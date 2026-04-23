@@ -1,4 +1,4 @@
-import { FunnelApproved } from '@/app/components/funnel/FunnelApproved';
+import { FunnelApproved } from '@/components/funnel/FunnelApproved';
 
 export default function FunnelApprovedPage() {
   return <FunnelApproved />;

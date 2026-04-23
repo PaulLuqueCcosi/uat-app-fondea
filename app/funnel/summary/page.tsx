@@ -1,5 +1,5 @@
 import { getApplication } from '@/app/actions/loan.actions';
-import { FunnelSummary } from '@/app/components/funnel/FunnelSummary';
+import { FunnelSummary } from '@/components/funnel/FunnelSummary';
 
 export default async function FunnelSummaryPage() {
   const application = await getApplication();

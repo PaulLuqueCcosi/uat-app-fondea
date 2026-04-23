@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card';
 import { getLogtoContext } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
 import { User, Mail, Phone, Calendar, Shield, Key, Server } from 'lucide-react';
-import { ProfileClient } from '@/app/components/dashboard/ProfileClient';
+import { ProfileClient } from '@/components/dashboard/ProfileClient';
 
 export default async function ProfilePage() {
   const { isAuthenticated, claims } = await getLogtoContext(logtoConfig);

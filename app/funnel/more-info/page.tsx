@@ -1,4 +1,4 @@
-import { FunnelMoreInfo } from '@/app/components/funnel/FunnelMoreInfo';
+import { FunnelMoreInfo } from '@/components/funnel/FunnelMoreInfo';
 
 export default function FunnelMoreInfoPage() {
   return <FunnelMoreInfo />;

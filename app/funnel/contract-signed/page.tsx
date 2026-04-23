@@ -1,4 +1,4 @@
-import { FunnelContractSigned } from '@/app/components/funnel/FunnelContractSigned';
+import { FunnelContractSigned } from '@/components/funnel/FunnelContractSigned';
 
 export default function FunnelContractSignedPage() {
   return <FunnelContractSigned />;

@@ -1,4 +1,4 @@
-import { FunnelKYCDocuments } from '@/app/components/funnel/FunnelKYCDocuments';
+import { FunnelKYCDocuments } from '@/components/funnel/FunnelKYCDocuments';
 
 export default function FunnelKYCDocumentsPage() {
   return <FunnelKYCDocuments />;

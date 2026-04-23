@@ -1,7 +1,7 @@
 import { getUser } from '@/app/actions/auth.actions';
 import { redirect } from 'next/navigation';
-import { DashboardSidebar } from '@/app/components/dashboard/DashboardSidebar';
-import { DashboardNavbar } from '@/app/components/dashboard/DashboardNavbar';
+import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
+import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
 import { appBackgroundStyle, blobTopRight, blobBottomLeft } from '@/lib/backgroundStyle';
 import { signOut } from '@logto/next/server-actions';
 import { logtoConfig } from '../logto';

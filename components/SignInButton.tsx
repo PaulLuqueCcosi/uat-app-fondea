@@ -10,7 +10,7 @@ interface SignInButtonProps {
   rightIcon?: React.ReactNode;
 }
 
-export function SignInButton({ onSignIn, children, variant = 'ghost', size = 'default', rightIcon }: SignInButtonProps) {
+export function SignInButton({ onSignIn, children, variant = 'default', size = 'default', rightIcon }: SignInButtonProps) {
   return (
     <Button
       variant={variant}

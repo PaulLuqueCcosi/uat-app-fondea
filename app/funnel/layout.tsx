@@ -1,8 +1,8 @@
 import { getLogtoContext, signOut } from '@logto/next/server-actions';
 import { redirect } from 'next/navigation';
 import { logtoConfig } from '../logto';
-import { FunnelNavbar } from '../components/funnel/FunnelNavbar';
-import { FunnelSidebar } from '../components/funnel/FunnelSidebar';
+import { FunnelNavbar } from '../../components/funnel/FunnelNavbar';
+import { FunnelSidebar } from '../../components/funnel/FunnelSidebar';
 import { appBackgroundStyle, blobTopRight, blobBottomLeft } from '@/lib/backgroundStyle';
 
 export default async function FunnelLayout({

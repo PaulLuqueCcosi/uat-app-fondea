@@ -1,4 +1,4 @@
-import { FunnelLaborProfileShadcn } from '@/app/components/funnel/FunnelLaborProfileShadcn';
+import { FunnelLaborProfileShadcn } from '@/components/funnel/FunnelLaborProfileShadcn';
 
 export default function FunnelLaborPage() {
   return <FunnelLaborProfileShadcn />;

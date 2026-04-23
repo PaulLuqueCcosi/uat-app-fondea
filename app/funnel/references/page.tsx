@@ -1,4 +1,4 @@
-import { FunnelReferences } from '@/app/components/funnel/FunnelReferences';
+import { FunnelReferences } from '@/components/funnel/FunnelReferences';
 
 export default function FunnelReferencesPage() {
   return <FunnelReferences />;

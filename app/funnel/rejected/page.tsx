@@ -1,4 +1,4 @@
-import { FunnelRejected } from '@/app/components/funnel/FunnelRejected';
+import { FunnelRejected } from '@/components/funnel/FunnelRejected';
 
 export default function FunnelRejectedPage() {
   return <FunnelRejected />;

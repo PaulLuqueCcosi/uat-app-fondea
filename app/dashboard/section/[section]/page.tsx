@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
 import { Card } from '@/components/ui/card';
-import { FunnelLaborProfile } from '@/app/components/funnel/FunnelLaborProfile';
-import { FunnelEconomicProfile } from '@/app/components/funnel/FunnelEconomicProfile';
-import { FunnelReferences } from '@/app/components/funnel/FunnelReferences';
-import { FunnelAdditionalInfo } from '@/app/components/funnel/FunnelAdditionalInfo';
+import { FunnelLaborProfile } from '@/components/funnel/FunnelLaborProfile';
+import { FunnelEconomicProfile } from '@/components/funnel/FunnelEconomicProfile';
+import { FunnelReferences } from '@/components/funnel/FunnelReferences';
+import { FunnelAdditionalInfo } from '@/components/funnel/FunnelAdditionalInfo';
 
 const validSections = ['kyc', 'labor', 'economic', 'references', 'additional'];
 

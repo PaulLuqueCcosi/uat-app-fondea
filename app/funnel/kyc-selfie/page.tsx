@@ -1,4 +1,4 @@
-import { FunnelKYCSelfie } from '@/app/components/funnel/FunnelKYCSelfie';
+import { FunnelKYCSelfie } from '@/components/funnel/FunnelKYCSelfie';
 
 export default function FunnelKYCSelfiePage() {
   return <FunnelKYCSelfie />;
