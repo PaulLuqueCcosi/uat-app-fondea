@@ -1,4 +1,4 @@
-import { Card } from '@/app/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { getLogtoContext } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
 import { User, Mail, Phone, Calendar, Shield, Key, Server } from 'lucide-react';

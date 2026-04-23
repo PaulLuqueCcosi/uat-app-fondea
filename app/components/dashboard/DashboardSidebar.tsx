@@ -19,7 +19,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/app/components/ui/Badge';
+import { Badge } from '@/components/ui/badge';
 
 const profileSections = [
   { path: '/dashboard/section/kyc', label: 'Verificación KYC', icon: CreditCard, status: 'pending' as const },
@@ -67,7 +67,7 @@ export function DashboardSidebar() {
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-dark text-sm truncate">Usuario</p>
-                <Badge variant="warning" label="Perfil incompleto" className="mt-0.5" />
+                <Badge variant="warning" className="mt-0.5">Perfil incompleto</Badge>
               </div>
             </div>
           )}

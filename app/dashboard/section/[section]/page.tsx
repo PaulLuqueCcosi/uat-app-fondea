@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { Card } from '@/app/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { FunnelLaborProfile } from '@/app/components/funnel/FunnelLaborProfile';
 import { FunnelEconomicProfile } from '@/app/components/funnel/FunnelEconomicProfile';
 import { FunnelReferences } from '@/app/components/funnel/FunnelReferences';

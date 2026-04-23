@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card } from '@/app/components/ui/Card';
-import { Button } from '@/app/components/ui/Button';
-import { Badge } from '@/app/components/ui/Badge';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { CheckCircle, DollarSign, Briefcase, CreditCard, Users, MapPin, AlertCircle } from 'lucide-react';
 import { submitApplication } from '@/app/actions/loan.actions';
 import type { LoanApplication } from '@/lib/types';

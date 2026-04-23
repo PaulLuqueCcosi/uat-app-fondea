@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card } from '@/app/components/ui/Card';
-import { Input } from '@/app/components/ui/Input';
-import { Button } from '@/app/components/ui/Button';
-import { StickyBottomBar } from '@/app/components/ui/StickyBottomBar';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { Users, Plus, X, Phone, User as UserIcon } from 'lucide-react';
 import { saveReferences } from '@/app/actions/loan.actions';
 import type { ReferencesData, Reference } from '@/lib/types';

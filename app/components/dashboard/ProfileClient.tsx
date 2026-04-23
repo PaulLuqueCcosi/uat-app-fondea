@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card } from '@/app/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react';
-import { Button } from '@/app/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 interface ProfileData {
   isAuthenticated: boolean;

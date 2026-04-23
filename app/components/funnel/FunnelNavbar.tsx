@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowLeft, User, LogOut } from 'lucide-react';
-import { Logo } from '@/app/components/ui/Logo';
+import { Logo } from '@/components/ui/logo';
 import type { User as UserType } from '@/lib/types';
 
 interface FunnelNavbarProps {

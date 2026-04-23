@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Card } from '@/app/components/ui/Card';
-import { Button } from '@/app/components/ui/Button';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { CheckCircle, DollarSign, Calendar, TrendingUp } from 'lucide-react';
 import { getApplication } from '@/app/actions/loan.actions';
 import { useEffect, useState } from 'react';

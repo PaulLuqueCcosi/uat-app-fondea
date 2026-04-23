@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Bell, User, LogOut, Settings, ChevronDown, X } from 'lucide-react';
-import { Logo } from '@/app/components/ui/Logo';
+import { Logo } from '@/components/ui/logo';
 import type { User as UserType } from '@/lib/types';
 
 interface DashboardNavbarProps {

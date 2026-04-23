@@ -1,24 +1,24 @@
 'use client';
 
-import { Button } from './ui/Button';
+import { Button } from '@/components/ui/button';
 
 interface SignInButtonProps {
   onSignIn: () => Promise<void>;
   children: React.ReactNode;
-  variant?: 'primary' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'default' | 'ghost';
+  size?: 'xs' | 'sm' | 'default' | 'lg';
   rightIcon?: React.ReactNode;
 }
 
-export function SignInButton({ onSignIn, children, variant = 'ghost', size = 'md', rightIcon }: SignInButtonProps) {
+export function SignInButton({ onSignIn, children, variant = 'ghost', size = 'default', rightIcon }: SignInButtonProps) {
   return (
     <Button
       variant={variant}
       size={size}
-      rightIcon={rightIcon}
       onClick={() => onSignIn()}
     >
       {children}
+      {rightIcon}
     </Button>
   );
 }

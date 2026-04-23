@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card } from '@/app/components/ui/Card';
-import { Button } from '@/app/components/ui/Button';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { uploadDocument } from '@/app/actions/loan.actions';
 

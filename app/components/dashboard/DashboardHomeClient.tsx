@@ -7,8 +7,8 @@ import {
   X, ArrowRight, BookOpen, Settings, User, Bell,
   ChevronRight, ClipboardList, FileText
 } from 'lucide-react';
-import { Card } from '@/app/components/ui/Card';
-import { Badge } from '@/app/components/ui/Badge';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface ExpedienteSection {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card } from '@/app/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Clock, FileCheck } from 'lucide-react';
 import { evaluateApplication } from '@/app/actions/loan.actions';
 

@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Card } from '@/app/components/ui/Card';
-import { Button } from '@/app/components/ui/Button';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { CheckCircle, Download, Calendar, CreditCard, AlertCircle } from 'lucide-react';
 
 export function FunnelContractSigned() {

@@ -25,7 +25,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Switch } from '@/components/ui/switch';
-import { StickyBottomBar } from '@/app/components/ui/StickyBottomBar';
+import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { saveLaborProfile } from '@/app/actions/loan.actions';
 import type { LaborData } from '@/lib/types';
 
