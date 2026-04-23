@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__shadcn__list_items_in_registries",
+      "Bash(npx shadcn *)",
+      "mcp__shadcn__get_add_command_for_items",
+      "mcp__shadcn__view_items_in_registries",
+      "Bash(npx shadcn@latest *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

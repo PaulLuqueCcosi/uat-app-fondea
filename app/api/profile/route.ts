@@ -25,7 +25,7 @@ export async function GET() {
       emailVerified: claims?.email_verified || false,
       phoneVerified: claims?.phone_number_verified || false,
       picture: claims?.picture || null,
-      updatedAt: claims?.updated_at ? new Date(claims.updated_at * 1000).toISOString() : null,
+      updatedAt: claims?.updated_at ? new Date(Number(claims.updated_at) * 1000).toISOString() : null,
     },
   });
 }

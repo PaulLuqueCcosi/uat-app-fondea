@@ -57,7 +57,7 @@ export function DashboardHomeClient({ userName }: DashboardHomeClientProps) {
       <div className="flex flex-col gap-8">
         {/* Header */}
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-dark mb-1">Hola, {userName} 👋</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-dark mb-1">Hola, {userName}</h1>
           <p className="text-sm sm:text-base text-fondea-text">Completa tu expediente para solicitar tu primer préstamo</p>
         </div>
 

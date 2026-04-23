@@ -115,14 +115,14 @@ export default async function ProfilePage() {
               <p className="text-sm text-dark font-mono">{claims.sub}</p>
             </div>
 
-            {claims.updated_at && (
+            {claims.updated_at ? (
               <div className="space-y-1">
                 <p className="text-xs text-fondea-text font-medium flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
                   Última actualización
                 </p>
                 <p className="text-sm text-dark">
-                  {new Date(claims.updated_at * 1000).toLocaleDateString('es-PE', {
+                  {new Date(Number(claims.updated_at) * 1000).toLocaleDateString('es-PE', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
@@ -131,7 +131,7 @@ export default async function ProfilePage() {
                   })}
                 </p>
               </div>
-            )}
+            ) : null}
 
             {claims.aud && (
               <div className="space-y-1">
