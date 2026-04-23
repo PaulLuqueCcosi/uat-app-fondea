@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -80,22 +80,28 @@ export function ProfileClient() {
   return (
     <Card>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-dark flex items-center gap-2">
-            Datos desde API Route
-            <CheckCircle className="w-5 h-5 text-green-600" />
-          </h2>
+        <div className="flex items-start">
+          <CardHeader className="flex-1">
+            <CardTitle>Datos desde API Route</CardTitle>
+            <CardDescription>
+              Showing total visitors for the last 6 months
+            </CardDescription>
+          </CardHeader>
+
           <Button
             size="sm"
             variant="ghost"
             onClick={fetchProfile}
-            loading={loading}
+            disabled={loading}
+            className="ml-auto px-4"
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
 
-        <div className="space-y-2 p-4 bg-background/50 rounded-lg">
+
+        <CardContent>
+
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-fondea-text w-32">Estado:</span>
             <span className={`text-sm font-medium ${data.isAuthenticated ? 'text-green-600' : 'text-error'}`}>
@@ -141,18 +147,20 @@ export function ProfileClient() {
               </span>
             </div>
           )}
-        </div>
 
-        <details className="text-sm">
-          <summary className="cursor-pointer text-fondea-text hover:text-dark font-medium">
-            Ver todos los claims ({Object.keys(data.claims).length})
-          </summary>
-          <div className="mt-2 p-3 bg-dark/5 rounded overflow-x-auto">
-            <pre className="text-xs font-mono">
-              {JSON.stringify(data.claims, null, 2)}
-            </pre>
-          </div>
-        </details>
+        </CardContent>
+        <CardFooter>
+          <details className="text-sm">
+            <summary className="cursor-pointer text-fondea-text hover:text-dark font-medium">
+              Ver todos los claims ({Object.keys(data.claims).length})
+            </summary>
+            <div className="mt-2 p-3 bg-dark/5 rounded overflow-x-auto">
+              <pre className="text-xs font-mono">
+                {JSON.stringify(data.claims, null, 2)}
+              </pre>
+            </div>
+          </details>
+        </CardFooter>
       </div>
     </Card>
   );
