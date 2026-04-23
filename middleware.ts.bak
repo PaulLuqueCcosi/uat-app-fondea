@@ -1,0 +1,40 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  console.log('[MIDDLEWARE] Request to:', pathname);
+
+  // Rutas públicas (no requieren auth)
+  const publicPaths = [
+    '/',
+    '/callback',
+  ];
+
+  if (publicPaths.includes(pathname)) {
+    console.log('[MIDDLEWARE] Public path, allowing');
+    return NextResponse.next();
+  }
+
+  // Verificar autenticación para rutas protegidas
+  // Logto SDK usa cookies con prefijo 'logto:'
+  const cookies = request.cookies.getAll();
+  console.log('[MIDDLEWARE] All cookies:', cookies.map(c => c.name));
+
+  const hasLogtoSession = cookies.some(cookie => cookie.name.startsWith('logto:'));
+  console.log('[MIDDLEWARE] Has Logto session:', hasLogtoSession);
+
+  if (!hasLogtoSession) {
+    console.log('[MIDDLEWARE] No session, redirecting to /');
+    // Redirigir a home (que tiene el botón de sign-in)
+    const homeUrl = new URL('/', request.url);
+    return NextResponse.redirect(homeUrl);
+  }
+
+  console.log('[MIDDLEWARE] Session found, allowing access');
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/funnel/:path*'],
+};
