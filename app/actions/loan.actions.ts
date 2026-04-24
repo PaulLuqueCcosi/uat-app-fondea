@@ -33,6 +33,30 @@ export async function getApplication(): Promise<LoanApplication | null> {
   return currentApplication;
 }
 
+export async function getLoanSummary(): Promise<{
+  amount: number;
+  installments: number;
+  installmentAmount: number;
+  firstPaymentDate: string;
+} | null> {
+  const app = currentApplication || await initApplication();
+
+  if (!app.simulation) {
+    return null;
+  }
+
+  // Calcular la fecha de la primera cuota (30 días después de hoy)
+  const firstPaymentDate = new Date();
+  firstPaymentDate.setDate(firstPaymentDate.getDate() + 30);
+
+  return {
+    amount: app.simulation.amount,
+    installments: app.simulation.months,
+    installmentAmount: app.simulation.monthlyPayment,
+    firstPaymentDate: firstPaymentDate.toISOString(),
+  };
+}
+
 export async function initApplication(simulation?: LoanSimulation): Promise<LoanApplication> {
   if (currentApplication) return currentApplication;
 

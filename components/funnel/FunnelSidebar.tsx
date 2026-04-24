@@ -9,6 +9,7 @@ import {
   getCurrentStepIndex,
   getVisibleSteps
 } from '@/lib/funnel-steps';
+import { FunnelLoanSummaryCard } from './FunnelLoanSummaryCard';
 
 export function FunnelSidebar() {
   const pathname = usePathname();
@@ -24,17 +25,11 @@ export function FunnelSidebar() {
   return (
     <aside className="hidden md:flex flex-col w-80 bg-white border-r border-border fixed left-0 top-16 bottom-0 overflow-y-auto">
       <div className="p-6">
-        <div className="mb-6">
+        {/* Card de resumen de solicitud */}
+        <FunnelLoanSummaryCard />
+
+        <div className="mb-2">
           <h2 className="text-lg font-bold text-dark">Proceso de Solicitud</h2>
-          <p className="text-xs text-fondea-text mt-1">
-            Paso {currentStepIndex + 1} de {FUNNEL_STEPS.length}
-          </p>
-          <div className="mt-3 h-2 bg-background rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all duration-300"
-              style={{ width: `${((currentStepIndex + 1) / FUNNEL_STEPS.length) * 100}%` }}
-            />
-          </div>
         </div>
 
         <nav className="space-y-1">
