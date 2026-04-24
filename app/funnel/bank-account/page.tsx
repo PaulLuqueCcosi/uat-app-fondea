@@ -1,5 +1,13 @@
 import { FunnelBankAccount } from '@/components/funnel/FunnelBankAccount';
+import { FunnelBankAccountShadcn } from '@/components/funnel/FunnelBankAccountShadcn';
 
 export default function FunnelBankAccountPage() {
-  return <FunnelBankAccount />;
+  return (
+    <div className='py-4'>
+      <div className='mx-auto w-fit px-4 sm:px-6 lg:px-8'>
+        <FunnelBankAccountShadcn />
+      </div>
+    </div>
+  );
+  // return <FunnelBankAccount />;
 }
