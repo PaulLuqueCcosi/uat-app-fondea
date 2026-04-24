@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, Check, AlertCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { FileText, Download, Check, AlertCircle, PenLine } from 'lucide-react';
 import { signContract } from '@/app/actions/loan.actions';
 
 export function FunnelContract() {
@@ -12,71 +13,7 @@ export function FunnelContract() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
-  const [signature, setSignature] = useState('');
-  const [isDrawing, setIsDrawing] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const context = canvas.getContext('2d');
-      if (context) {
-        context.strokeStyle = '#1E293B';
-        context.lineWidth = 2;
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-        setCtx(context);
-      }
-    }
-  }, []);
-
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!ctx) return;
-    setIsDrawing(true);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !ctx) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-
-  const stopDrawing = () => {
-    if (!ctx) return;
-    setIsDrawing(false);
-    ctx.closePath();
-
-    // Save signature as data URL
-    const canvas = canvasRef.current;
-    if (canvas) {
-      setSignature(canvas.toDataURL());
-    }
-  };
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current;
-    if (canvas && ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      setSignature('');
-    }
-  };
+  const [fullName, setFullName] = useState('');
 
   const handleSubmit = async () => {
     if (!accepted) {
@@ -84,8 +21,13 @@ export function FunnelContract() {
       return;
     }
 
-    if (!signature) {
-      setError('Debes firmar el contrato');
+    if (!fullName.trim()) {
+      setError('Debes ingresar tu nombre completo para firmar');
+      return;
+    }
+
+    if (fullName.trim().length < 5) {
+      setError('El nombre debe tener al menos 5 caracteres');
       return;
     }
 
@@ -93,7 +35,7 @@ export function FunnelContract() {
     setError('');
 
     try {
-      await signContract(signature);
+      await signContract(fullName);
       router.push('/funnel/contract-signed');
     } catch (err) {
       console.error('Error signing contract:', err);
@@ -229,36 +171,6 @@ export function FunnelContract() {
           </label>
         </Card>
 
-        {/* Signature pad */}
-        <Card className="p-6">
-          <h3 className="font-semibold text-dark mb-4">Firma Digital</h3>
-
-          <div className="bg-background rounded-lg p-4 border-2 border-dashed border-border">
-            <canvas
-              ref={canvasRef}
-              width={600}
-              height={200}
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
-              className="w-full touch-none cursor-crosshair bg-white rounded"
-            />
-          </div>
-
-          <div className="flex items-center justify-between mt-3">
-            <p className="text-xs text-fondea-text">
-              Firma aquí con el mouse o con tu dedo (en móvil)
-            </p>
-            <Button variant="ghost" size="sm" onClick={clearSignature}>
-              Limpiar
-            </Button>
-          </div>
-        </Card>
-
         {/* Info */}
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
           <div className="flex gap-3">
@@ -269,26 +181,62 @@ export function FunnelContract() {
                 <li>Haber leído todo el contrato</li>
                 <li>Entender las condiciones del préstamo</li>
                 <li>Estar de acuerdo con el monto, plazo y cuota mensual</li>
-                <li>Conocer las penalidades por mora</li>
               </ul>
             </div>
           </div>
         </div>
 
-        {error && (
-          <div className="p-4 bg-error/10 border border-error rounded-lg">
-            <p className="text-sm text-error">{error}</p>
+        {/* Firma Digital */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <PenLine className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold text-dark">Firma Digital</h3>
           </div>
-        )}
 
-        <div className="flex gap-3">
-          <Button variant="ghost" onClick={() => router.push('/dashboard')} className="flex-1">
-            Guardar para después
-          </Button>
-          <Button onClick={handleSubmit} loading={loading} disabled={!accepted || !signature} className="flex-1" size="lg">
-            Firmar y finalizar →
-          </Button>
-        </div>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-medium text-dark mb-2">
+                Nombre completo
+              </label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="Ej: Juan Carlos Pérez García"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-fondea-text mt-2">
+                Al escribir tu nombre completo, estás firmando digitalmente este contrato
+              </p>
+            </div>
+
+            {fullName.trim() && (
+              <div className="bg-background rounded-lg p-4 border border-border">
+                <p className="text-xs text-fondea-text mb-2">Vista previa de tu firma:</p>
+                <p className="text-2xl font-signature text-primary text-center py-3 italic">
+                  {fullName}
+                </p>
+              </div>
+            )}
+
+            {error && (
+              <div className="p-3 bg-error/10 border border-error rounded-lg">
+                <p className="text-sm text-error">{error}</p>
+              </div>
+            )}
+
+            <Button
+              onClick={handleSubmit}
+              loading={loading}
+              disabled={!accepted || !fullName.trim() || fullName.trim().length < 5}
+              className="w-full"
+              size="lg"
+            >
+              Firmar y finalizar →
+            </Button>
+          </div>
+        </Card>
       </div>
     </div>
   );
