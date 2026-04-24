@@ -129,7 +129,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false }: FunnelReferenc
 
   const content = (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="min-w-[500px] max-w-4xl w-full">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
         {/* Referencias en 2 columnas */}
         <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-10">
           {/* Separador vertical - centrado entre las columnas */}
@@ -288,7 +288,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false }: FunnelReferenc
 
         {/* Botones de acción */}
         {!dashboardMode && (
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
               Atrás
             </Button>
@@ -319,7 +319,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false }: FunnelReferenc
   }
 
   return (
-    <Card>
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="pb-4">
         <FormHeader
           icon={Users}

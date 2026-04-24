@@ -179,7 +179,7 @@ export function FunnelKYCDocuments() {
 
   return (
     <>
-      <Card>
+      <Card className="w-full max-w-3xl mx-auto">
         <CardHeader className="pb-4">
           <FormHeader
             icon={FileText}
@@ -188,7 +188,7 @@ export function FunnelKYCDocuments() {
           />
         </CardHeader>
         <CardContent className="pt-0">
-          <form className="min-w-[500px] max-w-2xl w-full">
+          <form className="w-full">
             {/* Consejos */}
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-10">
               <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2 text-sm">
@@ -257,12 +257,13 @@ export function FunnelKYCDocuments() {
                       )}
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete('front')}
+                        className="w-full sm:w-auto"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Eliminar
@@ -272,6 +273,7 @@ export function FunnelKYCDocuments() {
                         variant="outline"
                         size="sm"
                         onClick={() => openCameraModal('front')}
+                        className="w-full sm:w-auto"
                       >
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Volver a tomar
@@ -281,14 +283,14 @@ export function FunnelKYCDocuments() {
                           type="button"
                           onClick={() => handleUpload('front')}
                           disabled={loading === 'front'}
-                          className="flex-1"
+                          className="w-full sm:flex-1"
                         >
                           {loading === 'front' ? 'Subiendo...' : 'Subir frente'}
                         </Button>
                       ) : (
-                        <div className="flex-1 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle className="w-4 h-4 text-primary" />
-                          <span>Imagen subida correctamente</span>
+                        <div className="w-full sm:flex-1 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
+                          <span className="text-center">Imagen subida correctamente</span>
                         </div>
                       )}
                     </div>
@@ -353,12 +355,13 @@ export function FunnelKYCDocuments() {
                       )}
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete('back')}
+                        className="w-full sm:w-auto"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Eliminar
@@ -368,6 +371,7 @@ export function FunnelKYCDocuments() {
                         variant="outline"
                         size="sm"
                         onClick={() => openCameraModal('back')}
+                        className="w-full sm:w-auto"
                       >
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Volver a tomar
@@ -377,14 +381,14 @@ export function FunnelKYCDocuments() {
                           type="button"
                           onClick={() => handleUpload('back')}
                           disabled={loading === 'back'}
-                          className="flex-1"
+                          className="w-full sm:flex-1"
                         >
                           {loading === 'back' ? 'Subiendo...' : 'Subir reverso'}
                         </Button>
                       ) : (
-                        <div className="flex-1 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle className="w-4 h-4 text-primary" />
-                          <span>Imagen subida correctamente</span>
+                        <div className="w-full sm:flex-1 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
+                          <span className="text-center">Imagen subida correctamente</span>
                         </div>
                       )}
                     </div>
@@ -405,7 +409,7 @@ export function FunnelKYCDocuments() {
             <Separator className="my-10 bg-primary/20 h-px" />
 
             {/* Botones de acción */}
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
               <Button
                 type="button"
                 variant="outline"

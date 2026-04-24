@@ -168,7 +168,7 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
 
   const content = (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="min-w-[500px] max-w-2xl w-full">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
         {/* Selector de tipo de ingreso */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
           <SectionHeader
@@ -356,7 +356,7 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
 
         {/* Botones de acción */}
         {!dashboardMode && (
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
               Atrás
             </Button>
@@ -387,7 +387,7 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
   }
 
   return (
-    <Card>
+    <Card className="w-full max-w-3xl mx-auto">
       <CardHeader className="pb-4">
         <FormHeader
           icon={MapPin}

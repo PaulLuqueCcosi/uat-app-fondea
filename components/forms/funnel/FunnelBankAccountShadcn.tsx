@@ -95,7 +95,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAcc
 
   const content = (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="min-w-[500px] max-w-2xl w-full">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
         {/* Info importante */}
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-10">
           <p className="text-sm text-foreground">
@@ -167,7 +167,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAcc
 
         {/* Botones de acción */}
         {!dashboardMode && (
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
               Atrás
             </Button>
@@ -198,7 +198,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAcc
   }
 
   return (
-    <Card>
+    <Card className="w-full max-w-3xl mx-auto">
       <CardHeader className="pb-4">
         <FormHeader
           // step={5}
