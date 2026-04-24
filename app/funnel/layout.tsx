@@ -1,8 +1,7 @@
 import { getLogtoContext, signOut } from '@logto/next/server-actions';
 import { redirect } from 'next/navigation';
 import { logtoConfig } from '../logto';
-import { FunnelNavbar } from '../../components/funnel/FunnelNavbar';
-import { FunnelSidebar } from '../../components/funnel/FunnelSidebar';
+import { FunnelLayoutClient } from '@/components/funnel/FunnelLayoutClient';
 import { appBackgroundStyle, blobTopRight, blobBottomLeft } from '@/lib/backgroundStyle';
 
 export default async function FunnelLayout({
@@ -32,20 +31,15 @@ export default async function FunnelLayout({
         <div className="absolute -bottom-64 -left-32 w-[550px] h-[550px] rounded-full" style={blobBottomLeft} />
       </div>
 
-      <FunnelNavbar
+      <FunnelLayoutClient
         user={user}
         onSignOut={async () => {
           'use server';
           await signOut(logtoConfig);
         }}
-      />
-
-      <div className="flex flex-1">
-        <FunnelSidebar />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-80">
-          {children}
-        </main>
-      </div>
+      >
+        {children}
+      </FunnelLayoutClient>
     </div>
   );
 }

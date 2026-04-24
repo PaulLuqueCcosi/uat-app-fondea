@@ -17,14 +17,14 @@ export function FunnelNavbar({ user, onSignOut }: FunnelNavbarProps) {
 
   return (
     <header className="bg-white border-b border-border sticky top-0 z-40 h-16">
-      <div className="flex items-center justify-between h-full px-4 md:px-6">
+      <div className="flex items-center justify-between h-full px-4 md:px-6 lg:px-8">
         <div className="flex items-center gap-4">
           <Link
             href="/dashboard"
             className="flex items-center gap-2 text-fondea-text hover:text-dark transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">Volver al Dashboard</span>
+            <span className="text-sm font-medium hidden sm:inline">Volver al Dashboard</span>
           </Link>
           <div className="h-6 w-px bg-border hidden sm:block" />
           <Logo />
