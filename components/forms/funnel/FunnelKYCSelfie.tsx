@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Camera, Upload, CheckCircle, AlertCircle, Trash2, User, RefreshCw } from 'lucide-react';
@@ -9,6 +9,7 @@ import { verifyBiometric } from '@/app/actions/loan.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../funnel/CameraModal';
+import { getCurrentStep } from '@/lib/funnel-steps';
 
 interface SectionHeaderProps {
   title: string;
@@ -26,6 +27,8 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
 
 export function FunnelKYCSelfie() {
   const router = useRouter();
+  const pathname = usePathname();
+  const currentStep = getCurrentStep(pathname);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -91,7 +94,7 @@ export function FunnelKYCSelfie() {
         setVerified(true);
         // Wait a moment to show success, then continue
         setTimeout(() => {
-          router.push('/funnel/contract');
+          router.push(currentStep?.nextPath || '/funnel/contract');
         }, 1500);
       } else {
         setError(result.error || 'No pudimos verificar tu identidad. Intenta nuevamente.');
@@ -121,7 +124,7 @@ export function FunnelKYCSelfie() {
     if (!verified) {
       await handleVerify();
     } else {
-      router.push('/funnel/contract');
+      router.push(currentStep?.nextPath || '/funnel/contract');
     }
   };
 
@@ -130,7 +133,7 @@ export function FunnelKYCSelfie() {
       <Card className="w-full max-w-3xl mx-auto">
         <CardHeader className="pb-4">
           <FormHeader
-            icon={User}
+            icon={currentStep?.icon || User}
             title="Verificación facial"
             description="Toma una selfie para verificar tu identidad"
           />

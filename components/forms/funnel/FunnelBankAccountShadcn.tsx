@@ -1,11 +1,12 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Building2, Wallet } from 'lucide-react';
 import { CreditCard } from 'lucide-react';
+import { getCurrentStep } from '@/lib/funnel-steps';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -67,6 +68,8 @@ type BankAccountFormValues = z.infer<typeof bankAccountFormSchema>;
 
 export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAccountProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const currentStep = getCurrentStep(pathname);
 
   const form = useForm<BankAccountFormValues>({
     resolver: zodResolver(bankAccountFormSchema),
@@ -89,7 +92,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAcc
     if (dashboardMode) {
       router.push('/dashboard');
     } else {
-      router.push('/funnel/summary');
+      router.push(currentStep?.nextPath || '/funnel/summary');
     }
   };
 
@@ -201,10 +204,9 @@ export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAcc
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader className="pb-4">
         <FormHeader
-          // step={5}
-          icon={CreditCard}
-          title="Cuenta bancaria para desembolso"
-          description="Ingresa la cuenta donde recibirás el dinero del préstamo"
+          icon={currentStep?.icon || CreditCard}
+          title={currentStep?.title || "Cuenta bancaria para desembolso"}
+          description={currentStep?.description || "Ingresa la cuenta donde recibirás el dinero del préstamo"}
         />
       </CardHeader>
       <CardContent className="pt-0">

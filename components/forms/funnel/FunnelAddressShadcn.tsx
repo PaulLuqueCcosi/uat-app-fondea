@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { MapPin, Map } from 'lucide-react';
+import { getCurrentStep } from '@/lib/funnel-steps';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -129,6 +130,8 @@ type AddressFormValues = z.infer<typeof addressFormSchema>;
 
 export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const currentStep = getCurrentStep(pathname);
   const [selectedRegion, setSelectedRegion] = useState('');
 
   const form = useForm<AddressFormValues>({
@@ -162,7 +165,7 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
     if (dashboardMode) {
       router.push('/dashboard');
     } else {
-      router.push('/funnel/loan-request');
+      router.push(currentStep?.nextPath || '/funnel/loan-request');
     }
   };
 
@@ -390,7 +393,7 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader className="pb-4">
         <FormHeader
-          icon={MapPin}
+          icon={currentStep?.icon || MapPin}
           title="Información de dirección"
           description="Ingresa tu dirección actual de residencia"
         />

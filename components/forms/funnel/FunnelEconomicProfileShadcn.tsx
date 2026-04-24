@@ -1,10 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus, Trash2, Wallet, TrendingUp, CreditCard, PiggyBank } from 'lucide-react';
+import { getCurrentStep } from '@/lib/funnel-steps';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -82,6 +83,8 @@ type EconomicFormValues = z.infer<typeof economicFormSchema>;
 
 export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEconomicProfileProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const currentStep = getCurrentStep(pathname);
 
   const form = useForm<EconomicFormValues>({
     resolver: zodResolver(economicFormSchema),
@@ -125,7 +128,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEco
     if (dashboardMode) {
       router.push('/dashboard');
     } else {
-      router.push('/funnel/references');
+      router.push(currentStep?.nextPath || '/funnel/references');
     }
   };
 
@@ -398,7 +401,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEco
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader className="pb-4">
         <FormHeader
-          icon={Wallet}
+          icon={currentStep?.icon || Wallet}
           title="Perfil económico"
           description="Cuéntanos sobre tu situación financiera para evaluar tu solicitud"
         />

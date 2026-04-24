@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2, RefreshCw } from 'lucide-react';
@@ -9,6 +9,7 @@ import { uploadDocument } from '@/app/actions/loan.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../funnel/CameraModal';
+import { getCurrentStep } from '@/lib/funnel-steps';
 
 interface SectionHeaderProps {
   title: string;
@@ -26,6 +27,8 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
 
 export function FunnelKYCDocuments() {
   const router = useRouter();
+  const pathname = usePathname();
+  const currentStep = getCurrentStep(pathname);
   const [loading, setLoading] = useState<'front' | 'back' | null>(null);
   const [error, setError] = useState('');
 
@@ -174,7 +177,7 @@ export function FunnelKYCDocuments() {
     }
 
     setLoading(null);
-    router.push('/funnel/kyc-selfie');
+    router.push(currentStep?.nextPath || '/funnel/kyc-selfie');
   };
 
   return (
@@ -182,7 +185,7 @@ export function FunnelKYCDocuments() {
       <Card className="w-full max-w-3xl mx-auto">
         <CardHeader className="pb-4">
           <FormHeader
-            icon={FileText}
+            icon={currentStep?.icon || FileText}
             title="Documentos de identidad"
             description="Sube fotos de tu DNI para verificar tu identidad"
           />

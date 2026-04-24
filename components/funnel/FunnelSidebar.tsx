@@ -2,104 +2,18 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import {
-  Briefcase,
-  DollarSign,
-  Users,
-  MapPin,
-  FileText,
-  CreditCard,
-  Camera,
-  Building2,
-  FileSignature,
-  CheckCircle2,
-  Circle,
-  Clock
-} from 'lucide-react';
+import { CheckCircle2, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const steps = [
-  {
-    id: 1,
-    title: 'Perfil Laboral',
-    path: '/funnel/labor',
-    icon: Briefcase,
-    description: 'Información de trabajo',
-  },
-  {
-    id: 2,
-    title: 'Perfil Económico',
-    path: '/funnel/economic',
-    icon: DollarSign,
-    description: 'Ingresos y gastos',
-  },
-  {
-    id: 3,
-    title: 'Referencias',
-    path: '/funnel/references',
-    icon: Users,
-    description: 'Contactos de referencia',
-  },
-  {
-    id: 4,
-    title: 'Info Adicional',
-    path: '/funnel/additional',
-    icon: MapPin,
-    description: 'Dirección y más',
-  },
-  {
-    id: 5,
-    title: 'Cuenta Bancaria',
-    path: '/funnel/bank-account',
-    icon: Building2,
-    description: 'Datos de desembolso',
-  },
-  {
-    id: 6,
-    title: 'Resumen',
-    path: '/funnel/summary',
-    icon: FileText,
-    description: 'Revisar y enviar',
-  },
-  {
-    id: 7,
-    title: 'Evaluación',
-    path: '/funnel/waiting',
-    icon: Clock,
-    description: 'Esperando resultado',
-  },
-  {
-    id: 8,
-    title: 'Documentos DNI',
-    path: '/funnel/kyc-documents',
-    icon: CreditCard,
-    description: 'Verificación de identidad',
-  },
-  {
-    id: 9,
-    title: 'Selfie',
-    path: '/funnel/kyc-selfie',
-    icon: Camera,
-    description: 'Verificación biométrica',
-  },
-  {
-    id: 10,
-    title: 'Contrato',
-    path: '/funnel/contract',
-    icon: FileSignature,
-    description: 'Firmar contrato',
-  },
-];
+import {
+  FUNNEL_STEPS,
+  getCurrentStepIndex,
+  getVisibleSteps
+} from '@/lib/funnel-steps';
 
 export function FunnelSidebar() {
   const pathname = usePathname();
-
-  const getCurrentStepIndex = () => {
-    const index = steps.findIndex(step => pathname === step.path);
-    return index !== -1 ? index : 0;
-  };
-
-  const currentStepIndex = getCurrentStepIndex();
+  const currentStepIndex = getCurrentStepIndex(pathname);
+  const visibleSteps = getVisibleSteps(pathname);
 
   const getStepStatus = (stepIndex: number): 'completed' | 'current' | 'upcoming' => {
     if (stepIndex < currentStepIndex) return 'completed';
@@ -113,20 +27,21 @@ export function FunnelSidebar() {
         <div className="mb-6">
           <h2 className="text-lg font-bold text-dark">Proceso de Solicitud</h2>
           <p className="text-xs text-fondea-text mt-1">
-            Paso {currentStepIndex + 1} de {steps.length}
+            Paso {currentStepIndex + 1} de {FUNNEL_STEPS.length}
           </p>
           <div className="mt-3 h-2 bg-background rounded-full overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-300"
-              style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}
+              style={{ width: `${((currentStepIndex + 1) / FUNNEL_STEPS.length) * 100}%` }}
             />
           </div>
         </div>
 
         <nav className="space-y-1">
-          {steps.map((step, index) => {
+          {visibleSteps.map((step, arrayIndex) => {
+            const stepIndex = FUNNEL_STEPS.findIndex(s => s.id === step.id);
             const Icon = step.icon;
-            const status = getStepStatus(index);
+            const status = getStepStatus(stepIndex);
             const isActive = pathname === step.path;
 
             return (
@@ -144,7 +59,7 @@ export function FunnelSidebar() {
                 )}
               >
                 {/* Line connector */}
-                {index < steps.length - 1 && (
+                {arrayIndex < visibleSteps.length - 1 && (
                   <div
                     className={cn(
                       'absolute left-[26px] top-[44px] w-px h-[calc(100%-4px)]',
@@ -221,7 +136,7 @@ export function FunnelSidebar() {
             )}
             {pathname === '/funnel/more-info' && (
               <>
-                <Clock className="w-12 h-12 text-warning mx-auto mb-2" />
+                <CheckCircle2 className="w-12 h-12 text-warning mx-auto mb-2" />
                 <p className="text-sm font-semibold text-dark">Más Información</p>
                 <p className="text-xs text-fondea-text mt-1">
                   Completa los datos faltantes

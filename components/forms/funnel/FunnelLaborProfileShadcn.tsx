@@ -1,10 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus, Trash2, Briefcase } from 'lucide-react';
+import { getCurrentStep } from '@/lib/funnel-steps';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -137,6 +138,8 @@ type LaborFormValues = z.infer<typeof laborFormSchema>;
 
 export function FunnelLaborProfileShadcn({ dashboardMode = false }: FunnelLaborProfileProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const currentStep = getCurrentStep(pathname);
 
   const form = useForm<LaborFormValues>({
     resolver: zodResolver(laborFormSchema),
@@ -177,7 +180,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false }: FunnelLaborP
     if (dashboardMode) {
       router.push('/dashboard');
     } else {
-      router.push('/funnel/economic');
+      router.push(currentStep?.nextPath || '/funnel/economic');
     }
   };
 
@@ -458,7 +461,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false }: FunnelLaborP
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader className="pb-4">
         <FormHeader
-          icon={Briefcase}
+          icon={currentStep?.icon || Briefcase}
           title="Perfil laboral"
           description="Cuéntanos sobre tu trabajo e ingresos para evaluar tu solicitud"
         />

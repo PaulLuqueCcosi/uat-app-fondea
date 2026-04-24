@@ -1,10 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Users, UserCheck } from 'lucide-react';
+import { getCurrentStep } from '@/lib/funnel-steps';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -85,6 +86,8 @@ type ReferencesFormValues = z.infer<typeof referencesFormSchema>;
 
 export function FunnelReferencesShadcn({ dashboardMode = false }: FunnelReferencesProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const currentStep = getCurrentStep(pathname);
 
   const form = useForm<ReferencesFormValues>({
     resolver: zodResolver(referencesFormSchema),
@@ -123,7 +126,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false }: FunnelReferenc
     if (dashboardMode) {
       router.push('/dashboard');
     } else {
-      router.push('/funnel/additional');
+      router.push(currentStep?.nextPath || '/funnel/additional');
     }
   };
 
@@ -322,7 +325,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false }: FunnelReferenc
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="pb-4">
         <FormHeader
-          icon={Users}
+          icon={currentStep?.icon || Users}
           title="Referencias personales"
           description="Necesitamos al menos 2 referencias de personas que te conozcan"
         />
