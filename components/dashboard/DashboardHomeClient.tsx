@@ -94,7 +94,7 @@ export function DashboardHomeClient({ userName }: DashboardHomeClientProps) {
           {/* Left column */}
           <div className="lg:col-span-3 flex flex-col gap-4 md:gap-6">
             {/* Mi Expediente */}
-            <Card padding="none">
+            <Card>
               <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
                 <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                   <ClipboardList className="w-4 h-4 text-white" />
@@ -141,7 +141,7 @@ export function DashboardHomeClient({ userName }: DashboardHomeClientProps) {
             </Card>
 
             {/* Mis Solicitudes */}
-            <Card padding="none">
+            <Card>
               <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
                 <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                   <FileText className="w-4 h-4 text-white" />
@@ -167,7 +167,7 @@ export function DashboardHomeClient({ userName }: DashboardHomeClientProps) {
           {/* Right column */}
           <div className="lg:col-span-2 flex flex-col gap-4 md:gap-6">
             {/* Solicitar Préstamo */}
-            <Card padding="none">
+            <Card>
               <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
                 <div className={cn(
                   'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
@@ -204,7 +204,7 @@ export function DashboardHomeClient({ userName }: DashboardHomeClientProps) {
             </Card>
 
             {/* Educación Financiera */}
-            <Card padding="none">
+            <Card>
               <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
                 <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                   <BookOpen className="w-4 h-4 text-white" />
@@ -225,7 +225,7 @@ export function DashboardHomeClient({ userName }: DashboardHomeClientProps) {
             </Card>
 
             {/* Configuración rápida */}
-            <Card padding="none">
+            <Card>
               <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
                 <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                   <Settings className="w-4 h-4 text-white" />

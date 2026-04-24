@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { MapPin, Home, Calendar } from 'lucide-react';
@@ -12,6 +11,27 @@ import type { AdditionalData } from '@/lib/types';
 
 interface FunnelAdditionalInfoProps {
   dashboardMode?: boolean;
+}
+
+interface FormFieldProps {
+  label: string;
+  required?: boolean;
+  error?: string;
+  helpText?: string;
+  children: React.ReactNode;
+}
+
+function FormField({ label, required, error, helpText, children }: FormFieldProps) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-sm font-medium text-dark">
+        {label} {required && <span className="text-error">*</span>}
+      </label>
+      {children}
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
+      {error && <p className="text-xs text-error">{error}</p>}
+    </div>
+  );
 }
 
 export function FunnelAdditionalInfo({ dashboardMode }: FunnelAdditionalInfoProps) {
@@ -98,65 +118,62 @@ export function FunnelAdditionalInfo({ dashboardMode }: FunnelAdditionalInfoProp
 
   const content = (
     <div className="space-y-6">
-      {/* Dirección */}
       <div>
         <h3 className="text-lg font-semibold text-dark mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-primary" />
           Dirección de Residencia
         </h3>
         <div className="space-y-4">
-          <Input
-            label="Dirección completa"
-            value={form.address}
-            onChange={(value) => updateField('address', value)}
-            placeholder="Ej: Av. Javier Prado Este 123, Dpto. 456"
-            icon={<Home className="w-4 h-4" />}
-            error={errors.address}
-            helpText="Incluye calle, número, piso/dpto si aplica"
-            required
-          />
+          <FormField label="Dirección completa" required error={errors.address} helpText="Incluye calle, número, piso/dpto si aplica">
+            <input
+              type="text"
+              value={form.address}
+              onChange={(e) => updateField('address', e.target.value)}
+              placeholder="Ej: Av. Javier Prado Este 123, Dpto. 456"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </FormField>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Distrito"
-              value={form.district}
-              onChange={(value) => updateField('district', value)}
-              placeholder="Ej: San Isidro"
-              error={errors.district}
-              required
-            />
-            <Input
-              label="Ciudad"
-              value={form.city}
-              onChange={(value) => updateField('city', value)}
-              placeholder="Ej: Lima"
-              error={errors.city}
-              required
-            />
+            <FormField label="Distrito" required error={errors.district}>
+              <input
+                type="text"
+                value={form.district}
+                onChange={(e) => updateField('district', e.target.value)}
+                placeholder="Ej: San Isidro"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </FormField>
+            <FormField label="Ciudad" required error={errors.city}>
+              <input
+                type="text"
+                value={form.city}
+                onChange={(e) => updateField('city', e.target.value)}
+                placeholder="Ej: Lima"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </FormField>
           </div>
 
-          <Input
-            label="Departamento"
-            value={form.department}
-            onChange={(value) => updateField('department', value)}
-            placeholder="Ej: Lima"
-            error={errors.department}
-            required
-          />
+          <FormField label="Departamento" required error={errors.department}>
+            <input
+              type="text"
+              value={form.department}
+              onChange={(e) => updateField('department', e.target.value)}
+              placeholder="Ej: Lima"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </FormField>
         </div>
       </div>
 
-      {/* Tipo de vivienda */}
       <div>
         <h3 className="text-lg font-semibold text-dark mb-4 flex items-center gap-2">
           <Home className="w-5 h-5 text-primary" />
           Vivienda
         </h3>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">
-              Tipo de vivienda <span className="text-error">*</span>
-            </label>
+          <FormField label="Tipo de vivienda" required>
             <select
               value={form.housingType}
               onChange={(e) => updateField('housingType', e.target.value)}
@@ -168,30 +185,25 @@ export function FunnelAdditionalInfo({ dashboardMode }: FunnelAdditionalInfoProp
               <option value="mortgage">Hipotecada</option>
               <option value="other">Otro</option>
             </select>
-          </div>
+          </FormField>
 
-          <Input
-            label="Años viviendo en esta dirección"
-            type="number"
-            value={form.yearsAtAddress || ''}
-            onChange={(value) => updateField('yearsAtAddress', Number(value))}
-            placeholder="Ej: 3"
-            icon={<Calendar className="w-4 h-4" />}
-            error={errors.yearsAtAddress}
-            min={0}
-            required
-          />
+          <FormField label="Años viviendo en esta dirección" required error={errors.yearsAtAddress}>
+            <input
+              type="number"
+              value={form.yearsAtAddress || ''}
+              onChange={(e) => updateField('yearsAtAddress', Number(e.target.value))}
+              placeholder="Ej: 3"
+              min={0}
+              className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </FormField>
         </div>
       </div>
 
-      {/* Información personal */}
       <div>
         <h3 className="text-lg font-semibold text-dark mb-4">Información Personal</h3>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">
-              Nivel educativo <span className="text-error">*</span>
-            </label>
+          <FormField label="Nivel educativo" required>
             <select
               value={form.educationLevel}
               onChange={(e) => updateField('educationLevel', e.target.value)}
@@ -203,12 +215,9 @@ export function FunnelAdditionalInfo({ dashboardMode }: FunnelAdditionalInfoProp
               <option value="university">Universitario</option>
               <option value="postgraduate">Postgrado</option>
             </select>
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">
-              Estado civil <span className="text-error">*</span>
-            </label>
+          <FormField label="Estado civil" required>
             <select
               value={form.maritalStatus}
               onChange={(e) => updateField('maritalStatus', e.target.value)}
@@ -220,19 +229,18 @@ export function FunnelAdditionalInfo({ dashboardMode }: FunnelAdditionalInfoProp
               <option value="widowed">Viudo(a)</option>
               <option value="cohabiting">Conviviente</option>
             </select>
-          </div>
+          </FormField>
 
-          <Input
-            label="Número de dependientes"
-            type="number"
-            value={form.dependents || ''}
-            onChange={(value) => updateField('dependents', Number(value))}
-            placeholder="0"
-            helpText="Personas que dependen económicamente de ti"
-            error={errors.dependents}
-            min={0}
-            required
-          />
+          <FormField label="Número de dependientes" required error={errors.dependents} helpText="Personas que dependen económicamente de ti">
+            <input
+              type="number"
+              value={form.dependents || ''}
+              onChange={(e) => updateField('dependents', Number(e.target.value))}
+              placeholder="0"
+              min={0}
+              className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </FormField>
         </div>
       </div>
 
@@ -245,7 +253,7 @@ export function FunnelAdditionalInfo({ dashboardMode }: FunnelAdditionalInfoProp
       {!dashboardMode && (
         <Button
           onClick={handleSubmit}
-          loading={loading}
+          disabled={loading}
           className="w-full"
           size="lg"
         >

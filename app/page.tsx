@@ -45,7 +45,7 @@ export default async function Home() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <SignInButton
-              variant="primary"
+              variant="default"
               size="lg"
               rightIcon={<ArrowRight className="w-5 h-5" />}
               onSignIn={async () => {

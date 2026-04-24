@@ -97,7 +97,7 @@ export default function MasInfoPage() {
                       <p className="font-medium text-foreground">{item.seccion}</p>
                       <p className="text-sm text-muted-foreground">{item.campo}</p>
                     </div>
-                    <Badge variant="pending" label="Pendiente" />
+                    <Badge variant="pending">Pendiente</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">{item.descripcion}</p>
                   {item.path && (
@@ -136,7 +136,7 @@ export default function MasInfoPage() {
                       <p className="font-medium text-foreground">{item.seccion}</p>
                       <p className="text-sm text-muted-foreground">{item.campo}</p>
                     </div>
-                    <Badge variant="success" label="Completo" />
+                    <Badge variant="success">Completo</Badge>
                   </div>
                 </div>
               ))}

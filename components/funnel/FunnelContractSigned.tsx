@@ -130,7 +130,7 @@ export function FunnelContractSigned() {
           <Button variant="ghost" onClick={() => router.push('/dashboard/loans')} className="flex-1">
             Ver mis préstamos
           </Button>
-          <Button variant="primary" onClick={() => router.push('/dashboard')} className="flex-1" size="lg">
+          <Button variant="default" onClick={() => router.push('/dashboard')} className="flex-1" size="lg">
             Ir al dashboard
           </Button>
         </div>

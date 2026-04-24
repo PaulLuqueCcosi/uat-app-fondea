@@ -68,7 +68,7 @@ export interface EconomicData {
 export interface Debt {
   id: string;
   entity: string;
-  type: 'personal' | 'credit_card' | 'mortgage' | 'auto' | 'other';
+  type: string;
   amount: number;
   monthlyPayment: number;
 }
@@ -77,7 +77,7 @@ export interface Reference {
   id: string;
   name: string;
   phone: string;
-  relationship: 'family' | 'friend' | 'coworker' | 'neighbor' | 'other';
+  relationship: string;
 }
 
 export interface ReferencesData {
@@ -123,7 +123,7 @@ export type ApplicationStatus =
 export interface BankAccount {
   bank: string;
   accountNumber: string;
-  accountType: 'savings' | 'checking';
+  accountType: string;
   cci: string;
 }
 

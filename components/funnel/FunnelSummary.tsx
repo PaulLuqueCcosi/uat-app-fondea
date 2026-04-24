@@ -154,7 +154,7 @@ export function FunnelSummary() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success" label="Completo" />
+                <Badge variant="success">Completo</Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -240,7 +240,7 @@ export function FunnelSummary() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success" label="Completo" />
+                <Badge variant="success">Completo</Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -317,10 +317,10 @@ export function FunnelSummary() {
                   <p className="text-sm text-muted-foreground mb-1">Patrimonio</p>
                   <div className="flex gap-2 flex-wrap">
                     {DEMO_DATA.economic.hasProperty && (
-                      <Badge variant="outline" label="Inmueble propio" />
+                      <Badge variant="outline">Inmueble propio</Badge>
                     )}
                     {DEMO_DATA.economic.hasVehicle && (
-                      <Badge variant="outline" label="Vehículo propio" />
+                      <Badge variant="outline">Vehículo propio</Badge>
                     )}
                     {!DEMO_DATA.economic.hasProperty && !DEMO_DATA.economic.hasVehicle && (
                       <span className="text-sm text-muted-foreground">Sin patrimonio declarado</span>
@@ -356,7 +356,7 @@ export function FunnelSummary() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success" label="Completo" />
+                <Badge variant="success">Completo</Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -422,7 +422,7 @@ export function FunnelSummary() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success" label="Completo" />
+                <Badge variant="success">Completo</Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -494,7 +494,7 @@ export function FunnelSummary() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success" label="Completo" />
+                <Badge variant="success">Completo</Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"

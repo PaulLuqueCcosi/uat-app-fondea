@@ -4,8 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Building2, Wallet } from 'lucide-react';
-import { CreditCard } from 'lucide-react';
+import { Building2, Wallet, CreditCard } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
 
 import { Button } from '@/components/ui/button';

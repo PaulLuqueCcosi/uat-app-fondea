@@ -99,7 +99,7 @@ export function FunnelRejected() {
             Volver al dashboard
           </Button>
           <Button
-            variant="primary"
+            variant="default"
             onClick={() => window.open('mailto:soporte@fondea.pe?subject=Consulta sobre solicitud rechazada', '_blank')}
             className="flex-1"
           >

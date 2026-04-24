@@ -33,7 +33,7 @@ export function CameraModal({
   );
   const [error, setError] = useState('');
   const [detectionActive, setDetectionActive] = useState(false);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number>(0);
 
   // Iniciar cámara
   const startCamera = async (mode: 'user' | 'environment') => {

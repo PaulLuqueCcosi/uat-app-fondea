@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 interface SignInButtonProps {
   onSignIn: () => Promise<void>;
   children: React.ReactNode;
-  variant?: 'default' | 'ghost';
+  variant?: 'default' | 'ghost' | 'outline' | 'secondary' | 'destructive' | 'link';
   size?: 'xs' | 'sm' | 'default' | 'lg';
   rightIcon?: React.ReactNode;
 }

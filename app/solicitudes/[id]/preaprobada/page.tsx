@@ -130,7 +130,7 @@ export default function PreaprobadaPage() {
                   <p className="font-medium text-foreground">1. Verificar tu identidad (DNI)</p>
                   <p className="text-sm text-muted-foreground">Sube fotos de tu DNI (adelante y atrás)</p>
                 </div>
-                <Badge variant="pending" label="Pendiente" />
+                <Badge variant="pending">Pendiente</Badge>
               </div>
 
               <div className="flex items-center gap-3 p-4 border border-border rounded-lg bg-background">
@@ -141,7 +141,7 @@ export default function PreaprobadaPage() {
                   <p className="font-medium text-foreground">2. Verificación biométrica</p>
                   <p className="text-sm text-muted-foreground">Toma una selfie para confirmar tu identidad</p>
                 </div>
-                <Badge variant="pending" label="Pendiente" />
+                <Badge variant="pending">Pendiente</Badge>
               </div>
 
               <div className="flex items-center gap-3 p-4 border border-border rounded-lg bg-background">
@@ -152,7 +152,7 @@ export default function PreaprobadaPage() {
                   <p className="font-medium text-foreground">3. Firmar el contrato</p>
                   <p className="text-sm text-muted-foreground">Revisa y firma digitalmente tu contrato</p>
                 </div>
-                <Badge variant="pending" label="Pendiente" />
+                <Badge variant="pending">Pendiente</Badge>
               </div>
             </div>
           </div>
