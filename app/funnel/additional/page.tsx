@@ -1,5 +1,13 @@
 import { FunnelAdditionalInfo } from '@/components/funnel/FunnelAdditionalInfo';
+import { FunnelAddressShadcn } from '@/components/funnel/FunnelAddressShadcn';
 
 export default function FunnelAdditionalPage() {
-  return <FunnelAdditionalInfo />;
+  return (
+    <div className='py-4'>
+      <div className='mx-auto w-fit px-4 sm:px-6 lg:px-8'>
+        <FunnelAddressShadcn />
+      </div>
+    </div>
+  );
+  // return <FunnelAdditionalInfo />;
 }
