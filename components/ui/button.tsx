@@ -44,14 +44,18 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  loading,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { loading?: boolean }) {
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
+      disabled={loading || props.disabled}
       {...props}
-    />
+    >
+      {loading ? 'Cargando...' : props.children}
+    </ButtonPrimitive>
   )
 }
 

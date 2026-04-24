@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   FUNNEL_STEPS,
@@ -66,8 +66,8 @@ export function FunnelSidebar() {
                 {/* Step icon/number */}
                 <div className="relative z-10 flex-shrink-0">
                   {status === 'completed' ? (
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                      <CheckCircle2 className="w-5 h-5 text-white" />
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                      <Icon className="w-4 h-4 text-dark" />
                     </div>
                   ) : status === 'current' ? (
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
@@ -75,7 +75,7 @@ export function FunnelSidebar() {
                     </div>
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-background border-2 border-border flex items-center justify-center">
-                      <Circle className="w-4 h-4 text-fondea-text" />
+                      <Icon className="w-4 h-4 text-fondea-text" />
                     </div>
                   )}
                 </div>
