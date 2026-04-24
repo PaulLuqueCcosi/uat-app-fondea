@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2, RefreshCw } from 'lucide-react';
@@ -28,7 +28,12 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
 export function FunnelKYCDocuments() {
   const router = useRouter();
   const pathname = usePathname();
+  const params = useParams();
   const currentStep = getCurrentStep(pathname);
+
+  // Detectar si estamos en el flujo de solicitudes
+  const isInSolicitudFlow = pathname.includes('/solicitudes/');
+  const solicitudId = params.id as string | undefined;
   const [loading, setLoading] = useState<'front' | 'back' | null>(null);
   const [error, setError] = useState('');
 
@@ -177,7 +182,13 @@ export function FunnelKYCDocuments() {
     }
 
     setLoading(null);
-    router.push(currentStep?.nextPath || '/funnel/kyc-selfie');
+
+    // Redirigir según el flujo
+    if (isInSolicitudFlow && solicitudId) {
+      router.push(`/solicitudes/${solicitudId}/kyc-selfie`);
+    } else {
+      router.push(currentStep?.nextPath || '/funnel/kyc-selfie');
+    }
   };
 
   return (

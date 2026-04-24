@@ -7,7 +7,12 @@
       "mcp__shadcn__view_items_in_registries",
       "Bash(npx shadcn@latest *)",
       "Bash(npm install *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(mkdir -p \"E:\\\\FONDEA_FINTECH\\\\app_fondea\\\\app_fondea_pe\\\\app\\\\solicitudes\\\\[id]\\\\evaluando\")",
+      "Bash(mkdir -p \"E:\\\\FONDEA_FINTECH\\\\app_fondea\\\\app_fondea_pe\\\\app\\\\solicitudes\\\\[id]\\\\preaprobada\")",
+      "Bash(mkdir -p \"E:\\\\FONDEA_FINTECH\\\\app_fondea\\\\app_fondea_pe\\\\app\\\\solicitudes\\\\[id]\\\\rechazada\")",
+      "Bash(mkdir -p \"E:\\\\FONDEA_FINTECH\\\\app_fondea\\\\app_fondea_pe\\\\app\\\\solicitudes\\\\[id]\\\\mas-info\")",
+      "Bash(mkdir -p \"E:\\\\FONDEA_FINTECH\\\\app_fondea\\\\app_fondea_pe\\\\app\\\\solicitudes\\\\[id]\\\\kyc-documentos\")"
     ]
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,10 +10,16 @@ import { signContract } from '@/app/actions/loan.actions';
 
 export function FunnelContract() {
   const router = useRouter();
+  const pathname = usePathname();
+  const params = useParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [fullName, setFullName] = useState('');
+
+  // Detectar si estamos en el flujo de solicitudes
+  const isInSolicitudFlow = pathname.includes('/solicitudes/');
+  const solicitudId = params.id as string | undefined;
 
   const handleSubmit = async () => {
     if (!accepted) {
@@ -36,7 +42,13 @@ export function FunnelContract() {
 
     try {
       await signContract(fullName);
-      router.push('/funnel/contract-signed');
+
+      // Redirigir según el flujo
+      if (isInSolicitudFlow && solicitudId) {
+        router.push(`/solicitudes/${solicitudId}/aprobada`);
+      } else {
+        router.push('/funnel/contract-signed');
+      }
     } catch (err) {
       console.error('Error signing contract:', err);
       setError('Error al firmar el contrato. Intenta nuevamente.');

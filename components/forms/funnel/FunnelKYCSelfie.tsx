@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Camera, Upload, CheckCircle, AlertCircle, Trash2, User, RefreshCw } from 'lucide-react';
@@ -28,9 +28,14 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
 export function FunnelKYCSelfie() {
   const router = useRouter();
   const pathname = usePathname();
+  const params = useParams();
   const currentStep = getCurrentStep(pathname);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Detectar si estamos en el flujo de solicitudes
+  const isInSolicitudFlow = pathname.includes('/solicitudes/');
+  const solicitudId = params.id as string | undefined;
 
   // Estado para la selfie
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
@@ -94,7 +99,12 @@ export function FunnelKYCSelfie() {
         setVerified(true);
         // Wait a moment to show success, then continue
         setTimeout(() => {
-          router.push(currentStep?.nextPath || '/funnel/contract');
+          // Redirigir según el flujo
+      if (isInSolicitudFlow && solicitudId) {
+        router.push(`/solicitudes/${solicitudId}/contrato`);
+      } else {
+        router.push(currentStep?.nextPath || '/funnel/contract');
+      }
         }, 1500);
       } else {
         setError(result.error || 'No pudimos verificar tu identidad. Intenta nuevamente.');
@@ -124,7 +134,12 @@ export function FunnelKYCSelfie() {
     if (!verified) {
       await handleVerify();
     } else {
-      router.push(currentStep?.nextPath || '/funnel/contract');
+      // Redirigir según el flujo
+      if (isInSolicitudFlow && solicitudId) {
+        router.push(`/solicitudes/${solicitudId}/contrato`);
+      } else {
+        router.push(currentStep?.nextPath || '/funnel/contract');
+      }
     }
   };
 

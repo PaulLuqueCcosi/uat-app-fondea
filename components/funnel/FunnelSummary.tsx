@@ -92,9 +92,16 @@ export function FunnelSummary() {
     setLoading(true);
     setError('');
     try {
-      // Simular envío
+      // TODO: Llamar a la API para crear la solicitud
+      // const result = await submitApplication();
+      // const solicitudId = result.id;
+
+      // Simular envío y generar ID temporal
       await new Promise(resolve => setTimeout(resolve, 1500));
-      router.push('/funnel/kyc-documents');
+      const solicitudId = 'demo-' + Date.now();
+
+      // Redirigir a la página de evaluación
+      router.push(`/solicitudes/${solicitudId}/evaluando`);
     } catch (err) {
       console.error('Error submitting application:', err);
       setError('Error al enviar la solicitud. Intenta nuevamente.');

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   CreditCard, Briefcase, DollarSign, Users, MapPin,
   X, ArrowRight, BookOpen, Settings, User, Bell,
-  ChevronRight, ClipboardList, FileText
+  ChevronRight, ClipboardList, FileText, Plus
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,9 +56,18 @@ export function DashboardHomeClient({ userName }: DashboardHomeClientProps) {
     <>
       <div className="flex flex-col gap-8">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-dark mb-1">Hola, {userName}</h1>
-          <p className="text-sm sm:text-base text-fondea-text">Completa tu expediente para solicitar tu primer préstamo</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-dark mb-1">Hola, {userName}</h1>
+            <p className="text-sm sm:text-base text-fondea-text">Completa tu expediente para solicitar tu primer préstamo</p>
+          </div>
+          <button
+            onClick={() => router.push('/funnel/labor')}
+            className="flex items-center justify-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl whitespace-nowrap"
+          >
+            <Plus className="w-5 h-5" />
+            Pedir préstamo
+          </button>
         </div>
 
         {/* Progress bar */}
