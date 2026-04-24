@@ -1,6 +1,4 @@
-import FormLayout from '@/components/forms/labor';
-import { FunnelLaborProfile } from '@/components/funnel/FunnelLaborProfile';
-import { FunnelLaborProfileShadcn } from '@/components/funnel/FunnelLaborProfileShadcn';
+import { FunnelLaborProfileShadcn } from '@/components/forms/funnel/FunnelLaborProfileShadcn';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function FunnelLaborPage() {

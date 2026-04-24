@@ -1,5 +1,4 @@
-import { FunnelReferences } from '@/components/funnel/FunnelReferences';
-import { FunnelReferencesShadcn } from '@/components/funnel/FunnelReferencesShadcn';
+import { FunnelReferencesShadcn } from '@/components/forms/funnel/FunnelReferencesShadcn';
 
 export default function FunnelReferencesPage() {
   return (

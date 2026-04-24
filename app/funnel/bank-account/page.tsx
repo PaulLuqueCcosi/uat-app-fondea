@@ -1,5 +1,4 @@
-import { FunnelBankAccount } from '@/components/funnel/FunnelBankAccount';
-import { FunnelBankAccountShadcn } from '@/components/funnel/FunnelBankAccountShadcn';
+import { FunnelBankAccountShadcn } from '@/components/forms/funnel/FunnelBankAccountShadcn';
 
 export default function FunnelBankAccountPage() {
   return (

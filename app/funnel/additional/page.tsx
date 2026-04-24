@@ -1,5 +1,4 @@
-import { FunnelAdditionalInfo } from '@/components/funnel/FunnelAdditionalInfo';
-import { FunnelAddressShadcn } from '@/components/funnel/FunnelAddressShadcn';
+import { FunnelAddressShadcn } from '@/components/forms/funnel/FunnelAddressShadcn';
 
 export default function FunnelAdditionalPage() {
   return (

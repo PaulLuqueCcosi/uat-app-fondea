@@ -8,7 +8,7 @@ import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2, RefreshCw }
 import { uploadDocument } from '@/app/actions/loan.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
-import { CameraModal } from './CameraModal';
+import { CameraModal } from '../../funnel/CameraModal';
 
 interface SectionHeaderProps {
   title: string;

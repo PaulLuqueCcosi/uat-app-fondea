@@ -1,5 +1,4 @@
-import { FunnelEconomicProfile } from '@/components/funnel/FunnelEconomicProfile';
-import { FunnelEconomicProfileShadcn } from '@/components/funnel/FunnelEconomicProfileShadcn';
+import { FunnelEconomicProfileShadcn } from '@/components/forms/funnel/FunnelEconomicProfileShadcn';
 
 export default function FunnelEconomicPage() {
   return (

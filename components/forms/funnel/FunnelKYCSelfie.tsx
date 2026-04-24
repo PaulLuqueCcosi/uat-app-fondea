@@ -8,7 +8,7 @@ import { Camera, Upload, CheckCircle, AlertCircle, Trash2, User, RefreshCw } fro
 import { verifyBiometric } from '@/app/actions/loan.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
-import { CameraModal } from './CameraModal';
+import { CameraModal } from '../../funnel/CameraModal';
 
 interface SectionHeaderProps {
   title: string;
