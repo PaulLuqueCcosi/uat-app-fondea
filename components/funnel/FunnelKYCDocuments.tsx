@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2, RefreshCw } from 'lucide-react';
 import { uploadDocument } from '@/app/actions/loan.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
@@ -267,6 +267,15 @@ export function FunnelKYCDocuments() {
                         <Trash2 className="w-4 h-4 mr-2" />
                         Eliminar
                       </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openCameraModal('front')}
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Volver a tomar
+                      </Button>
                       {!frontUploaded ? (
                         <Button
                           type="button"
@@ -353,6 +362,15 @@ export function FunnelKYCDocuments() {
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Eliminar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openCameraModal('back')}
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Volver a tomar
                       </Button>
                       {!backUploaded ? (
                         <Button

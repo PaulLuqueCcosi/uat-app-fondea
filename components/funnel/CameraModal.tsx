@@ -12,6 +12,7 @@ interface CameraModalProps {
   mode: 'document' | 'face';
   title: string;
   description: string;
+  fullScreen?: boolean;
 }
 
 export function CameraModal({
@@ -21,6 +22,7 @@ export function CameraModal({
   mode,
   title,
   description,
+  fullScreen = false,
 }: CameraModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -267,22 +269,28 @@ export function CameraModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent fullScreen className="bg-black p-0">
+      <DialogContent
+        fullScreen={fullScreen}
+        className={fullScreen
+          ? "bg-black p-0"
+          : "bg-black p-0 w-[95vw] h-[90vh] max-w-2xl rounded-2xl overflow-hidden"
+        }
+      >
         <div className="relative w-full h-full flex flex-col">
           {/* Header */}
-          <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/80 to-transparent p-4">
+          <div className={`absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/80 to-transparent ${fullScreen ? 'p-4' : 'p-3 rounded-t-2xl'}`}>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-white font-semibold">{title}</h3>
-                <p className="text-white/80 text-sm">{description}</p>
+                <h3 className="text-white font-semibold text-base">{title}</h3>
+                <p className="text-white/80 text-xs">{description}</p>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleClose}
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-white/20 h-8 w-8"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </Button>
             </div>
           </div>
@@ -308,7 +316,7 @@ export function CameraModal({
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute top-20 right-4 z-10"
+                className={`absolute ${fullScreen ? 'top-20 right-4' : 'top-16 right-3'} z-10`}
                 onClick={switchCamera}
               >
                 <RefreshCw className="w-5 h-5" />
@@ -317,10 +325,10 @@ export function CameraModal({
           </div>
 
           {/* Footer con botón capturar */}
-          <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent p-6">
+          <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent ${fullScreen ? 'p-6' : 'p-4 rounded-b-2xl'}`}>
             <div className="flex items-center justify-center gap-4">
               <div className="text-center">
-                <p className="text-white/80 text-sm mb-4">
+                <p className="text-white/80 text-xs mb-3">
                   {mode === 'document'
                     ? 'Alinea el DNI dentro del recuadro'
                     : 'Centra tu rostro en el óvalo'}
@@ -328,9 +336,9 @@ export function CameraModal({
                 <Button
                   size="lg"
                   onClick={capturePhoto}
-                  className="bg-primary hover:bg-primary/90 text-white rounded-full w-20 h-20 p-0"
+                  className={`bg-primary hover:bg-primary/90 text-white rounded-full p-0 ${fullScreen ? 'w-20 h-20' : 'w-16 h-16'}`}
                 >
-                  <Camera className="w-8 h-8" />
+                  <Camera className={fullScreen ? 'w-8 h-8' : 'w-7 h-7'} />
                 </Button>
               </div>
             </div>
@@ -338,8 +346,8 @@ export function CameraModal({
 
           {/* Error */}
           {error && (
-            <div className="absolute top-20 left-4 right-4 z-20 bg-destructive/90 text-destructive-foreground p-3 rounded-lg">
-              <p className="text-sm">{error}</p>
+            <div className={`absolute ${fullScreen ? 'top-20' : 'top-16'} left-4 right-4 z-20 bg-destructive/90 text-destructive-foreground p-3 rounded-lg`}>
+              <p className="text-xs">{error}</p>
             </div>
           )}
         </div>

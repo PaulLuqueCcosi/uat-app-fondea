@@ -1,5 +1,11 @@
 import { FunnelKYCSelfie } from '@/components/funnel/FunnelKYCSelfie';
 
 export default function FunnelKYCSelfiePage() {
-  return <FunnelKYCSelfie />;
+  return (
+    <div className='py-4'>
+      <div className='mx-auto w-fit px-4 sm:px-6 lg:px-8'>
+        <FunnelKYCSelfie />
+      </div>
+    </div>
+  );
 }
