@@ -86,7 +86,7 @@ export function FunnelAdditionalInfo({ dashboardMode }: FunnelAdditionalInfoProp
       if (dashboardMode) {
         router.push('/dashboard');
       } else {
-        router.push('/funnel/summary');
+        router.push('/funnel/bank-account');
       }
     } catch (error) {
       console.error('Error saving additional info:', error);

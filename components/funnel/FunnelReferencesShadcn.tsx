@@ -123,7 +123,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false }: FunnelReferenc
     if (dashboardMode) {
       router.push('/dashboard');
     } else {
-      router.push('/funnel/bank-account');
+      router.push('/funnel/additional');
     }
   };
 

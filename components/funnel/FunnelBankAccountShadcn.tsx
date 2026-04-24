@@ -89,7 +89,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAcc
     if (dashboardMode) {
       router.push('/dashboard');
     } else {
-      router.push('/funnel/additional');
+      router.push('/funnel/summary');
     }
   };
 
