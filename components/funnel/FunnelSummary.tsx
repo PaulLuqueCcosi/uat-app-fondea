@@ -129,22 +129,19 @@ export function FunnelSummary() {
         <div className="space-y-6">
         {/* 1. PERFIL LABORAL */}
         <Card className="border-2 overflow-hidden">
-          <button
-            onClick={() => toggleSection('labor')}
-            className="w-full p-6 text-left"
-          >
+          <div className="w-full p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1">
                 <button
                   className="p-2 bg-primary/10 rounded-lg cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSection('labor');
-                  }}
+                  onClick={() => toggleSection('labor')}
                 >
                   <Briefcase className="w-5 h-5 text-primary" />
                 </button>
-                <div className="flex-1">
+                <div
+                  className="flex-1 cursor-pointer"
+                  onClick={() => toggleSection('labor')}
+                >
                   <h3 className="text-lg font-semibold text-foreground">Perfil Laboral</h3>
                   {!expandedSections.labor && (
                     <p className="text-sm text-muted-foreground">
@@ -161,21 +158,23 @@ export function FunnelSummary() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push('/funnel/labor');
-                  }}
+                  onClick={() => router.push('/funnel/labor')}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
-                {expandedSections.labor ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
+                <button
+                  onClick={() => toggleSection('labor')}
+                  className="cursor-pointer"
+                >
+                  {expandedSections.labor ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
               </div>
             </div>
-          </button>
+          </div>
 
           {expandedSections.labor && (
             <div className="px-6 pb-6 space-y-4 border-t">
@@ -219,22 +218,16 @@ export function FunnelSummary() {
 
         {/* 2. PERFIL ECONÓMICO */}
         <Card className="border-2 overflow-hidden">
-          <button
-            onClick={() => toggleSection('economic')}
-            className="w-full p-6 text-left"
-          >
+          <div className="w-full p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1">
                 <button
                   className="p-2 bg-primary/10 rounded-lg cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSection('economic');
-                  }}
+                  onClick={() => toggleSection('economic')}
                 >
                   <DollarSign className="w-5 h-5 text-primary" />
                 </button>
-                <div className="flex-1">
+                <div className="flex-1 cursor-pointer" onClick={() => toggleSection('economic')}>
                   <h3 className="text-lg font-semibold text-foreground">Perfil Económico</h3>
                   {!expandedSections.economic && (
                     <p className="text-sm text-muted-foreground">
@@ -251,21 +244,23 @@ export function FunnelSummary() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push('/funnel/economic');
-                  }}
+                  onClick={() => router.push('/funnel/economic')}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
-                {expandedSections.economic ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
+                <button
+                  onClick={() => toggleSection('economic')}
+                  className="cursor-pointer"
+                >
+                  {expandedSections.economic ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
               </div>
             </div>
-          </button>
+          </div>
 
           {expandedSections.economic && (
             <div className="px-6 pb-6 space-y-4 border-t">
@@ -339,22 +334,16 @@ export function FunnelSummary() {
 
         {/* 3. REFERENCIAS */}
         <Card className="border-2 overflow-hidden">
-          <button
-            onClick={() => toggleSection('references')}
-            className="w-full p-6 text-left"
-          >
+          <div className="w-full p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1">
                 <button
                   className="p-2 bg-primary/10 rounded-lg cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSection('references');
-                  }}
+                  onClick={() => toggleSection('references')}
                 >
                   <Users className="w-5 h-5 text-primary" />
                 </button>
-                <div className="flex-1">
+                <div className="flex-1 cursor-pointer" onClick={() => toggleSection('references')}>
                   <h3 className="text-lg font-semibold text-foreground">Referencias Personales</h3>
                   {!expandedSections.references && (
                     <p className="text-sm text-muted-foreground">
@@ -371,21 +360,23 @@ export function FunnelSummary() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push('/funnel/references');
-                  }}
+                  onClick={() => router.push('/funnel/references')}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
-                {expandedSections.references ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
+                <button
+                  onClick={() => toggleSection('references')}
+                  className="cursor-pointer"
+                >
+                  {expandedSections.references ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
               </div>
             </div>
-          </button>
+          </div>
 
           {expandedSections.references && (
             <div className="px-6 pb-6 border-t pt-4">
@@ -409,22 +400,16 @@ export function FunnelSummary() {
 
         {/* 4. DIRECCIÓN */}
         <Card className="border-2 overflow-hidden">
-          <button
-            onClick={() => toggleSection('address')}
-            className="w-full p-6 text-left"
-          >
+          <div className="w-full p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1">
                 <button
                   className="p-2 bg-primary/10 rounded-lg cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSection('address');
-                  }}
+                  onClick={() => toggleSection('address')}
                 >
                   <MapPin className="w-5 h-5 text-primary" />
                 </button>
-                <div className="flex-1">
+                <div className="flex-1 cursor-pointer" onClick={() => toggleSection('address')}>
                   <h3 className="text-lg font-semibold text-foreground">Dirección de Residencia</h3>
                   {!expandedSections.address && (
                     <p className="text-sm text-muted-foreground">
@@ -441,21 +426,23 @@ export function FunnelSummary() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push('/funnel/address');
-                  }}
+                  onClick={() => router.push('/funnel/address')}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
-                {expandedSections.address ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
+                <button
+                  onClick={() => toggleSection('address')}
+                  className="cursor-pointer"
+                >
+                  {expandedSections.address ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
               </div>
             </div>
-          </button>
+          </div>
 
           {expandedSections.address && (
             <div className="px-6 pb-6 border-t pt-4">
@@ -485,22 +472,16 @@ export function FunnelSummary() {
 
         {/* 5. CUENTA BANCARIA */}
         <Card className="border-2 overflow-hidden">
-          <button
-            onClick={() => toggleSection('bankAccount')}
-            className="w-full p-6 text-left"
-          >
+          <div className="w-full p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1">
                 <button
                   className="p-2 bg-primary/10 rounded-lg cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSection('bankAccount');
-                  }}
+                  onClick={() => toggleSection('bankAccount')}
                 >
                   <Building2 className="w-5 h-5 text-primary" />
                 </button>
-                <div className="flex-1">
+                <div className="flex-1 cursor-pointer" onClick={() => toggleSection('bankAccount')}>
                   <h3 className="text-lg font-semibold text-foreground">Cuenta para Desembolso</h3>
                   {!expandedSections.bankAccount && (
                     <p className="text-sm text-muted-foreground">
@@ -517,21 +498,23 @@ export function FunnelSummary() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push('/funnel/bank-account');
-                  }}
+                  onClick={() => router.push('/funnel/bank-account')}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
-                {expandedSections.bankAccount ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
+                <button
+                  onClick={() => toggleSection('bankAccount')}
+                  className="cursor-pointer"
+                >
+                  {expandedSections.bankAccount ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
               </div>
             </div>
-          </button>
+          </div>
 
           {expandedSections.bankAccount && (
             <div className="px-6 pb-6 border-t pt-4">
