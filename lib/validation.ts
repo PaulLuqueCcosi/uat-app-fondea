@@ -22,6 +22,22 @@ export function isValidDNI(dni: string): boolean {
 }
 
 /**
+ * Valida nombres y apellidos (solo letras, espacios y acentos)
+ */
+export function isValidName(name: string): boolean {
+  const cleaned = name.trim();
+  return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(cleaned) && cleaned.length >= 2;
+}
+
+/**
+ * Valida código de verificación del DNI (3 dígitos)
+ */
+export function isValidVerificationCode(code: string): boolean {
+  const cleaned = code.trim();
+  return /^\d{3}$/.test(cleaned);
+}
+
+/**
  * Valida número de teléfono peruano (9 dígitos, empieza con 9)
  */
 export function isValidPeruvianPhone(phone: string): boolean {

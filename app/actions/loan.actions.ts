@@ -81,19 +81,159 @@ export async function updateSimulation(amount: number, months: number): Promise<
 }
 
 export async function verifyDNI(data: KYCData): Promise<{ success: boolean; error?: string; errorCode?: string }> {
-  await sleep(2500);
+  try {
+    // Simular delay de API externa
+    await sleep(2500);
 
-  // Mock: rechazar DNIs de prueba
+    // Validaciones básicas del lado del servidor
+    if (!data.dni || data.dni.length !== 8 || !/^\d{8}$/.test(data.dni)) {
+      return { 
+        success: false, 
+        error: 'El DNI debe tener exactamente 8 dígitos.', 
+        errorCode: 'invalid_format' 
+      };
+    }
+
+    if (!data.firstName || data.firstName.trim().length < 2) {
+      return { 
+        success: false, 
+        error: 'El primer nombre es obligatorio y debe tener al menos 2 caracteres.', 
+        errorCode: 'invalid_name' 
+      };
+    }
+
+    if (!data.firstLastName || data.firstLastName.trim().length < 2) {
+      return { 
+        success: false, 
+        error: 'El primer apellido es obligatorio y debe tener al menos 2 caracteres.', 
+        errorCode: 'invalid_lastname' 
+      };
+    }
+
+    if (!data.verificationCode || data.verificationCode.length !== 3 || !/^\d{3}$/.test(data.verificationCode)) {
+      return { 
+        success: false, 
+        error: 'El código de verificación debe tener exactamente 3 dígitos.', 
+        errorCode: 'invalid_code' 
+      };
+    }
+
+    // Simular llamada a API externa de RENIEC/validación
+    const validationResult = await validateWithExternalAPI(data);
+    
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: validationResult.error,
+        errorCode: validationResult.errorCode
+      };
+    }
+
+    // Si la validación es exitosa, guardar los datos
+    const app = currentApplication || await initApplication();
+    const kycData: KYCData = {
+      dni: data.dni,
+      firstName: data.firstName.trim().toUpperCase(),
+      secondName: data.secondName?.trim().toUpperCase(),
+      firstLastName: data.firstLastName.trim().toUpperCase(),
+      secondLastName: data.secondLastName?.trim().toUpperCase(),
+      verificationCode: data.verificationCode,
+    };
+
+    currentApplication = { ...app, kyc: kycData };
+    console.log('[SUCCESS] KYC verificado exitosamente:', {
+      dni: kycData.dni,
+      fullName: `${kycData.firstName} ${kycData.secondName || ''} ${kycData.firstLastName} ${kycData.secondLastName || ''}`.trim()
+    });
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('[ERROR] Error en verificación KYC:', error);
+    return { 
+      success: false, 
+      error: 'Error de conexión. Por favor, inténtalo nuevamente.', 
+      errorCode: 'connection_error' 
+    };
+  }
+}
+
+/**
+ * Simula la validación con API externa (RENIEC u otro proveedor)
+ * En producción, aquí iría la llamada real a la API
+ */
+async function validateWithExternalAPI(data: KYCData): Promise<{ success: boolean; error?: string; errorCode?: string }> {
+  // Simular diferentes casos de error para testing
+  
+  // DNI no encontrado en RENIEC
   if (data.dni === '00000000') {
-    return { success: false, error: 'No encontramos este DNI en RENIEC.', errorCode: 'not_found' };
-  }
-  if (data.dni === '11111111') {
-    return { success: false, error: 'Los datos ingresados no coinciden con los registros de RENIEC.', errorCode: 'mismatch' };
+    return { 
+      success: false, 
+      error: 'No encontramos este DNI en los registros de RENIEC. Verifica que esté correcto.', 
+      errorCode: 'dni_not_found' 
+    };
   }
 
-  const app = currentApplication || await initApplication();
-  currentApplication = { ...app, kyc: data };
-  console.log('[MOCK] KYC verificado:', data);
+  // Datos no coinciden
+  if (data.dni === '11111111') {
+    return { 
+      success: false, 
+      error: 'Los datos ingresados no coinciden con los registros oficiales. Revisa que estén exactamente como aparecen en tu DNI.', 
+      errorCode: 'data_mismatch' 
+    };
+  }
+
+  // DNI con problemas de estado
+  if (data.dni === '22222222') {
+    return { 
+      success: false, 
+      error: 'Este DNI presenta observaciones en RENIEC. Contacta con soporte para más información.', 
+      errorCode: 'dni_with_issues' 
+    };
+  }
+
+  // Código de verificación incorrecto
+  if (data.verificationCode === '000') {
+    return { 
+      success: false, 
+      error: 'El código de verificación no coincide con el DNI. Revisa los 3 dígitos en la parte inferior de tu documento.', 
+      errorCode: 'invalid_verification_code' 
+    };
+  }
+
+  // Simular timeout de API
+  if (data.dni === '99999999') {
+    await sleep(8000); // Simular timeout
+    return { 
+      success: false, 
+      error: 'El servicio de validación no está disponible temporalmente. Inténtalo en unos minutos.', 
+      errorCode: 'service_timeout' 
+    };
+  }
+
+  // TODO: En producción, aquí iría la llamada real a la API
+  // const response = await fetch('https://api-reniec.gob.pe/validate', {
+  //   method: 'POST',
+  //   headers: {
+  //     'Content-Type': 'application/json',
+  //     'Authorization': `Bearer ${process.env.RENIEC_API_KEY}`,
+  //   },
+  //   body: JSON.stringify({
+  //     dni: data.dni,
+  //     firstName: data.firstName,
+  //     firstLastName: data.firstLastName,
+  //     verificationCode: data.verificationCode,
+  //   }),
+  // });
+  // 
+  // if (!response.ok) {
+  //   throw new Error(`API Error: ${response.status}`);
+  // }
+  // 
+  // const result = await response.json();
+  // return result;
+
+  // Por ahora, simular éxito para DNIs válidos
   return { success: true };
 }
 

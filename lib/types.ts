@@ -33,7 +33,9 @@ export interface LoanSimulation {
 export interface KYCData {
   dni: string;
   firstName: string;
-  lastName: string;
+  secondName?: string;
+  firstLastName: string;
+  secondLastName?: string;
   verificationCode: string;
 }
 

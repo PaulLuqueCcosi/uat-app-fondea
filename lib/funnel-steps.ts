@@ -23,6 +23,14 @@ export interface FunnelStep {
 
 export const FUNNEL_STEPS: FunnelStep[] = [
   {
+    id: 0,
+    title: 'Verificación de Identidad',
+    path: '/funnel/kyc-validation',
+    icon: CreditCard,
+    description: 'Validar datos del DNI',
+    nextPath: '/funnel/labor',
+  },
+  {
     id: 1,
     title: 'Perfil Laboral',
     path: '/funnel/labor',
