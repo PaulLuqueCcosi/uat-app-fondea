@@ -22,7 +22,7 @@ type Detection = {
 // Ajusta estos valores para controlar la exigencia de la detección facial.
 // THRESHOLD_GREEN  → mínimo para considerar el rostro válido (habilita captura)
 // THRESHOLD_ORANGE → mínimo para mostrar advertencia naranja (por debajo → rojo)
-const THRESHOLD_GREEN  = 0.95;
+const THRESHOLD_GREEN  = 0.90;
 const THRESHOLD_ORANGE = 0.61;
 
 type FaceStatus = 'none' | 'red' | 'orange' | 'green';
@@ -184,9 +184,9 @@ export function CameraModal({
     );
   }, []);
 
-  // ── Dibujar overlay de rostro ───────────────────────────────────────────────
+  // ── Dibujar overlay de rostro (sin óvalo, solo badge de estado) ────────────
   const drawFaceOverlay = useCallback(
-    (canvas: HTMLCanvasElement, video: HTMLVideoElement, ovalColor: string) => {
+    (canvas: HTMLCanvasElement, video: HTMLVideoElement, _ovalColor: string) => {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
@@ -195,33 +195,8 @@ export function CameraModal({
         canvas.height = video.videoHeight || 480;
       }
 
+      // Limpiar — sin sombra ni óvalo, la cámara se ve completa
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Sombra oscura
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const cx = canvas.width  / 2;
-      const cy = canvas.height / 2;
-      const rx = canvas.width  * 0.32;
-      const ry = canvas.height * 0.42;
-
-      // Recorte transparente (óvalo)
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Borde del óvalo con color de estado
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = ovalColor;
-      ctx.lineWidth   = 5;
-      ctx.shadowColor = ovalColor;
-      ctx.shadowBlur  = 12;
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
     },
     []
   );

@@ -30,7 +30,7 @@ type FaceDetectorInstance = {
 // Ajusta estos valores para controlar la exigencia de la detección facial.
 // THRESHOLD_GREEN  → mínimo para considerar el rostro válido (habilita continuar)
 // THRESHOLD_ORANGE → mínimo para mostrar advertencia naranja (por debajo → rojo)
-const THRESHOLD_GREEN  = 0.95;
+const THRESHOLD_GREEN  = 0.90;
 const THRESHOLD_ORANGE = 0.61;
 
 type FaceStatus = 'none' | 'red' | 'orange' | 'green';
