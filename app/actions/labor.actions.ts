@@ -128,9 +128,9 @@ export async function saveLaborDetails(
     }
 
     if (situation.employment_status === 'EMPLEADO_DEPENDIENTE') {
-      // Validar años de actividad para empleado dependiente (mínimo 1 año)
-      if (details.years_of_activity === undefined || details.years_of_activity === null || details.years_of_activity < 1) {
-        return { success: false, error: 'Debes tener al menos 1 año en la empresa.' };
+      // Validar años de actividad para empleado dependiente (no negativos)
+      if (details.years_of_activity === undefined || details.years_of_activity === null || details.years_of_activity < 0) {
+        return { success: false, error: 'Ingresa un tiempo válido en la empresa.' };
       }
     }
 

@@ -69,12 +69,12 @@ const laborFormSchema = z.object({
   if (['INDEPENDIENTE', 'FREELANCE'].includes(data.employment_status) && (data.years_of_activity === undefined || data.years_of_activity === '')) {
     ctx.addIssue({ code: 'custom', message: 'Ingresa los años de actividad', path: ['years_of_activity'] });
   }
-  // Antigüedad mínima 1 año para EMPLEADO_DEPENDIENTE
+  // Antigüedad para EMPLEADO_DEPENDIENTE (no negativos)
   if (data.employment_status === 'EMPLEADO_DEPENDIENTE') {
     if (data.years_of_activity === undefined || data.years_of_activity === '') {
       ctx.addIssue({ code: 'custom', message: 'Ingresa tu tiempo en la empresa', path: ['years_of_activity'] });
-    } else if (Number(data.years_of_activity) < 1) {
-      ctx.addIssue({ code: 'custom', message: 'Debes tener al menos 1 año en la empresa', path: ['years_of_activity'] });
+    } else if (Number(data.years_of_activity) < 0) {
+      ctx.addIssue({ code: 'custom', message: 'El tiempo no puede ser negativo', path: ['years_of_activity'] });
     }
   }
   // Años + RUC para EMPRESARIO
@@ -221,6 +221,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         },
         {
           monthly_income: Number(data.monthly_income),
+          income_receipt_method: data.income_receipt_method as IncomeReceiptMethod,
           has_additional_income: data.has_additional_income,
           additional_incomes: (data.has_additional_income ? data.additional_incomes ?? [] : []).map(i => ({
             id: i.id,
@@ -251,6 +252,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
   // ── Vista readonly (datos guardados) ────────────────────────────────────────
   const employmentLabel = EMPLOYMENT_OPTIONS.find(o => o.value === prevSituation?.employment_status)?.label ?? '—';
   const industryLabel = INDUSTRY_OPTIONS.find(o => o.value === prevDetails?.industry)?.label ?? '—';
+  const incomeReceiptLabel = INCOME_RECEIPT_OPTIONS.find(o => o.value === prevIncome?.income_receipt_method)?.label ?? '—';
 
   const verifiedView = (
     <div className="space-y-6">
@@ -268,34 +270,100 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <DataRow label="Situación laboral" value={employmentLabel} />
-        {prevSituation?.employment_status !== 'PENSIONISTA' && (
-          <DataRow label="Sector" value={industryLabel} />
-        )}
-        {prevDetails?.years_of_activity !== undefined && <DataRow label="Años de actividad" value={prevDetails.years_of_activity} />}
-        {prevDetails?.business_ruc && <DataRow label="RUC" value={prevDetails.business_ruc} />}
-        <DataRow label="Ingreso mensual neto" value={`S/ ${Number(prevIncome?.monthly_income ?? 0).toLocaleString()}`} />
-        {prevIncome?.income_receipt_method && (
-          <DataRow 
-            label="Cómo recibe ingresos" 
-            value={INCOME_RECEIPT_OPTIONS.find(o => o.value === prevIncome.income_receipt_method)?.label ?? prevIncome.income_receipt_method} 
+      {/* Situación Laboral */}
+      <div>
+        <h3 className="text-sm font-semibold text-primary mb-3">Situación Laboral</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <DataRow label="Situación laboral" value={employmentLabel} />
+          {prevSituation?.employment_status !== 'PENSIONISTA' && (
+            <DataRow label="Sector" value={industryLabel} />
+          )}
+        </div>
+      </div>
+
+      {/* Detalles Laborales */}
+      {prevSituation?.employment_status !== 'PENSIONISTA' && (
+        <>
+          <Separator className="bg-border h-px" />
+          <div>
+            <h3 className="text-sm font-semibold text-primary mb-3">Detalles Laborales</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {prevDetails?.company && (
+                <DataRow label="Empresa" value={prevDetails.company} />
+              )}
+              {prevDetails?.position && (
+                <DataRow label="Cargo" value={prevDetails.position} />
+              )}
+              {prevDetails?.years_of_activity !== undefined && (
+                <DataRow
+                  label={
+                    prevSituation?.employment_status === 'EMPLEADO_DEPENDIENTE'
+                      ? 'Tiempo en la empresa'
+                      : prevSituation?.employment_status === 'EMPRESARIO'
+                      ? 'Años con el negocio'
+                      : 'Años de actividad'
+                  }
+                  value={`${prevDetails.years_of_activity} ${prevDetails.years_of_activity === 1 ? 'año' : 'años'}`}
+                />
+              )}
+              {prevDetails?.business_ruc && (
+                <DataRow label="RUC del negocio" value={prevDetails.business_ruc} />
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Ingresos */}
+      <Separator className="bg-border h-px" />
+      <div>
+        <h3 className="text-sm font-semibold text-primary mb-3">Ingresos</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <DataRow
+            label="Ingreso mensual neto"
+            value={`S/ ${Number(prevIncome?.monthly_income ?? 0).toLocaleString()}`}
           />
-        )}
-        <DataRow label="Ingresos adicionales" value={prevIncome?.has_additional_income} />
-        {prevIncome?.has_additional_income && prevIncome.additional_incomes.length > 0 && (
-          <div className="sm:col-span-2 space-y-2">
-            <span className="text-xs text-muted-foreground">Detalle de ingresos adicionales</span>
-            {prevIncome.additional_incomes.map((inc) => {
-              const typeLabel = ADDITIONAL_INCOME_TYPE_OPTIONS.find(o => o.value === inc.type)?.label ?? inc.type;
-              const label = inc.type === 'OTRO' && inc.custom_type ? inc.custom_type : typeLabel;
-              return (
-                <div key={inc.id} className="flex items-center justify-between text-sm border rounded-lg px-3 py-2">
-                  <span className="text-foreground">{label}{inc.description ? ` — ${inc.description}` : ''}</span>
-                  <span className="font-medium text-foreground">S/ {Number(inc.amount).toLocaleString()}</span>
-                </div>
-              );
-            })}
+          <DataRow
+            label="Cómo recibes tus ingresos"
+            value={incomeReceiptLabel}
+          />
+          <DataRow
+            label="¿Tienes ingresos adicionales?"
+            value={prevIncome?.has_additional_income ? 'Sí' : 'No'}
+          />
+        </div>
+
+        {prevIncome?.has_additional_income && prevIncome.additional_incomes && prevIncome.additional_incomes.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs text-muted-foreground mb-2 font-medium">Detalle de ingresos adicionales:</p>
+            <div className="space-y-2">
+              {prevIncome.additional_incomes.map((inc) => {
+                const typeLabel = ADDITIONAL_INCOME_TYPE_OPTIONS.find(o => o.value === inc.type)?.label ?? inc.type;
+                const label = inc.type === 'OTRO' && inc.custom_type ? inc.custom_type : typeLabel;
+                return (
+                  <div key={inc.id} className="flex items-center justify-between text-sm border rounded-lg px-3 py-2.5 bg-muted/30">
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">{label}</p>
+                      {inc.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{inc.description}</p>
+                      )}
+                    </div>
+                    <span className="font-semibold text-foreground ml-4">S/ {Number(inc.amount).toLocaleString()}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 p-3 bg-secondary/10 rounded-lg border border-secondary/20">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground">Ingreso total mensual</span>
+                <span className="text-base font-bold text-secondary">
+                  S/ {(
+                    Number(prevIncome.monthly_income) +
+                    prevIncome.additional_incomes.reduce((sum, inc) => sum + Number(inc.amount), 0)
+                  ).toLocaleString()}
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -384,8 +452,8 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                     render={({ field }) => (
                       <FormItem className="flex flex-col items-start gap-1">
                         <FormLabel>Tiempo en la empresa</FormLabel>
-                        <Input type="number" placeholder="2" {...field} className="w-full" min="1" />
-                        <FormDescription>¿Cuántos años llevas en tu empresa actual? (mínimo 1 año)</FormDescription>
+                        <Input type="number" placeholder="2" {...field} className="w-full" min="0" step="0.1" />
+                        <FormDescription>¿Cuántos años llevas en tu empresa actual?</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
