@@ -30,6 +30,8 @@ import {
   getDistritosAction,
   type UbigeoOption,
 } from '@/app/actions/ubigeo.actions';
+import { GoogleAddressAutocomplete } from '@/components/forms/solicitar/GoogleAddressAutocomplete';
+import type { AddressDetail } from '@/app/actions/address.actions';
 
 interface FunnelAddressProps {
   dashboardMode?: boolean;
@@ -240,10 +242,17 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1">
                     <FormLabel>Dirección completa</FormLabel>
-                    <Input
-                      placeholder="Av. Javier Prado 1234, Dpto 501"
-                      {...field}
-                      className="w-full"
+                    <GoogleAddressAutocomplete
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      onAddressSelected={(detail: AddressDetail) => {
+                        // Cuando tengas el backend, aquí puedes pre-rellenar
+                        // otros campos del form con los datos del detalle:
+                        // form.setValue('street_address', detail.street);
+                        // etc.
+                        console.log('[Google Address] Detalle seleccionado:', detail);
+                      }}
+                      error={!!form.formState.errors.google_address}
                     />
                     <FormDescription>
                       Escribe tu dirección y selecciona de las sugerencias
