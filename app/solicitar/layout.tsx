@@ -6,10 +6,8 @@ import { FunnelLayoutClient } from '@/components/solicitar/SolicitarLayoutClient
 
 export default async function FunnelLayout({
   children,
-  params,
 }: {
   children: React.ReactNode;
-  params: Record<string, string>;
 }) {
   const user = await requireValidSession();
 

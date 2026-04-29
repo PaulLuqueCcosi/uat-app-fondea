@@ -98,8 +98,8 @@ const kycValidationSchema = z.object({
       const today = new Date();
       const age = today.getFullYear() - date.getFullYear()
         - (today < new Date(today.getFullYear(), date.getMonth(), date.getDate()) ? 1 : 0);
-      return age >= 21 && age <= 65;
-    }, { message: 'Debes tener entre 21 y 65 años para solicitar un préstamo' }),
+      return age >= 18 && age <= 80;
+    }, { message: 'Debes tener entre 18 y 80 años para solicitar un préstamo' }),
 });
 
 type KYCValidationFormValues = z.infer<typeof kycValidationSchema>;
