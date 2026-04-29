@@ -59,32 +59,41 @@ const laborFormSchema = z.object({
 }).superRefine((data, ctx) => {
   // Sector requerido para todos excepto PENSIONISTA
   if (data.employment_status && data.employment_status !== 'PENSIONISTA' && !data.industry) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecciona el sector', path: ['industry'] });
+    ctx.addIssue({ code: 'custom', message: 'Selecciona el sector', path: ['industry'] });
+  }
+  // Empresa y cargo — obligatorios para EMPLEADO_DEPENDIENTE
+  if (data.employment_status === 'EMPLEADO_DEPENDIENTE') {
+    if (!data.company?.trim()) {
+      ctx.addIssue({ code: 'custom', message: 'Ingresa el nombre de tu empresa', path: ['company'] });
+    }
+    if (!data.position?.trim()) {
+      ctx.addIssue({ code: 'custom', message: 'Ingresa tu cargo o puesto', path: ['position'] });
+    }
   }
   // Años de actividad para INDEPENDIENTE y FREELANCE
-  if (['INDEPENDIENTE', 'FREELANCE'].includes(data.employment_status) && !data.years_of_activity) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ingresa los años de actividad', path: ['years_of_activity'] });
+  if (['INDEPENDIENTE', 'FREELANCE'].includes(data.employment_status) && (data.years_of_activity === undefined || data.years_of_activity === '')) {
+    ctx.addIssue({ code: 'custom', message: 'Ingresa los años de actividad', path: ['years_of_activity'] });
   }
   // Años + RUC para EMPRESARIO
   if (data.employment_status === 'EMPRESARIO') {
-    if (!data.years_of_activity) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ingresa los años con tu negocio', path: ['years_of_activity'] });
+    if (data.years_of_activity === undefined || data.years_of_activity === '') {
+      ctx.addIssue({ code: 'custom', message: 'Ingresa los años con tu negocio', path: ['years_of_activity'] });
     }
     if (!data.business_ruc) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ingresa el RUC del negocio', path: ['business_ruc'] });
+      ctx.addIssue({ code: 'custom', message: 'Ingresa el RUC del negocio', path: ['business_ruc'] });
     } else if (data.business_ruc.length !== LABOR_CONFIG.RUC_LENGTH) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `El RUC debe tener ${LABOR_CONFIG.RUC_LENGTH} dígitos`, path: ['business_ruc'] });
+      ctx.addIssue({ code: 'custom', message: `El RUC debe tener ${LABOR_CONFIG.RUC_LENGTH} dígitos`, path: ['business_ruc'] });
     }
   }
   // Al menos un ingreso adicional si el switch está activo
   if (data.has_additional_income && (!data.additional_incomes || data.additional_incomes.length === 0)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Agrega al menos un ingreso adicional', path: ['has_additional_income'] });
+    ctx.addIssue({ code: 'custom', message: 'Agrega al menos un ingreso adicional', path: ['has_additional_income'] });
   }
   // custom_type requerido cuando type === 'OTRO'
   if (data.additional_incomes) {
     data.additional_incomes.forEach((item, _i) => {
       if (item.type === 'OTRO' && !item.custom_type?.trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Especifica el tipo de ingreso', path: [`additional_incomes.${_i}.custom_type`] });
+        ctx.addIssue({ code: 'custom', message: 'Especifica el tipo de ingreso', path: [`additional_incomes.${_i}.custom_type`] });
       }
     });
   }
@@ -257,7 +266,9 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <DataRow label="Situación laboral" value={employmentLabel} />
-        <DataRow label="Sector" value={industryLabel} />
+        {prevSituation?.employment_status !== 'PENSIONISTA' && (
+          <DataRow label="Sector" value={industryLabel} />
+        )}
         {prevDetails?.company && <DataRow label="Empresa" value={prevDetails.company} />}
         {prevDetails?.position && <DataRow label="Cargo" value={prevDetails.position} />}
         {prevDetails?.years_of_activity !== undefined && <DataRow label="Años de actividad" value={prevDetails.years_of_activity} />}
@@ -267,7 +278,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         {prevIncome?.has_additional_income && prevIncome.additional_incomes.length > 0 && (
           <div className="sm:col-span-2 space-y-2">
             <span className="text-xs text-muted-foreground">Detalle de ingresos adicionales</span>
-            {prevIncome.additional_incomes.map((inc, i) => {
+            {prevIncome.additional_incomes.map((inc) => {
               const typeLabel = ADDITIONAL_INCOME_TYPE_OPTIONS.find(o => o.value === inc.type)?.label ?? inc.type;
               const label = inc.type === 'OTRO' && inc.custom_type ? inc.custom_type : typeLabel;
               return (

@@ -131,10 +131,13 @@ export async function saveLaborDetails(
       if (!details.company?.trim()) {
         return { success: false, error: 'Ingresa el nombre de tu empresa.' };
       }
+      if (!details.position?.trim()) {
+        return { success: false, error: 'Ingresa tu cargo o puesto.' };
+      }
     }
 
     if (['INDEPENDIENTE', 'FREELANCE', 'EMPRESARIO'].includes(situation.employment_status)) {
-      if (!details.years_of_activity || details.years_of_activity < 0) {
+      if (details.years_of_activity === undefined || details.years_of_activity === null || details.years_of_activity < 0) {
         return { success: false, error: 'Ingresa los años de actividad.' };
       }
     }
@@ -167,7 +170,7 @@ export async function saveLaborIncome(
   try {
     await new Promise((r) => setTimeout(r, 400));
 
-    if (!income.monthly_income || income.monthly_income < LABOR_CONFIG.MIN_MONTHLY_INCOME) {
+    if (income.monthly_income === undefined || income.monthly_income === null || income.monthly_income < LABOR_CONFIG.MIN_MONTHLY_INCOME) {
       return {
         success: false,
         error: `El ingreso mensual mínimo es S/ ${LABOR_CONFIG.MIN_MONTHLY_INCOME}.`,
@@ -230,9 +233,9 @@ export async function saveLaborProfile(
     const detailsResult = await saveLaborDetails(details);
     if (!detailsResult.success) return detailsResult;
   } else {
-    // Para PENSIONISTA guardamos un details vacío pero verificado
-    const detailsDB = await readJSON<LaborDetails>(DETAILS_DB);
+    // Para PENSIONISTA guardamos un details marcado como verificado sin campos extra
     const user = await requireValidSession();
+    const detailsDB = await readJSON<LaborDetails>(DETAILS_DB);
     detailsDB[user.id] = { industry: 'OTRO', verified: true };
     await writeJSON(DETAILS_DB, detailsDB);
   }
