@@ -402,7 +402,7 @@ export function FunnelKYCValidation({
 
         {/* Código de verificación */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-          <SectionHeader title="Código de verificación" description="Los 3 dígitos de tu DNI" />
+          <SectionHeader title="Código de verificación" description="Código verificador de tu DNI" />
           <div className="md:col-span-2">
             <FormField
               control={form.control}

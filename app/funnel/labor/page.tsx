@@ -1,13 +1,20 @@
+import { redirect } from 'next/navigation';
+import { getKYCData } from '@/app/actions/kyc.actions';
 import { FunnelLaborProfileShadcn } from '@/components/forms/funnel/FunnelLaborProfileShadcn';
-import { Card, CardContent } from '@/components/ui/card';
 
-export default function FunnelLaborPage() {
-  // return <FunnelLaborProfileShadcn />;
+export default async function FunnelLaborPage() {
+  // El KYC debe estar verificado para poder avanzar al siguiente paso
+  const { data } = await getKYCData();
+
+  if (!data?.verified) {
+    redirect('/funnel/kyc-validation');
+  }
+
   return (
-    <div className='py-4'>
-      <div className='mx-auto w-full px-4 sm:px-6 lg:px-8'>
+    <div className="py-4">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
         <FunnelLaborProfileShadcn />
       </div>
-    </div>);
-  // return <FunnelLaborProfile />;
+    </div>
+  );
 }
