@@ -129,6 +129,7 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
   const [departamentos, setDepartamentos] = useState<UbigeoOption[]>([]);
   const [provincias, setProvincias]       = useState<UbigeoOption[]>([]);
   const [distritos, setDistritos]         = useState<UbigeoOption[]>([]);
+  const [googlePrefilled, setGooglePrefilled] = useState(false);
 
   // Carga inicial de departamentos
   useEffect(() => {
@@ -194,7 +195,17 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       type="button"
-                      onClick={() => field.onChange('google')}
+                      onClick={() => {
+                        field.onChange('google');
+                        // Manual → Google: limpia todo
+                        form.setValue('google_address', '');
+                        form.setValue('region', '');
+                        form.setValue('province', '');
+                        form.setValue('district', '');
+                        setProvincias([]);
+                        setDistritos([]);
+                        setGooglePrefilled(false);
+                      }}
                       className={`p-4 rounded-lg border-2 transition-all text-left ${
                         field.value === 'google'
                           ? 'border-primary bg-primary/5'
@@ -207,7 +218,21 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
                     </button>
                     <button
                       type="button"
-                      onClick={() => field.onChange('manual')}
+                      onClick={async () => {
+                        field.onChange('manual');
+                        // Google → Manual: mantiene region/province/district
+                        // Solo recarga las listas si hay valores pre-rellenados
+                        const currentRegion   = form.getValues('region');
+                        const currentProvince = form.getValues('province');
+                        if (currentRegion && provincias.length === 0) {
+                          const provs = await getProvinciasAction(currentRegion);
+                          setProvincias(provs);
+                        }
+                        if (currentProvince && distritos.length === 0) {
+                          const dists = await getDistritosAction(currentProvince);
+                          setDistritos(dists);
+                        }
+                      }}
                       className={`p-4 rounded-lg border-2 transition-all text-left ${
                         field.value === 'manual'
                           ? 'border-primary bg-primary/5'
@@ -235,7 +260,7 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
               description="Busca tu dirección con Google"
             />
 
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 space-y-8">
               <FormField
                 control={form.control}
                 name="google_address"
@@ -244,13 +269,43 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
                     <FormLabel>Dirección completa</FormLabel>
                     <GoogleAddressAutocomplete
                       value={field.value ?? ''}
-                      onChange={field.onChange}
-                      onAddressSelected={(detail: AddressDetail) => {
-                        // Cuando tengas el backend, aquí puedes pre-rellenar
-                        // otros campos del form con los datos del detalle:
-                        // form.setValue('street_address', detail.street);
-                        // etc.
-                        console.log('[Google Address] Detalle seleccionado:', detail);
+                      onChange={(val) => {
+                        field.onChange(val);
+                        // Si el usuario borra el input, limpia el pre-relleno
+                        if (!val) {
+                          setGooglePrefilled(false);
+                          form.setValue('region', '');
+                          form.setValue('province', '');
+                          form.setValue('district', '');
+                          setProvincias([]);
+                          setDistritos([]);
+                        }
+                      }}
+                      onAddressSelected={async (detail: AddressDetail) => {
+                        setGooglePrefilled(false);
+                        if (detail.matched_departamento_id) {
+                          form.setValue('region', detail.matched_departamento_id);
+                          const provs = await getProvinciasAction(detail.matched_departamento_id);
+                          setProvincias(provs);
+
+                          if (detail.matched_provincia_id) {
+                            form.setValue('province', detail.matched_provincia_id);
+                            const dists = await getDistritosAction(detail.matched_provincia_id);
+                            setDistritos(dists);
+                            form.setValue('district', detail.matched_distrito_id ?? '');
+                          } else {
+                            form.setValue('province', '');
+                            form.setValue('district', '');
+                            setDistritos([]);
+                          }
+                          setGooglePrefilled(true);
+                        } else {
+                          form.setValue('region', '');
+                          form.setValue('province', '');
+                          form.setValue('district', '');
+                          setProvincias([]);
+                          setDistritos([]);
+                        }
                       }}
                       error={!!form.formState.errors.google_address}
                     />
@@ -261,6 +316,104 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
                   </FormItem>
                 )}
               />
+
+              {/* Selects de ubigeo — siempre visibles en modo Google para que el usuario valide */}
+              <div className="space-y-4">
+                {googlePrefilled && (
+                  <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary">
+                    <span>✦</span>
+                    <span>Completado automáticamente. Verifica que los datos sean correctos y corrígelos si es necesario.</span>
+                  </div>
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="region"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-1">
+                      <FormLabel>Departamento</FormLabel>
+                      <NativeSelect
+                        {...field}
+                        className="w-full"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          form.setValue('province', '');
+                          form.setValue('district', '');
+                          setProvincias([]);
+                          setDistritos([]);
+                          setGooglePrefilled(false);
+                          if (e.target.value) {
+                            getProvinciasAction(e.target.value).then(setProvincias);
+                          }
+                        }}
+                      >
+                        <NativeSelectOption value="">Selecciona el departamento</NativeSelectOption>
+                        {departamentos.map((opt) => (
+                          <NativeSelectOption key={opt.value} value={opt.value}>{opt.label}</NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {watchedRegion && (
+                  <FormField
+                    control={form.control}
+                    name="province"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col gap-1">
+                        <FormLabel>Provincia</FormLabel>
+                        <NativeSelect
+                          {...field}
+                          className="w-full"
+                          onChange={(e) => {
+                            field.onChange(e);
+                            form.setValue('district', '');
+                            setDistritos([]);
+                            setGooglePrefilled(false);
+                            if (e.target.value) {
+                              getDistritosAction(e.target.value).then(setDistritos);
+                            }
+                          }}
+                        >
+                          <NativeSelectOption value="">Selecciona la provincia</NativeSelectOption>
+                          {provincias.map((opt) => (
+                            <NativeSelectOption key={opt.value} value={opt.value}>{opt.label}</NativeSelectOption>
+                          ))}
+                        </NativeSelect>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {watchedRegion && form.watch('province') && (
+                  <FormField
+                    control={form.control}
+                    name="district"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col gap-1">
+                        <FormLabel>Distrito</FormLabel>
+                        <NativeSelect
+                          {...field}
+                          className="w-full"
+                          onChange={(e) => {
+                            field.onChange(e);
+                            setGooglePrefilled(false);
+                          }}
+                        >
+                          <NativeSelectOption value="">Selecciona el distrito</NativeSelectOption>
+                          {distritos.map((opt) => (
+                            <NativeSelectOption key={opt.value} value={opt.value}>{opt.label}</NativeSelectOption>
+                          ))}
+                        </NativeSelect>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
             </div>
           </div>
         ) : (
