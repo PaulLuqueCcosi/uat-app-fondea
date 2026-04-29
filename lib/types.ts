@@ -37,6 +37,8 @@ export interface KYCData {
   firstLastName: string;
   secondLastName?: string;
   verificationCode: string;
+  /** El backend indica si los datos ya fueron validados exitosamente */
+  verified?: boolean;
 }
 
 export interface LaborData {

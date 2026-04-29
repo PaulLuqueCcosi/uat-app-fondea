@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CreditCard, Info, CheckCircle2 } from 'lucide-react';
+import { CreditCard, Info, CheckCircle2, Pencil, ShieldCheck } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
 import { isValidDNI } from '@/lib/validation';
 import { KYCData } from '@/lib/types';
@@ -23,11 +23,12 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
-import { verifyDNI } from '@/app/actions/loan.actions';
+import { saveKYCData } from '@/app/actions/kyc.actions';
 import { useState } from 'react';
 
 interface FunnelKYCValidationProps {
   dashboardMode?: boolean;
+  initialData?: KYCData | null;
 }
 
 interface SectionHeaderProps {
@@ -88,24 +89,35 @@ const kycValidationSchema = z.object({
 
 type KYCValidationFormValues = z.infer<typeof kycValidationSchema>;
 
-export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidationProps) {
+export function FunnelKYCValidation({ dashboardMode = false, initialData }: FunnelKYCValidationProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
+
+  // Si el backend ya marcó como verificado, arrancamos en modo readonly
+  const [isVerified, setIsVerified] = useState(initialData?.verified === true);
+  const [isEditing, setIsEditing] = useState(!initialData?.verified);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
 
   const form = useForm<KYCValidationFormValues>({
     resolver: zodResolver(kycValidationSchema),
     defaultValues: {
-      dni: '',
-      firstName: '',
-      secondName: '',
-      firstLastName: '',
-      secondLastName: '',
-      verificationCode: '',
+      dni: initialData?.dni ?? '',
+      firstName: initialData?.firstName ?? '',
+      secondName: initialData?.secondName ?? '',
+      firstLastName: initialData?.firstLastName ?? '',
+      secondLastName: initialData?.secondLastName ?? '',
+      verificationCode: initialData?.verificationCode ?? '',
     },
   });
+
+  const handleEdit = () => {
+    // Al editar, el estado verificado se pierde — el backend re-validará al guardar
+    setIsVerified(false);
+    setIsEditing(true);
+    setVerificationError(null);
+  };
 
   const onSubmit = async (data: KYCValidationFormValues) => {
     setIsVerifying(true);
@@ -121,27 +133,25 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
         verificationCode: data.verificationCode,
       };
 
-      const result = await verifyDNI(kycData);
+      const result = await saveKYCData(kycData);
 
       if (!result.success) {
         setVerificationError(result.error || 'Error en la verificación');
         setIsVerifying(false);
-        
-        // Scroll al error para mejor UX
         setTimeout(() => {
-          const errorElement = document.querySelector('[data-error="verification"]');
-          if (errorElement) {
-            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
+          document
+            .querySelector('[data-error="verification"]')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
-        
         return;
       }
 
-      // Verificación exitosa
-      if (dashboardMode) {
-        router.push('/dashboard');
-      } else {
+      // El backend validó correctamente
+      setIsVerified(true);
+      setIsEditing(false);
+      setIsVerifying(false);
+
+      if (!dashboardMode) {
         router.push(currentStep?.nextPath || '/funnel/kyc-documents');
       }
     } catch (error) {
@@ -151,16 +161,84 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
     }
   };
 
-  const content = (
+  // ── Vista verificada (readonly) ──────────────────────────────────────────
+  const verifiedView = (
+    <div className="space-y-6">
+      {/* Banner de verificación exitosa */}
+      <div className="flex items-center gap-3 rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3">
+        <ShieldCheck className="h-5 w-5 shrink-0 text-secondary" />
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-secondary">Identidad verificada</p>
+          <p className="text-xs text-muted-foreground">
+            Tus datos fueron validados correctamente. Si necesitas corregir algo, puedes editar.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleEdit}
+          className="shrink-0 gap-1.5"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          Editar
+        </Button>
+      </div>
+
+      {/* Resumen de datos en readonly */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <DataRow label="DNI" value={initialData?.dni ?? form.getValues('dni')} mono />
+        <DataRow label="Código de verificación" value={initialData?.verificationCode ?? form.getValues('verificationCode')} mono />
+        <DataRow
+          label="Nombres"
+          value={[
+            initialData?.firstName ?? form.getValues('firstName'),
+            initialData?.secondName ?? form.getValues('secondName'),
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        />
+        <DataRow
+          label="Apellidos"
+          value={[
+            initialData?.firstLastName ?? form.getValues('firstLastName'),
+            initialData?.secondLastName ?? form.getValues('secondLastName'),
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        />
+      </div>
+
+      {/* Botón continuar en modo funnel */}
+      {!dashboardMode && (
+        <>
+          <Separator className="bg-primary/20 h-px" />
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => router.back()}>
+              Atrás
+            </Button>
+            <Button
+              type="button"
+              onClick={() => router.push(currentStep?.nextPath || '/funnel/kyc-documents')}
+            >
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Continuar
+              </span>
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // ── Formulario editable ──────────────────────────────────────────────────
+  const editForm = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
-        {/* Sección de datos del DNI */}
+        {/* DNI */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-          <SectionHeader
-            title="Número de DNI"
-            description="Ingresa tu número de documento"
-          />
-
+          <SectionHeader title="Número de DNI" description="Ingresa tu número de documento" />
           <div className="md:col-span-2">
             <FormField
               control={form.control}
@@ -173,10 +251,7 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
                     {...field}
                     className="w-full font-mono text-lg"
                     maxLength={8}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
-                      field.onChange(value);
-                    }}
+                    onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
                   />
                   <FormDescription>8 dígitos sin espacios ni guiones</FormDescription>
                   <FormMessage />
@@ -188,13 +263,9 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
 
         <Separator className="my-10 bg-primary/20 h-px" />
 
-        {/* Sección de nombres */}
+        {/* Nombres */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-          <SectionHeader
-            title="Nombres"
-            description="Como aparecen en tu DNI"
-          />
-
+          <SectionHeader title="Nombres" description="Como aparecen en tu DNI" />
           <div className="space-y-8 md:col-span-2">
             <FormField
               control={form.control}
@@ -206,17 +277,17 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
                     placeholder="Juan"
                     {...field}
                     className="w-full"
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
-                      field.onChange(value.toUpperCase());
-                    }}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
+                      )
+                    }
                   />
                   <FormDescription>Exactamente como aparece en tu DNI</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="secondName"
@@ -227,10 +298,11 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
                     placeholder="Carlos (opcional)"
                     {...field}
                     className="w-full"
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
-                      field.onChange(value.toUpperCase());
-                    }}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
+                      )
+                    }
                   />
                   <FormDescription>Solo si tienes segundo nombre en tu DNI</FormDescription>
                   <FormMessage />
@@ -242,13 +314,9 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
 
         <Separator className="my-10 bg-primary/20 h-px" />
 
-        {/* Sección de apellidos */}
+        {/* Apellidos */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-          <SectionHeader
-            title="Apellidos"
-            description="Como aparecen en tu DNI"
-          />
-
+          <SectionHeader title="Apellidos" description="Como aparecen en tu DNI" />
           <div className="space-y-8 md:col-span-2">
             <FormField
               control={form.control}
@@ -260,17 +328,17 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
                     placeholder="Pérez"
                     {...field}
                     className="w-full"
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
-                      field.onChange(value.toUpperCase());
-                    }}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
+                      )
+                    }
                   />
                   <FormDescription>Apellido paterno</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="secondLastName"
@@ -281,10 +349,11 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
                     placeholder="García (opcional)"
                     {...field}
                     className="w-full"
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
-                      field.onChange(value.toUpperCase());
-                    }}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
+                      )
+                    }
                   />
                   <FormDescription>Apellido materno, si lo tienes</FormDescription>
                   <FormMessage />
@@ -296,13 +365,9 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
 
         <Separator className="my-10 bg-primary/20 h-px" />
 
-        {/* Sección de código de verificación */}
+        {/* Código de verificación */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-          <SectionHeader
-            title="Código de verificación"
-            description="Los 3 dígitos de tu DNI"
-          />
-
+          <SectionHeader title="Código de verificación" description="Los 3 dígitos de tu DNI" />
           <div className="md:col-span-2">
             <FormField
               control={form.control}
@@ -315,10 +380,7 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
                     {...field}
                     className="w-full font-mono text-lg"
                     maxLength={3}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
-                      field.onChange(value);
-                    }}
+                    onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
                   />
                   <FormDescription>
                     Los 3 dígitos que aparecen en la parte inferior de tu DNI
@@ -334,20 +396,20 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
         {verificationError && (
           <>
             <Separator className="my-10 bg-primary/20 h-px" />
-            <div 
+            <div
               data-error="verification"
               className="rounded-lg border border-destructive/20 bg-destructive/5 p-4"
             >
               <div className="flex items-start gap-3">
-                <div className="h-5 w-5 text-destructive mt-0.5 shrink-0">⚠</div>
+                <span className="mt-0.5 shrink-0 text-destructive">⚠</span>
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-destructive">Error de verificación</p>
                   <p className="text-sm text-destructive/80">{verificationError}</p>
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <p className="font-medium">Consejos para resolver el problema:</p>
+                    <p className="font-medium">Consejos:</p>
                     <ul className="list-disc list-inside space-y-1 ml-2">
                       <li>Verifica que todos los datos coincidan exactamente con tu DNI físico</li>
-                      <li>Asegúrate de escribir los nombres y apellidos en mayúsculas</li>
+                      <li>Escribe los nombres y apellidos en mayúsculas</li>
                       <li>Revisa que el código de verificación sean los 3 dígitos correctos</li>
                       <li>Si el problema persiste, contacta con soporte</li>
                     </ul>
@@ -360,33 +422,29 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
 
         <Separator className="my-10 bg-primary/20 h-px" />
 
-        {/* Botones de acción */}
+        {/* Botones */}
         {!dashboardMode && (
           <div className="flex flex-col sm:flex-row justify-end gap-3">
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full sm:w-auto" 
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => router.back()}
               disabled={isVerifying}
             >
               Atrás
             </Button>
-            <Button
-              type="submit"
-              className="w-full sm:w-auto"
-              disabled={isVerifying}
-            >
+            <Button type="submit" className="w-full sm:w-auto" disabled={isVerifying}>
               {isVerifying ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block" />
                   Verificando...
-                </>
+                </span>
               ) : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
                   Verificar datos
-                </>
+                </span>
               )}
             </Button>
           </div>
@@ -395,20 +453,23 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
     </Form>
   );
 
+  // ── Contenido activo según estado ────────────────────────────────────────
+  const content = isVerified && !isEditing ? verifiedView : editForm;
+
   if (dashboardMode) {
     return (
       <div className="flex flex-col xl:flex-row gap-6 lg:gap-8 xl:items-start xl:justify-center max-w-7xl mx-auto">
         <div className="flex-1 xl:max-w-2xl">
           {content}
-          <StickyBottomBar
-            ctaLabel={isVerifying ? "Verificando..." : "Verificar datos"}
-            onCta={form.handleSubmit(onSubmit)}
-            loading={isVerifying}
-          />
+          {(!isVerified || isEditing) && (
+            <StickyBottomBar
+              ctaLabel={isVerifying ? 'Verificando...' : 'Verificar datos'}
+              onCta={form.handleSubmit(onSubmit)}
+              loading={isVerifying}
+            />
+          )}
         </div>
-
-        {/* Card de ayuda - Mobile abajo, Desktop a la derecha */}
-        <div className="xl:flex-shrink-0">
+        <div className="xl:shrink-0">
           <DNIHelpCard />
         </div>
       </div>
@@ -417,31 +478,50 @@ export function FunnelKYCValidation({ dashboardMode = false }: FunnelKYCValidati
 
   return (
     <div className="flex flex-col xl:flex-row gap-6 lg:gap-8 xl:items-start xl:justify-center max-w-7xl mx-auto">
-      {/* Formulario principal */}
       <div className="flex-1 xl:max-w-2xl">
         <Card className="w-full">
           <CardHeader className="pb-4">
             <FormHeader
               icon={currentStep?.icon || CreditCard}
               title="Verificación de identidad"
-              description="Ingresa tus datos exactamente como aparecen en tu DNI"
+              description={
+                isVerified && !isEditing
+                  ? 'Tu identidad ha sido verificada correctamente'
+                  : 'Ingresa tus datos exactamente como aparecen en tu DNI'
+              }
             />
           </CardHeader>
-          <CardContent className="pt-0">
-            {content}
-          </CardContent>
+          <CardContent className="pt-0">{content}</CardContent>
         </Card>
       </div>
-
-      {/* Card de ayuda - Mobile abajo, Desktop a la derecha */}
-      <div className="xl:flex-shrink-0">
+      <div className="xl:shrink-0">
         <DNIHelpCard />
       </div>
     </div>
   );
 }
 
-// Componente separado para la card de ayuda
+// ── Componente auxiliar: fila de dato en readonly ────────────────────────────
+function DataRow({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className={`text-sm font-medium text-foreground ${mono ? 'font-mono' : ''}`}>
+        {value || '—'}
+      </span>
+    </div>
+  );
+}
+
+// ── Componente auxiliar: card de ayuda DNI ───────────────────────────────────
 function DNIHelpCard() {
   return (
     <div className="xl:sticky xl:top-4">
@@ -453,24 +533,21 @@ function DNIHelpCard() {
           </div>
         </CardHeader>
         <CardContent className="p-4">
-          {/* DNI simulado - proporción 1.58:1 */}
           <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-lg shadow-lg text-white aspect-[1.58/1] flex flex-col justify-between p-4 relative overflow-hidden">
-            {/* Efecto de sello de agua */}
             <div className="absolute inset-0 opacity-5">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-6xl font-bold">
                 PERÚ
               </div>
             </div>
-
-            {/* Contenido del DNI */}
             <div className="relative z-10 space-y-2">
               <div>
-                <span className="text-[9px] opacity-70 block mb-0.5">DOCUMENTO NACIONAL DE IDENTIDAD</span>
+                <span className="text-[9px] opacity-70 block mb-0.5">
+                  DOCUMENTO NACIONAL DE IDENTIDAD
+                </span>
                 <span className="font-mono bg-yellow-400 text-yellow-900 px-2 py-1 rounded text-sm font-bold inline-block shadow-sm">
                   12345678
                 </span>
               </div>
-
               <div className="space-y-1.5">
                 <div>
                   <span className="text-[9px] opacity-70 block mb-0.5">NOMBRES</span>
@@ -478,7 +555,6 @@ function DNIHelpCard() {
                     JUAN CARLOS
                   </span>
                 </div>
-
                 <div>
                   <span className="text-[9px] opacity-70 block mb-0.5">APELLIDOS</span>
                   <span className="bg-green-400 text-green-900 px-2 py-0.5 rounded font-medium text-xs inline-block shadow-sm">
@@ -487,8 +563,6 @@ function DNIHelpCard() {
                 </div>
               </div>
             </div>
-
-            {/* Código de verificación en la parte inferior */}
             <div className="relative z-10 flex items-center justify-between pt-2 border-t border-white/30">
               <span className="text-[9px] opacity-70">CÓDIGO DE VERIFICACIÓN</span>
               <span className="bg-orange-400 text-orange-900 px-2 py-1 rounded font-mono font-bold text-xs shadow-sm">
