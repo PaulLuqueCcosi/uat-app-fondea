@@ -1,4 +1,4 @@
-import { getUser } from '@/app/actions/auth.actions';
+import { requireValidSession } from '@/app/actions/auth.actions';
 import { redirect } from 'next/navigation';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
@@ -11,11 +11,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getUser();
-
-  if (!user) {
-    redirect('/');
-  }
+  const user = await requireValidSession();
 
   return (
     <div className="min-h-screen flex flex-col relative">
