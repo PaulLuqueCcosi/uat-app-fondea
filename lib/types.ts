@@ -41,22 +41,86 @@ export interface KYCData {
   verified?: boolean;
 }
 
-export interface LaborData {
-  situation?: string;
-  employment_status?: string;
-  employmentStatus?: string;
-  industry?: string;
+// ─── Labor ───────────────────────────────────────────────────────────────────
+
+export type EmploymentStatus =
+  | 'EMPLEADO_DEPENDIENTE'
+  | 'INDEPENDIENTE'
+  | 'EMPRESARIO'
+  | 'FREELANCE'
+  | 'PENSIONISTA';
+
+export type LaborIndustry =
+  | 'TECNOLOGIA'
+  | 'SALUD'
+  | 'EDUCACION'
+  | 'CONSTRUCCION'
+  | 'COMERCIO'
+  | 'SERVICIOS_PROFESIONALES'
+  | 'OTRO';
+
+export type AdditionalIncomeType =
+  | 'ALQUILER'
+  | 'DIVIDENDOS'
+  | 'PENSION'
+  | 'FREELANCE'
+  | 'NEGOCIO_SECUNDARIO'
+  | 'OTRO';
+
+export interface AdditionalIncome {
+  /** ID local para identificar el item en el array (UUID generado en frontend) */
+  id: string;
+  type: AdditionalIncomeType;
+  /** Solo requerido cuando type === 'OTRO' */
+  custom_type?: string;
+  amount: number;
+  /** Descripción opcional */
+  description?: string;
+}
+
+/** Recurso 1: Situación laboral */
+export interface LaborSituation {
+  employment_status: EmploymentStatus;
+  verified?: boolean;
+}
+
+/** Recurso 2: Detalles laborales — shape varía según employment_status */
+export interface LaborDetails {
+  industry: LaborIndustry;
+  /** Solo EMPLEADO_DEPENDIENTE */
   company?: string;
-  companyName?: string;
+  /** Solo EMPLEADO_DEPENDIENTE */
   position?: string;
-  contractType?: string;
-  startDate?: string;
-  monthly_income?: number | string;
-  monthlyIncome?: number;
-  has_additional_income?: boolean;
-  hasAdditionalIncome?: boolean;
-  additionalIncomeAmount?: number;
-  additionalIncomeSource?: string;
+  /** INDEPENDIENTE, FREELANCE, EMPRESARIO */
+  years_of_activity?: number;
+  /** Solo EMPRESARIO */
+  business_ruc?: string;
+  verified?: boolean;
+}
+
+/** Recurso 3: Ingresos */
+export interface LaborIncome {
+  monthly_income: number;
+  has_additional_income: boolean;
+  additional_incomes: AdditionalIncome[];
+  verified?: boolean;
+}
+
+/** Estado completo del perfil laboral — lo que devuelve GET /labor/status */
+export interface LaborProfileStatus {
+  situation: (LaborSituation & { verified: boolean }) | null;
+  details: (LaborDetails & { verified: boolean }) | null;
+  income: (LaborIncome & { verified: boolean }) | null;
+  /** true solo cuando los 3 recursos están verified */
+  overall_verified: boolean;
+}
+
+/** Shape completo para compatibilidad con LoanApplication */
+export interface LaborData {
+  situation?: LaborSituation;
+  details?: LaborDetails;
+  income?: LaborIncome;
+  overall_verified?: boolean;
 }
 
 export interface EconomicData {

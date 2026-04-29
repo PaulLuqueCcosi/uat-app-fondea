@@ -6,6 +6,7 @@ const validSections = ['kyc', 'labor', 'economic', 'references', 'additional'];
 // Secciones que tienen su propia página dedicada
 const dedicatedPages: Record<string, string> = {
   kyc: '/dashboard/section/kyc-validation',
+  labor: '/dashboard/section/labor',
 };
 
 export default async function DashboardSectionPage({
