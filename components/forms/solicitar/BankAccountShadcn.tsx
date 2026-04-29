@@ -4,8 +4,10 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Building2, Wallet, CreditCard } from 'lucide-react';
+import { Building2, Wallet, CreditCard, Pencil, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
+import { useState } from 'react';
+import { BankAccountProfileStatus } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -22,10 +24,11 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
-import { saveBankAccount } from '@/app/actions/loan.actions';
+import { saveBankAccountProfile } from '@/app/actions/bank-account.actions';
 
 interface FunnelBankAccountProps {
   dashboardMode?: boolean;
+  initialData?: BankAccountProfileStatus;
 }
 
 interface SectionHeaderProps {
@@ -38,6 +41,16 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
     <div className="space-y-1">
       <h2 className="font-semibold text-primary">{title}</h2>
       <p className="text-muted-foreground text-sm">{description}</p>
+    </div>
+  );
+}
+
+function DataRow({ label, value }: { label: string; value?: string }) {
+  const display = value === undefined || value === null || value === '' ? '—' : String(value);
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground">{display}</span>
     </div>
   );
 }
@@ -71,40 +84,146 @@ const bankAccountFormSchema = z.object({
 
 type BankAccountFormValues = z.infer<typeof bankAccountFormSchema>;
 
-export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAccountProps) {
+export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: FunnelBankAccountProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
+  const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
+  const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [showCCI, setShowCCI] = useState(false);
+
+  const prevProfile = initialData?.profile;
+
   const form = useForm<BankAccountFormValues>({
     resolver: zodResolver(bankAccountFormSchema),
     defaultValues: {
-      bank: '',
-      account_type: '',
-      cci: '',
+      bank: prevProfile?.bank || '',
+      account_type: prevProfile?.account_type || '',
+      cci: prevProfile?.cci || '',
     },
   });
 
+  const handleEdit = () => {
+    setIsVerified(false);
+    setIsEditing(true);
+    setSaveError(null);
+  };
+
   const onSubmit = async (data: BankAccountFormValues) => {
-    const bankAccountData = {
-      bank: data.bank,
-      account_type: data.account_type,
-      accountNumber: '',
-      cci: data.cci,
-    };
+    setSaveError(null);
+    try {
+      const bankAccountProfile = {
+        bank: data.bank,
+        account_type: data.account_type as any,
+        cci: data.cci,
+      };
 
-    await saveBankAccount(bankAccountData);
+      const result = await saveBankAccountProfile(bankAccountProfile);
 
-    if (dashboardMode) {
-      router.push('/dashboard');
-    } else {
-      router.push(currentStep?.nextPath || '/solicitar/summary');
+      if (!result.success) {
+        setSaveError(result.error || 'Error al guardar los datos.');
+        return;
+      }
+
+      setIsVerified(true);
+      setIsEditing(false);
+
+      if (!dashboardMode) {
+        router.push(currentStep?.nextPath || '/solicitar/summary');
+      }
+    } catch {
+      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
     }
   };
 
-  const content = (
+  // ── Vista readonly (datos guardados) ────────────────────────────────────────
+  const bankLabel = BANKS.find(b => b.value === prevProfile?.bank)?.label ?? prevProfile?.bank ?? '—';
+  const accountTypeLabel = ACCOUNT_TYPES.find(t => t.value === prevProfile?.account_type)?.label ?? '—';
+
+  const maskedCCI = prevProfile?.cci ? '****' + prevProfile.cci.slice(-4) : '—';
+  const displayCCI = showCCI ? prevProfile?.cci : maskedCCI;
+
+  const verifiedView = (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-secondary" />
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-secondary">Cuenta bancaria guardada</p>
+          <p className="text-xs text-muted-foreground">
+            Tu cuenta para el desembolso está registrada. Puedes editarla si algo cambió.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={handleEdit} className="shrink-0 gap-1.5">
+          <Pencil className="h-3.5 w-3.5" />
+          Editar
+        </Button>
+      </div>
+
+      {/* Info importante */}
+      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+        <p className="text-sm text-foreground">
+          La cuenta debe estar a tu nombre y debe ser una cuenta en soles.
+        </p>
+      </div>
+
+      {/* Datos bancarios */}
+      <div>
+        <h3 className="text-sm font-semibold text-primary mb-3">Datos bancarios</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <DataRow label="Banco" value={bankLabel} />
+          <DataRow label="Tipo de cuenta" value={accountTypeLabel} />
+          <div className="sm:col-span-2">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground">CCI</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-foreground font-mono">{displayCCI}</span>
+                <button
+                  type="button"
+                  onClick={() => setShowCCI(!showCCI)}
+                  className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted"
+                  aria-label={showCCI ? 'Ocultar CCI' : 'Mostrar CCI'}
+                >
+                  {showCCI ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {!dashboardMode && (
+        <>
+          <Separator className="bg-primary/20 h-px" />
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => router.back()}>Atrás</Button>
+            <Button type="button" onClick={() => router.push(currentStep?.nextPath || '/solicitar/summary')}>
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Continuar
+              </span>
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // ── Formulario editable ──────────────────────────────────────────────────────
+  const editForm = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+        {saveError && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm text-red-800">{saveError}</p>
+          </div>
+        )}
+
         {/* Info importante */}
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-10">
           <p className="text-sm text-foreground">
@@ -212,15 +331,20 @@ export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAcc
     </Form>
   );
 
+  // ── Renderizado final ────────────────────────────────────────────────────────
+  const content = isVerified && !isEditing ? verifiedView : editForm;
+
   if (dashboardMode) {
     return (
       <>
         {content}
-        <StickyBottomBar
-          ctaLabel="Guardar cambios"
-          onCta={form.handleSubmit(onSubmit)}
-          loading={form.formState.isSubmitting}
-        />
+        {isEditing && (
+          <StickyBottomBar
+            ctaLabel="Guardar cambios"
+            onCta={form.handleSubmit(onSubmit)}
+            loading={form.formState.isSubmitting}
+          />
+        )}
       </>
     );
   }

@@ -280,6 +280,20 @@ export interface BankAccount {
   cci: string;
 }
 
+/** Cuenta bancaria del usuario para desembolso */
+export interface BankAccountProfile {
+  bank: string;
+  account_type: AccountType;
+  cci: string;
+  verified?: boolean;
+}
+
+/** Estado de cuenta bancaria — lo que devuelve GET /bank-account/status */
+export interface BankAccountProfileStatus {
+  profile: (BankAccountProfile & { verified: boolean }) | null;
+  overall_verified: boolean;
+}
+
 // ─── UI ──────────────────────────────────────────────────────────────────────
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'disabled' | 'danger';
