@@ -10,8 +10,8 @@ import path from 'path';
 const KYC_CONFIG = {
   /** Intentos máximos antes de bloquear */
   maxAttempts: 3,
-  /** Minutos de bloqueo al agotar intentos */
-  lockoutMinutes: 30,
+  /** Horas de bloqueo al agotar intentos */
+  lockoutHours: 24,
 };
 
 // ── Tipos internos (nunca se exponen al frontend) ────────────────────────────
@@ -28,10 +28,10 @@ export interface KYCSaveResult {
   success: boolean;
   /** Mensaje genérico para mostrar al usuario */
   error?: string;
-  /** El frontend solo necesita saber si está bloqueado y cuánto tiempo */
+  /** El frontend solo necesita saber si está bloqueado */
   blocked?: boolean;
-  /** Minutos restantes de bloqueo (solo si blocked=true) */
-  blockedMinutesLeft?: number;
+  /** Horas restantes de bloqueo (solo si blocked=true) */
+  blockedHoursLeft?: number;
   /** Intentos restantes antes de bloquearse (solo si success=false y no blocked) */
   attemptsLeft?: number;
 }
@@ -69,10 +69,10 @@ async function writeAttemptsDB(data: Record<string, KYCAttemptRecord>): Promise<
 
 // ── Helpers de intentos ──────────────────────────────────────────────────────
 
-function getBlockedMinutesLeft(record: KYCAttemptRecord): number {
+function getBlockedHoursLeft(record: KYCAttemptRecord): number {
   if (!record.lockedUntil) return 0;
   const msLeft = new Date(record.lockedUntil).getTime() - Date.now();
-  return msLeft > 0 ? Math.ceil(msLeft / 60000) : 0;
+  return msLeft > 0 ? Math.ceil(msLeft / 3600000) : 0;
 }
 
 // ── Server Actions públicas ──────────────────────────────────────────────────
@@ -84,7 +84,7 @@ function getBlockedMinutesLeft(record: KYCAttemptRecord): number {
 export async function getKYCData(): Promise<{
   data: KYCData | null;
   blocked: boolean;
-  blockedMinutesLeft: number;
+  blockedHoursLeft: number;
   attemptsLeft: number;
 }> {
   const user = await requireValidSession();
@@ -96,18 +96,18 @@ export async function getKYCData(): Promise<{
     const attemptRecord = attemptsDB[user.id];
 
     let blocked = false;
-    let blockedMinutesLeft = 0;
+    let blockedHoursLeft = 0;
     let attemptsLeft = KYC_CONFIG.maxAttempts;
 
     if (attemptRecord) {
-      const minutesLeft = getBlockedMinutesLeft(attemptRecord);
-      if (minutesLeft > 0) {
+      const hoursLeft = getBlockedHoursLeft(attemptRecord);
+      if (hoursLeft > 0) {
         blocked = true;
-        blockedMinutesLeft = minutesLeft;
+        blockedHoursLeft = hoursLeft;
         attemptsLeft = 0;
       } else {
-        // Bloqueo expirado — resetear
         if (attemptRecord.lockedUntil) {
+          // Bloqueo expirado — resetear
           attemptsDB[user.id] = { attempts: 0, lockedUntil: null, lastAttemptAt: new Date().toISOString() };
           await writeAttemptsDB(attemptsDB);
           attemptsLeft = KYC_CONFIG.maxAttempts;
@@ -118,10 +118,10 @@ export async function getKYCData(): Promise<{
     }
 
     console.log('[KYC] Estado cargado para usuario:', user.id, { blocked, attemptsLeft });
-    return { data: kycData, blocked, blockedMinutesLeft, attemptsLeft };
+    return { data: kycData, blocked, blockedHoursLeft, attemptsLeft };
   } catch (error) {
     console.error('[KYC] Error al leer datos:', error);
-    return { data: null, blocked: false, blockedMinutesLeft: 0, attemptsLeft: KYC_CONFIG.maxAttempts };
+    return { data: null, blocked: false, blockedHoursLeft: 0, attemptsLeft: KYC_CONFIG.maxAttempts };
   }
 }
 
@@ -142,18 +142,18 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
     const record = attemptsDB[user.id] ?? { attempts: 0, lockedUntil: null, lastAttemptAt: new Date().toISOString() };
 
     // ── Verificar bloqueo activo ─────────────────────────────────────────
-    const minutesLeft = getBlockedMinutesLeft(record);
-    if (minutesLeft > 0) {
+    const hoursLeft = getBlockedHoursLeft(record);
+    if (hoursLeft > 0) {
       return {
         success: false,
         blocked: true,
-        blockedMinutesLeft: minutesLeft,
-        error: `Demasiados intentos fallidos. Podrás intentarlo nuevamente en ${minutesLeft} minuto${minutesLeft !== 1 ? 's' : ''}.`,
+        blockedHoursLeft: hoursLeft,
+        error: `Demasiados intentos fallidos. Podrás intentarlo nuevamente en ${hoursLeft} hora${hoursLeft !== 1 ? 's' : ''}.`,
       };
     }
 
     // Si el bloqueo expiró, resetear contador
-    if (record.lockedUntil && minutesLeft === 0) {
+    if (record.lockedUntil && hoursLeft === 0) {
       record.attempts = 0;
       record.lockedUntil = null;
     }
@@ -168,8 +168,8 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
     if (!data.firstLastName?.trim() || data.firstLastName.trim().length < 2) {
       return { success: false, error: 'El primer apellido es obligatorio.' };
     }
-    if (!data.verificationCode || !/^\d{3}$/.test(data.verificationCode)) {
-      return { success: false, error: 'El código de verificación debe tener 3 dígitos.' };
+    if (!data.verificationCode || !/^\d{1}$/.test(data.verificationCode)) {
+      return { success: false, error: 'El código de verificación debe ser 1 dígito.' };
     }
 
     // ── Validación con RENIEC (mock) ─────────────────────────────────────
@@ -185,8 +185,8 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       const attemptsLeft = KYC_CONFIG.maxAttempts - record.attempts;
 
       if (attemptsLeft <= 0) {
-        // Bloquear al usuario
-        const lockedUntil = new Date(Date.now() + KYC_CONFIG.lockoutMinutes * 60 * 1000);
+        // Bloquear al usuario por 24 horas
+        const lockedUntil = new Date(Date.now() + KYC_CONFIG.lockoutHours * 3600 * 1000);
         record.lockedUntil = lockedUntil.toISOString();
         attemptsDB[user.id] = record;
         await writeAttemptsDB(attemptsDB);
@@ -196,8 +196,8 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
         return {
           success: false,
           blocked: true,
-          blockedMinutesLeft: KYC_CONFIG.lockoutMinutes,
-          error: `Has agotado todos los intentos. Podrás intentarlo nuevamente en ${KYC_CONFIG.lockoutMinutes} minutos.`,
+          blockedHoursLeft: KYC_CONFIG.lockoutHours,
+          error: `Has agotado todos los intentos. Por seguridad, podrás intentarlo nuevamente en ${KYC_CONFIG.lockoutHours} horas.`,
         };
       }
 
@@ -205,14 +205,18 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       await writeAttemptsDB(attemptsDB);
 
       console.warn('[KYC] Intento fallido para usuario:', user.id, {
-        internalReason: reniecResult.reason, // solo en logs del servidor
+        internalReason: reniecResult.reason,
         attemptsLeft,
       });
+
+      const attemptsMsg = attemptsLeft === 1
+        ? 'Solo te queda 1 intento antes de un bloqueo de 24 horas'
+        : `Te quedan ${attemptsLeft} intentos`;
 
       return {
         success: false,
         attemptsLeft,
-        error: `Los datos ingresados no pudieron ser verificados. Revisa que coincidan exactamente con tu DNI físico. Te ${attemptsLeft === 1 ? 'queda 1 intento' : `quedan ${attemptsLeft} intentos`} antes de un bloqueo temporal.`,
+        error: `Los datos no coinciden con los registros. Verifica que sean exactamente como aparecen en tu DNI físico. ${attemptsMsg}.`,
       };
     }
 
@@ -255,7 +259,7 @@ async function mockReniecValidation(data: KYCData): Promise<{ valid: boolean; re
   if (data.dni === '00000000') return { valid: false, reason: 'dni_not_found_in_reniec' };
   if (data.dni === '11111111') return { valid: false, reason: 'name_mismatch' };
   if (data.dni === '22222222') return { valid: false, reason: 'dni_flagged' };
-  if (data.verificationCode === '000') return { valid: false, reason: 'invalid_verification_code' };
+  if (data.verificationCode === '0') return { valid: false, reason: 'invalid_verification_code' };
 
   return { valid: true };
 }

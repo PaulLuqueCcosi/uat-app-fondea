@@ -6,7 +6,7 @@ import { CreditCard, ChevronRight, ShieldCheck, ShieldAlert } from 'lucide-react
 import Link from 'next/link';
 
 export default async function DashboardKYCValidationPage() {
-  const { data, blocked, blockedMinutesLeft, attemptsLeft } = await getKYCData();
+  const { data, blocked, blockedHoursLeft, attemptsLeft } = await getKYCData();
   const isVerified = data?.verified === true;
 
   return (
@@ -51,15 +51,17 @@ export default async function DashboardKYCValidationPage() {
             {blocked && (
               <div className="mt-3 flex items-center gap-2 text-sm text-destructive font-medium">
                 <ShieldAlert className="w-4 h-4" />
-                Verificación bloqueada temporalmente por intentos fallidos. Vuelve en {blockedMinutesLeft} min.
+                Verificación bloqueada por {blockedHoursLeft} hora{blockedHoursLeft !== 1 ? 's' : ''} debido a intentos fallidos.
               </div>
             )}
             {!isVerified && !blocked && (
               <div className="mt-3 flex items-center gap-2 text-sm text-fondea-text">
                 <span className="inline-flex items-center gap-1.5">
                   Tienes
-                  <span className="font-semibold text-dark">{attemptsLeft} intentos</span>
-                  disponibles antes de un bloqueo temporal.
+                  <span className={`font-semibold ${attemptsLeft === 1 ? 'text-destructive' : 'text-dark'}`}>
+                    {attemptsLeft} intento{attemptsLeft !== 1 ? 's' : ''}
+                  </span>
+                  disponible{attemptsLeft !== 1 ? 's' : ''} antes de un bloqueo de 24 horas.
                 </span>
               </div>
             )}
@@ -72,7 +74,7 @@ export default async function DashboardKYCValidationPage() {
         dashboardMode={true}
         initialData={data}
         initialBlocked={blocked}
-        initialBlockedMinutesLeft={blockedMinutesLeft}
+        initialBlockedHoursLeft={blockedHoursLeft}
         initialAttemptsLeft={attemptsLeft}
       />
     </div>

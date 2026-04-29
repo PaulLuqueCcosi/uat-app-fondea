@@ -31,7 +31,7 @@ interface FunnelKYCValidationProps {
   dashboardMode?: boolean;
   initialData?: KYCData | null;
   initialBlocked?: boolean;
-  initialBlockedMinutesLeft?: number;
+  initialBlockedHoursLeft?: number;
   initialAttemptsLeft?: number;
 }
 
@@ -87,8 +87,8 @@ const kycValidationSchema = z.object({
   verificationCode: z
     .string()
     .min(1, 'Ingresa el código de verificación')
-    .length(3, 'El código debe tener exactamente 3 dígitos')
-    .regex(/^\d{3}$/, 'El código debe contener solo números'),
+    .length(1, 'El código debe tener exactamente 1 dígito')
+    .regex(/^\d{1}$/, 'El código debe ser un número'),
 });
 
 type KYCValidationFormValues = z.infer<typeof kycValidationSchema>;
@@ -97,7 +97,7 @@ export function FunnelKYCValidation({
   dashboardMode = false,
   initialData,
   initialBlocked = false,
-  initialBlockedMinutesLeft = 0,
+  initialBlockedHoursLeft = 0,
   initialAttemptsLeft = 3,
 }: FunnelKYCValidationProps) {
   const router = useRouter();
@@ -110,13 +110,13 @@ export function FunnelKYCValidation({
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [attemptsLeft, setAttemptsLeft] = useState(initialAttemptsLeft);
   const [blocked, setBlocked] = useState(initialBlocked);
-  const [blockedMinutesLeft, setBlockedMinutesLeft] = useState(initialBlockedMinutesLeft);
+  const [blockedHoursLeft, setBlockedHoursLeft] = useState(initialBlockedHoursLeft);
 
-  // Cuenta regresiva del bloqueo
+  // Cuenta regresiva del bloqueo (en horas)
   useEffect(() => {
-    if (!blocked || blockedMinutesLeft <= 0) return;
+    if (!blocked || blockedHoursLeft <= 0) return;
     const interval = setInterval(() => {
-      setBlockedMinutesLeft((prev) => {
+      setBlockedHoursLeft((prev) => {
         if (prev <= 1) {
           setBlocked(false);
           setAttemptsLeft(initialAttemptsLeft);
@@ -125,9 +125,9 @@ export function FunnelKYCValidation({
         }
         return prev - 1;
       });
-    }, 60000); // actualizar cada minuto
+    }, 3600000); // actualizar cada hora
     return () => clearInterval(interval);
-  }, [blocked, blockedMinutesLeft, initialAttemptsLeft]);
+  }, [blocked, blockedHoursLeft, initialAttemptsLeft]);
 
   const form = useForm<KYCValidationFormValues>({
     resolver: zodResolver(kycValidationSchema),
@@ -167,7 +167,7 @@ export function FunnelKYCValidation({
       if (!result.success) {
         if (result.blocked) {
           setBlocked(true);
-          setBlockedMinutesLeft(result.blockedMinutesLeft ?? 0);
+          setBlockedHoursLeft(result.blockedHoursLeft ?? 0);
           setAttemptsLeft(0);
         } else if (result.attemptsLeft !== undefined) {
           setAttemptsLeft(result.attemptsLeft);
@@ -411,14 +411,14 @@ export function FunnelKYCValidation({
                 <FormItem className="flex flex-col gap-1">
                   <FormLabel>Código de verificación</FormLabel>
                   <Input
-                    placeholder="123"
+                    placeholder="5"
                     {...field}
                     className="w-full font-mono text-lg"
-                    maxLength={3}
+                    maxLength={1}
                     onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
                   />
                   <FormDescription>
-                    Los 3 dígitos que aparecen en la parte inferior de tu DNI
+                    El dígito de verificación que aparece en la parte inferior de tu DNI
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -433,39 +433,50 @@ export function FunnelKYCValidation({
             <Separator className="my-10 bg-primary/20 h-px" />
             <div
               data-error="verification"
-              className="rounded-lg border border-destructive/20 bg-destructive/5 p-4"
+              className={`rounded-lg border p-4 ${blocked ? 'border-destructive/30 bg-destructive/5' : 'border-warning/30 bg-warning/5'}`}
             >
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 shrink-0 text-destructive">⚠</span>
+                <span className={`mt-0.5 shrink-0 text-lg ${blocked ? 'text-destructive' : 'text-warning'}`}>
+                  {blocked ? '🔒' : '⚠️'}
+                </span>
                 <div className="space-y-2 w-full">
-                  <p className="text-sm font-medium text-destructive">
-                    {blocked ? 'Verificación bloqueada temporalmente' : 'Datos no verificados'}
+                  <p className={`text-sm font-semibold ${blocked ? 'text-destructive' : 'text-warning'}`}>
+                    {blocked
+                      ? `Verificación bloqueada por ${blockedHoursLeft} hora${blockedHoursLeft !== 1 ? 's' : ''}`
+                      : 'Los datos no coinciden'}
                   </p>
-                  <p className="text-sm text-destructive/80">{verificationError}</p>
+                  <p className="text-sm text-muted-foreground">{verificationError}</p>
 
-                  {/* Barra de intentos restantes — solo si no está bloqueado */}
+                  {/* Barra de intentos — solo si no está bloqueado */}
                   {!blocked && attemptsLeft > 0 && (
-                    <div className="pt-1 space-y-1.5">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Intentos restantes</span>
-                        <span className="font-medium">{attemptsLeft} de {initialAttemptsLeft}</span>
+                    <div className="pt-2 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Intentos restantes</span>
+                        <span className={`font-semibold ${attemptsLeft === 1 ? 'text-destructive' : 'text-foreground'}`}>
+                          {attemptsLeft} de {initialAttemptsLeft}
+                        </span>
                       </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-destructive transition-all duration-500"
+                          className={`h-full rounded-full transition-all duration-500 ${attemptsLeft === 1 ? 'bg-destructive' : 'bg-warning'}`}
                           style={{ width: `${((initialAttemptsLeft - attemptsLeft) / initialAttemptsLeft) * 100}%` }}
                         />
                       </div>
+                      {attemptsLeft === 1 && (
+                        <p className="text-xs text-destructive font-medium">
+                          ⚠ Último intento — si falla, quedará bloqueado 24 horas
+                        </p>
+                      )}
                     </div>
                   )}
 
                   {/* Consejos — solo si no está bloqueado */}
                   {!blocked && (
-                    <div className="text-sm text-muted-foreground space-y-1 pt-1">
-                      <p className="font-medium">Revisa lo siguiente:</p>
-                      <ul className="list-disc list-inside space-y-1 ml-2">
+                    <div className="text-xs text-muted-foreground space-y-1 pt-1 border-t border-border mt-2">
+                      <p className="font-medium pt-2">Revisa lo siguiente:</p>
+                      <ul className="list-disc list-inside space-y-1 ml-1">
                         <li>Los datos deben coincidir exactamente con tu DNI físico</li>
-                        <li>Nombres y apellidos en mayúsculas</li>
+                        <li>Nombres y apellidos en mayúsculas, sin tildes</li>
                         <li>El código son los 3 dígitos en la parte inferior del DNI</li>
                       </ul>
                     </div>
@@ -521,6 +532,7 @@ export function FunnelKYCValidation({
               ctaLabel={isVerifying ? 'Verificando...' : 'Verificar datos'}
               onCta={form.handleSubmit(onSubmit)}
               loading={isVerifying}
+              ctaDisabled={blocked}
             />
           )}
         </div>
@@ -638,7 +650,7 @@ function DNIHelpCard() {
             <div className="relative z-10 flex items-center justify-between pt-2 border-t border-white/30">
               <span className="text-[9px] opacity-70">CÓDIGO DE VERIFICACIÓN</span>
               <span className="bg-orange-400 text-orange-900 px-2 py-1 rounded font-mono font-bold text-xs shadow-sm">
-                123
+                5
               </span>
             </div>
           </div>

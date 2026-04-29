@@ -2,7 +2,7 @@ import { FunnelKYCValidation } from '@/components/forms/funnel/FunnelKYCValidati
 import { getKYCData } from '@/app/actions/kyc.actions';
 
 export default async function KYCValidationPage() {
-  const { data, blocked, blockedMinutesLeft, attemptsLeft } = await getKYCData();
+  const { data, blocked, blockedHoursLeft, attemptsLeft } = await getKYCData();
 
   return (
     <div className="py-4">
@@ -10,7 +10,7 @@ export default async function KYCValidationPage() {
         <FunnelKYCValidation
           initialData={data}
           initialBlocked={blocked}
-          initialBlockedMinutesLeft={blockedMinutesLeft}
+          initialBlockedHoursLeft={blockedHoursLeft}
           initialAttemptsLeft={attemptsLeft}
         />
       </div>
