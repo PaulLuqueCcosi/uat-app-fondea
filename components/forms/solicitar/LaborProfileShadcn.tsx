@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus, Trash2, Briefcase, Pencil, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
-import type { LaborProfileStatus, EmploymentStatus, AdditionalIncomeType } from '@/lib/types';
+import type { LaborProfileStatus, EmploymentStatus, AdditionalIncomeType, LaborIndustry } from '@/lib/types';
 import {
   EMPLOYMENT_OPTIONS,
   INDUSTRY_OPTIONS,
@@ -82,9 +82,9 @@ const laborFormSchema = z.object({
   }
   // custom_type requerido cuando type === 'OTRO'
   if (data.additional_incomes) {
-    data.additional_incomes.forEach((item, i) => {
+    data.additional_incomes.forEach((item, _i) => {
       if (item.type === 'OTRO' && !item.custom_type?.trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Especifica el tipo de ingreso', path: [`additional_incomes.${i}.custom_type`] });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Especifica el tipo de ingreso', path: [`additional_incomes.${_i}.custom_type`] });
       }
     });
   }
@@ -200,7 +200,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
       const result = await saveLaborProfile(
         data.employment_status as EmploymentStatus,
         {
-          industry: data.industry as any,
+          industry: data.industry as LaborIndustry,
           company: data.company || undefined,
           position: data.position || undefined,
           years_of_activity: data.years_of_activity ? Number(data.years_of_activity) : undefined,

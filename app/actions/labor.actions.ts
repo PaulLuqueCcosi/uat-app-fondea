@@ -123,7 +123,7 @@ export async function saveLaborDetails(
     }
 
     // Validaciones según tipo
-    if (!details.industry) {
+    if (situation.employment_status !== 'PENSIONISTA' && !details.industry) {
       return { success: false, error: 'Selecciona el sector o industria.' };
     }
 
@@ -225,9 +225,17 @@ export async function saveLaborProfile(
   const situationResult = await saveLaborSituation(situation);
   if (!situationResult.success) return situationResult;
 
-  // Paso 2: Detalles
-  const detailsResult = await saveLaborDetails(details);
-  if (!detailsResult.success) return detailsResult;
+  // Paso 2: Detalles — PENSIONISTA no tiene detalles laborales
+  if (situation !== 'PENSIONISTA') {
+    const detailsResult = await saveLaborDetails(details);
+    if (!detailsResult.success) return detailsResult;
+  } else {
+    // Para PENSIONISTA guardamos un details vacío pero verificado
+    const detailsDB = await readJSON<LaborDetails>(DETAILS_DB);
+    const user = await requireValidSession();
+    detailsDB[user.id] = { industry: 'OTRO', verified: true };
+    await writeJSON(DETAILS_DB, detailsDB);
+  }
 
   // Paso 3: Ingresos
   const incomeResult = await saveLaborIncome(income);
