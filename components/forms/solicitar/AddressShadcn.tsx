@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,6 +24,12 @@ import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { REFERRAL_SOURCE_OPTIONS } from '@/lib/constants';
+import {
+  getDepartamentosAction,
+  getProvinciasAction,
+  getDistritosAction,
+  type UbigeoOption,
+} from '@/app/actions/ubigeo.actions';
 
 interface FunnelAddressProps {
   dashboardMode?: boolean;
@@ -42,36 +48,6 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
     </div>
   );
 }
-
-// Datos de ejemplo - en producción estos vendrían de una API
-const REGIONS = [
-  { value: 'lima', label: 'Lima' },
-  { value: 'arequipa', label: 'Arequipa' },
-  { value: 'cusco', label: 'Cusco' },
-  { value: 'la_libertad', label: 'La Libertad' },
-];
-
-const PROVINCES = {
-  lima: [
-    { value: 'lima', label: 'Lima' },
-    { value: 'barranca', label: 'Barranca' },
-    { value: 'cañete', label: 'Cañete' },
-  ],
-  arequipa: [
-    { value: 'arequipa', label: 'Arequipa' },
-    { value: 'camana', label: 'Camaná' },
-  ],
-};
-
-const DISTRICTS = {
-  lima: [
-    { value: 'miraflores', label: 'Miraflores' },
-    { value: 'san_isidro', label: 'San Isidro' },
-    { value: 'surco', label: 'Surco' },
-    { value: 'san_borja', label: 'San Borja' },
-    { value: 'la_molina', label: 'La Molina' },
-  ],
-};
 
 const addressFormSchema = z.object({
   address_type: z.enum(['google', 'manual']),
@@ -146,7 +122,16 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
-  const [selectedRegion, setSelectedRegion] = useState('');
+
+  // ── Estado ubigeo ───────────────────────────────────────────────────────────
+  const [departamentos, setDepartamentos] = useState<UbigeoOption[]>([]);
+  const [provincias, setProvincias]       = useState<UbigeoOption[]>([]);
+  const [distritos, setDistritos]         = useState<UbigeoOption[]>([]);
+
+  // Carga inicial de departamentos
+  useEffect(() => {
+    getDepartamentosAction().then(setDepartamentos);
+  }, []);
 
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressFormSchema),
@@ -299,19 +284,23 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
                 name="region"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1">
-                    <FormLabel>Región</FormLabel>
+                    <FormLabel>Departamento</FormLabel>
                     <NativeSelect
                       {...field}
                       className="w-full"
                       onChange={(e) => {
                         field.onChange(e);
-                        setSelectedRegion(e.target.value);
                         form.setValue('province', '');
                         form.setValue('district', '');
+                        setProvincias([]);
+                        setDistritos([]);
+                        if (e.target.value) {
+                          getProvinciasAction(e.target.value).then(setProvincias);
+                        }
                       }}
                     >
-                      <NativeSelectOption value="">Selecciona la región</NativeSelectOption>
-                      {REGIONS.map((opt) => (
+                      <NativeSelectOption value="">Selecciona el departamento</NativeSelectOption>
+                      {departamentos.map((opt) => (
                         <NativeSelectOption key={opt.value} value={opt.value}>
                           {opt.label}
                         </NativeSelectOption>
@@ -335,10 +324,14 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
                         onChange={(e) => {
                           field.onChange(e);
                           form.setValue('district', '');
+                          setDistritos([]);
+                          if (e.target.value) {
+                            getDistritosAction(e.target.value).then(setDistritos);
+                          }
                         }}
                       >
                         <NativeSelectOption value="">Selecciona la provincia</NativeSelectOption>
-                        {(PROVINCES[watchedRegion as keyof typeof PROVINCES] || []).map((opt) => (
+                        {provincias.map((opt) => (
                           <NativeSelectOption key={opt.value} value={opt.value}>
                             {opt.label}
                           </NativeSelectOption>
@@ -359,7 +352,7 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
                       <FormLabel>Distrito</FormLabel>
                       <NativeSelect {...field} className="w-full">
                         <NativeSelectOption value="">Selecciona el distrito</NativeSelectOption>
-                        {(DISTRICTS[form.watch('province') as keyof typeof DISTRICTS] || []).map((opt) => (
+                        {distritos.map((opt) => (
                           <NativeSelectOption key={opt.value} value={opt.value}>
                             {opt.label}
                           </NativeSelectOption>
