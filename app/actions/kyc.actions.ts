@@ -171,6 +171,21 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
     if (!data.verificationCode || !/^\d{1}$/.test(data.verificationCode)) {
       return { success: false, error: 'El código de verificación debe ser 1 dígito.' };
     }
+    if (!data.birth_date) {
+      return { success: false, error: 'La fecha de nacimiento es obligatoria.' };
+    }
+    
+    // Validar edad entre 21 y 65 años
+    const birthDate = new Date(data.birth_date);
+    if (isNaN(birthDate.getTime())) {
+      return { success: false, error: 'La fecha de nacimiento no es válida.' };
+    }
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear()
+      - (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate()) ? 1 : 0);
+    if (age < 21 || age > 65) {
+      return { success: false, error: 'Debes tener entre 21 y 65 años para solicitar un préstamo.' };
+    }
 
     // ── Validación con RENIEC (mock) ─────────────────────────────────────
     // En producción: llamada real a la API externa
@@ -234,6 +249,7 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       firstLastName: data.firstLastName.trim().toUpperCase(),
       secondLastName: data.secondLastName?.trim().toUpperCase() || undefined,
       verificationCode: data.verificationCode,
+      birth_date: data.birth_date,
       verified: true,
     };
     await writeKYCDB(kycDB);

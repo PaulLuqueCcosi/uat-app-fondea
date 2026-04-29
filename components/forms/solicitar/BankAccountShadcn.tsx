@@ -55,8 +55,14 @@ const BANKS = [
   { value: 'Otro', label: 'Otro' },
 ];
 
+const ACCOUNT_TYPES = [
+  { value: 'AHORROS', label: 'Cuenta de ahorros' },
+  { value: 'CORRIENTE', label: 'Cuenta corriente' },
+];
+
 const bankAccountFormSchema = z.object({
   bank: z.string().min(1, 'Selecciona tu banco'),
+  account_type: z.string().min(1, 'Selecciona el tipo de cuenta'),
   cci: z
     .string()
     .length(20, 'El CCI debe tener exactamente 20 dígitos')
@@ -74,6 +80,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAcc
     resolver: zodResolver(bankAccountFormSchema),
     defaultValues: {
       bank: '',
+      account_type: '',
       cci: '',
     },
   });
@@ -81,7 +88,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAcc
   const onSubmit = async (data: BankAccountFormValues) => {
     const bankAccountData = {
       bank: data.bank,
-      accountType: 'savings',
+      account_type: data.account_type,
       accountNumber: '',
       cci: data.cci,
     };
@@ -128,6 +135,25 @@ export function FunnelBankAccountShadcn({ dashboardMode = false }: FunnelBankAcc
                     ))}
                   </NativeSelect>
                   <FormDescription>El banco donde tienes tu cuenta</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="account_type"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-1">
+                  <FormLabel>Tipo de cuenta</FormLabel>
+                  <NativeSelect {...field} className="w-full">
+                    <NativeSelectOption value="">Selecciona el tipo</NativeSelectOption>
+                    {ACCOUNT_TYPES.map((opt) => (
+                      <NativeSelectOption key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
                   <FormMessage />
                 </FormItem>
               )}

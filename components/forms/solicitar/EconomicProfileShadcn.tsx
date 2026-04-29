@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveEconomicProfile } from '@/app/actions/loan.actions';
+import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/lib/constants';
 
 interface FunnelEconomicProfileProps {
   dashboardMode?: boolean;
@@ -53,6 +54,7 @@ const DEBT_TYPES = [
 ];
 
 const economicFormSchema = z.object({
+  loan_purpose: z.string().min(1, 'Selecciona para qué usarás el dinero'),
   monthly_expenses: z
     .string()
     .min(1, 'Ingresa tus gastos mensuales')
@@ -68,6 +70,8 @@ const economicFormSchema = z.object({
   })).optional(),
   has_property: z.boolean(),
   has_vehicle: z.boolean(),
+  has_services: z.boolean(),
+  education_level: z.string().min(1, 'Selecciona tu grado de instrucción'),
 }).superRefine((data, ctx) => {
   // Validar que si tiene deudas, debe agregar al menos una
   if (data.has_debts && (!data.debts || data.debts.length === 0)) {
@@ -89,11 +93,14 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEco
   const form = useForm<EconomicFormValues>({
     resolver: zodResolver(economicFormSchema),
     defaultValues: {
+      loan_purpose: '',
       monthly_expenses: '',
       has_debts: false,
       debts: [],
       has_property: false,
       has_vehicle: false,
+      has_services: false,
+      education_level: '',
     },
   });
 
@@ -108,6 +115,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEco
     const economicData = {
       monthlyIncome: 0, // Se obtiene del formulario laboral
       otherIncome: 0,
+      loan_purpose: data.loan_purpose,
       monthlyExpenses: Number(data.monthly_expenses),
       hasDebts: data.has_debts,
       debts: data.debts?.map(debt => ({
@@ -119,8 +127,10 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEco
       })) || [],
       hasProperty: data.has_property,
       hasVehicle: data.has_vehicle,
+      has_services: data.has_services,
       hasSavings: false,
       savingsAmount: 0,
+      education_level: data.education_level,
     };
 
     await saveEconomicProfile(economicData);
@@ -135,6 +145,38 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEco
   const content = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+        {/* Sección 0: Propósito del préstamo */}
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+          <SectionHeader
+            title="Propósito del préstamo"
+            description="¿Para qué necesitas el dinero?"
+          />
+
+          <div className="md:col-span-2">
+            <FormField
+              control={form.control}
+              name="loan_purpose"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-1">
+                  <FormLabel>¿Cómo vas a usar el dinero?</FormLabel>
+                  <NativeSelect {...field} className="w-full">
+                    <NativeSelectOption value="">Selecciona una opción</NativeSelectOption>
+                    {LOAN_PURPOSE_OPTIONS.map((opt) => (
+                      <NativeSelectOption key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                  <FormDescription>Esto nos ayuda a entender mejor tu necesidad</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        <Separator className="my-10 bg-primary/20 h-px" />
+
         {/* Sección 1: Gastos */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
           <SectionHeader
@@ -357,6 +399,57 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEco
                       onCheckedChange={field.onChange}
                     />
                   </div>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="has_services"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <FormLabel>¿Cuentas con servicios a tu nombre?</FormLabel>
+                      <FormDescription>Luz, agua, celular postpago, etc.</FormDescription>
+                    </div>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        <Separator className="my-10 bg-primary/20 h-px" />
+
+        {/* Sección 4: Educación */}
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+          <SectionHeader
+            title="Grado de instrucción"
+            description="Tu nivel educativo alcanzado"
+          />
+
+          <div className="md:col-span-2">
+            <FormField
+              control={form.control}
+              name="education_level"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-1">
+                  <FormLabel>¿Cuál es tu grado de instrucción?</FormLabel>
+                  <NativeSelect {...field} className="w-full">
+                    <NativeSelectOption value="">Selecciona una opción</NativeSelectOption>
+                    {EDUCATION_LEVEL_OPTIONS.map((opt) => (
+                      <NativeSelectOption key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                  <FormDescription>Tu nivel educativo más alto completado</FormDescription>
+                  <FormMessage />
                 </FormItem>
               )}
             />

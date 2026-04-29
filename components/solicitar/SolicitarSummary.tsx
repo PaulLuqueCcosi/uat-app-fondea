@@ -81,6 +81,13 @@ export function FunnelSummary() {
     bankAccount: true
   });
 
+  // Estado de las declaraciones PEP
+  const [pepDeclarations, setPepDeclarations] = useState({
+    not_pep: false,
+    not_pep_relative: false,
+    accept_terms: false,
+  });
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -89,11 +96,17 @@ export function FunnelSummary() {
   };
 
   const handleSubmit = async () => {
+    // Validar que todas las declaraciones estén marcadas
+    if (!pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms) {
+      setError('Debes aceptar todas las declaraciones para continuar.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
-      // TODO: Llamar a la API para crear la solicitud
-      // const result = await submitApplication();
+      // TODO: Llamar a la API para crear la solicitud incluyendo pepDeclarations
+      // const result = await submitApplication({ ...data, pep_declarations: pepDeclarations });
       // const solicitudId = result.id;
 
       // Simular envío y generar ID temporal
@@ -532,24 +545,56 @@ export function FunnelSummary() {
           )}
         </Card>
 
-        {/* DECLARACIÓN JURADA */}
-        {/* <Card className="p-6 bg-primary/5 border-2 border-primary/20">
+        {/* DECLARACIONES LEGALES */}
+        <Card className="p-6 bg-primary/5 border-2 border-primary/20">
           <div className="flex gap-4">
-            <AlertCircle className="w-6 h-6 text-primary flex-shrink-0" />
-            <div>
-              <h4 className="font-semibold text-foreground mb-2">Declaración Jurada</h4>
-              <p className="text-sm text-foreground mb-3 leading-relaxed">
-                Al continuar, declaro bajo juramento que toda la información proporcionada es verídica y completa.
-                Autorizo expresamente a Fondea a verificar mi información crediticia en las centrales de riesgo
-                y contactar a mis referencias personales para validación.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Fondea se reserva el derecho de solicitar documentación adicional para verificar la información
-                proporcionada. La falsedad de datos puede resultar en el rechazo inmediato de la solicitud.
+            <AlertCircle className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-foreground mb-4">Declaraciones Legales</h4>
+              <div className="space-y-4">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={pepDeclarations.not_pep}
+                    onChange={(e) => setPepDeclarations(prev => ({ ...prev, not_pep: e.target.checked }))}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-foreground leading-relaxed">
+                    Declaro que <strong>no soy Persona Expuesta Políticamente (PEP)</strong>
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={pepDeclarations.not_pep_relative}
+                    onChange={(e) => setPepDeclarations(prev => ({ ...prev, not_pep_relative: e.target.checked }))}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-foreground leading-relaxed">
+                    Declaro que <strong>no soy pariente de una PEP hasta el 2do grado de consanguinidad o afinidad</strong>
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={pepDeclarations.accept_terms}
+                    onChange={(e) => setPepDeclarations(prev => ({ ...prev, accept_terms: e.target.checked }))}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-foreground leading-relaxed">
+                    Acepto los <strong>Términos y Condiciones</strong> y consiento el uso de mis datos personales
+                  </span>
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
+                Fondea se reserva el derecho de solicitar documentación adicional para verificar la información proporcionada.
+                La falsedad de datos puede resultar en el rechazo inmediato de la solicitud.
               </p>
             </div>
           </div>
-        </Card> */}
+        </Card>
 
         {/* ERROR MESSAGE */}
         {error && (
@@ -571,7 +616,7 @@ export function FunnelSummary() {
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || !pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms}
             className="flex-1"
             size="lg"
           >

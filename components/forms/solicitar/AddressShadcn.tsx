@@ -23,6 +23,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
+import { REFERRAL_SOURCE_OPTIONS } from '@/lib/constants';
 
 interface FunnelAddressProps {
   dashboardMode?: boolean;
@@ -83,6 +84,10 @@ const addressFormSchema = z.object({
   region: z.string().optional(),
   province: z.string().optional(),
   district: z.string().optional(),
+
+  // Canal de marketing
+  referral_source: z.string().min(1, 'Selecciona cómo nos conociste'),
+  referral_other: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.address_type === 'google') {
     if (!data.google_address || data.google_address.trim().length === 0) {
@@ -124,6 +129,15 @@ const addressFormSchema = z.object({
       });
     }
   }
+
+  // Validar referral_other cuando se selecciona OTRO
+  if (data.referral_source === 'OTRO' && (!data.referral_other || data.referral_other.trim().length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Especifica cómo nos conociste',
+      path: ['referral_other'],
+    });
+  }
 });
 
 type AddressFormValues = z.infer<typeof addressFormSchema>;
@@ -143,11 +157,14 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
       region: '',
       province: '',
       district: '',
+      referral_source: '',
+      referral_other: '',
     },
   });
 
   const addressType = form.watch('address_type');
   const watchedRegion = form.watch('region');
+  const referralSource = form.watch('referral_source');
 
   const onSubmit = async (data: AddressFormValues) => {
     const addressData = {
@@ -157,6 +174,8 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
       region: data.region || '',
       province: data.province || '',
       district: data.district || '',
+      referral_source: data.referral_source,
+      referral_other: data.referral_source === 'OTRO' ? data.referral_other : undefined,
     };
 
     console.log('Address data:', addressData);
@@ -354,6 +373,56 @@ export function FunnelAddressShadcn({ dashboardMode = false }: FunnelAddressProp
             </div>
           </div>
         )}
+
+        <Separator className="my-10 bg-primary/20 h-px" />
+
+        {/* Canal de conocimiento */}
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+          <SectionHeader
+            title="¿Cómo nos conociste?"
+            description="Ayúdanos a mejorar nuestro servicio"
+          />
+
+          <div className="space-y-8 md:col-span-2">
+            <FormField
+              control={form.control}
+              name="referral_source"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-1">
+                  <FormLabel>¿De dónde nos conociste?</FormLabel>
+                  <NativeSelect {...field} className="w-full">
+                    <NativeSelectOption value="">Selecciona una opción</NativeSelectOption>
+                    {REFERRAL_SOURCE_OPTIONS.map((opt) => (
+                      <NativeSelectOption key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                  <FormDescription>Esta información nos ayuda a mejorar</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {referralSource === 'OTRO' && (
+              <FormField
+                control={form.control}
+                name="referral_other"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-1">
+                    <FormLabel>Especifica cómo</FormLabel>
+                    <Input
+                      placeholder="Ej: Evento, recomendación, etc."
+                      {...field}
+                      className="w-full"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </div>
+        </div>
 
         <Separator className="my-10 bg-primary/20 h-px" />
 

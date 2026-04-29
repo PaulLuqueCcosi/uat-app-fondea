@@ -37,6 +37,7 @@ export interface KYCData {
   firstLastName: string;
   secondLastName?: string;
   verificationCode: string;
+  birth_date?: string;
   /** El backend indica si los datos ya fueron validados exitosamente */
   verified?: boolean;
 }
@@ -67,6 +68,36 @@ export type AdditionalIncomeType =
   | 'NEGOCIO_SECUNDARIO'
   | 'OTRO';
 
+export type IncomeReceiptMethod =
+  | 'CUENTA_BANCARIA'
+  | 'EFECTIVO'
+  | 'BILLETERA_DIGITAL';
+
+export type LoanPurpose =
+  | 'EDUCACION'
+  | 'SALUD'
+  | 'NEGOCIO'
+  | 'VIAJE'
+  | 'HOGAR'
+  | 'DEUDAS'
+  | 'OTRO';
+
+export type EducationLevel =
+  | 'PRIMARIA'
+  | 'SECUNDARIA'
+  | 'TECNICA'
+  | 'UNIVERSITARIA'
+  | 'POSGRADO';
+
+export type ReferralSource =
+  | 'REDES_SOCIALES'
+  | 'RECOMENDACION'
+  | 'GOOGLE'
+  | 'PUBLICIDAD'
+  | 'OTRO';
+
+export type AccountType = 'AHORROS' | 'CORRIENTE';
+
 export interface AdditionalIncome {
   /** ID local para identificar el item en el array (UUID generado en frontend) */
   id: string;
@@ -91,7 +122,7 @@ export interface LaborDetails {
   company?: string;
   /** Solo EMPLEADO_DEPENDIENTE */
   position?: string;
-  /** INDEPENDIENTE, FREELANCE, EMPRESARIO */
+  /** EMPLEADO_DEPENDIENTE (mín 1), INDEPENDIENTE, FREELANCE, EMPRESARIO */
   years_of_activity?: number;
   /** Solo EMPRESARIO */
   business_ruc?: string;
@@ -101,6 +132,8 @@ export interface LaborDetails {
 /** Recurso 3: Ingresos */
 export interface LaborIncome {
   monthly_income: number;
+  /** Cómo recibe sus ingresos — afecta scoring */
+  income_receipt_method?: IncomeReceiptMethod;
   has_additional_income: boolean;
   additional_incomes: AdditionalIncome[];
   verified?: boolean;
@@ -131,6 +164,12 @@ export interface EconomicData {
   debts: Debt[];
   hasSavings: boolean;
   savingsAmount: number;
+  /** Propósito del préstamo - afecta scoring */
+  loan_purpose?: LoanPurpose;
+  /** Grado de instrucción - afecta scoring */
+  education_level?: EducationLevel;
+  /** ¿Tiene servicios a su nombre? - afecta scoring */
+  has_services?: boolean;
 }
 
 export interface Debt {
@@ -162,6 +201,10 @@ export interface AdditionalData {
   educationLevel: 'primary' | 'secondary' | 'technical' | 'university' | 'postgraduate';
   maritalStatus: 'single' | 'married' | 'divorced' | 'widowed' | 'cohabiting';
   dependents: number;
+  /** Canal de conocimiento - para marketing */
+  referral_source?: ReferralSource;
+  /** Especificación cuando referral_source es 'OTRO' */
+  referral_other?: string;
 }
 
 export type ContactMethod = 'whatsapp' | 'sms' | 'email' | 'call';
@@ -191,7 +234,7 @@ export type ApplicationStatus =
 export interface BankAccount {
   bank: string;
   accountNumber: string;
-  accountType: string;
+  account_type?: AccountType;
   cci: string;
 }
 
@@ -221,4 +264,15 @@ export interface FunnelStep {
   id: number;
   label: string;
   state: StepState;
+}
+
+// ─── PEP Declarations ────────────────────────────────────────────────────────
+
+export interface PEPDeclarations {
+  /** Declaro que no soy Persona Expuesta Políticamente (PEP) */
+  not_pep: boolean;
+  /** Declaro que no soy pariente de una PEP hasta el 2do grado de consanguinidad o afinidad */
+  not_pep_relative: boolean;
+  /** Acepto los Términos y Condiciones y consiento el uso de mis datos personales */
+  accept_terms: boolean;
 }

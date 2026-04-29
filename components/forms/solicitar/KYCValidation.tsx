@@ -89,6 +89,17 @@ const kycValidationSchema = z.object({
     .min(1, 'Ingresa el código de verificación')
     .length(1, 'El código debe tener exactamente 1 dígito')
     .regex(/^\d{1}$/, 'El código debe ser un número'),
+  birth_date: z
+    .string()
+    .min(1, 'Ingresa tu fecha de nacimiento')
+    .refine((val) => {
+      const date = new Date(val);
+      if (isNaN(date.getTime())) return false;
+      const today = new Date();
+      const age = today.getFullYear() - date.getFullYear()
+        - (today < new Date(today.getFullYear(), date.getMonth(), date.getDate()) ? 1 : 0);
+      return age >= 21 && age <= 65;
+    }, { message: 'Debes tener entre 21 y 65 años para solicitar un préstamo' }),
 });
 
 type KYCValidationFormValues = z.infer<typeof kycValidationSchema>;
@@ -138,6 +149,7 @@ export function FunnelKYCValidation({
       firstLastName: initialData?.firstLastName ?? '',
       secondLastName: initialData?.secondLastName ?? '',
       verificationCode: initialData?.verificationCode ?? '',
+      birth_date: initialData?.birth_date ?? '',
     },
   });
 
@@ -160,6 +172,7 @@ export function FunnelKYCValidation({
         firstLastName: data.firstLastName,
         secondLastName: data.secondLastName || undefined,
         verificationCode: data.verificationCode,
+        birth_date: data.birth_date,
       };
 
       const result: KYCSaveResult = await saveKYCData(kycData);
@@ -242,6 +255,7 @@ export function FunnelKYCValidation({
             .filter(Boolean)
             .join(' ')}
         />
+        <DataRow label="Fecha de nacimiento" value={initialData?.birth_date ?? form.getValues('birth_date')} />
       </div>
 
       {/* Botón continuar en modo funnel */}
@@ -420,6 +434,32 @@ export function FunnelKYCValidation({
                   <FormDescription>
                     El dígito de verificación que aparece en la parte inferior de tu DNI
                   </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Fecha de nacimiento */}
+        <Separator className="my-10 bg-primary/20 h-px" />
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+          <SectionHeader title="Fecha de nacimiento" description="Como aparece en tu DNI" />
+          <div className="md:col-span-2">
+            <FormField
+              control={form.control}
+              name="birth_date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-1">
+                  <FormLabel>Fecha de nacimiento</FormLabel>
+                  <Input
+                    type="date"
+                    {...field}
+                    className="w-full"
+                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 21)).toISOString().split('T')[0]}
+                    min={new Date(new Date().setFullYear(new Date().getFullYear() - 65)).toISOString().split('T')[0]}
+                  />
+                  <FormDescription>Debes tener entre 21 y 65 años</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

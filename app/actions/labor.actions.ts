@@ -128,7 +128,10 @@ export async function saveLaborDetails(
     }
 
     if (situation.employment_status === 'EMPLEADO_DEPENDIENTE') {
-      // Solo sector es requerido para empleado dependiente
+      // Validar años de actividad para empleado dependiente (mínimo 1 año)
+      if (details.years_of_activity === undefined || details.years_of_activity === null || details.years_of_activity < 1) {
+        return { success: false, error: 'Debes tener al menos 1 año en la empresa.' };
+      }
     }
 
     if (['INDEPENDIENTE', 'FREELANCE', 'EMPRESARIO'].includes(situation.employment_status)) {
@@ -172,6 +175,10 @@ export async function saveLaborIncome(
       };
     }
 
+    if (!income.income_receipt_method) {
+      return { success: false, error: 'Selecciona cómo recibes tus ingresos.' };
+    }
+
     // Validar ingresos adicionales si los hay
     if (income.has_additional_income) {
       if (!income.additional_incomes || income.additional_incomes.length === 0) {
@@ -193,6 +200,7 @@ export async function saveLaborIncome(
     const db = await readJSON<LaborIncome>(INCOME_DB);
     db[user.id] = {
       monthly_income: income.monthly_income,
+      income_receipt_method: income.income_receipt_method,
       has_additional_income: income.has_additional_income,
       additional_incomes: income.has_additional_income ? income.additional_incomes : [],
       verified: true,
