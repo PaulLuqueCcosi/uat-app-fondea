@@ -12,7 +12,8 @@
       "Bash(mkdir -p \"E:\\\\FONDEA_FINTECH\\\\app_fondea\\\\app_fondea_pe\\\\app\\\\solicitudes\\\\[id]\\\\preaprobada\")",
       "Bash(mkdir -p \"E:\\\\FONDEA_FINTECH\\\\app_fondea\\\\app_fondea_pe\\\\app\\\\solicitudes\\\\[id]\\\\rechazada\")",
       "Bash(mkdir -p \"E:\\\\FONDEA_FINTECH\\\\app_fondea\\\\app_fondea_pe\\\\app\\\\solicitudes\\\\[id]\\\\mas-info\")",
-      "Bash(mkdir -p \"E:\\\\FONDEA_FINTECH\\\\app_fondea\\\\app_fondea_pe\\\\app\\\\solicitudes\\\\[id]\\\\kyc-documentos\")"
+      "Bash(mkdir -p \"E:\\\\FONDEA_FINTECH\\\\app_fondea\\\\app_fondea_pe\\\\app\\\\solicitudes\\\\[id]\\\\kyc-documentos\")",
+      "Bash(npx tsc *)"
     ]
   }
 }

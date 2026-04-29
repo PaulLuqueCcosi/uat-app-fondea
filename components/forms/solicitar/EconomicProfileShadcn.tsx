@@ -4,8 +4,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, Trash2, Wallet, TrendingUp, CreditCard, PiggyBank } from 'lucide-react';
+import { Plus, Trash2, Wallet, TrendingUp, CreditCard, PiggyBank, Pencil, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -24,11 +25,13 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
-import { saveEconomicProfile } from '@/app/actions/loan.actions';
+import { saveEconomicProfile } from '@/app/actions/economic.actions';
 import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/lib/constants';
+import { EconomicProfileStatus } from '@/lib/types';
 
 interface FunnelEconomicProfileProps {
   dashboardMode?: boolean;
+  initialData?: EconomicProfileStatus;
 }
 
 interface SectionHeaderProps {
@@ -41,6 +44,20 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
     <div className="space-y-1">
       <h2 className="font-semibold text-primary">{title}</h2>
       <p className="text-muted-foreground text-sm">{description}</p>
+    </div>
+  );
+}
+
+function DataRow({ label, value }: { label: string; value?: string | number | boolean }) {
+  const display = value === undefined || value === null || value === ''
+    ? '—'
+    : typeof value === 'boolean'
+      ? (value ? 'Sí' : 'No')
+      : String(value);
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground">{display}</span>
     </div>
   );
 }
@@ -85,22 +102,33 @@ const economicFormSchema = z.object({
 
 type EconomicFormValues = z.infer<typeof economicFormSchema>;
 
-export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEconomicProfileProps) {
+export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData }: FunnelEconomicProfileProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
+  const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
+  const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const prevProfile = initialData?.profile;
+
   const form = useForm<EconomicFormValues>({
     resolver: zodResolver(economicFormSchema),
     defaultValues: {
-      loan_purpose: '',
-      monthly_expenses: '',
-      has_debts: false,
-      debts: [],
-      has_property: false,
-      has_vehicle: false,
-      has_services: false,
-      education_level: '',
+      loan_purpose: prevProfile?.loan_purpose || '',
+      monthly_expenses: prevProfile?.monthly_expenses?.toString() || '',
+      has_debts: prevProfile?.has_debts || false,
+      debts: prevProfile?.debts?.map(d => ({
+        entity: d.entity,
+        type: d.type,
+        amount: d.amount.toString(),
+        monthly_payment: d.monthlyPayment.toString(),
+      })) || [],
+      has_property: prevProfile?.has_property || false,
+      has_vehicle: prevProfile?.has_vehicle || false,
+      has_services: prevProfile?.has_services || false,
+      education_level: prevProfile?.education_level || '',
     },
   });
 
@@ -111,40 +139,180 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEco
 
   const hasDebts = form.watch('has_debts');
 
+  const handleEdit = () => {
+    setIsVerified(false);
+    setIsEditing(true);
+    setSaveError(null);
+  };
+
   const onSubmit = async (data: EconomicFormValues) => {
-    const economicData = {
-      monthlyIncome: 0, // Se obtiene del formulario laboral
-      otherIncome: 0,
-      loan_purpose: data.loan_purpose,
-      monthlyExpenses: Number(data.monthly_expenses),
-      hasDebts: data.has_debts,
-      debts: data.debts?.map(debt => ({
-        id: Date.now().toString() + Math.random(),
-        entity: debt.entity,
-        type: debt.type,
-        amount: Number(debt.amount),
-        monthlyPayment: Number(debt.monthly_payment),
-      })) || [],
-      hasProperty: data.has_property,
-      hasVehicle: data.has_vehicle,
-      has_services: data.has_services,
-      hasSavings: false,
-      savingsAmount: 0,
-      education_level: data.education_level,
-    };
+    setSaveError(null);
+    try {
+      const economicProfile = {
+        loan_purpose: data.loan_purpose as any,
+        monthly_expenses: Number(data.monthly_expenses),
+        has_debts: data.has_debts,
+        debts: data.has_debts ? data.debts?.map(debt => ({
+          id: debt.entity + '-' + Date.now(),
+          entity: debt.entity,
+          type: debt.type,
+          amount: Number(debt.amount),
+          monthlyPayment: Number(debt.monthly_payment),
+        })) || [] : [],
+        has_property: data.has_property,
+        has_vehicle: data.has_vehicle,
+        has_services: data.has_services,
+        education_level: data.education_level as any,
+      };
 
-    await saveEconomicProfile(economicData);
+      const result = await saveEconomicProfile(economicProfile);
 
-    if (dashboardMode) {
-      router.push('/dashboard');
-    } else {
-      router.push(currentStep?.nextPath || '/solicitar/references');
+      if (!result.success) {
+        setSaveError(result.error || 'Error al guardar los datos.');
+        return;
+      }
+
+      setIsVerified(true);
+      setIsEditing(false);
+
+      if (!dashboardMode) {
+        router.push(currentStep?.nextPath || '/solicitar/references');
+      }
+    } catch {
+      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
     }
   };
 
-  const content = (
+  // ── Vista readonly (datos guardados) ────────────────────────────────────────
+  const loanPurposeLabel = LOAN_PURPOSE_OPTIONS.find(o => o.value === prevProfile?.loan_purpose)?.label ?? '—';
+  const educationLevelLabel = EDUCATION_LEVEL_OPTIONS.find(o => o.value === prevProfile?.education_level)?.label ?? '—';
+
+  const verifiedView = (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-secondary" />
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-secondary">Perfil económico guardado</p>
+          <p className="text-xs text-muted-foreground">
+            Tu información económica está registrada. Puedes editarla si algo cambió.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={handleEdit} className="shrink-0 gap-1.5">
+          <Pencil className="h-3.5 w-3.5" />
+          Editar
+        </Button>
+      </div>
+
+      {/* Propósito del préstamo */}
+      <div>
+        <h3 className="text-sm font-semibold text-primary mb-3">Propósito del préstamo</h3>
+        <div className="grid grid-cols-1 gap-4">
+          <DataRow label="¿Para qué usarás el dinero?" value={loanPurposeLabel} />
+        </div>
+      </div>
+
+      {/* Gastos */}
+      <Separator className="bg-border h-px" />
+      <div>
+        <h3 className="text-sm font-semibold text-primary mb-3">Gastos mensuales</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <DataRow
+            label="Gastos mensuales totales"
+            value={`S/ ${Number(prevProfile?.monthly_expenses ?? 0).toLocaleString()}`}
+          />
+        </div>
+      </div>
+
+      {/* Deudas */}
+      <Separator className="bg-border h-px" />
+      <div>
+        <h3 className="text-sm font-semibold text-primary mb-3">Deudas</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <DataRow
+            label="¿Tienes deudas actualmente?"
+            value={prevProfile?.has_debts ? 'Sí' : 'No'}
+          />
+        </div>
+
+        {prevProfile?.has_debts && prevProfile.debts && prevProfile.debts.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs text-muted-foreground mb-2 font-medium">Detalle de deudas:</p>
+            <div className="space-y-2">
+              {prevProfile.debts.map((debt) => {
+                const debtTypeLabel = DEBT_TYPES.find(o => o.value === debt.type)?.label ?? debt.type;
+                return (
+                  <div key={debt.id} className="border rounded-lg px-3 py-2.5 bg-muted/30">
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground text-sm">{debt.entity}</p>
+                        <p className="text-xs text-muted-foreground">{debtTypeLabel}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Monto total:</span>
+                        <span className="font-semibold text-foreground ml-1">S/ {Number(debt.amount).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Cuota mensual:</span>
+                        <span className="font-semibold text-foreground ml-1">S/ {Number(debt.monthlyPayment).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Patrimonio */}
+      <Separator className="bg-border h-px" />
+      <div>
+        <h3 className="text-sm font-semibold text-primary mb-3">Patrimonio</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <DataRow label="¿Eres propietario de algún inmueble?" value={prevProfile?.has_property} />
+          <DataRow label="¿Tienes un vehículo a tu nombre?" value={prevProfile?.has_vehicle} />
+          <DataRow label="¿Cuentas con servicios a tu nombre?" value={prevProfile?.has_services} />
+        </div>
+      </div>
+
+      {/* Educación */}
+      <Separator className="bg-border h-px" />
+      <div>
+        <h3 className="text-sm font-semibold text-primary mb-3">Grado de instrucción</h3>
+        <div className="grid grid-cols-1 gap-4">
+          <DataRow label="¿Cuál es tu grado de instrucción?" value={educationLevelLabel} />
+        </div>
+      </div>
+
+      {!dashboardMode && (
+        <>
+          <Separator className="bg-primary/20 h-px" />
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => router.back()}>Atrás</Button>
+            <Button type="button" onClick={() => router.push(currentStep?.nextPath || '/solicitar/references')}>
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Continuar
+              </span>
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // ── Formulario editable ──────────────────────────────────────────────────────
+  const editForm = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+        {saveError && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm text-red-800">{saveError}</p>
+          </div>
+        )}
+
         {/* Sección 0: Propósito del préstamo */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
           <SectionHeader
@@ -477,15 +645,20 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false }: FunnelEco
     </Form>
   );
 
+  // ── Renderizado final ────────────────────────────────────────────────────────
+  const content = isVerified && !isEditing ? verifiedView : editForm;
+
   if (dashboardMode) {
     return (
       <>
         {content}
-        <StickyBottomBar
-          ctaLabel="Guardar cambios"
-          onCta={form.handleSubmit(onSubmit)}
-          loading={form.formState.isSubmitting}
-        />
+        {isEditing && (
+          <StickyBottomBar
+            ctaLabel="Guardar cambios"
+            onCta={form.handleSubmit(onSubmit)}
+            loading={form.formState.isSubmitting}
+          />
+        )}
       </>
     );
   }

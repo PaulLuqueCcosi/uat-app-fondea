@@ -180,6 +180,25 @@ export interface Debt {
   monthlyPayment: number;
 }
 
+/** Perfil económico del usuario — solo campos del formulario visible */
+export interface EconomicProfile {
+  loan_purpose: LoanPurpose;
+  monthly_expenses: number;
+  has_debts: boolean;
+  debts: Debt[];
+  has_property: boolean;
+  has_vehicle: boolean;
+  has_services: boolean;
+  education_level: EducationLevel;
+  verified?: boolean;
+}
+
+/** Estado del perfil económico — lo que devuelve GET /economic/status */
+export interface EconomicProfileStatus {
+  profile: (EconomicProfile & { verified: boolean }) | null;
+  overall_verified: boolean;
+}
+
 export interface Reference {
   id: string;
   name: string;
