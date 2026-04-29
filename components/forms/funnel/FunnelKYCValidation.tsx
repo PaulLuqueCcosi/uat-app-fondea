@@ -24,11 +24,15 @@ import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveKYCData } from '@/app/actions/kyc.actions';
-import { useState } from 'react';
+import type { KYCSaveResult } from '@/app/actions/kyc.actions';
+import { useState, useEffect } from 'react';
 
 interface FunnelKYCValidationProps {
   dashboardMode?: boolean;
   initialData?: KYCData | null;
+  initialBlocked?: boolean;
+  initialBlockedMinutesLeft?: number;
+  initialAttemptsLeft?: number;
 }
 
 interface SectionHeaderProps {
@@ -89,16 +93,41 @@ const kycValidationSchema = z.object({
 
 type KYCValidationFormValues = z.infer<typeof kycValidationSchema>;
 
-export function FunnelKYCValidation({ dashboardMode = false, initialData }: FunnelKYCValidationProps) {
+export function FunnelKYCValidation({
+  dashboardMode = false,
+  initialData,
+  initialBlocked = false,
+  initialBlockedMinutesLeft = 0,
+  initialAttemptsLeft = 3,
+}: FunnelKYCValidationProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  // Si el backend ya marcó como verificado, arrancamos en modo readonly
   const [isVerified, setIsVerified] = useState(initialData?.verified === true);
   const [isEditing, setIsEditing] = useState(!initialData?.verified);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [attemptsLeft, setAttemptsLeft] = useState(initialAttemptsLeft);
+  const [blocked, setBlocked] = useState(initialBlocked);
+  const [blockedMinutesLeft, setBlockedMinutesLeft] = useState(initialBlockedMinutesLeft);
+
+  // Cuenta regresiva del bloqueo
+  useEffect(() => {
+    if (!blocked || blockedMinutesLeft <= 0) return;
+    const interval = setInterval(() => {
+      setBlockedMinutesLeft((prev) => {
+        if (prev <= 1) {
+          setBlocked(false);
+          setAttemptsLeft(initialAttemptsLeft);
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 60000); // actualizar cada minuto
+    return () => clearInterval(interval);
+  }, [blocked, blockedMinutesLeft, initialAttemptsLeft]);
 
   const form = useForm<KYCValidationFormValues>({
     resolver: zodResolver(kycValidationSchema),
@@ -133,9 +162,16 @@ export function FunnelKYCValidation({ dashboardMode = false, initialData }: Funn
         verificationCode: data.verificationCode,
       };
 
-      const result = await saveKYCData(kycData);
+      const result: KYCSaveResult = await saveKYCData(kycData);
 
       if (!result.success) {
+        if (result.blocked) {
+          setBlocked(true);
+          setBlockedMinutesLeft(result.blockedMinutesLeft ?? 0);
+          setAttemptsLeft(0);
+        } else if (result.attemptsLeft !== undefined) {
+          setAttemptsLeft(result.attemptsLeft);
+        }
         setVerificationError(result.error || 'Error en la verificación');
         setIsVerifying(false);
         setTimeout(() => {
@@ -146,7 +182,6 @@ export function FunnelKYCValidation({ dashboardMode = false, initialData }: Funn
         return;
       }
 
-      // El backend validó correctamente
       setIsVerified(true);
       setIsEditing(false);
       setIsVerifying(false);
@@ -392,8 +427,8 @@ export function FunnelKYCValidation({ dashboardMode = false, initialData }: Funn
           </div>
         </div>
 
-        {/* Error de verificación */}
-        {verificationError && (
+        {/* Error de verificación / bloqueo */}
+        {(verificationError || blocked) && (
           <>
             <Separator className="my-10 bg-primary/20 h-px" />
             <div
@@ -402,18 +437,39 @@ export function FunnelKYCValidation({ dashboardMode = false, initialData }: Funn
             >
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 shrink-0 text-destructive">⚠</span>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-destructive">Error de verificación</p>
+                <div className="space-y-2 w-full">
+                  <p className="text-sm font-medium text-destructive">
+                    {blocked ? 'Verificación bloqueada temporalmente' : 'Datos no verificados'}
+                  </p>
                   <p className="text-sm text-destructive/80">{verificationError}</p>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p className="font-medium">Consejos:</p>
-                    <ul className="list-disc list-inside space-y-1 ml-2">
-                      <li>Verifica que todos los datos coincidan exactamente con tu DNI físico</li>
-                      <li>Escribe los nombres y apellidos en mayúsculas</li>
-                      <li>Revisa que el código de verificación sean los 3 dígitos correctos</li>
-                      <li>Si el problema persiste, contacta con soporte</li>
-                    </ul>
-                  </div>
+
+                  {/* Barra de intentos restantes — solo si no está bloqueado */}
+                  {!blocked && attemptsLeft > 0 && (
+                    <div className="pt-1 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Intentos restantes</span>
+                        <span className="font-medium">{attemptsLeft} de {initialAttemptsLeft}</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-destructive transition-all duration-500"
+                          style={{ width: `${((initialAttemptsLeft - attemptsLeft) / initialAttemptsLeft) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Consejos — solo si no está bloqueado */}
+                  {!blocked && (
+                    <div className="text-sm text-muted-foreground space-y-1 pt-1">
+                      <p className="font-medium">Revisa lo siguiente:</p>
+                      <ul className="list-disc list-inside space-y-1 ml-2">
+                        <li>Los datos deben coincidir exactamente con tu DNI físico</li>
+                        <li>Nombres y apellidos en mayúsculas</li>
+                        <li>El código son los 3 dígitos en la parte inferior del DNI</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -434,13 +490,8 @@ export function FunnelKYCValidation({ dashboardMode = false, initialData }: Funn
             >
               Atrás
             </Button>
-            <Button type="submit" className="w-full sm:w-auto" disabled={isVerifying}>
-              {isVerifying ? (
-                <span className="flex items-center gap-2">
-                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block" />
-                  Verificando...
-                </span>
-              ) : (
+            <Button type="submit" className="w-full sm:w-auto" disabled={isVerifying || blocked}>
+              {isVerifying ? <ButtonSpinner label="Verificando..." /> : (
                 <span className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
                   Verificar datos
@@ -460,7 +511,11 @@ export function FunnelKYCValidation({ dashboardMode = false, initialData }: Funn
     return (
       <div className="flex flex-col xl:flex-row gap-6 lg:gap-8 xl:items-start xl:justify-center max-w-7xl mx-auto">
         <div className="flex-1 xl:max-w-2xl">
-          {content}
+          <Card className="w-full">
+            <CardContent className="pt-6">
+              {content}
+            </CardContent>
+          </Card>
           {(!isVerified || isEditing) && (
             <StickyBottomBar
               ctaLabel={isVerifying ? 'Verificando...' : 'Verificar datos'}
@@ -498,6 +553,23 @@ export function FunnelKYCValidation({ dashboardMode = false, initialData }: Funn
         <DNIHelpCard />
       </div>
     </div>
+  );
+}
+
+// ── Componente auxiliar: spinner para botones ────────────────────────────────
+// IMPORTANTE: nunca usar <div> ni <span self-closing /> mezclado con texto
+// dentro de <button>. Siempre encapsular en un componente que retorne un
+// único elemento raíz con todo el contenido adentro.
+function ButtonSpinner({ label }: { label: string }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span
+        role="status"
+        aria-label="Cargando"
+        className="block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"
+      ></span>
+      <span>{label}</span>
+    </span>
   );
 }
 

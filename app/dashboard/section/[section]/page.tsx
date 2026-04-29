@@ -1,7 +1,12 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 
 const validSections = ['kyc', 'labor', 'economic', 'references', 'additional'];
+
+// Secciones que tienen su propia página dedicada
+const dedicatedPages: Record<string, string> = {
+  kyc: '/dashboard/section/kyc-validation',
+};
 
 export default async function DashboardSectionPage({
   params,
@@ -14,8 +19,12 @@ export default async function DashboardSectionPage({
     notFound();
   }
 
+  // Si tiene página dedicada, redirigir
+  if (dedicatedPages[section]) {
+    redirect(dedicatedPages[section]);
+  }
+
   const sectionMap: Record<string, React.ReactNode> = {
-    kyc: <Card><p className="text-sm text-fondea-text p-4">KYC - Por implementar</p></Card>,
     labor: <Card><p className="text-sm text-fondea-text p-4">Labor Profile - Por implementar</p></Card>,
     economic: <Card><p className="text-sm text-fondea-text p-4">Economic Profile - Por implementar</p></Card>,
     references: <Card><p className="text-sm text-fondea-text p-4">References - Por implementar</p></Card>,
