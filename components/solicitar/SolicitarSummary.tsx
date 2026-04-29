@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+import { submitApplicationAction } from '@/app/actions/application.actions';
 
 // DATOS DEMO - Reemplazar con datos reales del backend
 const DEMO_DATA = {
@@ -96,7 +97,6 @@ export function FunnelSummary() {
   };
 
   const handleSubmit = async () => {
-    // Validar que todas las declaraciones estén marcadas
     if (!pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms) {
       setError('Debes aceptar todas las declaraciones para continuar.');
       return;
@@ -105,16 +105,15 @@ export function FunnelSummary() {
     setLoading(true);
     setError('');
     try {
-      // TODO: Llamar a la API para crear la solicitud incluyendo pepDeclarations
-      // const result = await submitApplication({ ...data, pep_declarations: pepDeclarations });
-      // const solicitudId = result.id;
+      const result = await submitApplicationAction(pepDeclarations);
 
-      // Simular envío y generar ID temporal
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const solicitudId = 'demo-' + Date.now();
+      if (!result.success || !result.applicationId) {
+        setError(result.error ?? 'Error al enviar la solicitud. Intenta nuevamente.');
+        return;
+      }
 
-      // Redirigir a la página de evaluación
-      router.push(`/solicitudes/${solicitudId}/evaluando`);
+      // Navega a la página de evaluación — el polling arranca ahí
+      router.push(`/solicitudes/${result.applicationId}/evaluando`);
     } catch (err) {
       console.error('Error submitting application:', err);
       setError('Error al enviar la solicitud. Intenta nuevamente.');

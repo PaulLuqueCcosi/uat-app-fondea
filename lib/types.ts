@@ -298,6 +298,23 @@ export type ApplicationStatus =
   | 'signed'
   | 'disbursing';
 
+/** Resultado de la evaluación de una solicitud */
+export type EvaluationResult = 'approved' | 'rejected' | 'more_info';
+
+/** Registro de una solicitud en el mock-db */
+export interface ApplicationRecord {
+  id: string;
+  userId: string;
+  status: ApplicationStatus;
+  result?: EvaluationResult;
+  /** Timestamp ISO cuando se envió */
+  submittedAt: string;
+  /** Timestamp ISO cuando se evaluó */
+  evaluatedAt?: string;
+  /** Timestamp ISO — si fue rechazada, cuándo puede reintentar (30 días) */
+  canRetryAt?: string;
+}
+
 export interface BankAccount {
   bank: string;
   accountNumber: string;
