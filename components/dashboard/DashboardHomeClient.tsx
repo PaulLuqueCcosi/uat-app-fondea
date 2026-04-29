@@ -25,6 +25,42 @@ interface Article {
   description: string;
 }
 
+interface Solicitud {
+  id: string;
+  monto: number;
+  plazo: number;
+  fecha: string;
+  estado: 'preaprobada' | 'evaluando' | 'aprobada' | 'rechazada' | 'kyc-documentos' | 'kyc-selfie' | 'contrato' | 'mas-info';
+  estadoLabel: string;
+}
+
+const MOCK_SOLICITUDES: Solicitud[] = [
+  {
+    id: 'SOL-001',
+    monto: 5000,
+    plazo: 12,
+    fecha: '24 Abr 2025',
+    estado: 'preaprobada',
+    estadoLabel: 'Preaprobada',
+  },
+  {
+    id: 'SOL-002',
+    monto: 8000,
+    plazo: 24,
+    fecha: '10 Mar 2025',
+    estado: 'evaluando',
+    estadoLabel: 'En evaluación',
+  },
+  {
+    id: 'SOL-003',
+    monto: 3000,
+    plazo: 6,
+    fecha: '15 Ene 2025',
+    estado: 'rechazada',
+    estadoLabel: 'Rechazada',
+  },
+];
+
 const expedienteSections: ExpedienteSection[] = [
   { id: 'kyc', num: 1, icon: CreditCard, title: 'Verificación KYC', status: 'pending', path: '/dashboard/section/kyc' },
   { id: 'labor', num: 2, icon: Briefcase, title: 'Perfil Laboral', status: 'pending', path: '/dashboard/section/labor' },
@@ -147,19 +183,38 @@ export function DashboardHomeClient({ userName }: DashboardHomeClientProps) {
                   <FileText className="w-4 h-4 text-white" />
                 </div>
                 <h2 className="font-semibold text-dark">Mis Solicitudes</h2>
+                <span className="ml-auto text-xs text-fondea-text">{MOCK_SOLICITUDES.length} solicitudes</span>
               </div>
-              <div className="px-5 py-8 flex flex-col items-center gap-3 text-center">
-                <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-fondea-text" />
-                </div>
-                <p className="text-sm text-fondea-text">Aún no tienes solicitudes activas</p>
-                <button
-                  onClick={() => profileIsComplete ? router.push('/dashboard/loans') : setShowDrawer(true)}
-                  className="text-sm text-primary font-medium hover:underline flex items-center gap-1"
-                >
-                  {profileIsComplete ? 'Solicitar préstamo' : 'Ver qué falta para solicitar'}
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+              <div className="divide-y divide-border">
+                {MOCK_SOLICITUDES.map((sol) => (
+                  <button
+                    key={sol.id}
+                    onClick={() => router.push(`/solicitudes/${sol.id}/${sol.estado}`)}
+                    className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-background transition-colors text-left"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-[#F0FAFE] flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-dark">
+                        S/ {sol.monto.toLocaleString()} · {sol.plazo} meses
+                      </p>
+                      <p className="text-xs text-fondea-text">{sol.id} · {sol.fecha}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge
+                        variant={
+                          sol.estado === 'aprobada' ? 'completed'
+                          : sol.estado === 'rechazada' ? 'error'
+                          : 'pending'
+                        }
+                      >
+                        {sol.estadoLabel}
+                      </Badge>
+                      <ChevronRight className="w-4 h-4 text-fondea-text" />
+                    </div>
+                  </button>
+                ))}
               </div>
             </Card>
           </div>

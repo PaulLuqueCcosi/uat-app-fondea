@@ -6,8 +6,10 @@ import { appBackgroundStyle, blobTopRight, blobBottomLeft } from '@/lib/backgrou
 
 export default async function FunnelLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Record<string, string>;
 }) {
   const { isAuthenticated, claims } = await getLogtoContext(logtoConfig);
 
