@@ -204,10 +204,33 @@ export interface Reference {
   name: string;
   phone: string;
   relationship: string;
+  yearsKnown?: number;
 }
 
 export interface ReferencesData {
   references: Reference[];
+}
+
+/** Referencias del usuario */
+export interface ReferencesProfile {
+  family_reference: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  non_family_reference: {
+    name: string;
+    phone: string;
+    relationship: string;
+    years_known: number;
+  };
+  verified?: boolean;
+}
+
+/** Estado de referencias — lo que devuelve GET /references/status */
+export interface ReferencesProfileStatus {
+  profile: (ReferencesProfile & { verified: boolean }) | null;
+  overall_verified: boolean;
 }
 
 export interface AdditionalData {

@@ -4,8 +4,10 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Users, UserCheck } from 'lucide-react';
+import { Users, UserCheck, Pencil, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
+import { useState } from 'react';
+import { ReferencesProfileStatus } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -22,10 +24,11 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
-import { saveReferences } from '@/app/actions/loan.actions';
+import { saveReferencesProfile } from '@/app/actions/references.actions';
 
 interface FunnelReferencesProps {
   dashboardMode?: boolean;
+  initialData?: ReferencesProfileStatus;
 }
 
 const FAMILY_RELATIONS = [
@@ -84,55 +87,154 @@ const referencesFormSchema = z.object({
 
 type ReferencesFormValues = z.infer<typeof referencesFormSchema>;
 
-export function FunnelReferencesShadcn({ dashboardMode = false }: FunnelReferencesProps) {
+function DataRow({ label, value }: { label: string; value?: string | number }) {
+  const display = value === undefined || value === null || value === '' ? '—' : String(value);
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground">{display}</span>
+    </div>
+  );
+}
+
+export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: FunnelReferencesProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
+  const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
+  const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const prevProfile = initialData?.profile;
+
   const form = useForm<ReferencesFormValues>({
     resolver: zodResolver(referencesFormSchema),
     defaultValues: {
-      family_name: '',
-      family_relation: '',
-      family_phone: '',
-      non_family_name: '',
-      non_family_relation: '',
-      non_family_phone: '',
-      years_known: '',
+      family_name: prevProfile?.family_reference.name || '',
+      family_relation: prevProfile?.family_reference.relationship || '',
+      family_phone: prevProfile?.family_reference.phone || '',
+      non_family_name: prevProfile?.non_family_reference.name || '',
+      non_family_relation: prevProfile?.non_family_reference.relationship || '',
+      non_family_phone: prevProfile?.non_family_reference.phone || '',
+      years_known: prevProfile?.non_family_reference.years_known ? String(prevProfile.non_family_reference.years_known) : '',
     },
   });
 
+  const handleEdit = () => {
+    setIsVerified(false);
+    setIsEditing(true);
+    setSaveError(null);
+  };
+
   const onSubmit = async (data: ReferencesFormValues) => {
-    const referencesData = {
-      references: [
-        {
-          id: '1',
+    setSaveError(null);
+    try {
+      const referencesProfile = {
+        family_reference: {
           name: data.family_name,
           phone: data.family_phone,
           relationship: data.family_relation,
         },
-        {
-          id: '2',
+        non_family_reference: {
           name: data.non_family_name,
           phone: data.non_family_phone,
           relationship: data.non_family_relation,
-          yearsKnown: Number(data.years_known),
+          years_known: Number(data.years_known),
         },
-      ],
-    };
+      };
 
-    await saveReferences(referencesData);
+      const result = await saveReferencesProfile(referencesProfile);
 
-    if (dashboardMode) {
-      router.push('/dashboard');
-    } else {
-      router.push(currentStep?.nextPath || '/solicitar/additional');
+      if (!result.success) {
+        setSaveError(result.error || 'Error al guardar los datos.');
+        return;
+      }
+
+      setIsVerified(true);
+      setIsEditing(false);
+
+      if (!dashboardMode) {
+        router.push(currentStep?.nextPath || '/solicitar/additional');
+      }
+    } catch {
+      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
     }
   };
 
-  const content = (
+  // ── Vista readonly (datos guardados) ────────────────────────────────────────
+  const familyRelationLabel = FAMILY_RELATIONS.find(r => r.value === prevProfile?.family_reference.relationship)?.label ?? '—';
+  const nonFamilyRelationLabel = NON_FAMILY_RELATIONS.find(r => r.value === prevProfile?.non_family_reference.relationship)?.label ?? '—';
+
+  const verifiedView = (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-secondary" />
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-secondary">Referencias guardadas</p>
+          <p className="text-xs text-muted-foreground">
+            Tus referencias están registradas. Puedes editarlas si algo cambió.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={handleEdit} className="shrink-0 gap-1.5">
+          <Pencil className="h-3.5 w-3.5" />
+          Editar
+        </Button>
+      </div>
+
+      {/* Referencias en 2 columnas */}
+      <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="hidden lg:block absolute left-1/2 top-0 bottom-0 w-px bg-border -translate-x-1/2"></div>
+
+        {/* Referencia Familiar */}
+        <div>
+          <h3 className="text-sm font-semibold text-primary mb-3">Referencia Familiar</h3>
+          <div className="space-y-4">
+            <DataRow label="Nombre completo" value={prevProfile?.family_reference.name} />
+            <DataRow label="Relación" value={familyRelationLabel} />
+            <DataRow label="Teléfono" value={prevProfile?.family_reference.phone ? `+51 ${prevProfile.family_reference.phone}` : '—'} />
+          </div>
+        </div>
+
+        {/* Referencia No Familiar */}
+        <div>
+          <h3 className="text-sm font-semibold text-primary mb-3">Referencia No Familiar</h3>
+          <div className="space-y-4">
+            <DataRow label="Nombre completo" value={prevProfile?.non_family_reference.name} />
+            <DataRow label="Relación" value={nonFamilyRelationLabel} />
+            <DataRow label="Teléfono" value={prevProfile?.non_family_reference.phone ? `+51 ${prevProfile.non_family_reference.phone}` : '—'} />
+            <DataRow label="Años de conocerse" value={prevProfile?.non_family_reference.years_known ? `${prevProfile.non_family_reference.years_known} ${prevProfile.non_family_reference.years_known === 1 ? 'año' : 'años'}` : '—'} />
+          </div>
+        </div>
+      </div>
+
+      {!dashboardMode && (
+        <>
+          <Separator className="bg-primary/20 h-px" />
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => router.back()}>Atrás</Button>
+            <Button type="button" onClick={() => router.push(currentStep?.nextPath || '/solicitar/additional')}>
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Continuar
+              </span>
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // ── Formulario editable ──────────────────────────────────────────────────────
+  const editForm = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+        {saveError && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm text-red-800">{saveError}</p>
+          </div>
+        )}
+
         {/* Referencias en 2 columnas */}
         <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-10">
           {/* Separador vertical - centrado entre las columnas */}
@@ -308,15 +410,20 @@ export function FunnelReferencesShadcn({ dashboardMode = false }: FunnelReferenc
     </Form>
   );
 
+  // ── Renderizado final ────────────────────────────────────────────────────────
+  const content = isVerified && !isEditing ? verifiedView : editForm;
+
   if (dashboardMode) {
     return (
       <>
         {content}
-        <StickyBottomBar
-          ctaLabel="Guardar cambios"
-          onCta={form.handleSubmit(onSubmit)}
-          loading={form.formState.isSubmitting}
-        />
+        {isEditing && (
+          <StickyBottomBar
+            ctaLabel="Guardar cambios"
+            onCta={form.handleSubmit(onSubmit)}
+            loading={form.formState.isSubmitting}
+          />
+        )}
       </>
     );
   }
