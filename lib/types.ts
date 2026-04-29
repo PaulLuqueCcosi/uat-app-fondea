@@ -249,6 +249,31 @@ export interface AdditionalData {
   referral_other?: string;
 }
 
+/** Perfil de dirección del usuario */
+export interface AddressProfile {
+  address_type: 'google' | 'manual';
+  /** Dirección completa (modo google) */
+  google_address?: string;
+  /** Calle y número (modo manual) */
+  street_address?: string;
+  /** ID del departamento (ubigeo) */
+  region: string;
+  /** ID de la provincia (ubigeo) */
+  province: string;
+  /** ID del distrito (ubigeo) */
+  district: string;
+  /** Canal de conocimiento */
+  referral_source: string;
+  referral_other?: string;
+  verified?: boolean;
+}
+
+/** Estado del perfil de dirección — lo que devuelve GET /additional/status */
+export interface AddressProfileStatus {
+  profile: (AddressProfile & { verified: boolean }) | null;
+  overall_verified: boolean;
+}
+
 export type ContactMethod = 'whatsapp' | 'sms' | 'email' | 'call';
 
 export interface LoanApplication {
