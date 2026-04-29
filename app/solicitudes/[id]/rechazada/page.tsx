@@ -139,7 +139,7 @@ export default function RechazadaPage() {
             Volver al dashboard
           </Button>
           <Button
-            onClick={() => router.push('/funnel/labor')}
+            onClick={() => router.push('/solicitar/labor')}
             className="flex-1"
             size="lg"
           >

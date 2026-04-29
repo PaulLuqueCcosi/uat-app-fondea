@@ -98,7 +98,7 @@ export function DashboardHomeClient({ userName }: DashboardHomeClientProps) {
             <p className="text-sm sm:text-base text-fondea-text">Completa tu expediente para solicitar tu primer préstamo</p>
           </div>
           <button
-            onClick={() => router.push('/funnel/labor')}
+            onClick={() => router.push('/solicitar/labor')}
             className="flex items-center justify-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />

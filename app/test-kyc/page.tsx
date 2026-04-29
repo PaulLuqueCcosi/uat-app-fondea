@@ -1,4 +1,4 @@
-import { FunnelKYCValidation } from '@/components/forms/funnel/FunnelKYCValidation';
+import { FunnelKYCValidation } from '@/components/forms/solicitar/KYCValidation';
 
 export default function TestKYCPage() {
   return (

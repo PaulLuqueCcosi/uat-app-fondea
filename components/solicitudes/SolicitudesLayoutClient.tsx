@@ -1,6 +1,6 @@
 'use client';
 
-import { FunnelNavbar } from '../funnel/FunnelNavbar';
+import { FunnelNavbar } from '../solicitar/SolicitarNavbar';
 import { SolicitudesSidebar } from './SolicitudesSidebar';
 import type { User } from '@/lib/types';
 

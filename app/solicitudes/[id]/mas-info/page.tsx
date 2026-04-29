@@ -20,21 +20,21 @@ const INFORMACION_PENDIENTE = [
     campo: 'Constancia de trabajo',
     descripcion: 'Necesitamos verificar tu situación laboral actual',
     completado: false,
-    path: '/funnel/labor'
+    path: '/solicitar/labor'
   },
   {
     seccion: 'Perfil Económico',
     campo: 'Justificación de ingresos adicionales',
     descripcion: 'Requiere documentación que respalde los ingresos declarados',
     completado: false,
-    path: '/funnel/economic'
+    path: '/solicitar/economic'
   },
   {
     seccion: 'Referencias',
     campo: 'Verificación de contactos',
     descripcion: 'Una de las referencias no pudo ser contactada',
     completado: false,
-    path: '/funnel/references'
+    path: '/solicitar/references'
   },
   {
     seccion: 'Dirección',

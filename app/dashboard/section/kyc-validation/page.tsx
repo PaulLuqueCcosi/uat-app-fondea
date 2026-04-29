@@ -1,4 +1,4 @@
-import { FunnelKYCValidation } from '@/components/forms/funnel/FunnelKYCValidation';
+import { FunnelKYCValidation } from '@/components/forms/solicitar/KYCValidation';
 import { getKYCData } from '@/app/actions/kyc.actions';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

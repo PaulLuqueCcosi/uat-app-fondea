@@ -1,5 +1,5 @@
 import { FunnelContract } from '@/components/solicitar/SolicitarContract';
 
-export default function ContratoPage() {
+export default function FunnelContractPage() {
   return <FunnelContract />;
 }
