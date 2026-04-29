@@ -128,12 +128,7 @@ export async function saveLaborDetails(
     }
 
     if (situation.employment_status === 'EMPLEADO_DEPENDIENTE') {
-      if (!details.company?.trim()) {
-        return { success: false, error: 'Ingresa el nombre de tu empresa.' };
-      }
-      if (!details.position?.trim()) {
-        return { success: false, error: 'Ingresa tu cargo o puesto.' };
-      }
+      // Solo sector es requerido para empleado dependiente
     }
 
     if (['INDEPENDIENTE', 'FREELANCE', 'EMPRESARIO'].includes(situation.employment_status)) {

@@ -61,15 +61,8 @@ const laborFormSchema = z.object({
   if (data.employment_status && data.employment_status !== 'PENSIONISTA' && !data.industry) {
     ctx.addIssue({ code: 'custom', message: 'Selecciona el sector', path: ['industry'] });
   }
-  // Empresa y cargo — obligatorios para EMPLEADO_DEPENDIENTE
-  if (data.employment_status === 'EMPLEADO_DEPENDIENTE') {
-    if (!data.company?.trim()) {
-      ctx.addIssue({ code: 'custom', message: 'Ingresa el nombre de tu empresa', path: ['company'] });
-    }
-    if (!data.position?.trim()) {
-      ctx.addIssue({ code: 'custom', message: 'Ingresa tu cargo o puesto', path: ['position'] });
-    }
-  }
+  // Empresa y cargo — ya no son obligatorios para EMPLEADO_DEPENDIENTE
+  // (solo se pide sector/industria en la sección de detalles)
   // Años de actividad para INDEPENDIENTE y FREELANCE
   if (['INDEPENDIENTE', 'FREELANCE'].includes(data.employment_status) && (data.years_of_activity === undefined || data.years_of_activity === '')) {
     ctx.addIssue({ code: 'custom', message: 'Ingresa los años de actividad', path: ['years_of_activity'] });
@@ -269,8 +262,6 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         {prevSituation?.employment_status !== 'PENSIONISTA' && (
           <DataRow label="Sector" value={industryLabel} />
         )}
-        {prevDetails?.company && <DataRow label="Empresa" value={prevDetails.company} />}
-        {prevDetails?.position && <DataRow label="Cargo" value={prevDetails.position} />}
         {prevDetails?.years_of_activity !== undefined && <DataRow label="Años de actividad" value={prevDetails.years_of_activity} />}
         {prevDetails?.business_ruc && <DataRow label="RUC" value={prevDetails.business_ruc} />}
         <DataRow label="Ingreso mensual neto" value={`S/ ${Number(prevIncome?.monthly_income ?? 0).toLocaleString()}`} />
@@ -368,35 +359,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                   )}
                 />
 
-                {/* Empresa y cargo — solo para empleado dependiente */}
-                {employmentStatus === 'EMPLEADO_DEPENDIENTE' && (
-                  <>
-                    <FormField
-                      control={form.control}
-                      name="company"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col gap-1">
-                          <FormLabel>Empresa donde trabajas</FormLabel>
-                          <Input placeholder="Empresa S.A.C." {...field} className="w-full" />
-                          <FormDescription>Nombre de tu empleador actual</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="position"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col gap-1">
-                          <FormLabel>Cargo o puesto</FormLabel>
-                          <Input placeholder="Analista de sistemas" {...field} className="w-full" />
-                          <FormDescription>Tu cargo actual en la empresa</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                )}
+                {/* EMPLEADO_DEPENDIENTE — solo sector, sin campos adicionales */}
 
                 {/* Años de actividad — independiente y freelance */}
                 {(employmentStatus === 'INDEPENDIENTE' || employmentStatus === 'FREELANCE') && (
