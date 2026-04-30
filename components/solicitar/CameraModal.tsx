@@ -147,7 +147,7 @@ export function CameraModal({
     setFaceScore(null);
   }, []);
 
-  // ── Dibujar overlay de documento ────────────────────────────────────────────
+  // ── Dibujar overlay de documento (sin rectángulo, solo cámara limpia) ────────
   const drawDocumentOverlay = useCallback((canvas: HTMLCanvasElement, video: HTMLVideoElement) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -157,31 +157,8 @@ export function CameraModal({
       canvas.height = video.videoHeight || 480;
     }
 
+    // Limpiar canvas — sin overlay, la cámara se ve completa
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const dw = canvas.width * 0.8;
-    const dh = dw * 0.63;
-    const x  = (canvas.width  - dw) / 2;
-    const y  = (canvas.height - dh) / 2;
-
-    ctx.clearRect(x, y, dw, dh);
-    ctx.strokeStyle = '#10b981';
-    ctx.lineWidth   = 4;
-    ctx.strokeRect(x, y, dw, dh);
-
-    const cl = 30;
-    ctx.lineWidth = 6;
-    [[x, y, 1, 1], [x + dw, y, -1, 1], [x, y + dh, 1, -1], [x + dw, y + dh, -1, -1]].forEach(
-      ([cx, cy, sx, sy]) => {
-        ctx.beginPath();
-        ctx.moveTo(cx as number, (cy as number) + (sy as number) * cl);
-        ctx.lineTo(cx as number, cy as number);
-        ctx.lineTo((cx as number) + (sx as number) * cl, cy as number);
-        ctx.stroke();
-      }
-    );
   }, []);
 
   // ── Dibujar overlay de rostro (sin óvalo, solo badge de estado) ────────────
@@ -413,7 +390,7 @@ export function CameraModal({
               )}
 
               {mode === 'document' && (
-                <p className="text-white/80 text-xs">Alinea el DNI dentro del recuadro</p>
+                <p className="text-white text-sm font-medium">Toma una foto clara de tu DNI</p>
               )}
 
               {/* Botón capturar */}

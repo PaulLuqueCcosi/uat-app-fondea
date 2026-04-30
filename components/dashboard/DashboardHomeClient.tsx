@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import {
   CreditCard, Briefcase, DollarSign, Users, MapPin,
   X, ArrowRight, BookOpen, Settings, User, Bell,
-  ChevronRight, ClipboardList, FileText, Plus
+  ChevronRight, ClipboardList, FileText, Plus, CheckCircle
 } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface ExpedienteSection {
@@ -107,22 +108,63 @@ export function DashboardHomeClient({ userName }: DashboardHomeClientProps) {
         </div>
 
         {/* Progress bar */}
-        <Card>
-          <div className="flex flex-col gap-3">
+        <Card className="relative overflow-hidden">
+          <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <ClipboardList className="h-5 w-5 text-primary" />
+              </div>
+              <div className="space-y-0.5">
+                <CardTitle className="text-base">Tu Expediente Digital</CardTitle>
+                <CardDescription className="text-xs">
+                  Completa tu perfil para solicitar préstamos
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-2xl font-bold text-primary">{progress}%</span>
+              <span className="text-xs text-muted-foreground">completado</span>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-3 pb-4">
+            <div className="relative">
+              <div className="h-3 overflow-hidden rounded-full bg-border/50 shadow-inner">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-secondary shadow-sm transition-all duration-700 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-dark">Tu perfil está {progress}% completo</span>
-              <span className="text-sm text-fondea-text">{progress}%</span>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-1">
+                  <CheckCircle className={cn(
+                    "h-4 w-4",
+                    completedCount > 0 ? "text-secondary" : "text-border"
+                  )} />
+                  <span className="font-medium text-foreground">{completedCount} completadas</span>
+                </div>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-muted-foreground">
+                  {expedienteSections.length - completedCount} pendientes
+                </span>
+              </div>
+
+              {progress < 100 && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => setShowDrawer(true)}
+                  className="h-auto p-0 text-xs font-semibold"
+                >
+                  Ver detalles
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              )}
             </div>
-            <div className="h-2 bg-border rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <p className="text-xs text-fondea-text">
-              {completedCount} de {expedienteSections.length} secciones completadas
-            </p>
-          </div>
+          </CardContent>
         </Card>
 
         {/* 2-column layout */}
