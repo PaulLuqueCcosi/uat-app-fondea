@@ -150,13 +150,11 @@ Guarda los ingresos del usuario.
   "has_additional_income": true,
   "additional_incomes": [
     {
-      "id": "uuid-123",
       "type": "FREELANCE",
       "amount": 800,
       "description": "Proyectos web"
     },
     {
-      "id": "uuid-456",
       "type": "OTRO",
       "custom_type": "Venta de productos",
       "amount": 500
@@ -188,15 +186,24 @@ Guarda los ingresos del usuario.
 | `BILLETERA_DIGITAL` | Billetera digital (Yape, Plin, etc.) |
 | `OTROS` | Otro |
 
-**Additional Income — campos:**
+**Additional Income — campos (request):**
 
 | Campo | Tipo | Requerido | Validación |
 |---|---|---|---|
-| `id` | string | ✅ | UUID generado por el frontend |
 | `type` | string | ✅ | Ver enum |
 | `custom_type` | string | Si `type: "OTRO"` | Texto libre |
 | `amount` | number | ✅ | > 0 |
 | `description` | string | ❌ | Texto libre opcional |
+
+**Additional Income — campos (response en GET /status):**
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `id` | string | UUID generado por el backend |
+| `type` | string | Tipo de ingreso |
+| `custom_type` | string | Solo si `type: "OTRO"` |
+| `amount` | number | Monto mensual |
+| `description` | string | Descripción opcional |
 
 **Additional Income Type Enum:**
 
