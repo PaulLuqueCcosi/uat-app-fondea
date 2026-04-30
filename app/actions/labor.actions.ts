@@ -32,6 +32,48 @@ async function writeJSON<T>(filePath: string, data: Record<string, T>): Promise<
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
+// ── Validadores por tipo de empleo (escalables) ───────────────────────────────
+//
+// Para agregar un nuevo tipo de empleo:
+// 1. Agregar el valor a EmploymentStatus en lib/types.ts
+// 2. Crear la interfaz LaborDetails<NuevoTipo> en lib/types.ts
+// 3. Agregar la entrada en LaborDetailsByEmploymentStatus en lib/types.ts
+// 4. Agregar la opción en EMPLOYMENT_OPTIONS en lib/constants.ts
+// 5. Agregar el validador aquí y registrarlo en EMPLOYMENT_VALIDATORS
+// 6. Agregar el campo condicional en el formulario LaborProfileShadcn.tsx
+
+type ValidationResult = { success: boolean; error?: string };
+type DetailsValidator = (details: Omit<LaborDetails, 'verified'>) => ValidationResult;
+
+const EMPLOYMENT_VALIDATORS: Record<EmploymentStatus, DetailsValidator> = {
+  EMPLEADO_DEPENDIENTE: (d) => {
+    if (!d.industry) return { success: false, error: 'Selecciona el sector o industria.' };
+    if (d.years_of_activity === undefined || d.years_of_activity === null || d.years_of_activity < 0)
+      return { success: false, error: 'Ingresa un tiempo válido en la empresa.' };
+    return { success: true };
+  },
+  INDEPENDIENTE: (d) => {
+    if (!d.industry) return { success: false, error: 'Selecciona el sector o industria.' };
+    if (d.years_of_activity === undefined || d.years_of_activity === null || d.years_of_activity < 0)
+      return { success: false, error: 'Ingresa los años de actividad.' };
+    return { success: true };
+  },
+  FREELANCE: (d) => {
+    if (!d.industry) return { success: false, error: 'Selecciona el sector o industria.' };
+    if (d.years_of_activity === undefined || d.years_of_activity === null || d.years_of_activity < 0)
+      return { success: false, error: 'Ingresa los años de actividad.' };
+    return { success: true };
+  },
+  EMPRESARIO: (d) => {
+    if (!d.industry) return { success: false, error: 'Selecciona el sector o industria.' };
+    if (d.years_of_activity === undefined || d.years_of_activity === null || d.years_of_activity < 0)
+      return { success: false, error: 'Ingresa los años con tu negocio.' };
+    if (!d.business_ruc || String(d.business_ruc).length !== LABOR_CONFIG.RUC_LENGTH)
+      return { success: false, error: `El RUC debe tener ${LABOR_CONFIG.RUC_LENGTH} dígitos.` };
+    return { success: true };
+  },
+};
+
 // ── GET: Estado completo ──────────────────────────────────────────────────────
 
 /**
@@ -122,35 +164,16 @@ export async function saveLaborDetails(
       return { success: false, error: 'Primero debes seleccionar tu situación laboral.' };
     }
 
-    // Validaciones según tipo
-    if (situation.employment_status !== 'PENSIONISTA' && !details.industry) {
-      return { success: false, error: 'Selecciona el sector o industria.' };
-    }
-
-    if (situation.employment_status === 'EMPLEADO_DEPENDIENTE') {
-      // Validar años de actividad para empleado dependiente (no negativos)
-      if (details.years_of_activity === undefined || details.years_of_activity === null || details.years_of_activity < 0) {
-        return { success: false, error: 'Ingresa un tiempo válido en la empresa.' };
-      }
-    }
-
-    if (['INDEPENDIENTE', 'FREELANCE', 'EMPRESARIO'].includes(situation.employment_status)) {
-      if (details.years_of_activity === undefined || details.years_of_activity === null || details.years_of_activity < 0) {
-        return { success: false, error: 'Ingresa los años de actividad.' };
-      }
-    }
-
-    if (situation.employment_status === 'EMPRESARIO') {
-      if (!details.business_ruc || String(details.business_ruc).length !== LABOR_CONFIG.RUC_LENGTH) {
-        return { success: false, error: `El RUC debe tener ${LABOR_CONFIG.RUC_LENGTH} dígitos.` };
-      }
-    }
+    // Delegar validación al validador específico del tipo de empleo
+    const validator = EMPLOYMENT_VALIDATORS[situation.employment_status];
+    const validation = validator(details);
+    if (!validation.success) return validation;
 
     const db = await readJSON<LaborDetails>(DETAILS_DB);
     db[user.id] = { ...details, verified: true };
     await writeJSON(DETAILS_DB, db);
 
-    console.log('[LABOR] Detalles guardados:', user.id);
+    console.log('[LABOR] Detalles guardados:', user.id, situation.employment_status);
     return { success: true };
   } catch (error) {
     console.error('[LABOR] Error al guardar detalles:', error);
@@ -231,17 +254,9 @@ export async function saveLaborProfile(
   const situationResult = await saveLaborSituation(situation);
   if (!situationResult.success) return situationResult;
 
-  // Paso 2: Detalles — PENSIONISTA no tiene detalles laborales
-  if (situation !== 'PENSIONISTA') {
-    const detailsResult = await saveLaborDetails(details);
-    if (!detailsResult.success) return detailsResult;
-  } else {
-    // Para PENSIONISTA guardamos un details marcado como verificado sin campos extra
-    const user = await requireValidSession();
-    const detailsDB = await readJSON<LaborDetails>(DETAILS_DB);
-    detailsDB[user.id] = { industry: 'OTRO', verified: true };
-    await writeJSON(DETAILS_DB, detailsDB);
-  }
+  // Paso 2: Detalles laborales
+  const detailsResult = await saveLaborDetails(details);
+  if (!detailsResult.success) return detailsResult;
 
   // Paso 3: Ingresos
   const incomeResult = await saveLaborIncome(income);

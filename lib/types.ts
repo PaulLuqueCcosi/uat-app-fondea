@@ -48,8 +48,7 @@ export type EmploymentStatus =
   | 'EMPLEADO_DEPENDIENTE'
   | 'INDEPENDIENTE'
   | 'EMPRESARIO'
-  | 'FREELANCE'
-  | 'PENSIONISTA';
+  | 'FREELANCE';
 
 export type LaborIndustry =
   | 'TECNOLOGIA'
@@ -118,16 +117,61 @@ export interface LaborSituation {
 /** Recurso 2: Detalles laborales — shape varía según employment_status */
 export interface LaborDetails {
   industry: LaborIndustry;
-  /** Solo EMPLEADO_DEPENDIENTE */
-  company?: string;
-  /** Solo EMPLEADO_DEPENDIENTE */
-  position?: string;
   /** EMPLEADO_DEPENDIENTE (mín 1), INDEPENDIENTE, FREELANCE, EMPRESARIO */
   years_of_activity?: number;
   /** Solo EMPRESARIO */
   business_ruc?: string;
   verified?: boolean;
 }
+
+// ── Tipos específicos por situación laboral (escalables) ─────────────────────
+//
+// Para agregar un nuevo tipo de empleo:
+// 1. Agregar el valor a EmploymentStatus (abajo)
+// 2. Crear la interfaz LaborDetails<NuevoTipo> aquí
+// 3. Agregar la entrada en LaborDetailsByEmploymentStatus
+// 4. Agregar la opción en EMPLOYMENT_OPTIONS en lib/constants.ts
+// 5. Agregar el validador en EMPLOYMENT_VALIDATORS en labor.actions.ts
+// 6. Agregar el campo condicional en el formulario LaborProfileShadcn.tsx
+
+/** Detalles para EMPLEADO_DEPENDIENTE: sector + tiempo en empresa */
+export interface LaborDetailsEmpleado {
+  industry: LaborIndustry;
+  years_of_activity: number;
+}
+
+/** Detalles para INDEPENDIENTE: sector + años de actividad */
+export interface LaborDetailsIndependiente {
+  industry: LaborIndustry;
+  years_of_activity: number;
+}
+
+/** Detalles para FREELANCE: sector + años de actividad */
+export interface LaborDetailsFreelance {
+  industry: LaborIndustry;
+  years_of_activity: number;
+}
+
+/** Detalles para EMPRESARIO: sector + años con el negocio + RUC */
+export interface LaborDetailsEmpresario {
+  industry: LaborIndustry;
+  years_of_activity: number;
+  business_ruc: string;
+}
+
+/**
+ * Mapa que relaciona cada EmploymentStatus con su tipo de detalles específico.
+ * Al agregar un nuevo tipo de empleo, agregar aquí su entrada.
+ */
+export type LaborDetailsByEmploymentStatus = {
+  EMPLEADO_DEPENDIENTE: LaborDetailsEmpleado;
+  INDEPENDIENTE:        LaborDetailsIndependiente;
+  FREELANCE:            LaborDetailsFreelance;
+  EMPRESARIO:           LaborDetailsEmpresario;
+};
+
+/** Helper: obtiene el tipo de detalles correcto dado un EmploymentStatus */
+export type GetLaborDetailsType<T extends EmploymentStatus> = LaborDetailsByEmploymentStatus[T];
 
 /** Recurso 3: Ingresos */
 export interface LaborIncome {

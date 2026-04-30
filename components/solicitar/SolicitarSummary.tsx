@@ -224,27 +224,13 @@ export function FunnelSummary({
                   <p className="font-medium text-foreground">{getEmploymentLabel(laborData.situation?.employment_status)}</p>
                 </div>
 
-                {laborData.situation?.employment_status !== 'PENSIONISTA' && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Sector / Industria</p>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Sector / Industria</p>
                     <p className="font-medium text-foreground">{getIndustryLabel(laborData.details?.industry)}</p>
                   </div>
-                )}
 
                 {laborData.situation?.employment_status === 'EMPLEADO_DEPENDIENTE' && (
                   <>
-                    {laborData.details?.company && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Nombre de la empresa</p>
-                        <p className="font-medium text-foreground">{laborData.details.company}</p>
-                      </div>
-                    )}
-                    {laborData.details?.position && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Cargo / Puesto</p>
-                        <p className="font-medium text-foreground">{laborData.details.position}</p>
-                      </div>
-                    )}
                     {laborData.details?.years_of_activity !== undefined && (
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Tiempo en la empresa</p>

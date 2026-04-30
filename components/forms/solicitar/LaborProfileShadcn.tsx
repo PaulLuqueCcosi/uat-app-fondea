@@ -39,8 +39,6 @@ import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 const laborFormSchema = z.object({
   employment_status: z.string().min(1, 'Selecciona tu situación laboral'),
   industry: z.string().optional(),
-  company: z.string().optional(),
-  position: z.string().optional(),
   years_of_activity: z.string().optional(),
   business_ruc: z.string().optional(),
   monthly_income: z
@@ -59,44 +57,44 @@ const laborFormSchema = z.object({
     description: z.string().optional(),
   })).optional(),
 }).superRefine((data, ctx) => {
-  // Sector requerido para todos excepto PENSIONISTA
-  if (data.employment_status && data.employment_status !== 'PENSIONISTA' && !data.industry) {
+  // Sector requerido para todos los tipos de empleo
+  if (data.employment_status && !data.industry) {
     ctx.addIssue({ code: 'custom', message: 'Selecciona el sector', path: ['industry'] });
   }
-  // Empresa y cargo — ya no son obligatorios para EMPLEADO_DEPENDIENTE
-  // (solo se pide sector/industria en la sección de detalles)
-  // Años de actividad para INDEPENDIENTE y FREELANCE
-  if (['INDEPENDIENTE', 'FREELANCE'].includes(data.employment_status) && (data.years_of_activity === undefined || data.years_of_activity === '')) {
-    ctx.addIssue({ code: 'custom', message: 'Ingresa los años de actividad', path: ['years_of_activity'] });
-  }
-  // Antigüedad para EMPLEADO_DEPENDIENTE (no negativos)
-  if (data.employment_status === 'EMPLEADO_DEPENDIENTE') {
+
+  // years_of_activity requerido para todos los tipos (>= 0)
+  if (['EMPLEADO_DEPENDIENTE', 'INDEPENDIENTE', 'FREELANCE', 'EMPRESARIO'].includes(data.employment_status)) {
     if (data.years_of_activity === undefined || data.years_of_activity === '') {
-      ctx.addIssue({ code: 'custom', message: 'Ingresa tu tiempo en la empresa', path: ['years_of_activity'] });
+      const msg = data.employment_status === 'EMPLEADO_DEPENDIENTE'
+        ? 'Ingresa tu tiempo en la empresa'
+        : data.employment_status === 'EMPRESARIO'
+        ? 'Ingresa los años con tu negocio'
+        : 'Ingresa los años de actividad';
+      ctx.addIssue({ code: 'custom', message: msg, path: ['years_of_activity'] });
     } else if (Number(data.years_of_activity) < 0) {
-      ctx.addIssue({ code: 'custom', message: 'El tiempo no puede ser negativo', path: ['years_of_activity'] });
+      ctx.addIssue({ code: 'custom', message: 'El valor no puede ser negativo', path: ['years_of_activity'] });
     }
   }
-  // Años + RUC para EMPRESARIO
+
+  // RUC requerido solo para EMPRESARIO
   if (data.employment_status === 'EMPRESARIO') {
-    if (data.years_of_activity === undefined || data.years_of_activity === '') {
-      ctx.addIssue({ code: 'custom', message: 'Ingresa los años con tu negocio', path: ['years_of_activity'] });
-    }
     if (!data.business_ruc) {
       ctx.addIssue({ code: 'custom', message: 'Ingresa el RUC del negocio', path: ['business_ruc'] });
     } else if (data.business_ruc.length !== LABOR_CONFIG.RUC_LENGTH) {
       ctx.addIssue({ code: 'custom', message: `El RUC debe tener ${LABOR_CONFIG.RUC_LENGTH} dígitos`, path: ['business_ruc'] });
     }
   }
+
   // Al menos un ingreso adicional si el switch está activo
   if (data.has_additional_income && (!data.additional_incomes || data.additional_incomes.length === 0)) {
     ctx.addIssue({ code: 'custom', message: 'Agrega al menos un ingreso adicional', path: ['has_additional_income'] });
   }
+
   // custom_type requerido cuando type === 'OTRO'
   if (data.additional_incomes) {
-    data.additional_incomes.forEach((item, _i) => {
+    data.additional_incomes.forEach((item, i) => {
       if (item.type === 'OTRO' && !item.custom_type?.trim()) {
-        ctx.addIssue({ code: 'custom', message: 'Especifica el tipo de ingreso', path: [`additional_incomes.${_i}.custom_type`] });
+        ctx.addIssue({ code: 'custom', message: 'Especifica el tipo de ingreso', path: [`additional_incomes.${i}.custom_type`] });
       }
     });
   }
@@ -166,8 +164,6 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
     defaultValues: {
       employment_status: prevSituation?.employment_status ?? '',
       industry: prevDetails?.industry ?? '',
-      company: prevDetails?.company ?? '',
-      position: prevDetails?.position ?? '',
       years_of_activity: prevDetails?.years_of_activity ? String(prevDetails.years_of_activity) : '',
       business_ruc: prevDetails?.business_ruc ?? '',
       monthly_income: prevIncome?.monthly_income ? String(prevIncome.monthly_income) : '',
@@ -199,8 +195,6 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
     const prev = form.getValues('employment_status');
     if (prev && prev !== newValue) {
       form.setValue('industry', '');
-      form.setValue('company', '');
-      form.setValue('position', '');
       form.setValue('years_of_activity', '');
       form.setValue('business_ruc', '');
     }
@@ -214,8 +208,6 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         data.employment_status as EmploymentStatus,
         {
           industry: data.industry as LaborIndustry,
-          company: data.company || undefined,
-          position: data.position || undefined,
           years_of_activity: data.years_of_activity ? Number(data.years_of_activity) : undefined,
           business_ruc: data.business_ruc || undefined,
         },
@@ -275,25 +267,16 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         <h3 className="text-sm font-semibold text-primary mb-3">Situación Laboral</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DataRow label="Situación laboral" value={employmentLabel} />
-          {prevSituation?.employment_status !== 'PENSIONISTA' && (
-            <DataRow label="Sector" value={industryLabel} />
-          )}
+          <DataRow label="Sector" value={industryLabel} />
         </div>
       </div>
 
       {/* Detalles Laborales */}
-      {prevSituation?.employment_status !== 'PENSIONISTA' && (
-        <>
-          <Separator className="bg-border h-px" />
-          <div>
+      <>
+        <Separator className="bg-border h-px" />
+        <div>
             <h3 className="text-sm font-semibold text-primary mb-3">Detalles Laborales</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {prevDetails?.company && (
-                <DataRow label="Empresa" value={prevDetails.company} />
-              )}
-              {prevDetails?.position && (
-                <DataRow label="Cargo" value={prevDetails.position} />
-              )}
               {prevDetails?.years_of_activity !== undefined && (
                 <DataRow
                   label={
@@ -312,7 +295,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
             </div>
           </div>
         </>
-      )}
+      )
 
       {/* Ingresos */}
       <Separator className="bg-border h-px" />
@@ -419,7 +402,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         </div>
 
         {/* Detalles laborales — condicional según tipo */}
-        {employmentStatus && employmentStatus !== 'PENSIONISTA' && (
+        {employmentStatus && (
           <>
             <Separator className="my-10 bg-primary/20 h-px" />
             <div className="grid grid-cols-1 gap-10 md:grid-cols-3">

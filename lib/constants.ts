@@ -31,7 +31,6 @@ export const EMPLOYMENT_OPTIONS = [
   { value: 'INDEPENDIENTE',        label: 'Trabajador independiente' },
   { value: 'EMPRESARIO',           label: 'Dueño de negocio' },
   { value: 'FREELANCE',            label: 'Freelancer / Consultor' },
-  { value: 'PENSIONISTA',          label: 'Pensionista' },
 ] as const;
 
 export const INDUSTRY_OPTIONS = [
