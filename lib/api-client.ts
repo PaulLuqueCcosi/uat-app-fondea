@@ -19,8 +19,8 @@ class ApiClient {
     const url = `${this.baseUrl}${endpoint}`;
     
     try {
-      // 1. Obtener token (el SDK maneja refresh automáticamente)
-      const accessToken = await getAccessTokenRSC(logtoConfig);
+      // Obtener token con el resource del backend para que el JWT tenga aud correcto
+      const accessToken = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
       
       // 2. Preparar headers
       const headers = {

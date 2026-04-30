@@ -12,7 +12,9 @@ export default async function DevToolsPage() {
   let tokenError: string | null = null;
 
   try {
-    accessToken = await getAccessTokenRSC(logtoConfig);
+    // Pasar el resource para obtener un JWT con aud = tu backend
+    // Sin este argumento Logto devuelve un opaque token sin audience
+    accessToken = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
   } catch (e: any) {
     tokenError = e?.message ?? 'Error al obtener el token';
   }
