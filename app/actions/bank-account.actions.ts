@@ -1,26 +1,36 @@
 'use server';
 
-import { BankAccountProfile, BankAccountProfileStatus, AccountType } from '@/lib/types';
+import { BankAccountProfile, BankAccountProfileStatus } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
-import fs from 'fs/promises';
-import path from 'path';
+import { getAccessTokenRSC } from '@logto/next/server-actions';
+import { logtoConfig } from '@/app/logto';
 
-// ── Paths ─────────────────────────────────────────────────────────────────────
+// ── Helpers internos ──────────────────────────────────────────────────────────
 
-const BANK_ACCOUNT_DB = path.join(process.cwd(), 'mock-db', 'bank-account-profile.json');
+async function backendFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const token = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
+  const baseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
+  return fetch(`${baseUrl}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+}
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function readJSON<T>(filePath: string): Promise<Record<string, T>> {
+async function parseBackendError(res: Response): Promise<string> {
   try {
-    return JSON.parse(await fs.readFile(filePath, 'utf-8'));
+    const json = await res.json();
+    return json.detail ?? json.error ?? 'Error al guardar.';
   } catch {
-    return {};
+    return 'Error al guardar.';
   }
 }
 
-async function writeJSON<T>(filePath: string, data: Record<string, T>): Promise<void> {
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+function isSuccess(status: number): boolean {
+  return status >= 200 && status < 300;
 }
 
 // ── GET: Estado completo ──────────────────────────────────────────────────────
@@ -30,62 +40,65 @@ async function writeJSON<T>(filePath: string, data: Record<string, T>): Promise<
  * Retorna el perfil y si está verificado.
  */
 export async function getBankAccountProfileStatus(): Promise<BankAccountProfileStatus> {
-  const user = await requireValidSession();
-
+  await requireValidSession();
+  
   try {
-    const db = await readJSON<BankAccountProfile>(BANK_ACCOUNT_DB);
-    const profile = db[user.id] ?? null;
-
-    const overall_verified = profile?.verified === true;
-
-    return {
-      profile: profile ? { ...profile, verified: profile.verified ?? false } : null,
-      overall_verified,
-    };
+    const res = await backendFetch('/api/v1/bank-account/status');
+    if (!res.ok) return { profile: null, overall_verified: false };
+    
+    const json = await res.json();
+    const profile: (BankAccountProfile & { verified: boolean }) | null = json.profile
+      ? {
+          bank:         json.profile.bank,
+          account_type: json.profile.account_type,
+          cci:          json.profile.cci,
+          verified:     json.profile.verified ?? false,
+        }
+      : null;
+    
+    return { profile, overall_verified: json.overall_verified ?? false };
   } catch (error) {
-    console.error('[BANK_ACCOUNT] Error al leer estado:', error);
+    console.error('[BANK_ACCOUNT] Error al obtener estado:', error);
     return { profile: null, overall_verified: false };
   }
 }
 
-// ── PUT: Guardar cuenta bancaria ──────────────────────────────────────────────
+// ── POST: Guardar cuenta bancaria ─────────────────────────────────────────────
 
 export async function saveBankAccountProfile(
-  profile: Omit<BankAccountProfile, 'verified'>
+  data: Omit<BankAccountProfile, 'verified'>
 ): Promise<{ success: boolean; error?: string }> {
-  const user = await requireValidSession();
-
+  await requireValidSession();
+  
   try {
-    await new Promise((r) => setTimeout(r, 400));
-
-    // Validaciones
-    if (!profile.bank || profile.bank.trim().length === 0) {
+    // Validaciones del lado cliente (adicionales a las del backend)
+    if (!data.bank || data.bank.trim().length === 0) {
       return { success: false, error: 'Selecciona tu banco.' };
     }
 
-    if (!profile.account_type || !['AHORROS', 'CORRIENTE'].includes(profile.account_type)) {
+    if (!data.account_type || !['AHORROS', 'CORRIENTE'].includes(data.account_type)) {
       return { success: false, error: 'Selecciona el tipo de cuenta.' };
     }
 
-    if (!profile.cci || !/^\d{20}$/.test(profile.cci)) {
+    if (!data.cci || !/^\d{20}$/.test(data.cci)) {
       return { success: false, error: 'El CCI debe tener exactamente 20 dígitos.' };
     }
 
-    const db = await readJSON<BankAccountProfile>(BANK_ACCOUNT_DB);
-
-    db[user.id] = {
-      bank: profile.bank.trim(),
-      account_type: profile.account_type,
-      cci: profile.cci,
-      verified: true,
+    const body = {
+      bank: data.bank.trim(),
+      account_type: data.account_type, // Backend espera AHORROS/CORRIENTE (ya están en mayúsculas)
+      cci: data.cci,
     };
 
-    await writeJSON(BANK_ACCOUNT_DB, db);
-
-    console.log('[BANK_ACCOUNT] Perfil guardado:', user.id);
-    return { success: true };
+    const res = await backendFetch('/api/v1/bank-account/profile', { 
+      method: 'POST', 
+      body: JSON.stringify(body) 
+    });
+    
+    if (isSuccess(res.status)) return { success: true };
+    return { success: false, error: await parseBackendError(res) };
   } catch (error) {
-    console.error('[BANK_ACCOUNT] Error al guardar perfil:', error);
-    return { success: false, error: 'Error al guardar.' };
+    console.error('[BANK_ACCOUNT] Error al guardar:', error);
+    return { success: false, error: 'Error de conexión.' };
   }
 }
