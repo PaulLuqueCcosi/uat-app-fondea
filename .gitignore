@@ -42,5 +42,5 @@ yarn-error.log*
 next-env.d.ts
 
 # mock database (solo para desarrollo local)
-/mock-db/*.json
+# /mock-db/*.json
 .kiro/
