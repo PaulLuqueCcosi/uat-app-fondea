@@ -8,6 +8,8 @@ import { CreditCard, Info, CheckCircle2, Pencil, ShieldCheck } from 'lucide-reac
 import { getCurrentStep } from '@/lib/funnel-steps';
 import { isValidDNI } from '@/lib/validation';
 import { KYCData } from '@/lib/types';
+import { DNIAnnotatedCanvas } from '@/components/forms/solicitar/DNIAnnotatedCanvas';
+import type { DNIField } from '@/components/forms/solicitar/DNIAnnotatedCanvas';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -122,6 +124,7 @@ export function FunnelKYCValidation({
   const [attemptsLeft, setAttemptsLeft] = useState(initialAttemptsLeft);
   const [blocked, setBlocked] = useState(initialBlocked);
   const [blockedHoursLeft, setBlockedHoursLeft] = useState(initialBlockedHoursLeft);
+  const [activeField, setActiveField] = useState<DNIField>(null);
 
   // Cuenta regresiva del bloqueo (en horas)
   useEffect(() => {
@@ -301,6 +304,8 @@ export function FunnelKYCValidation({
                     className="w-full font-mono text-lg"
                     maxLength={8}
                     onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
+                    onFocus={() => setActiveField('dni')}
+                    onBlur={() => setActiveField(null)}
                   />
                   <FormDescription>8 dígitos sin espacios ni guiones</FormDescription>
                   <FormMessage />
@@ -331,6 +336,8 @@ export function FunnelKYCValidation({
                         e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
                       )
                     }
+                    onFocus={() => setActiveField('firstName')}
+                    onBlur={() => setActiveField(null)}
                   />
                   <FormDescription>Exactamente como aparece en tu DNI</FormDescription>
                   <FormMessage />
@@ -352,6 +359,8 @@ export function FunnelKYCValidation({
                         e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
                       )
                     }
+                    onFocus={() => setActiveField('secondName')}
+                    onBlur={() => setActiveField(null)}
                   />
                   <FormDescription>Solo si tienes segundo nombre en tu DNI</FormDescription>
                   <FormMessage />
@@ -382,6 +391,8 @@ export function FunnelKYCValidation({
                         e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
                       )
                     }
+                    onFocus={() => setActiveField('firstLastName')}
+                    onBlur={() => setActiveField(null)}
                   />
                   <FormDescription>Apellido paterno</FormDescription>
                   <FormMessage />
@@ -403,6 +414,8 @@ export function FunnelKYCValidation({
                         e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
                       )
                     }
+                    onFocus={() => setActiveField('secondLastName')}
+                    onBlur={() => setActiveField(null)}
                   />
                   <FormDescription>Apellido materno, si lo tienes</FormDescription>
                   <FormMessage />
@@ -430,6 +443,8 @@ export function FunnelKYCValidation({
                     className="w-full font-mono text-lg"
                     maxLength={1}
                     onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
+                    onFocus={() => setActiveField('verificationCode')}
+                    onBlur={() => setActiveField(null)}
                   />
                   <FormDescription>
                     El dígito de verificación que aparece en la parte inferior de tu DNI
@@ -458,6 +473,8 @@ export function FunnelKYCValidation({
                     className="w-full"
                     max={new Date(new Date().setFullYear(new Date().getFullYear() - 21)).toISOString().split('T')[0]}
                     min={new Date(new Date().setFullYear(new Date().getFullYear() - 65)).toISOString().split('T')[0]}
+                    onFocus={() => setActiveField('birth_date')}
+                    onBlur={() => setActiveField(null)}
                   />
                   <FormDescription>Debes tener entre 21 y 65 años</FormDescription>
                   <FormMessage />
@@ -577,7 +594,7 @@ export function FunnelKYCValidation({
           )}
         </div>
         <div className="xl:shrink-0">
-          <DNIHelpCard />
+          <DNIHelpCard activeField={activeField} />
         </div>
       </div>
     );
@@ -602,7 +619,7 @@ export function FunnelKYCValidation({
         </Card>
       </div>
       <div className="xl:shrink-0">
-        <DNIHelpCard />
+        <DNIHelpCard activeField={activeField} />
       </div>
     </div>
   );
@@ -646,53 +663,19 @@ function DataRow({
 }
 
 // ── Componente auxiliar: card de ayuda DNI ───────────────────────────────────
-function DNIHelpCard() {
+function DNIHelpCard({ activeField }: { activeField: DNIField }) {
   return (
     <div className="xl:sticky xl:top-4">
-      <Card className="w-full max-w-sm mx-auto xl:w-80">
+      <Card className="w-full max-w-sm mx-auto xl:w-[480px]">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Info className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-primary">Tu DNI</h3>
+            <h3 className="text-sm font-semibold text-primary">¿Dónde encuentro estos datos?</h3>
           </div>
         </CardHeader>
-        <CardContent className="p-4">
-          <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-lg shadow-lg text-white aspect-[1.58/1] flex flex-col justify-between p-4 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-5">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-6xl font-bold">
-                PERÚ
-              </div>
-            </div>
-            <div className="relative z-10 space-y-2">
-              <div>
-                <span className="text-[9px] opacity-70 block mb-0.5">
-                  DOCUMENTO NACIONAL DE IDENTIDAD
-                </span>
-                <span className="font-mono bg-yellow-400 text-yellow-900 px-2 py-1 rounded text-sm font-bold inline-block shadow-sm">
-                  12345678
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                <div>
-                  <span className="text-[9px] opacity-70 block mb-0.5">NOMBRES</span>
-                  <span className="bg-green-400 text-green-900 px-2 py-0.5 rounded font-medium text-xs inline-block shadow-sm">
-                    JUAN CARLOS
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[9px] opacity-70 block mb-0.5">APELLIDOS</span>
-                  <span className="bg-green-400 text-green-900 px-2 py-0.5 rounded font-medium text-xs inline-block shadow-sm">
-                    PÉREZ GARCÍA
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="relative z-10 flex items-center justify-between pt-2 border-t border-white/30">
-              <span className="text-[9px] opacity-70">CÓDIGO DE VERIFICACIÓN</span>
-              <span className="bg-orange-400 text-orange-900 px-2 py-1 rounded font-mono font-bold text-xs shadow-sm">
-                5
-              </span>
-            </div>
+        <CardContent className="p-4 pt-0">
+          <div className="w-full rounded-xl overflow-hidden border border-border shadow-sm">
+            <DNIAnnotatedCanvas activeField={activeField} />
           </div>
         </CardContent>
       </Card>
