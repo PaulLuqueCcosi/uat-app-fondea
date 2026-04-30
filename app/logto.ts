@@ -11,8 +11,4 @@ export const logtoConfig: LogtoNextConfig = {
   // Configuraciones adicionales para mejor manejo de sesiones
   resources: process.env.LOGTO_API_RESOURCE ? [process.env.LOGTO_API_RESOURCE] : undefined,
   scopes: ['openid', 'profile', 'email', 'phone'],
-  
-  // Configuración de cookies más robusta
-  cookieName: undefined, // Usar el nombre por defecto de Logto: logto_<appId>
-  cookieMaxAge: 60 * 60 * 24 * 7, // 7 días
 };
