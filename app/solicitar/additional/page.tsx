@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getEconomicProfileStatus } from '@/app/actions/economic.actions';
-import { getAddressProfileStatus } from '@/app/actions/additional.actions';
+import { getAddressProfileStatus } from '@/app/actions/additional-address.actions';
 import { FunnelAddressShadcn } from '@/components/forms/solicitar/AddressShadcn';
 
 export default async function FunnelAdditionalPage() {

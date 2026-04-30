@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MapPin, Loader2, X, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { searchAddressAction, getAddressDetailAction, type AddressSuggestion, type AddressDetail } from '@/app/actions/address.actions';
+import { searchAddressAction, getAddressDetailAction, type AddressSuggestion, type AddressDetail } from '@/app/actions/additional-address.actions';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 

@@ -2,53 +2,43 @@ import { getKYCData } from '@/app/actions/kyc.actions';
 import { getLaborProfileStatus } from '@/app/actions/labor.actions';
 import { getEconomicProfileStatus } from '@/app/actions/economic.actions';
 import { getReferencesProfileStatus } from '@/app/actions/references.actions';
-import { getAddressProfileStatus } from '@/app/actions/additional.actions';
+import { getAddressProfileStatus, getDepartamentosAction, getProvinciasAction, getDistritosAction } from '@/app/actions/additional-address.actions';
 import { getBankAccountProfileStatus } from '@/app/actions/bank-account.actions';
 import { FunnelSummary } from '@/components/solicitar/SolicitarSummary';
-import departamentosData from '@/lib/ubigeo_departamentos.json';
-import provinciasData from '@/lib/ubigeo_provincias.json';
-import distritosData from '@/lib/ubigeo_distritos.json';
-
-const toTitleCase = (str: string) => {
-  return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-};
 
 export default async function FunnelSummaryPage() {
-  // Obtener todos los datos de los formularios
   const [
     kycData,
     laborStatus,
     economicStatus,
     referencesStatus,
     addressStatus,
-    bankAccountStatus
+    bankAccountStatus,
   ] = await Promise.all([
     getKYCData(),
     getLaborProfileStatus(),
     getEconomicProfileStatus(),
     getReferencesProfileStatus(),
     getAddressProfileStatus(),
-    getBankAccountProfileStatus()
+    getBankAccountProfileStatus(),
   ]);
 
-  // Resolver nombres de ubigeo
+  // Resolver nombres de ubigeo desde el backend
   let ubigeoNames = { region: 'No especificado', province: 'No especificado', district: 'No especificado' };
 
   if (addressStatus.profile) {
-    const departamento = (departamentosData as any).ubigeo_departamentos.find(
-      (d: any) => String(d.id) === String(addressStatus.profile!.region)
-    );
-    const provincia = (provinciasData as any).ubigeo_provincias.find(
-      (p: any) => String(p.id) === String(addressStatus.profile!.province)
-    );
-    const distrito = (distritosData as any).ubigeo_distritos.find(
-      (d: any) => String(d.id) === String(addressStatus.profile!.district)
-    );
+    const { region, province, district } = addressStatus.profile;
+
+    const [departamentos, provincias, distritos] = await Promise.all([
+      getDepartamentosAction(),
+      region  ? getProvinciasAction(region)   : Promise.resolve([]),
+      province ? getDistritosAction(province) : Promise.resolve([]),
+    ]);
 
     ubigeoNames = {
-      region: departamento ? toTitleCase(departamento.departamento) : 'No especificado',
-      province: provincia ? toTitleCase(provincia.provincia) : 'No especificado',
-      district: distrito ? toTitleCase(distrito.distrito) : 'No especificado',
+      region:   departamentos.find((d) => d.value === region)?.label   ?? 'No especificado',
+      province: provincias.find((p) => p.value === province)?.label    ?? 'No especificado',
+      district: distritos.find((d) => d.value === district)?.label     ?? 'No especificado',
     };
   }
 

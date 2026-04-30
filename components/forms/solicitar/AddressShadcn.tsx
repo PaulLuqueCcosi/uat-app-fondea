@@ -29,10 +29,10 @@ import {
   getProvinciasAction,
   getDistritosAction,
   type UbigeoOption,
-} from '@/app/actions/ubigeo.actions';
+} from '@/app/actions/additional-address.actions';
 import { GoogleAddressAutocomplete } from '@/components/forms/solicitar/GoogleAddressAutocomplete';
-import type { AddressDetail } from '@/app/actions/address.actions';
-import { saveAddressProfile } from '@/app/actions/additional.actions';
+import type { AddressDetail } from '@/app/actions/additional-address.actions';
+import { saveAddressProfile, getAddressProfileStatus } from '@/app/actions/additional-address.actions';
 import type { AddressProfileStatus } from '@/lib/types';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
