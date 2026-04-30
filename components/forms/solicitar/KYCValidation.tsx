@@ -4,11 +4,12 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CreditCard, Info, CheckCircle2, Pencil, ShieldCheck } from 'lucide-react';
+import { CreditCard, Info, CheckCircle2, Pencil, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
 import { isValidDNI } from '@/lib/validation';
 import { KYCData } from '@/lib/types';
 import { DNIAnnotatedCanvas } from '@/components/forms/solicitar/DNIAnnotatedCanvas';
+import { DNIElectronicoAnnotatedCanvas } from '@/components/forms/solicitar/DNIElectronicoAnnotatedCanvas';
 import type { DNIField } from '@/components/forms/solicitar/DNIAnnotatedCanvas';
 
 import { Button } from '@/components/ui/button';
@@ -125,6 +126,18 @@ export function FunnelKYCValidation({
   const [blocked, setBlocked] = useState(initialBlocked);
   const [blockedHoursLeft, setBlockedHoursLeft] = useState(initialBlockedHoursLeft);
   const [activeField, setActiveField] = useState<DNIField>(null);
+
+  // Función para hacer focus en un campo específico
+  const focusField = (fieldName: DNIField) => {
+    if (!fieldName) return;
+    
+    // Buscar el input correspondiente y hacer focus
+    const fieldElement = document.querySelector(`input[name="${fieldName}"]`) as HTMLInputElement;
+    if (fieldElement) {
+      fieldElement.focus();
+      fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   // Cuenta regresiva del bloqueo (en horas)
   useEffect(() => {
@@ -594,7 +607,8 @@ export function FunnelKYCValidation({
           )}
         </div>
         <div className="xl:shrink-0">
-          <DNIHelpCard activeField={activeField} />
+          {/* Solo mostrar ayuda del DNI cuando está editando */}
+          {(!isVerified || isEditing) && <DNIHelpCard activeField={activeField} onFieldClick={focusField} />}
         </div>
       </div>
     );
@@ -619,7 +633,8 @@ export function FunnelKYCValidation({
         </Card>
       </div>
       <div className="xl:shrink-0">
-        <DNIHelpCard activeField={activeField} />
+        {/* Solo mostrar ayuda del DNI cuando está editando */}
+        {(!isVerified || isEditing) && <DNIHelpCard activeField={activeField} onFieldClick={focusField} />}
       </div>
     </div>
   );
@@ -663,10 +678,12 @@ function DataRow({
 }
 
 // ── Componente auxiliar: card de ayuda DNI ───────────────────────────────────
-function DNIHelpCard({ activeField }: { activeField: DNIField }) {
+function DNIHelpCard({ activeField, onFieldClick }: { activeField: DNIField; onFieldClick?: (field: DNIField) => void }) {
+  const [showFullDisclaimer, setShowFullDisclaimer] = useState(false);
+
   return (
-    <div className="xl:sticky xl:top-4">
-      <Card className="w-full max-w-sm mx-auto xl:w-[480px]">
+    <div className="xl:fixed xl:top-4 xl:right-4 xl:z-50 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+      <Card className="w-full max-w-lg mx-auto xl:w-[600px]">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Info className="h-4 w-4 text-primary" />
@@ -674,8 +691,44 @@ function DNIHelpCard({ activeField }: { activeField: DNIField }) {
           </div>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="w-full rounded-xl overflow-hidden border border-border shadow-sm">
-            <DNIAnnotatedCanvas activeField={activeField} />
+          <div className="space-y-4">
+            {/* DNI Azul */}
+            <div className="w-full rounded-xl overflow-hidden border border-border shadow-sm">
+              <DNIAnnotatedCanvas activeField={activeField} onFieldClick={onFieldClick} />
+            </div>
+            
+            {/* DNI Electrónico */}
+            <div className="w-full rounded-xl overflow-hidden border border-border shadow-sm">
+              <DNIElectronicoAnnotatedCanvas activeField={activeField} debugMode={false} onFieldClick={onFieldClick} />
+            </div>
+            
+            {/* Disclaimer Legal Desplegable */}
+            <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg border border-border/50">
+              <button
+                type="button"
+                onClick={() => setShowFullDisclaimer(!showFullDisclaimer)}
+                className="w-full p-3 text-left flex items-center justify-between hover:bg-muted/50 transition-colors rounded-lg"
+              >
+                <span className="font-medium">
+                  Imágenes demostrativas sin valor legal
+                </span>
+                {showFullDisclaimer ? (
+                  <ChevronUp className="h-3 w-3 shrink-0" />
+                ) : (
+                  <ChevronDown className="h-3 w-3 shrink-0" />
+                )}
+              </button>
+              
+              {showFullDisclaimer && (
+                <div className="px-3 pb-3 pt-0">
+                  <p className="leading-relaxed text-xs">
+                    Las imágenes mostradas son únicamente con fines demostrativos y educativos. 
+                    Los datos personales son ficticios y cualquier similitud con personas reales es pura coincidencia. 
+                    Estas imágenes no tienen valor legal ni representan documentos oficiales válidos.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

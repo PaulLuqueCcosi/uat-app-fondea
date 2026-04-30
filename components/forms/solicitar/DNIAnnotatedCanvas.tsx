@@ -15,19 +15,19 @@ const HIGHLIGHTS: Record<NonNullable<DNIField>, { x: number; y: number; w: numbe
     color: '#ff0000',
   },
   firstName: {
-    x: 463, y: 172, w: 210, h:72,
-    color: '#ff0000',
-  },
-  secondName: {
-    x: 463, y: 280, w: 240, h: 72,
-    color: '#ff0000',
-  },
-  firstLastName: {
     x: 463, y: 385, w: 210, h: 72,
     color: '#ff0000',
   },
-  secondLastName: {
+  secondName: {
     x: 672, y: 385, w: 230, h: 72,
+    color: '#ff0000',
+  },
+  firstLastName: {
+    x: 463, y: 172, w: 210, h:72,
+    color: '#ff0000',
+  },
+  secondLastName: {
+    x: 463, y: 280, w: 240, h: 72,
     color: '#ff0000',
   },
   verificationCode: {
@@ -44,6 +44,7 @@ const HIGHLIGHTS: Record<NonNullable<DNIField>, { x: number; y: number; w: numbe
 interface Props {
   activeField: DNIField;
   debugMode?: boolean; // Para mostrar todos los bordes siempre
+  onFieldClick?: (field: DNIField) => void; // Callback cuando se hace clic en un campo
 }
 
 // ── Helpers de dibujo ─────────────────────────────────────────────────────────
@@ -82,7 +83,7 @@ function drawRect(
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
-export function DNIAnnotatedCanvas({ activeField, debugMode = false }: Props) {
+export function DNIAnnotatedCanvas({ activeField, debugMode = false, onFieldClick }: Props) {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const imgRef      = useRef<HTMLImageElement | null>(null);
 
@@ -142,10 +143,40 @@ export function DNIAnnotatedCanvas({ activeField, debugMode = false }: Props) {
     }
   }
 
+  // Manejar clics en el canvas
+  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!onFieldClick) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    // Coordenadas del clic en el canvas original
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+    
+    // Buscar en qué campo se hizo clic
+    for (const [fieldName, fieldRect] of Object.entries(HIGHLIGHTS)) {
+      if (
+        x >= fieldRect.x &&
+        x <= fieldRect.x + fieldRect.w &&
+        y >= fieldRect.y &&
+        y <= fieldRect.y + fieldRect.h
+      ) {
+        onFieldClick(fieldName as DNIField);
+        return;
+      }
+    }
+  };
+
   return (
     <canvas
       ref={canvasRef}
-      style={{ width: '100%', height: 'auto', display: 'block' }}
+      style={{ width: '100%', height: 'auto', display: 'block', cursor: onFieldClick ? 'pointer' : 'default' }}
+      onClick={handleCanvasClick}
     />
   );
 }
