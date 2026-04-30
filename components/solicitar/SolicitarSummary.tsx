@@ -23,12 +23,14 @@ import {
   EyeOff
 } from 'lucide-react';
 import { submitApplicationAction } from '@/app/actions/application.actions';
-import { KYCData } from '@/lib/types';
-import { LaborProfileStatus } from '@/app/actions/labor.actions';
-import { EconomicProfileStatus } from '@/app/actions/economic.actions';
-import { ReferencesProfileStatus } from '@/app/actions/references.actions';
-import { AddressProfileStatus } from '@/app/actions/additional.actions';
-import { BankAccountProfileStatus } from '@/app/actions/bank-account.actions';
+import { 
+  KYCData, 
+  LaborProfileStatus, 
+  EconomicProfileStatus, 
+  ReferencesProfileStatus, 
+  AddressProfileStatus, 
+  BankAccountProfileStatus 
+} from '@/lib/types';
 import {
   EMPLOYMENT_OPTIONS,
   INDUSTRY_OPTIONS,
