@@ -2,48 +2,82 @@
 
 import { ReferencesProfile, ReferencesProfileStatus } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
-import fs from 'fs/promises';
-import path from 'path';
+import { getAccessTokenRSC } from '@logto/next/server-actions';
+import { logtoConfig } from '@/app/logto';
 
-// ── Paths ─────────────────────────────────────────────────────────────────────
+// ── Helper: fetch autenticado al backend ──────────────────────────────────────
 
-const REFERENCES_DB = path.join(process.cwd(), 'mock-db', 'references-profile.json');
+async function backendFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const token = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
+  const baseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+  return fetch(`${baseUrl}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+}
 
-async function readJSON<T>(filePath: string): Promise<Record<string, T>> {
+// ── Mappers: backend (camelCase) ↔ frontend (snake_case) ─────────────────────
+
+function mapProfileFromBackend(raw: any): ReferencesProfile & { verified: boolean } {
+  return {
+    family_reference: {
+      name:               raw.familyReference.name,
+      phone:              raw.familyReference.phone,
+      relationship:       raw.familyReference.relationship,
+      relationship_other: raw.familyReference.relationshipOther ?? undefined,
+    },
+    non_family_reference: {
+      name:               raw.nonFamilyReference.name,
+      phone:              raw.nonFamilyReference.phone,
+      relationship:       raw.nonFamilyReference.relationship,
+      relationship_other: raw.nonFamilyReference.relationshipOther ?? undefined,
+      years_known:        raw.nonFamilyReference.yearsKnown,
+    },
+    verified: raw.verified ?? false,
+  };
+}
+
+// ── Manejo de errores del backend ─────────────────────────────────────────────
+
+async function parseBackendError(res: Response): Promise<string> {
   try {
-    return JSON.parse(await fs.readFile(filePath, 'utf-8'));
+    const json = await res.json();
+    return json.detail ?? json.error ?? 'Error al guardar.';
   } catch {
-    return {};
+    return 'Error al guardar.';
   }
 }
 
-async function writeJSON<T>(filePath: string, data: Record<string, T>): Promise<void> {
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+function isSuccess(status: number): boolean {
+  return status >= 200 && status < 300;
 }
 
 // ── GET: Estado completo ──────────────────────────────────────────────────────
 
-/**
- * Obtiene el estado completo de las referencias del usuario.
- * Retorna el perfil y si está verificado.
- */
 export async function getReferencesProfileStatus(): Promise<ReferencesProfileStatus> {
-  const user = await requireValidSession();
+  await requireValidSession();
 
   try {
-    const db = await readJSON<ReferencesProfile>(REFERENCES_DB);
-    const profile = db[user.id] ?? null;
+    const res = await backendFetch('/api/v1/references/status');
 
-    const overall_verified = profile?.verified === true;
+    if (!res.ok) {
+      console.error('[REFERENCES] Error al obtener estado:', res.status);
+      return { profile: null, overall_verified: false };
+    }
+
+    const json = await res.json();
 
     return {
-      profile: profile ? { ...profile, verified: profile.verified ?? false } : null,
-      overall_verified,
+      profile:          json.profile ? mapProfileFromBackend(json.profile) : null,
+      overall_verified: json.overallVerified ?? false,
     };
   } catch (error) {
-    console.error('[REFERENCES] Error al leer estado:', error);
+    console.error('[REFERENCES] Error de conexión al obtener estado:', error);
     return { profile: null, overall_verified: false };
   }
 }
@@ -53,81 +87,40 @@ export async function getReferencesProfileStatus(): Promise<ReferencesProfileSta
 export async function saveReferencesProfile(
   profile: Omit<ReferencesProfile, 'verified'>
 ): Promise<{ success: boolean; error?: string }> {
-  const user = await requireValidSession();
+  await requireValidSession();
 
   try {
-    await new Promise((r) => setTimeout(r, 400));
-
-    // Validaciones - Referencia Familiar
-    if (!profile.family_reference.name || profile.family_reference.name.trim().length < 3) {
-      return { success: false, error: 'El nombre de la referencia familiar debe tener al menos 3 caracteres.' };
-    }
-
-    if (!profile.family_reference.relationship) {
-      return { success: false, error: 'Selecciona la relación con la referencia familiar.' };
-    }
-    if (profile.family_reference.relationship === 'OTRO' && !profile.family_reference.relationship_other?.trim()) {
-      return { success: false, error: 'Especifica la relación con la referencia familiar.' };
-    }
-
-    if (!profile.family_reference.phone || !/^9\d{8}$/.test(profile.family_reference.phone)) {
-      return { success: false, error: 'El teléfono de la referencia familiar debe comenzar con 9 y tener 9 dígitos.' };
-    }
-
-    // Validaciones - Referencia No Familiar
-    if (!profile.non_family_reference.name || profile.non_family_reference.name.trim().length < 3) {
-      return { success: false, error: 'El nombre de la referencia no familiar debe tener al menos 3 caracteres.' };
-    }
-
-    if (!profile.non_family_reference.relationship) {
-      return { success: false, error: 'Selecciona la relación con la referencia no familiar.' };
-    }
-    if (profile.non_family_reference.relationship === 'OTRO' && !profile.non_family_reference.relationship_other?.trim()) {
-      return { success: false, error: 'Especifica la relación con la referencia no familiar.' };
-    }
-
-    if (!profile.non_family_reference.phone || !/^9\d{8}$/.test(profile.non_family_reference.phone)) {
-      return { success: false, error: 'El teléfono de la referencia no familiar debe comenzar con 9 y tener 9 dígitos.' };
-    }
-
-    if (!profile.non_family_reference.years_known || profile.non_family_reference.years_known < 1) {
-      return { success: false, error: 'Ingresa al menos 1 año de conocer a la referencia no familiar.' };
-    }
-
-    // Validar que los teléfonos no sean iguales
-    if (profile.family_reference.phone === profile.non_family_reference.phone) {
-      return { success: false, error: 'Los teléfonos de las referencias no pueden ser iguales.' };
-    }
-
-    const db = await readJSON<ReferencesProfile>(REFERENCES_DB);
-
-    db[user.id] = {
-      family_reference: {
-        name: profile.family_reference.name.trim(),
-        phone: profile.family_reference.phone,
+    const body: Record<string, any> = {
+      familyReference: {
+        name:         profile.family_reference.name,
+        phone:        profile.family_reference.phone,
         relationship: profile.family_reference.relationship,
         ...(profile.family_reference.relationship === 'OTRO' && {
-          relationship_other: profile.family_reference.relationship_other!.trim(),
+          relationshipOther: profile.family_reference.relationship_other,
         }),
       },
-      non_family_reference: {
-        name: profile.non_family_reference.name.trim(),
-        phone: profile.non_family_reference.phone,
+      nonFamilyReference: {
+        name:         profile.non_family_reference.name,
+        phone:        profile.non_family_reference.phone,
         relationship: profile.non_family_reference.relationship,
+        yearsKnown:   profile.non_family_reference.years_known,
         ...(profile.non_family_reference.relationship === 'OTRO' && {
-          relationship_other: profile.non_family_reference.relationship_other!.trim(),
+          relationshipOther: profile.non_family_reference.relationship_other,
         }),
-        years_known: profile.non_family_reference.years_known,
       },
-      verified: true,
     };
 
-    await writeJSON(REFERENCES_DB, db);
+    const res = await backendFetch('/api/v1/references/profile', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
 
-    console.log('[REFERENCES] Perfil guardado:', user.id);
-    return { success: true };
+    if (isSuccess(res.status)) return { success: true };
+
+    const error = await parseBackendError(res);
+    return { success: false, error };
   } catch (error) {
-    console.error('[REFERENCES] Error al guardar perfil:', error);
-    return { success: false, error: 'Error al guardar.' };
+    console.error('[REFERENCES] Error al guardar referencias:', error);
+    return { success: false, error: 'Error de conexión.' };
   }
 }
