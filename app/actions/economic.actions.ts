@@ -1,55 +1,84 @@
 'use server';
 
-import {
-  EconomicProfile,
-  EconomicProfileStatus,
-  LoanPurpose,
-  EducationLevel,
-  Debt,
-} from '@/lib/types';
+import { EconomicProfile, EconomicProfileStatus, Debt } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
-import fs from 'fs/promises';
-import path from 'path';
+import { getAccessTokenRSC } from '@logto/next/server-actions';
+import { logtoConfig } from '@/app/logto';
 
-// ── Paths ─────────────────────────────────────────────────────────────────────
+// ── Helper: fetch autenticado al backend ──────────────────────────────────────
 
-const ECONOMIC_DB = path.join(process.cwd(), 'mock-db', 'economic-profile.json');
+async function backendFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const token = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
+  const baseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+  return fetch(`${baseUrl}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+}
 
-async function readJSON<T>(filePath: string): Promise<Record<string, T>> {
+// ── Mappers: backend (camelCase) ↔ frontend (snake_case) ─────────────────────
+
+function mapProfileFromBackend(raw: any): EconomicProfile & { verified: boolean } {
+  return {
+    loan_purpose:     raw.loanPurpose,
+    monthly_expenses: raw.monthlyExpenses,
+    has_debts:        raw.hasDebts,
+    debts: (raw.debts ?? []).map((d: any): Debt => ({
+      id:             d.id,
+      entity:         d.entity,
+      type:           d.type,
+      amount:         d.amount,
+      monthlyPayment: d.monthlyPayment,
+    })),
+    has_property:    raw.hasProperty,
+    has_vehicle:     raw.hasVehicle,
+    has_services:    raw.hasServices,
+    education_level: raw.educationLevel,
+    verified:        raw.verified ?? false,
+  };
+}
+
+// ── Manejo de errores del backend ─────────────────────────────────────────────
+
+async function parseBackendError(res: Response): Promise<string> {
   try {
-    return JSON.parse(await fs.readFile(filePath, 'utf-8'));
+    const json = await res.json();
+    return json.detail ?? json.error ?? 'Error al guardar.';
   } catch {
-    return {};
+    return 'Error al guardar.';
   }
 }
 
-async function writeJSON<T>(filePath: string, data: Record<string, T>): Promise<void> {
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+function isSuccess(status: number): boolean {
+  return status >= 200 && status < 300;
 }
 
 // ── GET: Estado completo ──────────────────────────────────────────────────────
 
-/**
- * Obtiene el estado completo del perfil económico del usuario.
- * Retorna el perfil y si está verificado.
- */
 export async function getEconomicProfileStatus(): Promise<EconomicProfileStatus> {
-  const user = await requireValidSession();
+  await requireValidSession();
 
   try {
-    const db = await readJSON<EconomicProfile>(ECONOMIC_DB);
-    const profile = db[user.id] ?? null;
+    const res = await backendFetch('/api/v1/economic/status');
 
-    const overall_verified = profile?.verified === true;
+    if (!res.ok) {
+      console.error('[ECONOMIC] Error al obtener estado:', res.status);
+      return { profile: null, overall_verified: false };
+    }
+
+    const json = await res.json();
 
     return {
-      profile: profile ? { ...profile, verified: profile.verified ?? false } : null,
-      overall_verified,
+      profile:          json.profile ? mapProfileFromBackend(json.profile) : null,
+      overall_verified: json.overallVerified ?? false,
     };
   } catch (error) {
-    console.error('[ECONOMIC] Error al leer estado:', error);
+    console.error('[ECONOMIC] Error de conexión al obtener estado:', error);
     return { profile: null, overall_verified: false };
   }
 }
@@ -59,67 +88,35 @@ export async function getEconomicProfileStatus(): Promise<EconomicProfileStatus>
 export async function saveEconomicProfile(
   profile: Omit<EconomicProfile, 'verified'>
 ): Promise<{ success: boolean; error?: string }> {
-  const user = await requireValidSession();
+  await requireValidSession();
 
   try {
-    await new Promise((r) => setTimeout(r, 400));
+    const res = await backendFetch('/api/v1/economic/profile', {
+      method: 'PUT',
+      body: JSON.stringify({
+        loanPurpose:     profile.loan_purpose,
+        monthlyExpenses: profile.monthly_expenses,
+        hasDebts:        profile.has_debts,
+        // El backend genera los IDs — no se envía id en cada deuda
+        debts: (profile.has_debts ? profile.debts : []).map(d => ({
+          entity:         d.entity,
+          type:           d.type,
+          amount:         d.amount,
+          monthlyPayment: d.monthlyPayment,
+        })),
+        hasProperty:    profile.has_property,
+        hasVehicle:     profile.has_vehicle,
+        hasServices:    profile.has_services,
+        educationLevel: profile.education_level,
+      }),
+    });
 
-    // Validaciones
-    if (!profile.loan_purpose) {
-      return { success: false, error: 'Selecciona para qué usarás el dinero.' };
-    }
+    if (isSuccess(res.status)) return { success: true };
 
-    if (profile.monthly_expenses === undefined || profile.monthly_expenses === null || profile.monthly_expenses < 0) {
-      return { success: false, error: 'Ingresa tus gastos mensuales.' };
-    }
-
-    // Validar deudas si las tiene
-    if (profile.has_debts) {
-      if (!profile.debts || profile.debts.length === 0) {
-        return { success: false, error: 'Debes agregar al menos una deuda.' };
-      }
-
-      for (const debt of profile.debts) {
-        if (!debt.entity?.trim()) {
-          return { success: false, error: 'Todas las deudas deben tener una entidad.' };
-        }
-        if (!debt.type) {
-          return { success: false, error: 'Selecciona el tipo de cada deuda.' };
-        }
-        if (!debt.amount || debt.amount <= 0) {
-          return { success: false, error: 'Todas las deudas deben tener un monto válido.' };
-        }
-        if (!debt.monthlyPayment || debt.monthlyPayment <= 0) {
-          return { success: false, error: 'Todas las deudas deben tener una cuota mensual válida.' };
-        }
-      }
-    }
-
-    if (!profile.education_level) {
-      return { success: false, error: 'Selecciona tu grado de instrucción.' };
-    }
-
-    const db = await readJSON<EconomicProfile>(ECONOMIC_DB);
-
-    // Guardar el perfil con las deudas limpias (solo si tiene deudas)
-    db[user.id] = {
-      loan_purpose: profile.loan_purpose,
-      monthly_expenses: profile.monthly_expenses,
-      has_debts: profile.has_debts,
-      debts: profile.has_debts ? profile.debts : [],
-      has_property: profile.has_property,
-      has_vehicle: profile.has_vehicle,
-      has_services: profile.has_services,
-      education_level: profile.education_level,
-      verified: true,
-    };
-
-    await writeJSON(ECONOMIC_DB, db);
-
-    console.log('[ECONOMIC] Perfil guardado:', user.id);
-    return { success: true };
+    const error = await parseBackendError(res);
+    return { success: false, error };
   } catch (error) {
     console.error('[ECONOMIC] Error al guardar perfil:', error);
-    return { success: false, error: 'Error al guardar.' };
+    return { success: false, error: 'Error de conexión.' };
   }
 }
