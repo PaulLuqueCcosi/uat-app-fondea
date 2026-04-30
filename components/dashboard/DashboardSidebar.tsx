@@ -16,7 +16,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ClipboardList
+  ClipboardList,
+  Terminal
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +34,7 @@ const mainNav = [
   { path: '/dashboard', label: 'Inicio', icon: Home },
   { path: '/dashboard/profile', label: 'Mi Perfil', icon: User },
   { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
+  { path: '/dashboard/dev-tools', label: 'Dev Tools', icon: Terminal },
   { path: '/dashboard/settings', label: 'Configuración', icon: Settings },
 ];
 
