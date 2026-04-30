@@ -70,7 +70,8 @@ export type AdditionalIncomeType =
 export type IncomeReceiptMethod =
   | 'CUENTA_BANCARIA'
   | 'EFECTIVO'
-  | 'BILLETERA_DIGITAL';
+  | 'BILLETERA_DIGITAL'
+  | 'OTROS';
 
 export type LoanPurpose =
   | 'EDUCACION'
@@ -86,7 +87,8 @@ export type EducationLevel =
   | 'SECUNDARIA'
   | 'TECNICA'
   | 'UNIVERSITARIA'
-  | 'POSGRADO';
+  | 'POSGRADO'
+  | 'OTRO';
 
 export type ReferralSource =
   | 'REDES_SOCIALES'
@@ -255,17 +257,37 @@ export interface ReferencesData {
   references: Reference[];
 }
 
+export type FamilyRelationship =
+  | 'MADRE'
+  | 'PADRE'
+  | 'HERMANO'
+  | 'HIJO'
+  | 'CONYUGE'
+  | 'TIO'
+  | 'PRIMO'
+  | 'ABUELO'
+  | 'OTRO';
+
+export type NonFamilyRelationship =
+  | 'COLEGA'
+  | 'AMIGO'
+  | 'VECINO'
+  | 'CONOCIDO'
+  | 'OTRO';
+
 /** Referencias del usuario */
 export interface ReferencesProfile {
   family_reference: {
     name: string;
     phone: string;
-    relationship: string;
+    relationship: FamilyRelationship;
+    relationship_other?: string; // requerido si relationship === 'OTRO'
   };
   non_family_reference: {
     name: string;
     phone: string;
-    relationship: string;
+    relationship: NonFamilyRelationship;
+    relationship_other?: string; // requerido si relationship === 'OTRO'
     years_known: number;
   };
   verified?: boolean;

@@ -65,6 +65,24 @@ const getEducationLevelLabel = (value?: string) => {
   return EDUCATION_LEVEL_OPTIONS.find(opt => opt.value === value)?.label || value;
 };
 
+const FAMILY_RELATIONS_MAP: Record<string, string> = {
+  MADRE: 'Madre', PADRE: 'Padre', HERMANO: 'Hermano/a', HIJO: 'Hijo/a',
+  CONYUGE: 'Cónyuge', TIO: 'Tío/a', PRIMO: 'Primo/a', ABUELO: 'Abuelo/a',
+};
+const NON_FAMILY_RELATIONS_MAP: Record<string, string> = {
+  COLEGA: 'Colega', AMIGO: 'Amigo/a', VECINO: 'Vecino/a', CONOCIDO: 'Conocido/a',
+};
+
+const getRelationLabel = (
+  relationship?: string,
+  relationship_other?: string,
+  map?: Record<string, string>
+): string => {
+  if (!relationship) return 'No especificado';
+  if (relationship === 'OTRO') return relationship_other?.trim() || 'Otro';
+  return map?.[relationship] ?? relationship;
+};
+
 interface FunnelSummaryProps {
   kycData: KYCData | null;
   laborData: LaborProfileStatus;
@@ -479,7 +497,7 @@ export function FunnelSummary({
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{referencesData.profile.family_reference.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {referencesData.profile.family_reference.phone} • {referencesData.profile.family_reference.relationship} • Familiar
+                          {referencesData.profile.family_reference.phone} • {getRelationLabel(referencesData.profile.family_reference.relationship, referencesData.profile.family_reference.relationship_other, FAMILY_RELATIONS_MAP)} • Familiar
                         </p>
                       </div>
                     </div>
@@ -488,7 +506,7 @@ export function FunnelSummary({
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{referencesData.profile.non_family_reference.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {referencesData.profile.non_family_reference.phone} • {referencesData.profile.non_family_reference.relationship} • {referencesData.profile.non_family_reference.years_known} años de conocidos
+                          {referencesData.profile.non_family_reference.phone} • {getRelationLabel(referencesData.profile.non_family_reference.relationship, referencesData.profile.non_family_reference.relationship_other, NON_FAMILY_RELATIONS_MAP)} • {referencesData.profile.non_family_reference.years_known} años de conocidos
                         </p>
                       </div>
                     </div>

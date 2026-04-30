@@ -66,6 +66,9 @@ export async function saveReferencesProfile(
     if (!profile.family_reference.relationship) {
       return { success: false, error: 'Selecciona la relación con la referencia familiar.' };
     }
+    if (profile.family_reference.relationship === 'OTRO' && !profile.family_reference.relationship_other?.trim()) {
+      return { success: false, error: 'Especifica la relación con la referencia familiar.' };
+    }
 
     if (!profile.family_reference.phone || !/^9\d{8}$/.test(profile.family_reference.phone)) {
       return { success: false, error: 'El teléfono de la referencia familiar debe comenzar con 9 y tener 9 dígitos.' };
@@ -78,6 +81,9 @@ export async function saveReferencesProfile(
 
     if (!profile.non_family_reference.relationship) {
       return { success: false, error: 'Selecciona la relación con la referencia no familiar.' };
+    }
+    if (profile.non_family_reference.relationship === 'OTRO' && !profile.non_family_reference.relationship_other?.trim()) {
+      return { success: false, error: 'Especifica la relación con la referencia no familiar.' };
     }
 
     if (!profile.non_family_reference.phone || !/^9\d{8}$/.test(profile.non_family_reference.phone)) {
@@ -100,11 +106,17 @@ export async function saveReferencesProfile(
         name: profile.family_reference.name.trim(),
         phone: profile.family_reference.phone,
         relationship: profile.family_reference.relationship,
+        ...(profile.family_reference.relationship === 'OTRO' && {
+          relationship_other: profile.family_reference.relationship_other!.trim(),
+        }),
       },
       non_family_reference: {
         name: profile.non_family_reference.name.trim(),
         phone: profile.non_family_reference.phone,
         relationship: profile.non_family_reference.relationship,
+        ...(profile.non_family_reference.relationship === 'OTRO' && {
+          relationship_other: profile.non_family_reference.relationship_other!.trim(),
+        }),
         years_known: profile.non_family_reference.years_known,
       },
       verified: true,

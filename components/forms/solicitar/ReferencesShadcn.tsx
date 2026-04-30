@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { Users, UserCheck, Pencil, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
 import { useState } from 'react';
-import { ReferencesProfileStatus } from '@/lib/types';
+import { ReferencesProfileStatus, FamilyRelationship, NonFamilyRelationship } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -32,28 +32,41 @@ interface FunnelReferencesProps {
 }
 
 const FAMILY_RELATIONS = [
-  { value: 'madre', label: 'Madre' },
-  { value: 'padre', label: 'Padre' },
-  { value: 'hermano', label: 'Hermano/a' },
-  { value: 'hijo', label: 'Hijo/a' },
-  { value: 'conyuge', label: 'Cónyuge' },
-  { value: 'tio', label: 'Tío/a' },
-  { value: 'primo', label: 'Primo/a' },
-  { value: 'abuelo', label: 'Abuelo/a' },
-  { value: 'otro_familiar', label: 'Otro familiar' },
+  { value: 'MADRE',          label: 'Madre' },
+  { value: 'PADRE',          label: 'Padre' },
+  { value: 'HERMANO',        label: 'Hermano/a' },
+  { value: 'HIJO',           label: 'Hijo/a' },
+  { value: 'CONYUGE',        label: 'Cónyuge' },
+  { value: 'TIO',            label: 'Tío/a' },
+  { value: 'PRIMO',          label: 'Primo/a' },
+  { value: 'ABUELO',         label: 'Abuelo/a' },
+  { value: 'OTRO',           label: 'Otro' },
 ];
 
 const NON_FAMILY_RELATIONS = [
-  { value: 'colega', label: 'Colega' },
-  { value: 'amigo', label: 'Amigo/a' },
-  { value: 'vecino', label: 'Vecino/a' },
-  { value: 'conocido', label: 'Conocido/a' },
+  { value: 'COLEGA',         label: 'Colega' },
+  { value: 'AMIGO',          label: 'Amigo/a' },
+  { value: 'VECINO',         label: 'Vecino/a' },
+  { value: 'CONOCIDO',       label: 'Conocido/a' },
+  { value: 'OTRO',           label: 'Otro' },
 ];
+
+/** Devuelve el label legible de una relación, usando relationship_other si es OTRO */
+function getRelationLabel(
+  relationship: string | undefined,
+  relationship_other: string | undefined,
+  options: { value: string; label: string }[]
+): string {
+  if (!relationship) return '—';
+  if (relationship === 'OTRO') return relationship_other?.trim() || 'Otro';
+  return options.find(o => o.value === relationship)?.label ?? relationship;
+}
 
 const referencesFormSchema = z.object({
   // Referencia Familiar
   family_name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
   family_relation: z.string().min(1, 'Selecciona la relación'),
+  family_relation_other: z.string().optional(),
   family_phone: z
     .string()
     .min(9, 'El teléfono debe tener 9 dígitos')
@@ -63,6 +76,7 @@ const referencesFormSchema = z.object({
   // Referencia No Familiar
   non_family_name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
   non_family_relation: z.string().min(1, 'Selecciona la relación'),
+  non_family_relation_other: z.string().optional(),
   non_family_phone: z
     .string()
     .min(9, 'El teléfono debe tener 9 dígitos')
@@ -75,13 +89,16 @@ const referencesFormSchema = z.object({
       message: 'Debe ser al menos 1 año',
     }),
 }).superRefine((data, ctx) => {
-  // Validar que los teléfonos no sean iguales
+  // Texto libre requerido cuando se elige OTRO
+  if (data.family_relation === 'OTRO' && !data.family_relation_other?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Especifica la relación', path: ['family_relation_other'] });
+  }
+  if (data.non_family_relation === 'OTRO' && !data.non_family_relation_other?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Especifica la relación', path: ['non_family_relation_other'] });
+  }
+  // Teléfonos no pueden ser iguales
   if (data.family_phone === data.non_family_phone) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Los teléfonos no pueden ser iguales',
-      path: ['non_family_phone'],
-    });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Los teléfonos no pueden ser iguales', path: ['non_family_phone'] });
   }
 });
 
@@ -113,9 +130,11 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
     defaultValues: {
       family_name: prevProfile?.family_reference.name || '',
       family_relation: prevProfile?.family_reference.relationship || '',
+      family_relation_other: prevProfile?.family_reference.relationship_other || '',
       family_phone: prevProfile?.family_reference.phone || '',
       non_family_name: prevProfile?.non_family_reference.name || '',
       non_family_relation: prevProfile?.non_family_reference.relationship || '',
+      non_family_relation_other: prevProfile?.non_family_reference.relationship_other || '',
       non_family_phone: prevProfile?.non_family_reference.phone || '',
       years_known: prevProfile?.non_family_reference.years_known ? String(prevProfile.non_family_reference.years_known) : '',
     },
@@ -127,6 +146,9 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
     setSaveError(null);
   };
 
+  const watchFamilyRelation = form.watch('family_relation');
+  const watchNonFamilyRelation = form.watch('non_family_relation');
+
   const onSubmit = async (data: ReferencesFormValues) => {
     setSaveError(null);
     try {
@@ -134,12 +156,14 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
         family_reference: {
           name: data.family_name,
           phone: data.family_phone,
-          relationship: data.family_relation,
+          relationship: data.family_relation as FamilyRelationship,
+          relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
         },
         non_family_reference: {
           name: data.non_family_name,
           phone: data.non_family_phone,
-          relationship: data.non_family_relation,
+          relationship: data.non_family_relation as NonFamilyRelationship,
+          relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
           years_known: Number(data.years_known),
         },
       };
@@ -163,8 +187,16 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
   };
 
   // ── Vista readonly (datos guardados) ────────────────────────────────────────
-  const familyRelationLabel = FAMILY_RELATIONS.find(r => r.value === prevProfile?.family_reference.relationship)?.label ?? '—';
-  const nonFamilyRelationLabel = NON_FAMILY_RELATIONS.find(r => r.value === prevProfile?.non_family_reference.relationship)?.label ?? '—';
+  const familyRelationLabel = getRelationLabel(
+    prevProfile?.family_reference.relationship,
+    prevProfile?.family_reference.relationship_other,
+    FAMILY_RELATIONS
+  );
+  const nonFamilyRelationLabel = getRelationLabel(
+    prevProfile?.non_family_reference.relationship,
+    prevProfile?.non_family_reference.relationship_other,
+    NON_FAMILY_RELATIONS
+  );
 
   const verifiedView = (
     <div className="space-y-6">
@@ -279,6 +311,20 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
                 )}
               />
 
+              {watchFamilyRelation === 'OTRO' && (
+                <FormField
+                  control={form.control}
+                  name="family_relation_other"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-1">
+                      <FormLabel>Especifica la relación</FormLabel>
+                      <Input placeholder="Ej: Cuñado, Padrino..." {...field} className="w-full" />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               <FormField
                 control={form.control}
                 name="family_phone"
@@ -346,6 +392,20 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
                   </FormItem>
                 )}
               />
+
+              {watchNonFamilyRelation === 'OTRO' && (
+                <FormField
+                  control={form.control}
+                  name="non_family_relation_other"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-1">
+                      <FormLabel>Especifica la relación</FormLabel>
+                      <Input placeholder="Ej: Compañero de gym, Mentor..." {...field} className="w-full" />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}
