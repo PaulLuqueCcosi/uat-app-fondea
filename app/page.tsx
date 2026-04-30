@@ -22,8 +22,8 @@ export default async function Home({
   if (isAuthenticated) {
     const intencionId = params.intencion;
     if (intencionId) {
-      // Autenticado + viene con intención → directo al funnel
-      redirect(`/funnel?${queryString}`);
+      // Autenticado + viene con intención → directo al solicitar
+      redirect(`/solicitar?${queryString}`);
     }
     redirect('/dashboard');
   }

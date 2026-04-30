@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   const queryString = searchParams.toString();
   if (queryString) {
     const returnTo = intencionId
-      ? `/funnel?${queryString}`
+      ? `/solicitar?${queryString}`
       : `/?${queryString}`;
 
     cookieStore.set(RETURN_TO_COOKIE, returnTo, {

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     if (intencionId) {
       console.log('[CALLBACK] intencionId encontrado:', intencionId);
-      return NextResponse.redirect(new URL(`/funnel?intencion=${intencionId}`, request.url));
+      return NextResponse.redirect(new URL(`/solicitar?intencion=${intencionId}`, request.url));
     }
 
     console.log('[CALLBACK] Sin destino específico, redirigiendo al dashboard');
