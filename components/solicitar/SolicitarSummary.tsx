@@ -18,57 +18,74 @@ import {
   Home,
   FileText,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { submitApplicationAction } from '@/app/actions/application.actions';
+import { KYCData } from '@/lib/types';
+import { LaborProfileStatus } from '@/app/actions/labor.actions';
+import { EconomicProfileStatus } from '@/app/actions/economic.actions';
+import { ReferencesProfileStatus } from '@/app/actions/references.actions';
+import { AddressProfileStatus } from '@/app/actions/additional.actions';
+import { BankAccountProfileStatus } from '@/app/actions/bank-account.actions';
+import {
+  EMPLOYMENT_OPTIONS,
+  INDUSTRY_OPTIONS,
+  ADDITIONAL_INCOME_TYPE_OPTIONS,
+  LOAN_PURPOSE_OPTIONS,
+  EDUCATION_LEVEL_OPTIONS,
+} from '@/lib/constants';
 
-// DATOS DEMO - Reemplazar con datos reales del backend
-const DEMO_DATA = {
-  // Perfil Laboral
-  labor: {
-    employmentStatus: 'Empleado en planilla',
-    industry: 'Tecnología',
-    company: 'Tech Solutions SAC',
-    position: 'Desarrollador Senior',
-    monthlyIncome: 5500,
-    hasAdditionalIncome: true,
-    additionalIncomes: [
-      { amount: 800, source: 'Freelance' },
-      { amount: 500, source: 'Alquiler de propiedad' }
-    ]
-  },
-  // Perfil Económico
-  economic: {
-    monthlyExpenses: 2800,
-    hasDebts: true,
-    debts: [
-      { entity: 'BCP', type: 'Tarjeta de crédito', amount: 5000, monthlyPayment: 450 },
-      { entity: 'Interbank', type: 'Préstamo personal', amount: 8000, monthlyPayment: 350 }
-    ],
-    hasProperty: true,
-    hasVehicle: false
-  },
-  // Referencias
-  references: [
-    { name: 'María García López', phone: '956123456', relationship: 'Madre' },
-    { name: 'Carlos Ruiz Díaz', phone: '987789012', relationship: 'Colega', yearsKnown: 5 }
-  ],
-  // Dirección
-  address: {
-    type: 'manual',
-    street: 'Av. Javier Prado 1234, Dpto 501',
-    district: 'San Isidro',
-    province: 'Lima',
-    region: 'Lima'
-  },
-  // Cuenta Bancaria
-  bankAccount: {
-    bank: 'BCP',
-    cci: '00211234567890123456'
-  }
+// Helper functions para obtener labels
+const getEmploymentLabel = (value?: string) => {
+  if (!value) return 'No especificado';
+  return EMPLOYMENT_OPTIONS.find(opt => opt.value === value)?.label || value;
 };
 
-export function FunnelSummary() {
+const getIndustryLabel = (value?: string) => {
+  if (!value) return 'No especificado';
+  return INDUSTRY_OPTIONS.find(opt => opt.value === value)?.label || value;
+};
+
+const getIncomeTypeLabel = (value?: string) => {
+  if (!value) return 'No especificado';
+  return ADDITIONAL_INCOME_TYPE_OPTIONS.find(opt => opt.value === value)?.label || value;
+};
+
+const getLoanPurposeLabel = (value?: string) => {
+  if (!value) return 'No especificado';
+  return LOAN_PURPOSE_OPTIONS.find(opt => opt.value === value)?.label || value;
+};
+
+const getEducationLevelLabel = (value?: string) => {
+  if (!value) return 'No especificado';
+  return EDUCATION_LEVEL_OPTIONS.find(opt => opt.value === value)?.label || value;
+};
+
+interface FunnelSummaryProps {
+  kycData: KYCData | null;
+  laborData: LaborProfileStatus;
+  economicData: EconomicProfileStatus;
+  referencesData: ReferencesProfileStatus;
+  addressData: AddressProfileStatus;
+  bankAccountData: BankAccountProfileStatus;
+  ubigeoNames?: {
+    region: string;
+    province: string;
+    district: string;
+  };
+}
+
+export function FunnelSummary({
+  kycData,
+  laborData,
+  economicData,
+  referencesData,
+  addressData,
+  bankAccountData,
+  ubigeoNames
+}: FunnelSummaryProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -88,6 +105,9 @@ export function FunnelSummary() {
     not_pep_relative: false,
     accept_terms: false,
   });
+
+  // Estado para mostrar/ocultar CCI
+  const [showCCI, setShowCCI] = useState(false);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
@@ -122,11 +142,15 @@ export function FunnelSummary() {
     }
   };
 
-  // Calcular totales
-  const totalIncome = DEMO_DATA.labor.monthlyIncome +
-    (DEMO_DATA.labor.additionalIncomes?.reduce((sum, inc) => sum + inc.amount, 0) || 0);
-  const totalDebtPayment = DEMO_DATA.economic.debts?.reduce((sum, debt) => sum + debt.monthlyPayment, 0) || 0;
-  const availableIncome = totalIncome - DEMO_DATA.economic.monthlyExpenses - totalDebtPayment;
+  // Calcular totales basados en datos reales
+  const laborIncome = laborData.income;
+  const totalIncome = laborIncome ?
+    laborIncome.monthly_income + (laborIncome.additional_incomes?.reduce((sum, inc) => sum + inc.amount, 0) || 0) : 0;
+
+  const economicProfile = economicData.profile;
+  const totalDebtPayment = economicProfile?.debts?.reduce((sum, debt) => sum + debt.monthlyPayment, 0) || 0;
+  const monthlyExpenses = economicProfile?.monthly_expenses || 0;
+  const availableIncome = totalIncome - monthlyExpenses - totalDebtPayment;
 
   return (
     <Card className="w-full max-w-5xl mx-auto">
@@ -157,7 +181,7 @@ export function FunnelSummary() {
                   <h3 className="text-lg font-semibold text-foreground">Perfil Laboral</h3>
                   {!expandedSections.labor && (
                     <p className="text-sm text-muted-foreground">
-                      {DEMO_DATA.labor.employmentStatus} • S/ {totalIncome.toLocaleString()}/mes
+                      {getEmploymentLabel(laborData.situation?.employment_status)} • S/ {totalIncome.toLocaleString()}/mes
                     </p>
                   )}
                   {expandedSections.labor && (
@@ -166,7 +190,9 @@ export function FunnelSummary() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success">Completo</Badge>
+                <Badge variant={laborData.overall_verified ? "success" : "secondary"}>
+                  {laborData.overall_verified ? "Completo" : "Pendiente"}
+                </Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -193,32 +219,80 @@ export function FunnelSummary() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Situación laboral</p>
-                  <p className="font-medium text-foreground">{DEMO_DATA.labor.employmentStatus}</p>
+                  <p className="font-medium text-foreground">{getEmploymentLabel(laborData.situation?.employment_status)}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Sector</p>
-                  <p className="font-medium text-foreground">{DEMO_DATA.labor.industry}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Empresa</p>
-                  <p className="font-medium text-foreground">{DEMO_DATA.labor.company}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Cargo</p>
-                  <p className="font-medium text-foreground">{DEMO_DATA.labor.position}</p>
-                </div>
+
+                {laborData.situation?.employment_status !== 'PENSIONISTA' && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Sector / Industria</p>
+                    <p className="font-medium text-foreground">{getIndustryLabel(laborData.details?.industry)}</p>
+                  </div>
+                )}
+
+                {laborData.situation?.employment_status === 'EMPLEADO_DEPENDIENTE' && (
+                  <>
+                    {laborData.details?.company && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Nombre de la empresa</p>
+                        <p className="font-medium text-foreground">{laborData.details.company}</p>
+                      </div>
+                    )}
+                    {laborData.details?.position && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Cargo / Puesto</p>
+                        <p className="font-medium text-foreground">{laborData.details.position}</p>
+                      </div>
+                    )}
+                    {laborData.details?.years_of_activity !== undefined && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Tiempo en la empresa</p>
+                        <p className="font-medium text-foreground">
+                          {laborData.details.years_of_activity} {laborData.details.years_of_activity === 1 ? 'año' : 'años'}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {['INDEPENDIENTE', 'FREELANCE', 'EMPRESARIO'].includes(laborData.situation?.employment_status || '') && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Años de actividad</p>
+                    <p className="font-medium text-foreground">
+                      {laborData.details?.years_of_activity !== undefined
+                        ? `${laborData.details.years_of_activity} ${laborData.details.years_of_activity === 1 ? 'año' : 'años'}`
+                        : 'No especificado'}
+                    </p>
+                  </div>
+                )}
+
+                {laborData.situation?.employment_status === 'EMPRESARIO' && laborData.details?.business_ruc && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">RUC del negocio</p>
+                    <p className="font-mono font-medium text-foreground">{laborData.details.business_ruc}</p>
+                  </div>
+                )}
+
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Ingreso mensual</p>
-                  <p className="font-semibold text-foreground text-lg">S/ {DEMO_DATA.labor.monthlyIncome.toLocaleString()}</p>
+                  <p className="font-semibold text-foreground text-lg">S/ {laborData.income?.monthly_income?.toLocaleString() || '0'}</p>
                 </div>
-                {DEMO_DATA.labor.hasAdditionalIncome && DEMO_DATA.labor.additionalIncomes && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Ingresos adicionales</p>
-                    <div className="space-y-1">
-                      {DEMO_DATA.labor.additionalIncomes.map((inc, idx) => (
-                        <p key={idx} className="text-sm text-foreground">
-                          <span className="font-medium">S/ {inc.amount.toLocaleString()}</span> - {inc.source}
-                        </p>
+
+                {laborData.income?.has_additional_income && laborData.income?.additional_incomes && laborData.income.additional_incomes.length > 0 && (
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-muted-foreground mb-2">Ingresos adicionales</p>
+                    <div className="space-y-2">
+                      {laborData.income.additional_incomes.map((inc, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              {inc.type === 'OTRO' && inc.custom_type ? inc.custom_type : getIncomeTypeLabel(inc.type)}
+                            </p>
+                            {inc.description && (
+                              <p className="text-xs text-muted-foreground">{inc.description}</p>
+                            )}
+                          </div>
+                          <p className="text-sm font-semibold text-foreground">S/ {inc.amount.toLocaleString()}</p>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -243,7 +317,7 @@ export function FunnelSummary() {
                   <h3 className="text-lg font-semibold text-foreground">Perfil Económico</h3>
                   {!expandedSections.economic && (
                     <p className="text-sm text-muted-foreground">
-                      Gastos S/ {DEMO_DATA.economic.monthlyExpenses.toLocaleString()} • {DEMO_DATA.economic.debts.length} deudas • Capacidad: S/ {availableIncome.toLocaleString()}
+                      Gastos S/ {monthlyExpenses.toLocaleString()} • {economicProfile?.debts?.length || 0} deudas • Capacidad: S/ {availableIncome.toLocaleString()}
                     </p>
                   )}
                   {expandedSections.economic && (
@@ -252,7 +326,9 @@ export function FunnelSummary() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success">Completo</Badge>
+                <Badge variant={economicData.overall_verified ? "success" : "secondary"}>
+                  {economicData.overall_verified ? "Completo" : "Pendiente"}
+                </Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -286,7 +362,7 @@ export function FunnelSummary() {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Gastos + Deudas</p>
                     <p className="text-lg font-bold text-foreground">
-                      S/ {(DEMO_DATA.economic.monthlyExpenses + totalDebtPayment).toLocaleString()}
+                      S/ {(monthlyExpenses + totalDebtPayment).toLocaleString()}
                     </p>
                   </div>
                   <div>
@@ -298,21 +374,29 @@ export function FunnelSummary() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
+                  <p className="text-sm text-muted-foreground mb-1">Para qué usarás el préstamo</p>
+                  <p className="font-medium text-foreground">{getLoanPurposeLabel(economicProfile?.loan_purpose)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Grado de instrucción</p>
+                  <p className="font-medium text-foreground">{getEducationLevelLabel(economicProfile?.education_level)}</p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground mb-1">Gastos mensuales</p>
-                  <p className="font-medium text-foreground">S/ {DEMO_DATA.economic.monthlyExpenses.toLocaleString()}</p>
+                  <p className="font-medium text-foreground">S/ {monthlyExpenses.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Deudas activas</p>
                   <p className="font-medium text-foreground">
-                    {DEMO_DATA.economic.hasDebts ? `${DEMO_DATA.economic.debts.length} deuda(s)` : 'Sin deudas'}
+                    {economicProfile?.has_debts ? `${economicProfile?.debts?.length || 0} deuda(s)` : 'Sin deudas'}
                   </p>
                 </div>
 
-                {DEMO_DATA.economic.hasDebts && DEMO_DATA.economic.debts && (
+                {economicProfile?.has_debts && economicProfile?.debts && economicProfile.debts.length > 0 && (
                   <div className="md:col-span-2">
                     <p className="text-sm text-muted-foreground mb-2">Detalle de deudas</p>
                     <div className="space-y-2">
-                      {DEMO_DATA.economic.debts.map((debt, idx) => (
+                      {economicProfile.debts.map((debt, idx) => (
                         <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                           <div className="flex-1">
                             <p className="text-sm font-medium text-foreground">{debt.entity} - {debt.type}</p>
@@ -328,16 +412,21 @@ export function FunnelSummary() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Patrimonio</p>
                   <div className="flex gap-2 flex-wrap">
-                    {DEMO_DATA.economic.hasProperty && (
+                    {economicProfile?.has_property && (
                       <Badge variant="outline">Inmueble propio</Badge>
                     )}
-                    {DEMO_DATA.economic.hasVehicle && (
+                    {economicProfile?.has_vehicle && (
                       <Badge variant="outline">Vehículo propio</Badge>
                     )}
-                    {!DEMO_DATA.economic.hasProperty && !DEMO_DATA.economic.hasVehicle && (
+                    {!economicProfile?.has_property && !economicProfile?.has_vehicle && (
                       <span className="text-sm text-muted-foreground">Sin patrimonio declarado</span>
                     )}
                   </div>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Servicios a su nombre</p>
+                  <p className="font-medium text-foreground">{economicProfile?.has_services ? 'Sí' : 'No'}</p>
                 </div>
               </div>
             </div>
@@ -359,7 +448,7 @@ export function FunnelSummary() {
                   <h3 className="text-lg font-semibold text-foreground">Referencias Personales</h3>
                   {!expandedSections.references && (
                     <p className="text-sm text-muted-foreground">
-                      {DEMO_DATA.references.length} referencias agregadas
+                      {referencesData.profile ? '2 referencias agregadas' : 'No completado'}
                     </p>
                   )}
                   {expandedSections.references && (
@@ -368,7 +457,9 @@ export function FunnelSummary() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success">Completo</Badge>
+                <Badge variant={referencesData.overall_verified ? "success" : "secondary"}>
+                  {referencesData.overall_verified ? "Completo" : "Pendiente"}
+                </Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -393,18 +484,30 @@ export function FunnelSummary() {
           {expandedSections.references && (
             <div className="px-6 pb-6 border-t pt-4">
               <div className="space-y-3">
-                {DEMO_DATA.references.map((ref, idx) => (
-                  <div key={idx} className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{ref.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {ref.phone} • {ref.relationship}
-                        {ref.yearsKnown && ` • ${ref.yearsKnown} años de conocidos`}
-                      </p>
+                {referencesData.profile ? (
+                  <>
+                    <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground">{referencesData.profile.family_reference.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {referencesData.profile.family_reference.phone} • {referencesData.profile.family_reference.relationship} • Familiar
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                    <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground">{referencesData.profile.non_family_reference.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {referencesData.profile.non_family_reference.phone} • {referencesData.profile.non_family_reference.relationship} • {referencesData.profile.non_family_reference.years_known} años de conocidos
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No hay referencias agregadas</p>
+                )}
               </div>
             </div>
           )}
@@ -425,7 +528,7 @@ export function FunnelSummary() {
                   <h3 className="text-lg font-semibold text-foreground">Dirección de Residencia</h3>
                   {!expandedSections.address && (
                     <p className="text-sm text-muted-foreground">
-                      {DEMO_DATA.address.district}, {DEMO_DATA.address.province}
+                      {ubigeoNames?.district || 'No especificado'}, {ubigeoNames?.province || 'No especificado'}
                     </p>
                   )}
                   {expandedSections.address && (
@@ -434,11 +537,13 @@ export function FunnelSummary() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success">Completo</Badge>
+                <Badge variant={addressData.overall_verified ? "success" : "secondary"}>
+                  {addressData.overall_verified ? "Completo" : "Pendiente"}
+                </Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  onClick={() => router.push('/solicitar/address')}
+                  onClick={() => router.push('/solicitar/additional')}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
@@ -461,20 +566,24 @@ export function FunnelSummary() {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Dirección completa</p>
-                  <p className="font-medium text-foreground">{DEMO_DATA.address.street}</p>
+                  <p className="font-medium text-foreground">
+                    {addressData.profile?.address_type === 'google'
+                      ? addressData.profile?.google_address
+                      : addressData.profile?.street_address || 'No especificado'}
+                  </p>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Distrito</p>
-                    <p className="font-medium text-foreground">{DEMO_DATA.address.district}</p>
+                    <p className="font-medium text-foreground">{ubigeoNames?.district || 'No especificado'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Provincia</p>
-                    <p className="font-medium text-foreground">{DEMO_DATA.address.province}</p>
+                    <p className="font-medium text-foreground">{ubigeoNames?.province || 'No especificado'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Región</p>
-                    <p className="font-medium text-foreground">{DEMO_DATA.address.region}</p>
+                    <p className="text-sm text-muted-foreground mb-1">Departamento</p>
+                    <p className="font-medium text-foreground">{ubigeoNames?.region || 'No especificado'}</p>
                   </div>
                 </div>
               </div>
@@ -497,7 +606,7 @@ export function FunnelSummary() {
                   <h3 className="text-lg font-semibold text-foreground">Cuenta para Desembolso</h3>
                   {!expandedSections.bankAccount && (
                     <p className="text-sm text-muted-foreground">
-                      {DEMO_DATA.bankAccount.bank} • •••{DEMO_DATA.bankAccount.cci.slice(-4)}
+                      {bankAccountData.profile?.bank || 'No especificado'} • •••{bankAccountData.profile?.cci?.slice(-4) || '****'}
                     </p>
                   )}
                   {expandedSections.bankAccount && (
@@ -506,7 +615,9 @@ export function FunnelSummary() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success">Completo</Badge>
+                <Badge variant={bankAccountData.overall_verified ? "success" : "secondary"}>
+                  {bankAccountData.overall_verified ? "Completo" : "Pendiente"}
+                </Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -533,11 +644,37 @@ export function FunnelSummary() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Banco</p>
-                  <p className="font-medium text-foreground">{DEMO_DATA.bankAccount.bank}</p>
+                  <p className="font-medium text-foreground">{bankAccountData.profile?.bank || 'No especificado'}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground mb-1">Tipo de cuenta</p>
+                  <p className="font-medium text-foreground">{bankAccountData.profile?.account_type || 'No especificado'}</p>
+                </div>
+                <div className="md:col-span-2">
                   <p className="text-sm text-muted-foreground mb-1">CCI</p>
-                  <p className="font-mono text-sm text-foreground">{DEMO_DATA.bankAccount.cci}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono text-sm text-foreground flex-1">
+                      {bankAccountData.profile?.cci
+                        ? showCCI
+                          ? bankAccountData.profile.cci
+                          : '•••••••••••••••' + bankAccountData.profile.cci.slice(-4)
+                        : 'No especificado'}
+                    </p>
+                    {bankAccountData.profile?.cci && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCCI(!showCCI)}
+                        className="p-2 hover:bg-muted rounded-md transition-colors"
+                        aria-label={showCCI ? 'Ocultar CCI' : 'Mostrar CCI'}
+                      >
+                        {showCCI ? (
+                          <EyeOff className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
