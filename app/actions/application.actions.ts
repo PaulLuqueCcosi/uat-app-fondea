@@ -77,8 +77,8 @@ export async function submitApplicationAction(pepDeclarations: {
         const freshDb = await readDB();
         if (!freshDb[applicationId]) return;
 
-        // Mock: 70% aprobado, 30% rechazado
-        const result: EvaluationResult = Math.random() > 0.3 ? 'approved' : 'rejected';
+        // Mock: 100% aprobado, 0% rechazado (ajustar porcentaje aquí si es necesario)
+        const result: EvaluationResult = Math.random() > 0.0 ? 'approved' : 'rejected';
         const evaluatedAt = new Date().toISOString();
         const canRetryAt = result === 'rejected'
           ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
