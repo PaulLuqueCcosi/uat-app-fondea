@@ -1,6 +1,4 @@
-import { getLogtoContext, signOut } from '@logto/next/server-actions';
-import { logtoConfig } from '../logto';
-import { requireValidSession } from '@/app/actions/auth.actions';
+import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
 import { SolicitudesLayoutClient } from '@/components/solicitudes/SolicitudesLayoutClient';
 import { appBackgroundStyle, blobTopRight, blobBottomLeft } from '@/lib/backgroundStyle';
 
@@ -22,10 +20,7 @@ export default async function SolicitudesLayout({
 
       <SolicitudesLayoutClient
         user={user}
-        onSignOut={async () => {
-          'use server';
-          await signOut(logtoConfig);
-        }}
+        onSignOut={performSignOut}
       >
         {children}
       </SolicitudesLayoutClient>

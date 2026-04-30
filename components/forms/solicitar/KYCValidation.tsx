@@ -682,7 +682,7 @@ function DNIHelpCard({ activeField, onFieldClick }: { activeField: DNIField; onF
   const [showFullDisclaimer, setShowFullDisclaimer] = useState(false);
 
   return (
-    <div className="xl:fixed xl:top-4 xl:right-4 xl:z-50 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+    <div className="xl:sticky xl:top-4">
       <Card className="w-full max-w-lg mx-auto xl:w-[600px]">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">

@@ -1,16 +1,19 @@
-import { requireValidSession } from '@/app/actions/auth.actions';
-import { redirect } from 'next/navigation';
+import { requireValidSession, requireValidSessionStrict, performSignOut } from '@/app/actions/auth.actions';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
 import { appBackgroundStyle, blobTopRight, blobBottomLeft } from '@/lib/backgroundStyle';
-import { signOut } from '@logto/next/server-actions';
-import { logtoConfig } from '../logto';
+
+// Forzar renderizado dinámico - NO cache para validación de sesión en tiempo real
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Usar validación normal (con cache inteligente)
+  // Solo valida contra servidor cada 5 minutos
   const user = await requireValidSession();
 
   return (
@@ -24,10 +27,7 @@ export default async function DashboardLayout({
 
       <DashboardNavbar
         user={user}
-        onSignOut={async () => {
-          'use server';
-          await signOut(logtoConfig);
-        }}
+        onSignOut={performSignOut}
       />
 
       <div className="flex flex-1">

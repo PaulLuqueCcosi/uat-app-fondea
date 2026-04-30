@@ -1,6 +1,4 @@
-import { getLogtoContext, signOut } from '@logto/next/server-actions';
-import { logtoConfig } from '../logto';
-import { requireValidSession } from '@/app/actions/auth.actions';
+import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
 import { appBackgroundStyle, blobTopRight, blobBottomLeft } from '@/lib/backgroundStyle';
 import { FunnelLayoutClient } from '@/components/solicitar/SolicitarLayoutClient';
 
@@ -22,10 +20,7 @@ export default async function FunnelLayout({
 
       <FunnelLayoutClient
         user={user}
-        onSignOut={async () => {
-          'use server';
-          await signOut(logtoConfig);
-        }}
+        onSignOut={performSignOut}
       >
         {children}
       </FunnelLayoutClient>
