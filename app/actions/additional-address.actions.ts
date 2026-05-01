@@ -166,8 +166,10 @@ export async function getDistritosAction(provinceId: string): Promise<UbigeoOpti
   } catch { return []; }
 }
 
-// ── Google Places (mock hasta tener API key) ──────────────────────────────────
+// ── Google Places ─────────────────────────────────────────────────────────────
 // TODO: reemplazar con Google Places API cuando se configure GOOGLE_PLACES_API_KEY
+//       endpoint sugerido: GET /api/v1/address/search?q={query}
+//                          GET /api/v1/address/detail/{placeId}
 
 const MOCK_SUGGESTIONS: AddressSuggestion[] = [
   { place_id: 'mock_1',  description: 'Av. Javier Prado Este 1234, San Isidro, Lima, Perú',   main_text: 'Av. Javier Prado Este 1234', secondary_text: 'San Isidro, Lima, Perú'        },
@@ -201,7 +203,6 @@ const MOCK_DETAILS: Record<string, AddressDetail> = {
 
 export async function searchAddressAction(query: string): Promise<AddressSuggestion[]> {
   if (!query || query.trim().length < 3) return [];
-  await new Promise((r) => setTimeout(r, 300));
   const q = query.toLowerCase();
   return MOCK_SUGGESTIONS.filter(
     (s) => s.description.toLowerCase().includes(q) || s.main_text.toLowerCase().includes(q)
@@ -209,6 +210,5 @@ export async function searchAddressAction(query: string): Promise<AddressSuggest
 }
 
 export async function getAddressDetailAction(placeId: string): Promise<AddressDetail | null> {
-  await new Promise((r) => setTimeout(r, 200));
   return MOCK_DETAILS[placeId] ?? null;
 }
