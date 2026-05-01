@@ -134,10 +134,11 @@ export async function verifyDNI(data: KYCData): Promise<{ success: boolean; erro
     const kycData: KYCData = {
       dni: data.dni,
       firstName: data.firstName.trim().toUpperCase(),
-      secondName: data.secondName?.trim().toUpperCase(),
+      secondName: (data.secondName ?? '').trim().toUpperCase(),
       firstLastName: data.firstLastName.trim().toUpperCase(),
-      secondLastName: data.secondLastName?.trim().toUpperCase(),
+      secondLastName: (data.secondLastName ?? '').trim().toUpperCase(),
       verificationCode: data.verificationCode,
+      birth_date: data.birth_date,
     };
 
     currentApplication = { ...app, kyc: kycData };

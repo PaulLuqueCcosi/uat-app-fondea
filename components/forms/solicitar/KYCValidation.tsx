@@ -66,13 +66,9 @@ const kycValidationSchema = z.object({
     .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo se permiten letras'),
   secondName: z
     .string()
-    .optional()
-    .refine((val) => !val || val.length >= 2, {
-      message: 'El segundo nombre debe tener al menos 2 caracteres',
-    })
-    .refine((val) => !val || /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(val), {
-      message: 'Solo se permiten letras',
-    }),
+    .min(1, 'Ingresa tu segundo nombre')
+    .min(2, 'El segundo nombre debe tener al menos 2 caracteres')
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo se permiten letras'),
   firstLastName: z
     .string()
     .min(1, 'Ingresa tu primer apellido')
@@ -80,13 +76,9 @@ const kycValidationSchema = z.object({
     .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo se permiten letras'),
   secondLastName: z
     .string()
-    .optional()
-    .refine((val) => !val || val.length >= 2, {
-      message: 'El segundo apellido debe tener al menos 2 caracteres',
-    })
-    .refine((val) => !val || /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(val), {
-      message: 'Solo se permiten letras',
-    }),
+    .min(1, 'Ingresa tu segundo apellido')
+    .min(2, 'El segundo apellido debe tener al menos 2 caracteres')
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo se permiten letras'),
   verificationCode: z
     .string()
     .min(1, 'Ingresa el código de verificación')
@@ -96,13 +88,21 @@ const kycValidationSchema = z.object({
     .string()
     .min(1, 'Ingresa tu fecha de nacimiento')
     .refine((val) => {
-      const date = new Date(val);
-      if (isNaN(date.getTime())) return false;
+      // Acepta formato DD/MM/AAAA
+      if (!/^\d{2}\/\d{2}\/\d{4}$/.test(val)) return false;
+      const [day, month, year] = val.split('/').map(Number);
+      const date = new Date(year, month - 1, day);
+      if (
+        isNaN(date.getTime()) ||
+        date.getDate() !== day ||
+        date.getMonth() !== month - 1 ||
+        date.getFullYear() !== year
+      ) return false;
       const today = new Date();
       const age = today.getFullYear() - date.getFullYear()
         - (today < new Date(today.getFullYear(), date.getMonth(), date.getDate()) ? 1 : 0);
       return age >= 18 && age <= 80;
-    }, { message: 'Debes tener entre 18 y 80 años para solicitar un préstamo' }),
+    }, { message: 'Debes de ser mayor de edad.' }),
 });
 
 type KYCValidationFormValues = z.infer<typeof kycValidationSchema>;
@@ -184,9 +184,9 @@ export function FunnelKYCValidation({
       const kycData: KYCData = {
         dni: data.dni,
         firstName: data.firstName,
-        secondName: data.secondName || undefined,
+        secondName: data.secondName,
         firstLastName: data.firstLastName,
-        secondLastName: data.secondLastName || undefined,
+        secondLastName: data.secondLastName,
         verificationCode: data.verificationCode,
         birth_date: data.birth_date,
       };
@@ -341,7 +341,7 @@ export function FunnelKYCValidation({
                 <FormItem className="flex flex-col gap-1">
                   <FormLabel>Primer nombre *</FormLabel>
                   <Input
-                    placeholder="Juan"
+                    placeholder="CARLOS"
                     {...field}
                     className="w-full"
                     onChange={(e) =>
@@ -362,9 +362,9 @@ export function FunnelKYCValidation({
               name="secondName"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Segundo nombre</FormLabel>
+                  <FormLabel>Segundo nombre *</FormLabel>
                   <Input
-                    placeholder="Carlos (opcional)"
+                    placeholder="ANDRES"
                     {...field}
                     className="w-full"
                     onChange={(e) =>
@@ -375,7 +375,7 @@ export function FunnelKYCValidation({
                     onFocus={() => setActiveField('secondName')}
                     onBlur={() => setActiveField(null)}
                   />
-                  <FormDescription>Solo si tienes segundo nombre en tu DNI</FormDescription>
+                  <FormDescription>Exactamente como aparece en tu DNI</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -396,7 +396,7 @@ export function FunnelKYCValidation({
                 <FormItem className="flex flex-col gap-1">
                   <FormLabel>Primer apellido *</FormLabel>
                   <Input
-                    placeholder="Pérez"
+                    placeholder="GARCIA"
                     {...field}
                     className="w-full"
                     onChange={(e) =>
@@ -417,9 +417,9 @@ export function FunnelKYCValidation({
               name="secondLastName"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Segundo apellido</FormLabel>
+                  <FormLabel>Segundo apellido *</FormLabel>
                   <Input
-                    placeholder="García (opcional)"
+                    placeholder="RAMIREZ"
                     {...field}
                     className="w-full"
                     onChange={(e) =>
@@ -430,7 +430,7 @@ export function FunnelKYCValidation({
                     onFocus={() => setActiveField('secondLastName')}
                     onBlur={() => setActiveField(null)}
                   />
-                  <FormDescription>Apellido materno, si lo tienes</FormDescription>
+                  <FormDescription>Apellido materno</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -479,17 +479,25 @@ export function FunnelKYCValidation({
               name="birth_date"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Fecha de nacimiento</FormLabel>
+                  <FormLabel>Fecha de nacimiento *</FormLabel>
                   <Input
-                    type="date"
+                    type="text"
+                    placeholder="15/05/1990"
                     {...field}
                     className="w-full"
-                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 21)).toISOString().split('T')[0]}
-                    min={new Date(new Date().setFullYear(new Date().getFullYear() - 65)).toISOString().split('T')[0]}
+                    maxLength={10}
+                    onChange={(e) => {
+                      // Máscara automática DD/MM/AAAA
+                      let val = e.target.value.replace(/\D/g, '');
+                      if (val.length > 2) val = val.slice(0, 2) + '/' + val.slice(2);
+                      if (val.length > 5) val = val.slice(0, 5) + '/' + val.slice(5);
+                      if (val.length > 10) val = val.slice(0, 10);
+                      field.onChange(val);
+                    }}
                     onFocus={() => setActiveField('birth_date')}
                     onBlur={() => setActiveField(null)}
                   />
-                  <FormDescription>Debes tener entre 21 y 65 años</FormDescription>
+                  <FormDescription>Debes de ser mayor de edad.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

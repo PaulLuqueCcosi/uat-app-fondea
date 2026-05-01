@@ -33,11 +33,11 @@ export interface LoanSimulation {
 export interface KYCData {
   dni: string;
   firstName: string;
-  secondName?: string;
+  secondName: string;
   firstLastName: string;
-  secondLastName?: string;
+  secondLastName: string;
   verificationCode: string;
-  birth_date?: string;
+  birth_date: string;
   /** El backend indica si los datos ya fueron validados exitosamente */
   verified?: boolean;
 }
