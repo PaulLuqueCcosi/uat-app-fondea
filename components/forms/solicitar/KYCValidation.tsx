@@ -451,7 +451,7 @@ export function FunnelKYCValidation({
                 <FormItem className="flex flex-col gap-1">
                   <FormLabel>Código de verificación</FormLabel>
                   <Input
-                    placeholder="5"
+                    placeholder="1"
                     {...field}
                     className="w-full font-mono text-lg"
                     maxLength={1}
