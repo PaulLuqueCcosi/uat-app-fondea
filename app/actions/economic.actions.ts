@@ -1,9 +1,10 @@
 'use server';
 
-import { EconomicProfile, EconomicProfileStatus, Debt } from '@/lib/types';
+import { EconomicProfile, EconomicProfileStatus, Debt, ActionResult } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { getAccessTokenRSC } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
+import { parseBackendResponse, networkError } from '@/lib/action-utils';
 
 // ── Helper: fetch autenticado al backend ──────────────────────────────────────
 
@@ -45,19 +46,6 @@ function mapProfileFromBackend(raw: any): EconomicProfile & { verified: boolean 
 
 // ── Manejo de errores del backend ─────────────────────────────────────────────
 
-async function parseBackendError(res: Response): Promise<string> {
-  try {
-    const json = await res.json();
-    return json.detail ?? json.error ?? 'Error al guardar.';
-  } catch {
-    return 'Error al guardar.';
-  }
-}
-
-function isSuccess(status: number): boolean {
-  return status >= 200 && status < 300;
-}
-
 // ── GET: Estado completo ──────────────────────────────────────────────────────
 
 export async function getEconomicProfileStatus(): Promise<EconomicProfileStatus> {
@@ -87,7 +75,7 @@ export async function getEconomicProfileStatus(): Promise<EconomicProfileStatus>
 
 export async function saveEconomicProfile(
   profile: Omit<EconomicProfile, 'verified'>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult> {
   await requireValidSession();
 
   try {
@@ -110,13 +98,9 @@ export async function saveEconomicProfile(
         educationLevel: profile.education_level,
       }),
     });
-
-    if (isSuccess(res.status)) return { success: true };
-
-    const error = await parseBackendError(res);
-    return { success: false, error };
-  } catch (error) {
-    console.error('[ECONOMIC] Error al guardar perfil:', error);
-    return { success: false, error: 'Error de conexión.' };
+    return parseBackendResponse(res);
+  } catch {
+    console.error('[ECONOMIC] Error al guardar perfil');
+    return networkError();
   }
 }

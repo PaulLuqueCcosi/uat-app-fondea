@@ -1,9 +1,10 @@
 'use server';
 
-import { ReferencesProfile, ReferencesProfileStatus } from '@/lib/types';
+import { ReferencesProfile, ReferencesProfileStatus, ActionResult } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { getAccessTokenRSC } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
+import { parseBackendResponse, networkError } from '@/lib/action-utils';
 
 // ── Helper: fetch autenticado al backend ──────────────────────────────────────
 
@@ -44,19 +45,6 @@ function mapProfileFromBackend(raw: any): ReferencesProfile & { verified: boolea
 
 // ── Manejo de errores del backend ─────────────────────────────────────────────
 
-async function parseBackendError(res: Response): Promise<string> {
-  try {
-    const json = await res.json();
-    return json.detail ?? json.error ?? 'Error al guardar.';
-  } catch {
-    return 'Error al guardar.';
-  }
-}
-
-function isSuccess(status: number): boolean {
-  return status >= 200 && status < 300;
-}
-
 // ── GET: Estado completo ──────────────────────────────────────────────────────
 
 export async function getReferencesProfileStatus(): Promise<ReferencesProfileStatus> {
@@ -86,7 +74,7 @@ export async function getReferencesProfileStatus(): Promise<ReferencesProfileSta
 
 export async function saveReferencesProfile(
   profile: Omit<ReferencesProfile, 'verified'>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult> {
   await requireValidSession();
 
   try {
@@ -114,13 +102,9 @@ export async function saveReferencesProfile(
       method: 'PUT',
       body: JSON.stringify(body),
     });
-
-    if (isSuccess(res.status)) return { success: true };
-
-    const error = await parseBackendError(res);
-    return { success: false, error };
-  } catch (error) {
-    console.error('[REFERENCES] Error al guardar referencias:', error);
-    return { success: false, error: 'Error de conexión.' };
+    return parseBackendResponse(res);
+  } catch {
+    console.error('[REFERENCES] Error al guardar referencias');
+    return networkError();
   }
 }

@@ -1,3 +1,41 @@
+// ─── Server Action Results ───────────────────────────────────────────────────
+
+/**
+ * Categorías de error que los server actions pueden devolver al cliente.
+ * Permite que los formularios muestren mensajes diferenciados según el tipo.
+ *
+ * - validation  → 400 / 422: datos inválidos, el usuario puede corregirlos
+ * - auth        → 401 / 403: sesión expirada o sin permisos
+ * - not_found   → 404: el recurso no existe en el backend
+ * - conflict    → 409: conflicto (ej: ya existe)
+ * - rate_limit  → 429: demasiados intentos
+ * - server      → 5xx: error interno del servidor
+ * - network     → 0:   sin conexión / fetch lanzó excepción
+ * - unknown     → cualquier otro código HTTP
+ */
+export type ErrorCategory =
+  | 'validation'
+  | 'auth'
+  | 'not_found'
+  | 'conflict'
+  | 'rate_limit'
+  | 'server'
+  | 'network'
+  | 'unknown';
+
+/**
+ * Resultado estándar que devuelven todos los server actions de escritura.
+ * Reemplaza el antiguo `{ success: boolean; error?: string }`.
+ */
+export type ActionResult =
+  | { success: true; httpStatus: number }
+  | {
+      success: false;
+      httpStatus: number;       // 0 = sin conexión, >0 = código HTTP real
+      errorCategory: ErrorCategory;
+      error: string;            // mensaje listo para mostrar al usuario
+    };
+
 // ─── Auth & User ─────────────────────────────────────────────────────────────
 
 export interface User {

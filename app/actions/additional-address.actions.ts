@@ -1,9 +1,10 @@
 'use server';
 
-import { AddressProfile, AddressProfileStatus } from '@/lib/types';
+import { AddressProfile, AddressProfileStatus, ActionResult } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { getAccessTokenRSC } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
+import { parseBackendResponse, networkError } from '@/lib/action-utils';
 
 // Importar los datos locales de ubigeo
 import departamentosData from '@/lib/ubigeo_departamentos.json';
@@ -23,19 +24,6 @@ async function backendFetch(path: string, options: RequestInit = {}): Promise<Re
       ...options.headers,
     },
   });
-}
-
-async function parseBackendError(res: Response): Promise<string> {
-  try {
-    const json = await res.json();
-    return json.detail ?? json.error ?? 'Error al guardar.';
-  } catch {
-    return 'Error al guardar.';
-  }
-}
-
-function isSuccess(status: number): boolean {
-  return status >= 200 && status < 300;
 }
 
 function toTitleCase(str: string): string {
@@ -105,11 +93,11 @@ export async function getAddressProfileStatus(): Promise<AddressProfileStatus> {
 
 export async function saveAddressProfile(
   data: Omit<AddressProfile, 'verified'>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult> {
   await requireValidSession();
   try {
     const body: Record<string, unknown> = {
-      address_type:    data.address_type?.toUpperCase() ?? 'MANUAL', // Backend espera GOOGLE/MANUAL en mayúsculas
+      address_type:    data.address_type?.toUpperCase() ?? 'MANUAL',
       region:          data.region,
       province:        data.province,
       district:        data.district,
@@ -120,11 +108,10 @@ export async function saveAddressProfile(
     if (data.referral_source === 'OTRO') body.referral_other = data.referral_other;
 
     const res = await backendFetch('/api/v1/additional', { method: 'POST', body: JSON.stringify(body) });
-    if (isSuccess(res.status)) return { success: true };
-    return { success: false, error: await parseBackendError(res) };
-  } catch (error) {
-    console.error('[ADDRESS] Error al guardar:', error);
-    return { success: false, error: 'Error de conexión.' };
+    return parseBackendResponse(res);
+  } catch {
+    console.error('[ADDRESS] Error al guardar');
+    return networkError();
   }
 }
 

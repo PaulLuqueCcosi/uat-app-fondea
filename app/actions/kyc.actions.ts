@@ -1,19 +1,28 @@
 'use server';
 
-import { KYCData } from '@/lib/types';
+import { KYCData, ActionResult } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { getAccessTokenRSC } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
+import { networkError } from '@/lib/action-utils';
 
 // ── Respuesta pública al frontend ────────────────────────────────────────────
 
-export interface KYCSaveResult {
-  success: boolean;
-  error?: string;
-  blocked?: boolean;
-  blockedHoursLeft?: number;
-  attemptsLeft?: number;
-}
+/**
+ * Extiende ActionResult con campos específicos de KYC:
+ * - blockedHoursLeft: horas restantes cuando el backend devuelve 429
+ * - attemptsLeft:     intentos restantes cuando el backend devuelve 400
+ */
+export type KYCSaveResult =
+  | { success: true; httpStatus: number }
+  | {
+      success: false;
+      httpStatus: number;
+      errorCategory: import('@/lib/types').ErrorCategory;
+      error: string;
+      blockedHoursLeft?: number;
+      attemptsLeft?: number;
+    };
 
 // ── Helper: fetch autenticado al backend ─────────────────────────────────────
 
@@ -96,11 +105,9 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
   await requireValidSession();
 
   try {
-    // Convertir DD/MM/YYYY → YYYY-MM-DD para que el backend deserialice LocalDate correctamente
     const [day, month, year] = (data.birth_date ?? '').split('/');
     const birthDateISO = day && month && year ? `${year}-${month}-${day}` : data.birth_date;
 
-    // Mapear birth_date → birthDate para el backend
     const body = {
       dni:              data.dni,
       firstName:        data.firstName,
@@ -108,7 +115,7 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       firstLastName:    data.firstLastName,
       secondLastName:   data.secondLastName,
       verificationCode: data.verificationCode,
-      birthDate:        birthDateISO,   // ← el backend espera YYYY-MM-DD
+      birthDate:        birthDateISO,
     };
 
     const res = await backendFetch('/api/v1/kyc/validate', {
@@ -116,26 +123,30 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       body: JSON.stringify(body),
     });
 
-    // Backend / token no disponible
+    // 503 — backend / token no disponible
     if (res.status === 503) {
       return {
         success: false,
+        httpStatus: 503,
+        errorCategory: 'server',
         error: 'El servicio no está disponible en este momento. Por favor, inténtalo más tarde.',
       };
     }
 
-    const json = await res.json();
-
     // 200 — éxito
     if (res.ok) {
-      return { success: true };
+      return { success: true, httpStatus: res.status };
     }
 
-    // 429 — bloqueado
+    let json: any = {};
+    try { json = await res.json(); } catch { /* body vacío */ }
+
+    // 429 — bloqueado por demasiados intentos
     if (res.status === 429) {
       return {
         success: false,
-        blocked: true,
+        httpStatus: 429,
+        errorCategory: 'rate_limit',
         blockedHoursLeft: json.blockedHoursLeft ?? 24,
         error: json.error ?? `Demasiados intentos. Podrás intentarlo en ${json.blockedHoursLeft ?? 24} horas.`,
       };
@@ -144,15 +155,14 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
     // 400 — datos inválidos o RENIEC rechazó
     return {
       success: false,
+      httpStatus: res.status,
+      errorCategory: 'validation',
       attemptsLeft: json.attemptsLeft,
       error: json.error ?? 'Los datos no coinciden. Verifica que sean exactamente como aparecen en tu DNI.',
     };
 
-  } catch (error) {
-    console.error('[KYC] Error de conexión:', error);
-    return {
-      success: false,
-      error: 'Error de conexión. Por favor, inténtalo nuevamente.',
-    };
+  } catch {
+    console.error('[KYC] Error de conexión');
+    return networkError();
   }
 }

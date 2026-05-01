@@ -7,10 +7,12 @@ import {
   LaborProfileStatus,
   EmploymentStatus,
   AdditionalIncome,
+  ActionResult,
 } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { getAccessTokenRSC } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
+import { parseBackendResponse, networkError } from '@/lib/action-utils';
 
 // ── Helper: fetch autenticado al backend ──────────────────────────────────────
 
@@ -64,21 +66,6 @@ function mapIncomeFromBackend(raw: any): LaborIncome & { verified: boolean } {
 
 // ── Manejo de errores del backend ─────────────────────────────────────────────
 
-async function parseBackendError(res: Response): Promise<string> {
-  try {
-    const json = await res.json();
-    // Formato estándar del backend: { status, detail, extensions.fieldErrors }
-    return json.detail ?? json.error ?? 'Error al guardar.';
-  } catch {
-    return 'Error al guardar.';
-  }
-}
-
-/** Considera éxito cualquier 2xx (200, 201, 204) */
-function isSuccess(status: number): boolean {
-  return status >= 200 && status < 300;
-}
-
 // ── GET: Estado completo ──────────────────────────────────────────────────────
 
 export async function getLaborProfileStatus(): Promise<LaborProfileStatus> {
@@ -110,7 +97,7 @@ export async function getLaborProfileStatus(): Promise<LaborProfileStatus> {
 
 export async function saveLaborSituation(
   employment_status: EmploymentStatus
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult> {
   await requireValidSession();
 
   try {
@@ -118,14 +105,10 @@ export async function saveLaborSituation(
       method: 'PUT',
       body: JSON.stringify({ employmentStatus: employment_status }),
     });
-
-    if (isSuccess(res.status)) return { success: true };
-
-    const error = await parseBackendError(res);
-    return { success: false, error };
-  } catch (error) {
-    console.error('[LABOR] Error al guardar situación:', error);
-    return { success: false, error: 'Error de conexión.' };
+    return parseBackendResponse(res);
+  } catch {
+    console.error('[LABOR] Error al guardar situación');
+    return networkError();
   }
 }
 
@@ -133,26 +116,22 @@ export async function saveLaborSituation(
 
 export async function saveLaborDetails(
   details: Omit<LaborDetails, 'verified'>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult> {
   await requireValidSession();
 
   try {
     const res = await backendFetch('/api/v1/labor/details', {
       method: 'PUT',
       body: JSON.stringify({
-        industry:      details.industry,
+        industry:        details.industry,
         yearsOfActivity: details.years_of_activity,
-        businessRuc:   details.business_ruc ?? null,
+        businessRuc:     details.business_ruc ?? null,
       }),
     });
-
-    if (isSuccess(res.status)) return { success: true };
-
-    const error = await parseBackendError(res);
-    return { success: false, error };
-  } catch (error) {
-    console.error('[LABOR] Error al guardar detalles:', error);
-    return { success: false, error: 'Error de conexión.' };
+    return parseBackendResponse(res);
+  } catch {
+    console.error('[LABOR] Error al guardar detalles');
+    return networkError();
   }
 }
 
@@ -160,7 +139,7 @@ export async function saveLaborDetails(
 
 export async function saveLaborIncome(
   income: Omit<LaborIncome, 'verified'>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult> {
   await requireValidSession();
 
   try {
@@ -178,14 +157,10 @@ export async function saveLaborIncome(
         })),
       }),
     });
-
-    if (isSuccess(res.status)) return { success: true };
-
-    const error = await parseBackendError(res);
-    return { success: false, error };
-  } catch (error) {
-    console.error('[LABOR] Error al guardar ingresos:', error);
-    return { success: false, error: 'Error de conexión.' };
+    return parseBackendResponse(res);
+  } catch {
+    console.error('[LABOR] Error al guardar ingresos');
+    return networkError();
   }
 }
 
@@ -195,7 +170,7 @@ export async function saveLaborProfile(
   situation: EmploymentStatus,
   details: Omit<LaborDetails, 'verified'>,
   income: Omit<LaborIncome, 'verified'>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult> {
   await requireValidSession();
 
   try {
@@ -221,13 +196,9 @@ export async function saveLaborProfile(
         },
       }),
     });
-
-    if (isSuccess(res.status)) return { success: true };
-
-    const error = await parseBackendError(res);
-    return { success: false, error };
-  } catch (error) {
-    console.error('[LABOR] Error al guardar perfil completo:', error);
-    return { success: false, error: 'Error de conexión.' };
+    return parseBackendResponse(res);
+  } catch {
+    console.error('[LABOR] Error al guardar perfil completo');
+    return networkError();
   }
 }

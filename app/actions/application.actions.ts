@@ -1,9 +1,10 @@
 'use server';
 
 import { requireValidSession } from './auth.actions';
-import { ApplicationRecord, PEPDeclarations } from '@/lib/types';
+import { ApplicationRecord, PEPDeclarations, ActionResult } from '@/lib/types';
 import { getAccessTokenRSC } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
+import { parseBackendResponse, networkError } from '@/lib/action-utils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -20,18 +21,17 @@ async function backendFetch(path: string, options: RequestInit = {}): Promise<Re
   });
 }
 
-async function parseBackendError(res: Response): Promise<string> {
-  try {
-    const json = await res.json();
-    return json.message ?? json.detail ?? json.error ?? 'Error al procesar la solicitud.';
-  } catch {
-    return 'Error al procesar la solicitud.';
-  }
-}
-
 function isSuccess(status: number): boolean {
   return status >= 200 && status < 300;
 }
+
+/**
+ * Extiende ActionResult con los datos de la solicitud creada.
+ * En éxito incluye applicationId y status devueltos por el backend.
+ */
+export type SubmitApplicationResult =
+  | { success: true; httpStatus: number; applicationId: string; status: string }
+  | Extract<ActionResult, { success: false }>;
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 
@@ -39,19 +39,15 @@ function isSuccess(status: number): boolean {
  * Envía la solicitud de préstamo al backend.
  * POST /api/v1/applications/submit
  */
-export async function submitApplicationAction(pepDeclarations: PEPDeclarations): Promise<{
-  success: boolean;
-  applicationId?: string;
-  status?: string;
-  error?: string;
-}> {
+export async function submitApplicationAction(pepDeclarations: PEPDeclarations): Promise<SubmitApplicationResult> {
   await requireValidSession();
 
   try {
-    // Validar que todas las declaraciones PEP sean true
     if (!pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms) {
       return {
         success: false,
+        httpStatus: 0,
+        errorCategory: 'validation',
         error: 'Debes aceptar todas las declaraciones para continuar.',
       };
     }
@@ -62,19 +58,19 @@ export async function submitApplicationAction(pepDeclarations: PEPDeclarations):
     });
 
     if (!isSuccess(res.status)) {
-      const error = await parseBackendError(res);
-      return { success: false, error };
+      return await parseBackendResponse(res) as Extract<ActionResult, { success: false }>;
     }
 
     const data = await res.json();
     return {
       success: true,
+      httpStatus: res.status,
       applicationId: data.applicationId,
       status: data.status,
     };
-  } catch (error) {
-    console.error('[APPLICATION] Error al enviar solicitud:', error);
-    return { success: false, error: 'Error de conexión. Intenta nuevamente.' };
+  } catch {
+    console.error('[APPLICATION] Error al enviar solicitud');
+    return networkError();
   }
 }
 

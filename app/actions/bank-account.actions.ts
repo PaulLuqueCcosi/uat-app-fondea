@@ -1,9 +1,10 @@
 'use server';
 
-import { BankAccountProfile, BankAccountProfileStatus } from '@/lib/types';
+import { BankAccountProfile, BankAccountProfileStatus, ActionResult } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { getAccessTokenRSC } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
+import { parseBackendResponse, networkError } from '@/lib/action-utils';
 
 // ── Helpers internos ──────────────────────────────────────────────────────────
 
@@ -18,19 +19,6 @@ async function backendFetch(path: string, options: RequestInit = {}): Promise<Re
       ...options.headers,
     },
   });
-}
-
-async function parseBackendError(res: Response): Promise<string> {
-  try {
-    const json = await res.json();
-    return json.detail ?? json.error ?? 'Error al guardar.';
-  } catch {
-    return 'Error al guardar.';
-  }
-}
-
-function isSuccess(status: number): boolean {
-  return status >= 200 && status < 300;
 }
 
 // ── GET: Estado completo ──────────────────────────────────────────────────────
@@ -67,38 +55,36 @@ export async function getBankAccountProfileStatus(): Promise<BankAccountProfileS
 
 export async function saveBankAccountProfile(
   data: Omit<BankAccountProfile, 'verified'>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult> {
   await requireValidSession();
-  
+
   try {
     // Validaciones del lado cliente (adicionales a las del backend)
     if (!data.bank || data.bank.trim().length === 0) {
-      return { success: false, error: 'Selecciona tu banco.' };
+      return { success: false, httpStatus: 0, errorCategory: 'validation', error: 'Selecciona tu banco.' };
     }
 
     if (!data.account_type || !['AHORROS', 'CORRIENTE'].includes(data.account_type)) {
-      return { success: false, error: 'Selecciona el tipo de cuenta.' };
+      return { success: false, httpStatus: 0, errorCategory: 'validation', error: 'Selecciona el tipo de cuenta.' };
     }
 
     if (!data.cci || !/^\d{20}$/.test(data.cci)) {
-      return { success: false, error: 'El CCI debe tener exactamente 20 dígitos.' };
+      return { success: false, httpStatus: 0, errorCategory: 'validation', error: 'El CCI debe tener exactamente 20 dígitos.' };
     }
 
     const body = {
       bank: data.bank.trim(),
-      account_type: data.account_type, // Backend espera AHORROS/CORRIENTE (ya están en mayúsculas)
+      account_type: data.account_type,
       cci: data.cci,
     };
 
-    const res = await backendFetch('/api/v1/bank-account/profile', { 
-      method: 'POST', 
-      body: JSON.stringify(body) 
+    const res = await backendFetch('/api/v1/bank-account/profile', {
+      method: 'POST',
+      body: JSON.stringify(body),
     });
-    
-    if (isSuccess(res.status)) return { success: true };
-    return { success: false, error: await parseBackendError(res) };
-  } catch (error) {
-    console.error('[BANK_ACCOUNT] Error al guardar:', error);
-    return { success: false, error: 'Error de conexión.' };
+    return parseBackendResponse(res);
+  } catch {
+    console.error('[BANK_ACCOUNT] Error al guardar');
+    return networkError();
   }
 }

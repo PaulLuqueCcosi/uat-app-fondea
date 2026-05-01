@@ -199,7 +199,7 @@ export function FunnelKYCValidation({
       const result: KYCSaveResult = await saveKYCData(kycData);
 
       if (!result.success) {
-        if (result.blocked) {
+        if (result.errorCategory === 'rate_limit') {
           setBlocked(true);
           setBlockedHoursLeft(result.blockedHoursLeft ?? 0);
           setAttemptsLeft(0);
