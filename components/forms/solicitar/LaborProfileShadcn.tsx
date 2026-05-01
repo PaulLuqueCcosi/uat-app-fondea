@@ -68,8 +68,8 @@ const laborFormSchema = z.object({
       const msg = data.employment_status === 'EMPLEADO_DEPENDIENTE'
         ? 'Ingresa tu tiempo en la empresa'
         : data.employment_status === 'EMPRESARIO'
-        ? 'Ingresa los años con tu negocio'
-        : 'Ingresa los años de actividad';
+          ? 'Ingresa los años con tu negocio'
+          : 'Ingresa los años de actividad';
       ctx.addIssue({ code: 'custom', message: msg, path: ['years_of_activity'] });
     } else if (Number(data.years_of_activity) < 0) {
       ctx.addIssue({ code: 'custom', message: 'El valor no puede ser negativo', path: ['years_of_activity'] });
@@ -275,27 +275,27 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
       <>
         <Separator className="bg-border h-px" />
         <div>
-            <h3 className="text-sm font-semibold text-primary mb-3">Detalles Laborales</h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {prevDetails?.years_of_activity !== undefined && (
-                <DataRow
-                  label={
-                    prevSituation?.employment_status === 'EMPLEADO_DEPENDIENTE'
-                      ? 'Tiempo en la empresa'
-                      : prevSituation?.employment_status === 'EMPRESARIO'
+          <h3 className="text-sm font-semibold text-primary mb-3">Detalles Laborales</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {prevDetails?.years_of_activity !== undefined && (
+              <DataRow
+                label={
+                  prevSituation?.employment_status === 'EMPLEADO_DEPENDIENTE'
+                    ? 'Tiempo en la empresa'
+                    : prevSituation?.employment_status === 'EMPRESARIO'
                       ? 'Años con el negocio'
                       : 'Años de actividad'
-                  }
-                  value={`${prevDetails.years_of_activity} ${prevDetails.years_of_activity === 1 ? 'año' : 'años'}`}
-                />
-              )}
-              {prevDetails?.business_ruc && (
-                <DataRow label="RUC del negocio" value={prevDetails.business_ruc} />
-              )}
-            </div>
+                }
+                value={`${prevDetails.years_of_activity} ${prevDetails.years_of_activity === 1 ? 'año' : 'años'}`}
+              />
+            )}
+            {prevDetails?.business_ruc && (
+              <DataRow label="RUC del negocio" value={prevDetails.business_ruc} />
+            )}
           </div>
-        </>
-      )
+        </div>
+      </>
+
 
       {/* Ingresos */}
       <Separator className="bg-border h-px" />
@@ -571,78 +571,78 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                 {fields.map((field, index) => {
                   const watchedType = form.watch(`additional_incomes.${index}.type`);
                   return (
-                  <div key={field.id} className="rounded-lg border p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-sm">Ingreso adicional #{index + 1}</h3>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => remove(index)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <div key={field.id} className="rounded-lg border p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-sm">Ingreso adicional #{index + 1}</h3>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => remove(index)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
 
-                    {/* Tipo de ingreso */}
-                    <FormField
-                      control={form.control}
-                      name={`additional_incomes.${index}.type`}
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col gap-1">
-                          <FormLabel>Tipo de ingreso</FormLabel>
-                          <NativeSelect {...field} className="w-full">
-                            <NativeSelectOption value="">Selecciona</NativeSelectOption>
-                            {ADDITIONAL_INCOME_TYPE_OPTIONS.map((opt) => (
-                              <NativeSelectOption key={opt.value} value={opt.value}>{opt.label}</NativeSelectOption>
-                            ))}
-                          </NativeSelect>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Tipo personalizado — solo si eligió OTRO */}
-                    {watchedType === 'OTRO' && (
+                      {/* Tipo de ingreso */}
                       <FormField
                         control={form.control}
-                        name={`additional_incomes.${index}.custom_type`}
+                        name={`additional_incomes.${index}.type`}
                         render={({ field }) => (
                           <FormItem className="flex flex-col gap-1">
-                            <FormLabel>Especifica el tipo</FormLabel>
-                            <Input placeholder="Ej: Comisiones, regalías..." {...field} className="w-full" />
+                            <FormLabel>Tipo de ingreso</FormLabel>
+                            <NativeSelect {...field} className="w-full">
+                              <NativeSelectOption value="">Selecciona</NativeSelectOption>
+                              {ADDITIONAL_INCOME_TYPE_OPTIONS.map((opt) => (
+                                <NativeSelectOption key={opt.value} value={opt.value}>{opt.label}</NativeSelectOption>
+                              ))}
+                            </NativeSelect>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    )}
 
-                    {/* Monto */}
-                    <FormField
-                      control={form.control}
-                      name={`additional_incomes.${index}.amount`}
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col gap-1">
-                          <FormLabel>Monto mensual</FormLabel>
-                          <div className="relative w-full">
-                            <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                              <span className="text-sm font-medium">S/</span>
+                      {/* Tipo personalizado — solo si eligió OTRO */}
+                      {watchedType === 'OTRO' && (
+                        <FormField
+                          control={form.control}
+                          name={`additional_incomes.${index}.custom_type`}
+                          render={({ field }) => (
+                            <FormItem className="flex flex-col gap-1">
+                              <FormLabel>Especifica el tipo</FormLabel>
+                              <Input placeholder="Ej: Comisiones, regalías..." {...field} className="w-full" />
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {/* Monto */}
+                      <FormField
+                        control={form.control}
+                        name={`additional_incomes.${index}.amount`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col gap-1">
+                            <FormLabel>Monto mensual</FormLabel>
+                            <div className="relative w-full">
+                              <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <span className="text-sm font-medium">S/</span>
+                              </div>
+                              <Input type="number" placeholder="0.00" {...field} className="w-full pl-10" min="0" step="0.01" />
                             </div>
-                            <Input type="number" placeholder="0.00" {...field} className="w-full pl-10" min="0" step="0.01" />
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    {/* Descripción opcional */}
-                    <FormField
-                      control={form.control}
-                      name={`additional_incomes.${index}.description`}
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col gap-1">
-                          <FormLabel>Descripción <span className="text-muted-foreground font-normal">(opcional)</span></FormLabel>
-                          <Input placeholder="Ej: Departamento en Miraflores" {...field} className="w-full" />
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                      {/* Descripción opcional */}
+                      <FormField
+                        control={form.control}
+                        name={`additional_incomes.${index}.description`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col gap-1">
+                            <FormLabel>Descripción <span className="text-muted-foreground font-normal">(opcional)</span></FormLabel>
+                            <Input placeholder="Ej: Departamento en Miraflores" {...field} className="w-full" />
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   );
                 })}
                 <Button
