@@ -27,6 +27,15 @@ function formatRetryDate(isoDate: string): string {
 
 function ApprovedView({ solicitudId }: { solicitudId: string }) {
   const router = useRouter();
+
+  // Auto-redirigir a la página principal de la solicitud después de 2 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push(`/solicitudes/${solicitudId}`);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [solicitudId, router]);
+
   return (
     <div className="flex flex-col items-center text-center space-y-6">
       <div className="w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center">
@@ -38,43 +47,28 @@ function ApprovedView({ solicitudId }: { solicitudId: string }) {
           ¡Tu solicitud fue aprobada!
         </h1>
         <p className="text-muted-foreground">
-          Felicitaciones. Ahora completa los últimos pasos para recibir tu préstamo.
+          Redirigiendo...
         </p>
       </div>
 
-      <div className="w-full space-y-2 text-left">
-        {[
-          { label: 'Verificar tu DNI', desc: 'Sube fotos de tu documento de identidad' },
-          { label: 'Verificación biométrica', desc: 'Toma una selfie para confirmar tu identidad' },
-          { label: 'Firmar el contrato', desc: 'Revisa y firma digitalmente tu contrato' },
-        ].map((step, i) => (
-          <div key={i} className="flex items-center gap-3 p-3 border border-border rounded-lg">
-            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
-              {i + 1}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">{step.label}</p>
-              <p className="text-xs text-muted-foreground">{step.desc}</p>
-            </div>
-          </div>
-        ))}
+      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+        <div className="h-full bg-primary animate-pulse" style={{ width: '100%' }} />
       </div>
-
-      <Button
-        size="lg"
-        className="w-full"
-        onClick={() => router.push(`/solicitudes/${solicitudId}/preaprobada`)}
-      >
-        Continuar con la verificación
-        <ArrowRight className="w-4 h-4 ml-2" />
-      </Button>
     </div>
   );
 }
 
-function RejectedView({ canRetryAt }: { canRetryAt?: string }) {
+function RejectedView({ solicitudId, canRetryAt }: { solicitudId: string; canRetryAt?: string }) {
   const router = useRouter();
   const retryDate = canRetryAt ? formatRetryDate(canRetryAt) : null;
+
+  // Auto-redirigir a la página principal de la solicitud después de 2 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push(`/solicitudes/${solicitudId}`);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [solicitudId, router]);
 
   return (
     <div className="flex flex-col items-center text-center space-y-6">
@@ -87,66 +81,12 @@ function RejectedView({ canRetryAt }: { canRetryAt?: string }) {
           Solicitud no aprobada
         </h1>
         <p className="text-muted-foreground">
-          Lamentablemente tu solicitud no cumplió con los requisitos en esta ocasión.
+          Redirigiendo...
         </p>
       </div>
 
-      {/* Mensaje de reintento */}
-      <div className="w-full bg-muted/50 border border-border rounded-lg p-4 text-left">
-        <div className="flex gap-3">
-          <Clock className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-semibold text-foreground mb-1">¿Cuándo puedo volver a intentarlo?</p>
-            <p className="text-muted-foreground">
-              Podrás presentar una nueva solicitud a partir del{' '}
-              {retryDate
-                ? <span className="font-semibold text-foreground">{retryDate}</span>
-                : 'los próximos 30 días'
-              }.
-              Te recomendamos mejorar tu perfil crediticio durante este tiempo.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Recomendaciones */}
-      <div className="w-full bg-primary/5 border border-primary/20 rounded-lg p-4 text-left">
-        <div className="flex gap-3">
-          <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-semibold text-foreground mb-2">Mientras tanto, puedes:</p>
-            <ul className="space-y-1 text-muted-foreground">
-              <li>• Mejorar tu score crediticio pagando deudas a tiempo</li>
-              <li>• Reducir tus deudas actuales</li>
-              <li>• Solicitar un monto menor cuando puedas reintentar</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full flex flex-col sm:flex-row gap-3">
-        <Button
-          variant="outline"
-          size="lg"
-          className="flex-1"
-          onClick={() => router.push('/dashboard')}
-        >
-          <Home className="w-4 h-4 mr-2" />
-          Ir al dashboard
-        </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          className="flex-1"
-          disabled={!!canRetryAt && new Date(canRetryAt) > new Date()}
-          onClick={() => router.push('/solicitar')}
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          {canRetryAt && new Date(canRetryAt) > new Date()
-            ? `Disponible el ${retryDate}`
-            : 'Nueva solicitud'
-          }
-        </Button>
+      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+        <div className="h-full bg-destructive animate-pulse" style={{ width: '100%' }} />
       </div>
     </div>
   );
@@ -281,7 +221,7 @@ export default function EvaluandoPage() {
       <Card className="w-full max-w-2xl p-8">
         {pageState === 'evaluating' && <EvaluatingView timeElapsed={timeElapsed} />}
         {pageState === 'approved'   && <ApprovedView   solicitudId={solicitudId} />}
-        {pageState === 'rejected'   && <RejectedView   canRetryAt={canRetryAt} />}
+        {pageState === 'rejected'   && <RejectedView   solicitudId={solicitudId} canRetryAt={canRetryAt} />}
       </Card>
     </div>
   );

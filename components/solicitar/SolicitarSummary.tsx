@@ -152,8 +152,9 @@ export function FunnelSummary({
         return;
       }
 
-      // Navega a la página de evaluación — el polling arranca ahí
-      router.push(`/solicitudes/${result.applicationId}/evaluando`);
+      // Navega a la página principal de la solicitud
+      // Esta página redirigirá automáticamente a /evaluando si está en proceso
+      router.push(`/solicitudes/${result.applicationId}`);
     } catch (err) {
       console.error('Error submitting application:', err);
       setError('Error al enviar la solicitud. Intenta nuevamente.');
