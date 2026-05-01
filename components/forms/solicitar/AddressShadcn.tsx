@@ -265,19 +265,22 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
   const summaryView = (
     <div className="space-y-6">
       {/* Banner verificado */}
-      <div className="flex items-center justify-between rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3">
-        <div className="flex items-center gap-2 text-green-600">
-          <CheckCircle2 className="h-4 w-4" />
-          <span className="text-sm font-medium">Dirección guardada</span>
+      <div className="flex items-center gap-3 rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-secondary" />
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-secondary">Dirección guardada</p>
+          <p className="text-xs text-muted-foreground">
+            Tu dirección está registrada. Puedes editarla si algo cambió.
+          </p>
         </div>
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={() => setIsEditing(true)}
-          className="h-8 gap-1.5 text-xs"
+          className="shrink-0 gap-1.5"
         >
-          <Pencil className="h-3 w-3" />
+          <Pencil className="h-3.5 w-3.5" />
           Editar
         </Button>
       </div>
