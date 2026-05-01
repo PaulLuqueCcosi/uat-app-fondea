@@ -39,6 +39,9 @@ import {
   ADDITIONAL_INCOME_TYPE_OPTIONS,
   LOAN_PURPOSE_OPTIONS,
   EDUCATION_LEVEL_OPTIONS,
+  INCOME_RECEIPT_OPTIONS,
+  REFERRAL_SOURCE_OPTIONS,
+  ACCOUNT_TYPE_OPTIONS,
 } from '@/lib/constants';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 
@@ -66,6 +69,22 @@ const getLoanPurposeLabel = (value?: string) => {
 const getEducationLevelLabel = (value?: string) => {
   if (!value) return 'No especificado';
   return EDUCATION_LEVEL_OPTIONS.find(opt => opt.value === value)?.label || value;
+};
+
+const getIncomeReceiptLabel = (value?: string) => {
+  if (!value) return 'No especificado';
+  return INCOME_RECEIPT_OPTIONS.find(opt => opt.value === value)?.label || value;
+};
+
+const getReferralSourceLabel = (value?: string, other?: string) => {
+  if (!value) return 'No especificado';
+  if (value === 'OTRO') return other?.trim() || 'Otro';
+  return REFERRAL_SOURCE_OPTIONS.find(opt => opt.value === value)?.label || value;
+};
+
+const getAccountTypeLabel = (value?: string) => {
+  if (!value) return 'No especificado';
+  return ACCOUNT_TYPE_OPTIONS.find(opt => opt.value === value)?.label || value;
 };
 
 const FAMILY_RELATIONS_MAP: Record<string, string> = {
@@ -380,6 +399,11 @@ export function FunnelSummary({
                   <p className="font-semibold text-foreground text-lg">S/ {laborData.income?.monthly_income?.toLocaleString() || '0'}</p>
                 </div>
 
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Cómo recibes tus ingresos</p>
+                  <p className="font-medium text-foreground">{getIncomeReceiptLabel(laborData.income?.income_receipt_method)}</p>
+                </div>
+
                 {laborData.income?.has_additional_income && laborData.income?.additional_incomes && laborData.income.additional_incomes.length > 0 && (
                   <div className="md:col-span-2">
                     <p className="text-sm text-muted-foreground mb-2">Ingresos adicionales</p>
@@ -689,6 +713,12 @@ export function FunnelSummary({
                     <p className="font-medium text-foreground">{ubigeoNames?.region || 'No especificado'}</p>
                   </div>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">¿Cómo nos conociste?</p>
+                  <p className="font-medium text-foreground">
+                    {getReferralSourceLabel(addressData.profile?.referral_source, addressData.profile?.referral_other)}
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -751,7 +781,7 @@ export function FunnelSummary({
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Tipo de cuenta</p>
-                  <p className="font-medium text-foreground">{bankAccountData.profile?.account_type || 'No especificado'}</p>
+                  <p className="font-medium text-foreground">{getAccountTypeLabel(bankAccountData.profile?.account_type)}</p>
                 </div>
                 <div className="md:col-span-2">
                   <p className="text-sm text-muted-foreground mb-1">CCI</p>
