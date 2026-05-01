@@ -28,6 +28,8 @@ import { FormHeader } from '@/components/ui/form-header';
 import { saveEconomicProfile } from '@/app/actions/economic.actions';
 import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/lib/constants';
 import { EconomicProfileStatus } from '@/lib/types';
+import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { ContinueButton } from '@/components/ui/continue-button';
 
 interface FunnelEconomicProfileProps {
   dashboardMode?: boolean;
@@ -111,6 +113,9 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const nextPath = currentStep?.nextPath || '/solicitar/references';
+  const autoNavigate = useAutoNavigate(() => router.push(nextPath));
+
   const prevProfile = initialData?.profile;
 
   const form = useForm<EconomicFormValues>({
@@ -176,7 +181,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       setIsEditing(false);
 
       if (!dashboardMode) {
-        router.push(currentStep?.nextPath || '/solicitar/references');
+        autoNavigate.start();
       }
     } catch {
       setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
@@ -291,12 +296,12 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
           <Separator className="bg-primary/20 h-px" />
           <div className="flex flex-col sm:flex-row justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => router.back()}>Atrás</Button>
-            <Button type="button" onClick={() => router.push(currentStep?.nextPath || '/solicitar/references')}>
-              <span className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" />
-                Continuar
-              </span>
-            </Button>
+            <ContinueButton
+              onClick={autoNavigate.navigateNow}
+              active={autoNavigate.active}
+              progress={autoNavigate.progress}
+              countdown={autoNavigate.countdown}
+            />
           </div>
         </>
       )}

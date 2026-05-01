@@ -16,6 +16,8 @@ import {
 } from '@/lib/constants';
 import { saveLaborProfile } from '@/app/actions/labor.actions';
 import { useState } from 'react';
+import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { ContinueButton } from '@/components/ui/continue-button';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -154,6 +156,9 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const nextPath = currentStep?.nextPath || '/solicitar/economic';
+  const autoNavigate = useAutoNavigate(() => router.push(nextPath));
+
   // Extraer datos previos de los 3 recursos
   const prevSituation = initialData?.situation;
   const prevDetails = initialData?.details;
@@ -234,7 +239,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
       setIsEditing(false);
 
       if (!dashboardMode) {
-        router.push(currentStep?.nextPath || '/solicitar/economic');
+        autoNavigate.start();
       }
     } catch {
       setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
@@ -356,12 +361,12 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
           <Separator className="bg-primary/20 h-px" />
           <div className="flex flex-col sm:flex-row justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => router.back()}>Atrás</Button>
-            <Button type="button" onClick={() => router.push(currentStep?.nextPath || '/solicitar/economic')}>
-              <span className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" />
-                Continuar
-              </span>
-            </Button>
+            <ContinueButton
+              onClick={autoNavigate.navigateNow}
+              active={autoNavigate.active}
+              progress={autoNavigate.progress}
+              countdown={autoNavigate.countdown}
+            />
           </div>
         </>
       )}

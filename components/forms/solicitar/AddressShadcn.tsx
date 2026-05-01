@@ -34,6 +34,8 @@ import { GoogleAddressAutocomplete } from '@/components/forms/solicitar/GoogleAd
 import type { AddressDetail } from '@/app/actions/additional-address.actions';
 import { saveAddressProfile, getAddressProfileStatus } from '@/app/actions/additional-address.actions';
 import type { AddressProfileStatus } from '@/lib/types';
+import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { ContinueButton } from '@/components/ui/continue-button';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -113,6 +115,9 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified ?? false);
   const [isEditing,  setIsEditing]  = useState(!initialData?.overall_verified);
   const [saveError,  setSaveError]  = useState<string | null>(null);
+
+  const nextPath = currentStep?.nextPath || '/solicitar/references';
+  const autoNavigate = useAutoNavigate(() => router.push(nextPath));
 
   // ── Estado ubigeo ───────────────────────────────────────────────────────────
   const [departamentos,    setDepartamentos]    = useState<UbigeoOption[]>([]);
@@ -250,7 +255,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
     setIsEditing(false);
 
     if (!dashboardMode) {
-      router.push(currentStep?.nextPath || '/solicitar/references');
+      autoNavigate.start();
     }
   };
 
@@ -312,13 +317,13 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
           <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
             Atrás
           </Button>
-          <Button
-            type="button"
+          <ContinueButton
+            onClick={autoNavigate.navigateNow}
+            active={autoNavigate.active}
+            progress={autoNavigate.progress}
+            countdown={autoNavigate.countdown}
             className="w-full sm:w-auto"
-            onClick={() => router.push(currentStep?.nextPath || '/solicitar/references')}
-          >
-            Continuar
-          </Button>
+          />
         </div>
       )}
     </div>

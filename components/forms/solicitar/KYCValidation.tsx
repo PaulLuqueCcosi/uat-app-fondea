@@ -28,6 +28,8 @@ import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveKYCData } from '@/app/actions/kyc.actions';
 import type { KYCSaveResult } from '@/app/actions/kyc.actions';
+import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { ContinueButton } from '@/components/ui/continue-button';
 import { useState, useEffect } from 'react';
 
 interface FunnelKYCValidationProps {
@@ -120,6 +122,9 @@ export function FunnelKYCValidation({
 
   const [isVerified, setIsVerified] = useState(initialData?.verified === true);
   const [isEditing, setIsEditing] = useState(!initialData?.verified);
+
+  const nextPath = currentStep?.nextPath || '/solicitar/kyc-documents';
+  const autoNavigate = useAutoNavigate(() => router.push(nextPath));
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [attemptsLeft, setAttemptsLeft] = useState(initialAttemptsLeft);
@@ -216,7 +221,7 @@ export function FunnelKYCValidation({
       setIsVerifying(false);
 
       if (!dashboardMode) {
-        router.push(currentStep?.nextPath || '/solicitar/kyc-documents');
+        autoNavigate.start();
       }
     } catch (error) {
       console.error('Error en verificación KYC:', error);
@@ -282,15 +287,12 @@ export function FunnelKYCValidation({
             <Button type="button" variant="outline" onClick={() => router.back()}>
               Atrás
             </Button>
-            <Button
-              type="button"
-              onClick={() => router.push(currentStep?.nextPath || '/solicitar/kyc-documents')}
-            >
-              <span className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" />
-                Continuar
-              </span>
-            </Button>
+            <ContinueButton
+              onClick={autoNavigate.navigateNow}
+              active={autoNavigate.active}
+              progress={autoNavigate.progress}
+              countdown={autoNavigate.countdown}
+            />
           </div>
         </>
       )}
