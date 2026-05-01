@@ -71,7 +71,12 @@ export async function submitApplicationAction(pepDeclarations: PEPDeclarations):
     };
   } catch {
     console.error('[APPLICATION] Error al enviar solicitud');
-    return networkError();
+    return {
+      success: false,
+      httpStatus: 0,
+      errorCategory: 'network',
+      error: 'Error de conexión. Verifica tu internet e inténtalo nuevamente.',
+    } as SubmitApplicationResult;
   }
 }
 

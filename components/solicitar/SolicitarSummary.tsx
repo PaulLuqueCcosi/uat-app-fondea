@@ -173,9 +173,15 @@ export function FunnelSummary({
     try {
       const result = await submitApplicationAction(pepDeclarations);
 
-      if (!result.success || !result.applicationId) {
+      if (!result.success) {
         setSaveError(result.error ?? 'Error al enviar la solicitud. Intenta nuevamente.');
         setSaveErrorCategory(result.errorCategory);
+        return;
+      }
+
+      if (!result.applicationId) {
+        setSaveError('Error al enviar la solicitud. Intenta nuevamente.');
+        setSaveErrorCategory('unknown');
         return;
       }
 
