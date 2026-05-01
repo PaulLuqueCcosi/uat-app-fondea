@@ -27,6 +27,7 @@ import { FormHeader } from '@/components/ui/form-header';
 import { saveReferencesProfile } from '@/app/actions/references.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
+import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 
 interface FunnelReferencesProps {
   dashboardMode?: boolean;
@@ -124,6 +125,10 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
+
+  // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
+  const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
 
   const nextPath = currentStep?.nextPath || '/solicitar/additional';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -149,6 +154,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
     setIsVerified(false);
     setIsEditing(true);
     setSaveError(null);
+    setSaveErrorCategory(undefined);
   };
 
   const watchFamilyRelation = form.watch('family_relation');
@@ -156,6 +162,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
 
   const onSubmit = async (data: ReferencesFormValues) => {
     setSaveError(null);
+    setSaveErrorCategory(undefined);
     try {
       const referencesProfile = {
         family_reference: {
@@ -176,10 +183,12 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
       const result = await saveReferencesProfile(referencesProfile);
 
       if (!result.success) {
-        setSaveError(result.error || 'Error al guardar los datos.');
+        setSaveError(result.error);
+        setSaveErrorCategory(result.errorCategory);
         return;
       }
 
+      setSavedProfile({ ...referencesProfile, verified: true });
       setIsVerified(true);
       setIsEditing(false);
 
@@ -188,18 +197,19 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
       }
     } catch {
       setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
+      setSaveErrorCategory('network');
     }
   };
 
   // ── Vista readonly (datos guardados) ────────────────────────────────────────
   const familyRelationLabel = getRelationLabel(
-    prevProfile?.family_reference.relationship,
-    prevProfile?.family_reference.relationship_other,
+    savedProfile?.family_reference.relationship,
+    savedProfile?.family_reference.relationship_other,
     FAMILY_RELATIONS
   );
   const nonFamilyRelationLabel = getRelationLabel(
-    prevProfile?.non_family_reference.relationship,
-    prevProfile?.non_family_reference.relationship_other,
+    savedProfile?.non_family_reference.relationship,
+    savedProfile?.non_family_reference.relationship_other,
     NON_FAMILY_RELATIONS
   );
 
@@ -227,9 +237,9 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
         <div>
           <h3 className="text-sm font-semibold text-primary mb-3">Referencia Familiar</h3>
           <div className="space-y-4">
-            <DataRow label="Nombre completo" value={prevProfile?.family_reference.name} />
+            <DataRow label="Nombre completo" value={savedProfile?.family_reference.name} />
             <DataRow label="Relación" value={familyRelationLabel} />
-            <DataRow label="Teléfono" value={prevProfile?.family_reference.phone ? `+51 ${prevProfile.family_reference.phone}` : '—'} />
+            <DataRow label="Teléfono" value={savedProfile?.family_reference.phone ? `+51 ${savedProfile.family_reference.phone}` : '—'} />
           </div>
         </div>
 
@@ -237,10 +247,10 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
         <div>
           <h3 className="text-sm font-semibold text-primary mb-3">Referencia No Familiar</h3>
           <div className="space-y-4">
-            <DataRow label="Nombre completo" value={prevProfile?.non_family_reference.name} />
+            <DataRow label="Nombre completo" value={savedProfile?.non_family_reference.name} />
             <DataRow label="Relación" value={nonFamilyRelationLabel} />
-            <DataRow label="Teléfono" value={prevProfile?.non_family_reference.phone ? `+51 ${prevProfile.non_family_reference.phone}` : '—'} />
-            <DataRow label="Años de conocerse" value={prevProfile?.non_family_reference.years_known ? `${prevProfile.non_family_reference.years_known} ${prevProfile.non_family_reference.years_known === 1 ? 'año' : 'años'}` : '—'} />
+            <DataRow label="Teléfono" value={savedProfile?.non_family_reference.phone ? `+51 ${savedProfile.non_family_reference.phone}` : '—'} />
+            <DataRow label="Años de conocerse" value={savedProfile?.non_family_reference.years_known ? `${savedProfile.non_family_reference.years_known} ${savedProfile.non_family_reference.years_known === 1 ? 'año' : 'años'}` : '—'} />
           </div>
         </div>
       </div>
@@ -267,9 +277,10 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
         {saveError && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-            <p className="text-sm text-red-800">{saveError}</p>
-          </div>
+          <SaveErrorBanner
+            error={saveError}
+            errorCategory={saveErrorCategory}
+          />
         )}
 
         {/* Referencias en 2 columnas */}

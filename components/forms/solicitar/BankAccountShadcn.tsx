@@ -27,6 +27,7 @@ import { FormHeader } from '@/components/ui/form-header';
 import { saveBankAccountProfile } from '@/app/actions/bank-account.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
+import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 
 interface FunnelBankAccountProps {
   dashboardMode?: boolean;
@@ -94,7 +95,11 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
   const [showCCI, setShowCCI] = useState(false);
+
+  // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
+  const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
 
   const nextPath = currentStep?.nextPath || '/solicitar/summary';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -114,10 +119,12 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
     setIsVerified(false);
     setIsEditing(true);
     setSaveError(null);
+    setSaveErrorCategory(undefined);
   };
 
   const onSubmit = async (data: BankAccountFormValues) => {
     setSaveError(null);
+    setSaveErrorCategory(undefined);
     try {
       const bankAccountProfile = {
         bank: data.bank,
@@ -128,10 +135,12 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
       const result = await saveBankAccountProfile(bankAccountProfile);
 
       if (!result.success) {
-        setSaveError(result.error || 'Error al guardar los datos.');
+        setSaveError(result.error);
+        setSaveErrorCategory(result.errorCategory);
         return;
       }
 
+      setSavedProfile({ ...bankAccountProfile, verified: true });
       setIsVerified(true);
       setIsEditing(false);
 
@@ -140,15 +149,16 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
       }
     } catch {
       setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
+      setSaveErrorCategory('network');
     }
   };
 
   // ── Vista readonly (datos guardados) ────────────────────────────────────────
-  const bankLabel = BANKS.find(b => b.value === prevProfile?.bank)?.label ?? prevProfile?.bank ?? '—';
-  const accountTypeLabel = ACCOUNT_TYPES.find(t => t.value === prevProfile?.account_type)?.label ?? '—';
+  const bankLabel = BANKS.find(b => b.value === savedProfile?.bank)?.label ?? savedProfile?.bank ?? '—';
+  const accountTypeLabel = ACCOUNT_TYPES.find(t => t.value === savedProfile?.account_type)?.label ?? '—';
 
-  const maskedCCI = prevProfile?.cci ? '****' + prevProfile.cci.slice(-4) : '—';
-  const displayCCI = showCCI ? prevProfile?.cci : maskedCCI;
+  const maskedCCI = savedProfile?.cci ? '****' + savedProfile.cci.slice(-4) : '—';
+  const displayCCI = showCCI ? savedProfile?.cci : maskedCCI;
 
   const verifiedView = (
     <div className="space-y-6">
@@ -224,9 +234,10 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
         {saveError && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-            <p className="text-sm text-red-800">{saveError}</p>
-          </div>
+          <SaveErrorBanner
+            error={saveError}
+            errorCategory={saveErrorCategory}
+          />
         )}
 
         {/* Info importante */}

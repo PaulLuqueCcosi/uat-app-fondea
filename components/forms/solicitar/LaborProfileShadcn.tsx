@@ -18,6 +18,7 @@ import { saveLaborProfile } from '@/app/actions/labor.actions';
 import { useState } from 'react';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
+import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -155,6 +156,12 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
+
+  // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
+  const [savedSituation, setSavedSituation] = useState(initialData?.situation ?? null);
+  const [savedDetails,   setSavedDetails]   = useState(initialData?.details   ?? null);
+  const [savedIncome,    setSavedIncome]     = useState(initialData?.income    ?? null);
 
   const nextPath = currentStep?.nextPath || '/solicitar/economic';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -193,6 +200,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
     setIsVerified(false);
     setIsEditing(true);
     setSaveError(null);
+    setSaveErrorCategory(undefined);
   };
 
   // Cuando cambia el tipo de empleo, resetear campos de detalles del tipo anterior
@@ -208,6 +216,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
 
   const onSubmit = async (data: LaborFormValues) => {
     setSaveError(null);
+    setSaveErrorCategory(undefined);
     try {
       const result = await saveLaborProfile(
         data.employment_status as EmploymentStatus,
@@ -231,9 +240,35 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
       );
 
       if (!result.success) {
-        setSaveError(result.error || 'Error al guardar los datos.');
+        setSaveError(result.error);
+        setSaveErrorCategory(result.errorCategory);
         return;
       }
+
+      // Guardar los datos del form para mostrarlos en el readonly
+      setSavedSituation({
+        employment_status: data.employment_status as EmploymentStatus,
+        verified: true,
+      });
+      setSavedDetails({
+        industry: data.industry as LaborIndustry,
+        years_of_activity: data.years_of_activity ? Number(data.years_of_activity) : undefined,
+        business_ruc: data.business_ruc || undefined,
+        verified: true,
+      });
+      setSavedIncome({
+        monthly_income: Number(data.monthly_income),
+        income_receipt_method: data.income_receipt_method as IncomeReceiptMethod,
+        has_additional_income: data.has_additional_income,
+        additional_incomes: (data.has_additional_income ? data.additional_incomes ?? [] : []).map(i => ({
+          id: i.id,
+          type: i.type as AdditionalIncomeType,
+          custom_type: i.type === 'OTRO' ? i.custom_type : undefined,
+          amount: Number(i.amount),
+          description: i.description || undefined,
+        })),
+        verified: true,
+      });
 
       setIsVerified(true);
       setIsEditing(false);
@@ -243,13 +278,14 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
       }
     } catch {
       setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
+      setSaveErrorCategory('network');
     }
   };
 
   // ── Vista readonly (datos guardados) ────────────────────────────────────────
-  const employmentLabel = EMPLOYMENT_OPTIONS.find(o => o.value === prevSituation?.employment_status)?.label ?? '—';
-  const industryLabel = INDUSTRY_OPTIONS.find(o => o.value === prevDetails?.industry)?.label ?? '—';
-  const incomeReceiptLabel = INCOME_RECEIPT_OPTIONS.find(o => o.value === prevIncome?.income_receipt_method)?.label ?? '—';
+  const employmentLabel = EMPLOYMENT_OPTIONS.find(o => o.value === savedSituation?.employment_status)?.label ?? '—';
+  const industryLabel = INDUSTRY_OPTIONS.find(o => o.value === savedDetails?.industry)?.label ?? '—';
+  const incomeReceiptLabel = INCOME_RECEIPT_OPTIONS.find(o => o.value === savedIncome?.income_receipt_method)?.label ?? '—';
 
   const verifiedView = (
     <div className="space-y-6">
@@ -282,20 +318,20 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         <div>
           <h3 className="text-sm font-semibold text-primary mb-3">Detalles Laborales</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {prevDetails?.years_of_activity !== undefined && (
+            {savedDetails?.years_of_activity !== undefined && (
               <DataRow
                 label={
-                  prevSituation?.employment_status === 'EMPLEADO_DEPENDIENTE'
+                  savedSituation?.employment_status === 'EMPLEADO_DEPENDIENTE'
                     ? 'Tiempo en la empresa'
-                    : prevSituation?.employment_status === 'EMPRESARIO'
+                    : savedSituation?.employment_status === 'EMPRESARIO'
                       ? 'Años con el negocio'
                       : 'Años de actividad'
                 }
-                value={`${prevDetails.years_of_activity} ${prevDetails.years_of_activity === 1 ? 'año' : 'años'}`}
+                value={`${savedDetails.years_of_activity} ${savedDetails.years_of_activity === 1 ? 'año' : 'años'}`}
               />
             )}
-            {prevDetails?.business_ruc && (
-              <DataRow label="RUC del negocio" value={prevDetails.business_ruc} />
+            {savedDetails?.business_ruc && (
+              <DataRow label="RUC del negocio" value={savedDetails.business_ruc} />
             )}
           </div>
         </div>
@@ -309,7 +345,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DataRow
             label="Ingreso mensual neto"
-            value={`S/ ${Number(prevIncome?.monthly_income ?? 0).toLocaleString()}`}
+            value={`S/ ${Number(savedIncome?.monthly_income ?? 0).toLocaleString()}`}
           />
           <DataRow
             label="Cómo recibes tus ingresos"
@@ -317,15 +353,15 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
           />
           <DataRow
             label="¿Tienes ingresos adicionales?"
-            value={prevIncome?.has_additional_income ? 'Sí' : 'No'}
+            value={savedIncome?.has_additional_income ? 'Sí' : 'No'}
           />
         </div>
 
-        {prevIncome?.has_additional_income && prevIncome.additional_incomes && prevIncome.additional_incomes.length > 0 && (
+        {savedIncome?.has_additional_income && savedIncome.additional_incomes && savedIncome.additional_incomes.length > 0 && (
           <div className="mt-4">
             <p className="text-xs text-muted-foreground mb-2 font-medium">Detalle de ingresos adicionales:</p>
             <div className="space-y-2">
-              {prevIncome.additional_incomes.map((inc) => {
+              {savedIncome.additional_incomes.map((inc) => {
                 const typeLabel = ADDITIONAL_INCOME_TYPE_OPTIONS.find(o => o.value === inc.type)?.label ?? inc.type;
                 const label = inc.type === 'OTRO' && inc.custom_type ? inc.custom_type : typeLabel;
                 return (
@@ -346,8 +382,8 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                 <span className="text-sm font-medium text-foreground">Ingreso total mensual</span>
                 <span className="text-base font-bold text-secondary">
                   S/ {(
-                    Number(prevIncome.monthly_income) +
-                    prevIncome.additional_incomes.reduce((sum, inc) => sum + Number(inc.amount), 0)
+                    Number(savedIncome.monthly_income) +
+                    savedIncome.additional_incomes.reduce((sum, inc) => sum + Number(inc.amount), 0)
                   ).toLocaleString()}
                 </span>
               </div>
@@ -672,13 +708,10 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
 
         {/* Error de guardado */}
         {saveError && (
-          <>
-            <Separator className="my-10 bg-primary/20 h-px" />
-            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
-              <p className="text-sm font-medium text-destructive">Error al guardar</p>
-              <p className="text-sm text-destructive/80 mt-1">{saveError}</p>
-            </div>
-          </>
+          <SaveErrorBanner
+            error={saveError}
+            errorCategory={saveErrorCategory}
+          />
         )}
 
         <Separator className="my-10 bg-primary/20 h-px" />

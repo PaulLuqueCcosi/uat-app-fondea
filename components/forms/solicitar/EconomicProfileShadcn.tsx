@@ -30,6 +30,7 @@ import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/lib/constants';
 import { EconomicProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
+import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 
 interface FunnelEconomicProfileProps {
   dashboardMode?: boolean;
@@ -112,6 +113,10 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
+
+  // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
+  const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
 
   const nextPath = currentStep?.nextPath || '/solicitar/references';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -148,10 +153,12 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
     setIsVerified(false);
     setIsEditing(true);
     setSaveError(null);
+    setSaveErrorCategory(undefined);
   };
 
   const onSubmit = async (data: EconomicFormValues) => {
     setSaveError(null);
+    setSaveErrorCategory(undefined);
     try {
       const economicProfile = {
         loan_purpose: data.loan_purpose as any,
@@ -173,10 +180,12 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       const result = await saveEconomicProfile(economicProfile);
 
       if (!result.success) {
-        setSaveError(result.error || 'Error al guardar los datos.');
+        setSaveError(result.error);
+        setSaveErrorCategory(result.errorCategory);
         return;
       }
 
+      setSavedProfile({ ...economicProfile, verified: true });
       setIsVerified(true);
       setIsEditing(false);
 
@@ -185,12 +194,13 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       }
     } catch {
       setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
+      setSaveErrorCategory('network');
     }
   };
 
   // ── Vista readonly (datos guardados) ────────────────────────────────────────
-  const loanPurposeLabel = LOAN_PURPOSE_OPTIONS.find(o => o.value === prevProfile?.loan_purpose)?.label ?? '—';
-  const educationLevelLabel = EDUCATION_LEVEL_OPTIONS.find(o => o.value === prevProfile?.education_level)?.label ?? '—';
+  const loanPurposeLabel = LOAN_PURPOSE_OPTIONS.find(o => o.value === savedProfile?.loan_purpose)?.label ?? '—';
+  const educationLevelLabel = EDUCATION_LEVEL_OPTIONS.find(o => o.value === savedProfile?.education_level)?.label ?? '—';
 
   const verifiedView = (
     <div className="space-y-6">
@@ -223,7 +233,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DataRow
             label="Gastos mensuales totales"
-            value={`S/ ${Number(prevProfile?.monthly_expenses ?? 0).toLocaleString()}`}
+            value={`S/ ${Number(savedProfile?.monthly_expenses ?? 0).toLocaleString()}`}
           />
         </div>
       </div>
@@ -235,15 +245,15 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DataRow
             label="¿Tienes deudas actualmente?"
-            value={prevProfile?.has_debts ? 'Sí' : 'No'}
+            value={savedProfile?.has_debts ? 'Sí' : 'No'}
           />
         </div>
 
-        {prevProfile?.has_debts && prevProfile.debts && prevProfile.debts.length > 0 && (
+        {savedProfile?.has_debts && savedProfile.debts && savedProfile.debts.length > 0 && (
           <div className="mt-4">
             <p className="text-xs text-muted-foreground mb-2 font-medium">Detalle de deudas:</p>
             <div className="space-y-2">
-              {prevProfile.debts.map((debt) => {
+              {savedProfile.debts.map((debt) => {
                 const debtTypeLabel = DEBT_TYPES.find(o => o.value === debt.type)?.label ?? debt.type;
                 return (
                   <div key={debt.id} className="border rounded-lg px-3 py-2.5 bg-muted/30">
@@ -276,9 +286,9 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       <div>
         <h3 className="text-sm font-semibold text-primary mb-3">Patrimonio</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <DataRow label="¿Eres propietario de algún inmueble?" value={prevProfile?.has_property} />
-          <DataRow label="¿Tienes un vehículo a tu nombre?" value={prevProfile?.has_vehicle} />
-          <DataRow label="¿Cuentas con servicios a tu nombre?" value={prevProfile?.has_services} />
+          <DataRow label="¿Eres propietario de algún inmueble?" value={savedProfile?.has_property} />
+          <DataRow label="¿Tienes un vehículo a tu nombre?" value={savedProfile?.has_vehicle} />
+          <DataRow label="¿Cuentas con servicios a tu nombre?" value={savedProfile?.has_services} />
         </div>
       </div>
 
@@ -313,9 +323,10 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
         {saveError && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-            <p className="text-sm text-red-800">{saveError}</p>
-          </div>
+          <SaveErrorBanner
+            error={saveError}
+            errorCategory={saveErrorCategory}
+          />
         )}
 
         {/* Sección 0: Propósito del préstamo */}

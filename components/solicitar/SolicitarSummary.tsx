@@ -20,16 +20,18 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
-  EyeOff
+  EyeOff,
+  CreditCard,
+  ShieldCheck
 } from 'lucide-react';
 import { submitApplicationAction } from '@/app/actions/application.actions';
-import { 
-  KYCData, 
-  LaborProfileStatus, 
-  EconomicProfileStatus, 
-  ReferencesProfileStatus, 
-  AddressProfileStatus, 
-  BankAccountProfileStatus 
+import {
+  KYCData,
+  LaborProfileStatus,
+  EconomicProfileStatus,
+  ReferencesProfileStatus,
+  AddressProfileStatus,
+  BankAccountProfileStatus
 } from '@/lib/types';
 import {
   EMPLOYMENT_OPTIONS,
@@ -38,6 +40,7 @@ import {
   LOAN_PURPOSE_OPTIONS,
   EDUCATION_LEVEL_OPTIONS,
 } from '@/lib/constants';
+import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 
 // Helper functions para obtener labels
 const getEmploymentLabel = (value?: string) => {
@@ -108,10 +111,12 @@ export function FunnelSummary({
 }: FunnelSummaryProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
 
   // Estado para controlar qué secciones están expandidas
   const [expandedSections, setExpandedSections] = useState({
+    kyc: true,
     labor: true,
     economic: true,
     references: true,
@@ -138,17 +143,20 @@ export function FunnelSummary({
 
   const handleSubmit = async () => {
     if (!pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms) {
-      setError('Debes aceptar todas las declaraciones para continuar.');
+      setSaveError('Debes aceptar todas las declaraciones para continuar.');
+      setSaveErrorCategory('validation');
       return;
     }
 
     setLoading(true);
-    setError('');
+    setSaveError(null);
+    setSaveErrorCategory(undefined);
     try {
       const result = await submitApplicationAction(pepDeclarations);
 
       if (!result.success || !result.applicationId) {
-        setError(result.error ?? 'Error al enviar la solicitud. Intenta nuevamente.');
+        setSaveError(result.error ?? 'Error al enviar la solicitud. Intenta nuevamente.');
+        setSaveErrorCategory(result.errorCategory);
         return;
       }
 
@@ -157,7 +165,8 @@ export function FunnelSummary({
       router.push(`/solicitudes/${result.applicationId}`);
     } catch (err) {
       console.error('Error submitting application:', err);
-      setError('Error al enviar la solicitud. Intenta nuevamente.');
+      setSaveError('Error al enviar la solicitud. Intenta nuevamente.');
+      setSaveErrorCategory('network');
     } finally {
       setLoading(false);
     }
@@ -184,6 +193,93 @@ export function FunnelSummary({
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-6">
+        {/* 0. VERIFICACIÓN DE IDENTIDAD (KYC) */}
+        <Card className="border-2 overflow-hidden">
+          <div className="w-full p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-1">
+                <button
+                  className="p-2 bg-primary/10 rounded-lg cursor-pointer"
+                  onClick={() => toggleSection('kyc')}
+                >
+                  <ShieldCheck className="w-5 h-5 text-primary" />
+                </button>
+                <div
+                  className="flex-1 cursor-pointer"
+                  onClick={() => toggleSection('kyc')}
+                >
+                  <h3 className="text-lg font-semibold text-foreground">Verificación de Identidad</h3>
+                  {!expandedSections.kyc && (
+                    <p className="text-sm text-muted-foreground">
+                      {kycData ? `DNI: ${kycData.dni} • ${kycData.firstName} ${kycData.firstLastName}` : 'No completado'}
+                    </p>
+                  )}
+                  {expandedSections.kyc && (
+                    <p className="text-sm text-muted-foreground">Tus datos personales verificados</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={kycData?.verified ? "success" : "secondary"}>
+                  {kycData?.verified ? "Verificado" : "Pendiente"}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => router.push('/solicitar/kyc-validation')}
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+                <button
+                  onClick={() => toggleSection('kyc')}
+                  className="cursor-pointer"
+                >
+                  {expandedSections.kyc ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {expandedSections.kyc && (
+            <div className="px-6 pb-6 space-y-4 border-t">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">DNI</p>
+                  <p className="font-mono font-medium text-foreground">{kycData?.dni || 'No especificado'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Código de verificación</p>
+                  <p className="font-mono font-medium text-foreground">{kycData?.verificationCode || 'No especificado'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Nombres</p>
+                  <p className="font-medium text-foreground">
+                    {kycData ? `${kycData.firstName} ${kycData.secondName}` : 'No especificado'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Apellidos</p>
+                  <p className="font-medium text-foreground">
+                    {kycData ? `${kycData.firstLastName} ${kycData.secondLastName}` : 'No especificado'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Fecha de nacimiento</p>
+                  <p className="font-medium text-foreground">{kycData?.birth_date || 'No especificado'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+
         {/* 1. PERFIL LABORAL */}
         <Card className="border-2 overflow-hidden">
           <div className="w-full p-6">
@@ -740,10 +836,11 @@ export function FunnelSummary({
         </Card>
 
         {/* ERROR MESSAGE */}
-        {error && (
-          <div className="p-4 bg-destructive/10 border-2 border-destructive rounded-lg">
-            <p className="text-sm text-destructive font-medium">{error}</p>
-          </div>
+        {saveError && (
+          <SaveErrorBanner
+            error={saveError}
+            errorCategory={saveErrorCategory}
+          />
         )}
 
         {/* BOTONES DE ACCIÓN */}

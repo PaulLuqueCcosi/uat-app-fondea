@@ -36,6 +36,7 @@ import { saveAddressProfile, getAddressProfileStatus } from '@/app/actions/addit
 import type { AddressProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
+import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -115,6 +116,10 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified ?? false);
   const [isEditing,  setIsEditing]  = useState(!initialData?.overall_verified);
   const [saveError,  setSaveError]  = useState<string | null>(null);
+  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
+
+  // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
+  const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
 
   const nextPath = currentStep?.nextPath || '/solicitar/references';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -240,6 +245,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
 
     if (!result.success) {
       setSaveError(result.error ?? 'Error al guardar.');
+      setSaveErrorCategory(result.errorCategory);
       return;
     }
 
@@ -251,6 +257,17 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
     if (prov) setLabelProv(prov.label);
     if (dist) setLabelDist(dist.label);
 
+    setSavedProfile({
+      address_type:    data.address_type!,
+      google_address:  data.google_address  || undefined,
+      street_address:  data.street_address  || undefined,
+      region:          data.region          ?? '',
+      province:        data.province        ?? '',
+      district:        data.district        ?? '',
+      referral_source: data.referral_source,
+      referral_other:  data.referral_source === 'OTRO' ? data.referral_other : undefined,
+      verified:        true,
+    });
     setIsVerified(true);
     setIsEditing(false);
 
@@ -261,11 +278,9 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
 
   // ── Vista resumen ───────────────────────────────────────────────────────────
 
-  const savedData = initialData?.profile;
-
   const referralLabel = REFERRAL_SOURCE_OPTIONS.find(
-    (o) => o.value === (savedData?.referral_source ?? form.getValues('referral_source'))
-  )?.label ?? savedData?.referral_source ?? '—';
+    (o) => o.value === (savedProfile?.referral_source ?? form.getValues('referral_source'))
+  )?.label ?? savedProfile?.referral_source ?? '—';
 
   const summaryView = (
     <div className="space-y-6">
@@ -282,7 +297,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => setIsEditing(true)}
+          onClick={() => { setIsEditing(true); setSaveError(null); setSaveErrorCategory(undefined); }}
           className="shrink-0 gap-1.5"
         >
           <Pencil className="h-3.5 w-3.5" />
@@ -294,20 +309,20 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <DataRow
           label="Método"
-          value={savedData?.address_type === 'google' ? 'Con Google' : 'Manual'}
+          value={savedProfile?.address_type === 'google' ? 'Con Google' : 'Manual'}
         />
-        {savedData?.address_type === 'google' && (
-          <DataRow label="Dirección" value={savedData.google_address} />
+        {savedProfile?.address_type === 'google' && (
+          <DataRow label="Dirección" value={savedProfile.google_address} />
         )}
-        {savedData?.address_type === 'manual' && (
-          <DataRow label="Calle y número" value={savedData.street_address} />
+        {savedProfile?.address_type === 'manual' && (
+          <DataRow label="Calle y número" value={savedProfile.street_address} />
         )}
-        <DataRow label="Departamento" value={labelDep || savedData?.region} />
-        <DataRow label="Provincia"    value={labelProv || savedData?.province} />
-        <DataRow label="Distrito"     value={labelDist || savedData?.district} />
+        <DataRow label="Departamento" value={labelDep || savedProfile?.region} />
+        <DataRow label="Provincia"    value={labelProv || savedProfile?.province} />
+        <DataRow label="Distrito"     value={labelDist || savedProfile?.district} />
         <DataRow label="¿Cómo nos conociste?" value={referralLabel} />
-        {savedData?.referral_other && (
-          <DataRow label="Especificación" value={savedData.referral_other} />
+        {savedProfile?.referral_other && (
+          <DataRow label="Especificación" value={savedProfile.referral_other} />
         )}
       </div>
 
@@ -540,9 +555,10 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
 
         {/* Error de guardado */}
         {saveError && (
-          <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {saveError}
-          </div>
+          <SaveErrorBanner
+            error={saveError}
+            errorCategory={saveErrorCategory}
+          />
         )}
 
         {/* Botones */}

@@ -30,6 +30,7 @@ import { saveKYCData } from '@/app/actions/kyc.actions';
 import type { KYCSaveResult } from '@/app/actions/kyc.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
+import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { useState, useEffect } from 'react';
 
 interface FunnelKYCValidationProps {
@@ -122,11 +123,15 @@ export function FunnelKYCValidation({
 
   const [isVerified, setIsVerified] = useState(initialData?.verified === true);
   const [isEditing, setIsEditing] = useState(!initialData?.verified);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
+
+  // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
+  const [savedData, setSavedData] = useState(initialData ?? null);
 
   const nextPath = currentStep?.nextPath || '/solicitar/kyc-documents';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
   const [attemptsLeft, setAttemptsLeft] = useState(initialAttemptsLeft);
   const [blocked, setBlocked] = useState(initialBlocked);
   const [blockedHoursLeft, setBlockedHoursLeft] = useState(initialBlockedHoursLeft);
@@ -174,16 +179,33 @@ export function FunnelKYCValidation({
     },
   });
 
+  // Efecto para resetear el formulario cuando se entra en modo edición
+  useEffect(() => {
+    if (isEditing && savedData) {
+      form.reset({
+        dni: savedData.dni ?? '',
+        firstName: savedData.firstName ?? '',
+        secondName: savedData.secondName ?? '',
+        firstLastName: savedData.firstLastName ?? '',
+        secondLastName: savedData.secondLastName ?? '',
+        verificationCode: savedData.verificationCode ?? '',
+        birth_date: savedData.birth_date ?? '',
+      });
+    }
+  }, [isEditing, savedData, form]);
+
   const handleEdit = () => {
     // Al editar, el estado verificado se pierde — el backend re-validará al guardar
     setIsVerified(false);
     setIsEditing(true);
-    setVerificationError(null);
+    setSaveError(null);
+    setSaveErrorCategory(undefined);
   };
 
   const onSubmit = async (data: KYCValidationFormValues) => {
     setIsVerifying(true);
-    setVerificationError(null);
+    setSaveError(null);
+    setSaveErrorCategory(undefined);
 
     try {
       const kycData: KYCData = {
@@ -206,15 +228,23 @@ export function FunnelKYCValidation({
         } else if (result.attemptsLeft !== undefined) {
           setAttemptsLeft(result.attemptsLeft);
         }
-        setVerificationError(result.error || 'Error en la verificación');
+        setSaveError(result.error || 'Error en la verificación');
+        setSaveErrorCategory(result.errorCategory);
         setIsVerifying(false);
-        setTimeout(() => {
-          document
-            .querySelector('[data-error="verification"]')
-            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
         return;
       }
+
+      // Guardar los datos que acabamos de verificar para mostrarlos en readonly
+      setSavedData({
+        dni: data.dni,
+        firstName: data.firstName,
+        secondName: data.secondName,
+        firstLastName: data.firstLastName,
+        secondLastName: data.secondLastName,
+        verificationCode: data.verificationCode,
+        birth_date: data.birth_date,
+        verified: true,
+      });
 
       setIsVerified(true);
       setIsEditing(false);
@@ -225,7 +255,8 @@ export function FunnelKYCValidation({
       }
     } catch (error) {
       console.error('Error en verificación KYC:', error);
-      setVerificationError('Error de conexión. Por favor, inténtalo nuevamente.');
+      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
+      setSaveErrorCategory('network');
       setIsVerifying(false);
     }
   };
@@ -256,13 +287,13 @@ export function FunnelKYCValidation({
 
       {/* Resumen de datos en readonly */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <DataRow label="DNI" value={initialData?.dni ?? form.getValues('dni')} mono />
-        <DataRow label="Código de verificación" value={initialData?.verificationCode ?? form.getValues('verificationCode')} mono />
+        <DataRow label="DNI" value={savedData?.dni} mono />
+        <DataRow label="Código de verificación" value={savedData?.verificationCode} mono />
         <DataRow
           label="Nombres"
           value={[
-            initialData?.firstName ?? form.getValues('firstName'),
-            initialData?.secondName ?? form.getValues('secondName'),
+            savedData?.firstName,
+            savedData?.secondName,
           ]
             .filter(Boolean)
             .join(' ')}
@@ -270,13 +301,13 @@ export function FunnelKYCValidation({
         <DataRow
           label="Apellidos"
           value={[
-            initialData?.firstLastName ?? form.getValues('firstLastName'),
-            initialData?.secondLastName ?? form.getValues('secondLastName'),
+            savedData?.firstLastName,
+            savedData?.secondLastName,
           ]
             .filter(Boolean)
             .join(' ')}
         />
-        <DataRow label="Fecha de nacimiento" value={initialData?.birth_date ?? form.getValues('birth_date')} />
+        <DataRow label="Fecha de nacimiento" value={savedData?.birth_date} />
       </div>
 
       {/* Botón continuar en modo funnel */}
@@ -303,6 +334,17 @@ export function FunnelKYCValidation({
   const editForm = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+        {/* Error de guardado */}
+        {saveError && (
+          <>
+            <SaveErrorBanner
+              error={saveError}
+              errorCategory={saveErrorCategory}
+            />
+            <Separator className="my-10 bg-primary/20 h-px" />
+          </>
+        )}
+
         {/* DNI */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
           <SectionHeader title="Número de DNI" description="Ingresa tu número de documento" />
@@ -507,25 +549,21 @@ export function FunnelKYCValidation({
           </div>
         </div>
 
-        {/* Error de verificación / bloqueo */}
-        {(verificationError || blocked) && (
+        {/* Información adicional sobre intentos y bloqueo */}
+        {(blocked || (saveError && attemptsLeft > 0 && attemptsLeft < initialAttemptsLeft)) && (
           <>
             <Separator className="my-10 bg-primary/20 h-px" />
-            <div
-              data-error="verification"
-              className={`rounded-lg border p-4 ${blocked ? 'border-destructive/30 bg-destructive/5' : 'border-warning/30 bg-warning/5'}`}
-            >
+            <div className={`rounded-lg border p-4 ${blocked ? 'border-destructive/30 bg-destructive/5' : 'border-warning/30 bg-warning/5'}`}>
               <div className="flex items-start gap-3">
                 <span className={`mt-0.5 shrink-0 text-lg ${blocked ? 'text-destructive' : 'text-warning'}`}>
                   {blocked ? '🔒' : '⚠️'}
                 </span>
                 <div className="space-y-2 w-full">
-                  <p className={`text-sm font-semibold ${blocked ? 'text-destructive' : 'text-warning'}`}>
-                    {blocked
-                      ? `Verificación bloqueada por ${blockedHoursLeft} hora${blockedHoursLeft !== 1 ? 's' : ''}`
-                      : 'Los datos no coinciden'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{verificationError}</p>
+                  {blocked && (
+                    <p className="text-sm font-semibold text-destructive">
+                      Verificación bloqueada por {blockedHoursLeft} hora{blockedHoursLeft !== 1 ? 's' : ''}
+                    </p>
+                  )}
 
                   {/* Barra de intentos — solo si no está bloqueado */}
                   {!blocked && attemptsLeft > 0 && (
@@ -557,7 +595,7 @@ export function FunnelKYCValidation({
                       <ul className="list-disc list-inside space-y-1 ml-1">
                         <li>Los datos deben coincidir exactamente con tu DNI físico</li>
                         <li>Nombres y apellidos en mayúsculas, sin tildes</li>
-                        <li>El código son los 3 dígitos en la parte inferior del DNI</li>
+                        <li>El código debe tener exactamente 1 dígito</li>
                       </ul>
                     </div>
                   )}
@@ -674,7 +712,7 @@ function DataRow({
   mono = false,
 }: {
   label: string;
-  value: string;
+  value?: string | null;
   mono?: boolean;
 }) {
   return (

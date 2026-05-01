@@ -29,9 +29,10 @@ function isSuccess(status: number): boolean {
  * Extiende ActionResult con los datos de la solicitud creada.
  * En éxito incluye applicationId y status devueltos por el backend.
  */
-export type SubmitApplicationResult =
-  | { success: true; httpStatus: number; applicationId: string; status: string }
-  | Extract<ActionResult, { success: false }>;
+export type SubmitApplicationResult = ActionResult & (
+  | { success: true; applicationId: string; status: string }
+  | { success: false }
+);
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 
