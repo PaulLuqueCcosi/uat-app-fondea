@@ -83,7 +83,7 @@ export async function getAddressProfileStatus(): Promise<AddressProfileStatus> {
     const json = await res.json();
     const profile: (AddressProfile & { verified: boolean }) | null = json.profile
       ? {
-          address_type:    json.profile.address_type,
+          address_type:    json.profile.address_type?.toLowerCase() as 'google' | 'manual' | undefined,
           google_address:  json.profile.google_address  ?? undefined,
           street_address:  json.profile.street_address  ?? undefined,
           region:          json.profile.region,
@@ -107,14 +107,14 @@ export async function saveAddressProfile(
   await requireValidSession();
   try {
     const body: Record<string, unknown> = {
-      address_type:    data.address_type.toUpperCase(), // Backend espera GOOGLE/MANUAL en mayúsculas
+      address_type:    data.address_type?.toUpperCase() ?? 'MANUAL', // Backend espera GOOGLE/MANUAL en mayúsculas
       region:          data.region,
       province:        data.province,
       district:        data.district,
       referral_source: data.referral_source,
     };
     if (data.address_type === 'google') body.google_address = data.google_address;
-    else body.street_address = data.street_address;
+    else if (data.address_type === 'manual') body.street_address = data.street_address;
     if (data.referral_source === 'OTRO') body.referral_other = data.referral_other;
 
     const res = await backendFetch('/api/v1/additional', { method: 'POST', body: JSON.stringify(body) });

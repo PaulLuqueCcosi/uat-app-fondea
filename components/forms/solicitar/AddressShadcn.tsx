@@ -65,7 +65,12 @@ function DataRow({ label, value }: { label: string; value?: string | null }) {
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 const addressFormSchema = z.object({
-  address_type: z.enum(['google', 'manual']),
+  address_type: z.enum(['google', 'manual'], {
+    required_error: 'Selecciona un método para ingresar tu dirección',
+    invalid_type_error: 'Selecciona un método válido'
+  }).or(z.undefined()).refine((val) => val !== undefined, {
+    message: 'Selecciona un método para ingresar tu dirección'
+  }),
   google_address: z.string().optional(),
   street_address: z.string().optional(),
   region: z.string().optional(),
@@ -148,6 +153,23 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
     }
   }, [initialData]);
 
+  // Efecto adicional para recargar ubigeo cuando se entra en modo edición
+  useEffect(() => {
+    if (isEditing && initialData?.profile) {
+      const p = initialData.profile;
+      
+      // Recargar provincias si hay región seleccionada
+      if (p.region && provincias.length === 0) {
+        getProvinciasAction(p.region).then(setProvincias);
+      }
+      
+      // Recargar distritos si hay provincia seleccionada
+      if (p.province && distritos.length === 0) {
+        getDistritosAction(p.province).then(setDistritos);
+      }
+    }
+  }, [isEditing, initialData, provincias.length, distritos.length]);
+
   // Resuelve el label del departamento cuando la lista carga
   useEffect(() => {
     const p = initialData?.profile;
@@ -159,7 +181,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressFormSchema),
     defaultValues: {
-      address_type:    initialData?.profile?.address_type    ?? 'google',
+      address_type:    initialData?.profile?.address_type    ?? undefined,
       google_address:  initialData?.profile?.google_address  ?? '',
       street_address:  initialData?.profile?.street_address  ?? '',
       region:          initialData?.profile?.region          ?? '',
@@ -170,6 +192,23 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
     },
   });
 
+  // Efecto para resetear el formulario cuando se entra en modo edición
+  useEffect(() => {
+    if (isEditing && initialData?.profile) {
+      const profile = initialData.profile;
+      form.reset({
+        address_type:    profile.address_type    ?? undefined,
+        google_address:  profile.google_address  ?? '',
+        street_address:  profile.street_address  ?? '',
+        region:          profile.region          ?? '',
+        province:        profile.province        ?? '',
+        district:        profile.district        ?? '',
+        referral_source: profile.referral_source ?? '',
+        referral_other:  profile.referral_other  ?? '',
+      });
+    }
+  }, [isEditing, initialData, form]);
+
   const addressType    = form.watch('address_type');
   const watchedRegion  = form.watch('region');
   const referralSource = form.watch('referral_source');
@@ -178,6 +217,13 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
 
   const onSubmit = async (data: AddressFormValues) => {
     setSaveError(null);
+
+    // Validar que address_type esté definido (debería estarlo por el schema)
+    if (!data.address_type) {
+      setSaveError('Selecciona un método para ingresar tu dirección');
+      return;
+    }
+
     const result = await saveAddressProfile({
       address_type:    data.address_type,
       google_address:  data.google_address  || undefined,
@@ -290,8 +336,9 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
             <FormField
               control={form.control}
               name="address_type"
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
+                  <FormLabel>Selecciona el método</FormLabel>
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       type="button"
@@ -305,7 +352,13 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
                         setDistritos([]);
                         setGooglePrefilled(false);
                       }}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${field.value === 'google' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${
+                        field.value === 'google' 
+                          ? 'border-primary bg-primary/5' 
+                          : fieldState.error 
+                            ? 'border-destructive hover:border-destructive/70' 
+                            : 'border-border hover:border-primary/50'
+                      }`}
                     >
                       <Map className="w-5 h-5 mb-2 text-primary" />
                       <p className="font-medium text-sm">Con Google</p>
@@ -326,13 +379,20 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
                           setDistritos(dists);
                         }
                       }}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${field.value === 'manual' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${
+                        field.value === 'manual' 
+                          ? 'border-primary bg-primary/5' 
+                          : fieldState.error 
+                            ? 'border-destructive hover:border-destructive/70' 
+                            : 'border-border hover:border-primary/50'
+                      }`}
                     >
                       <MapPin className="w-5 h-5 mb-2 text-primary" />
                       <p className="font-medium text-sm">Manual</p>
                       <p className="text-xs text-muted-foreground mt-1">Ingreso por campos</p>
                     </button>
                   </div>
+                  <FormMessage />
                 </FormItem>
               )}
             />
