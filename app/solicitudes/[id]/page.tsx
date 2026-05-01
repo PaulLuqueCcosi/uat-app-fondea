@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { requireValidSession } from '@/app/actions/auth.actions';
 import { getApplicationDetailAction, getApplicationStatusAction, getApplicationsAction } from '@/app/actions/application.actions';
 import { ApplicationStatusView } from '@/components/solicitudes/ApplicationStatusView';
+import type { ApplicationStatus, EvaluationResult } from '@/lib/types';
 
 export default async function SolicitudPage({ params }: { params: Promise<{ id: string }> }) {
   await requireValidSession();
@@ -37,8 +38,8 @@ export default async function SolicitudPage({ params }: { params: Promise<{ id: 
       application = {
         id: id,
         userId: '', // No lo necesitamos para mostrar
-        status: statusData.status,
-        result: statusData.result,
+        status: statusData.status as ApplicationStatus,
+        result: statusData.result as EvaluationResult | undefined,
         submittedAt: new Date().toISOString(), // Placeholder
         evaluatedAt: undefined,
         canRetryAt: statusData.canRetryAt ?? undefined,
@@ -47,6 +48,10 @@ export default async function SolicitudPage({ params }: { params: Promise<{ id: 
   }
 
   // Redirigir según el estado de la aplicación
+  if (!application) {
+    redirect('/dashboard');
+  }
+
   const status = application.status.toUpperCase();
   console.log('[SOLICITUD PAGE] Status final:', status);
 

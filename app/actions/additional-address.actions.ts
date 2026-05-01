@@ -81,19 +81,21 @@ export async function getAddressProfileStatus(): Promise<AddressProfileStatus> {
     const res = await backendFetch('/api/v1/additional/status');
     if (!res.ok) return { profile: null, overall_verified: false };
     const json = await res.json();
-    const profile: (AddressProfile & { verified: boolean }) | null = json.profile
-      ? {
-          address_type:    json.profile.address_type?.toLowerCase() as 'google' | 'manual' | undefined,
-          google_address:  json.profile.google_address  ?? undefined,
-          street_address:  json.profile.street_address  ?? undefined,
-          region:          json.profile.region,
-          province:        json.profile.province,
-          district:        json.profile.district,
-          referral_source: json.profile.referral_source,
-          referral_other:  json.profile.referral_other  ?? undefined,
-          verified:        json.profile.verified        ?? false,
-        }
-      : null;
+    const rawType = json.profile?.address_type?.toLowerCase();
+    const profile: (AddressProfile & { verified: boolean }) | null =
+      json.profile && (rawType === 'google' || rawType === 'manual')
+        ? {
+            address_type:    rawType,
+            google_address:  json.profile.google_address  ?? undefined,
+            street_address:  json.profile.street_address  ?? undefined,
+            region:          json.profile.region,
+            province:        json.profile.province,
+            district:        json.profile.district,
+            referral_source: json.profile.referral_source,
+            referral_other:  json.profile.referral_other  ?? undefined,
+            verified:        json.profile.verified        ?? false,
+          }
+        : null;
     return { profile, overall_verified: json.overall_verified ?? false };
   } catch (error) {
     console.error('[ADDRESS] Error al obtener estado:', error);

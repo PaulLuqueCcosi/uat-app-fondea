@@ -195,7 +195,7 @@ export default function EvaluandoPage() {
           setPageState('approved');
         } else if (data.status === 'rejected') {
           stopPolling();
-          setCanRetryAt(data.canRetryAt);
+          setCanRetryAt(data.canRetryAt ?? undefined);
           setPageState('rejected');
         }
         // si sigue 'evaluating', no hacemos nada — el polling continúa

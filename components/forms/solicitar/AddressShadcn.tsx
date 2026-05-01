@@ -65,12 +65,7 @@ function DataRow({ label, value }: { label: string; value?: string | null }) {
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 const addressFormSchema = z.object({
-  address_type: z.enum(['google', 'manual'], {
-    required_error: 'Selecciona un método para ingresar tu dirección',
-    invalid_type_error: 'Selecciona un método válido'
-  }).or(z.undefined()).refine((val) => val !== undefined, {
-    message: 'Selecciona un método para ingresar tu dirección'
-  }),
+  address_type: z.enum(['google', 'manual'] as const).optional(),
   google_address: z.string().optional(),
   street_address: z.string().optional(),
   region: z.string().optional(),
@@ -79,6 +74,9 @@ const addressFormSchema = z.object({
   referral_source: z.string().min(1, 'Selecciona cómo nos conociste'),
   referral_other: z.string().optional(),
 }).superRefine((data, ctx) => {
+  if (!data.address_type) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecciona un método para ingresar tu dirección', path: ['address_type'] });
+  }
   if (data.address_type === 'google') {
     if (!data.google_address?.trim()) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ingresa tu dirección', path: ['google_address'] });
