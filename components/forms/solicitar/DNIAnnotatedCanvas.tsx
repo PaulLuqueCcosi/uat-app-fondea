@@ -6,37 +6,47 @@ import { useEffect, useRef } from 'react';
 const IMG_W = 1660;
 const IMG_H = 948;
 
+// ── Color de anotación — usa el token de error del sistema de diseño ──────────
+// Canvas 2D no entiende var(), así que resolvemos el valor en runtime.
+function resolveColor(token: string): string {
+  if (typeof window === 'undefined') return '#DC2626';
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--color-error-600').trim();
+  return raw || token;
+}
+
+const ANNOTATION_COLOR = '#DC2626'; // fallback SSR — coincide con --color-error-600
+
 // ── Campos y sus rectángulos ──────────────────────────────────────────────────
 export type DNIField = 'dni' | 'firstName' | 'secondName' | 'firstLastName' | 'secondLastName' | 'verificationCode' | 'birth_date' | null;
 
 const HIGHLIGHTS: Record<NonNullable<DNIField>, { x: number; y: number; w: number; h: number; color: string }> = {
   dni: {
     x: 1320, y: 67, w: 215, h: 53,
-    color: '#ff0000',
+    color: ANNOTATION_COLOR,
   },
   firstName: {
     x: 463, y: 385, w: 210, h: 72,
-    color: '#ff0000',
+    color: ANNOTATION_COLOR,
   },
   secondName: {
     x: 672, y: 385, w: 230, h: 72,
-    color: '#ff0000',
+    color: ANNOTATION_COLOR,
   },
   firstLastName: {
     x: 463, y: 172, w: 210, h:72,
-    color: '#ff0000',
+    color: ANNOTATION_COLOR,
   },
   secondLastName: {
     x: 463, y: 280, w: 240, h: 72,
-    color: '#ff0000',
+    color: ANNOTATION_COLOR,
   },
   verificationCode: {
     x: 1560, y: 70, w: 35, h: 48,
-    color: '#ff0000',
+    color: ANNOTATION_COLOR,
   },
   birth_date: {
     x: 463, y: 490, w: 237, h: 55,
-    color: '#ff0000',
+    color: ANNOTATION_COLOR,
   },
 };
 
@@ -110,6 +120,12 @@ export function DNIAnnotatedCanvas({ activeField, debugMode = false, onFieldClic
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Resolver el token de color en runtime (Canvas 2D no entiende var())
+    const annotationColor = resolveColor(ANNOTATION_COLOR);
+    const highlights = Object.fromEntries(
+      Object.entries(HIGHLIGHTS).map(([k, v]) => [k, { ...v, color: annotationColor }])
+    ) as typeof HIGHLIGHTS;
+
     canvas.width  = IMG_W;
     canvas.height = IMG_H;
 
@@ -119,7 +135,7 @@ export function DNIAnnotatedCanvas({ activeField, debugMode = false, onFieldClic
     // En modo debug, mostrar todos los campos siempre
     if (debugMode) {
       // Dibujar todos los rectángulos
-      Object.entries(HIGHLIGHTS).forEach(([key, rect]) => {
+      Object.entries(highlights).forEach(([key, rect]) => {
         const isActive = key === field;
         drawRect(ctx, rect.x, rect.y, rect.w, rect.h, rect.color, isActive);
       });
@@ -131,7 +147,7 @@ export function DNIAnnotatedCanvas({ activeField, debugMode = false, onFieldClic
       }
 
       // Dibujar solo el campo activo
-      Object.entries(HIGHLIGHTS).forEach(([key, rect]) => {
+      Object.entries(highlights).forEach(([key, rect]) => {
         if (field && key === field) {
           // Recortar el overlay sobre el campo activo para que se vea la imagen
           ctx.clearRect(rect.x - 2, rect.y - 2, rect.w + 4, rect.h + 4);

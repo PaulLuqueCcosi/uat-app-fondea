@@ -45,10 +45,10 @@ export function ApplicationStatusView({ application }: ApplicationStatusViewProp
         <div className="flex flex-col items-center text-center space-y-6">
           {/* Icono de estado */}
           <div className={`w-24 h-24 rounded-full flex items-center justify-center ${
-            isApproved ? 'bg-green-500/10' : 'bg-destructive/10'
+            isApproved ? 'bg-success-500/10' : 'bg-destructive/10'
           }`}>
             {isApproved ? (
-              <CheckCircle2 className="w-12 h-12 text-green-500" />
+              <CheckCircle2 className="w-12 h-12 text-success-500" />
             ) : (
               <XCircle className="w-12 h-12 text-destructive" />
             )}

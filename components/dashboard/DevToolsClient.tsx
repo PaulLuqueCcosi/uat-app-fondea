@@ -30,7 +30,7 @@ function CopyButton({ text }: { text: string }) {
       title="Copiar"
     >
       {copied
-        ? <Check className="w-3.5 h-3.5 text-green-500" />
+        ? <Check className="w-3.5 h-3.5 text-success-500" />
         : <Copy className="w-3.5 h-3.5 text-muted-foreground" />
       }
     </button>
@@ -195,7 +195,7 @@ export function DevToolsClient({
           </CardHeader>
           <CardContent>
             <div className="flex items-start gap-2">
-              <div className="flex-1 rounded-lg bg-zinc-950 text-zinc-100 p-3 font-mono text-xs leading-relaxed break-all">
+              <div className="flex-1 rounded-lg bg-neutral-900 text-neutral-100 p-3 font-mono text-xs leading-relaxed break-all">
                 {curlCommand}
               </div>
               <CopyButton text={curlCommand} />

@@ -15,7 +15,7 @@ export function FunnelContractSigned() {
         <div className="relative w-24 h-24 mx-auto mb-6">
           <div className="absolute inset-0 bg-secondary/20 rounded-full animate-ping"></div>
           <div className="relative bg-secondary rounded-full w-24 h-24 flex items-center justify-center">
-            <CheckCircle className="w-14 h-14 text-white" />
+            <CheckCircle className="w-14 h-14 text-accent-900" />
           </div>
         </div>
 
@@ -118,7 +118,7 @@ export function FunnelContractSigned() {
         </Card>
 
         {/* Important note */}
-        <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-8">
+        <div className="bg-warning-50 border border-warning-100 rounded-lg p-4 mb-8">
           <p className="text-sm text-dark text-center">
             <strong>Importante:</strong> Mantén tu cuenta bancaria activa y con fondos disponibles
             para los pagos automáticos. Recibirás un recordatorio antes de cada cuota.

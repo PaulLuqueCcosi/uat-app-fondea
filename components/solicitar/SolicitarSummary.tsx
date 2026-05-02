@@ -500,7 +500,7 @@ export function FunnelSummary({
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Capacidad de pago</p>
-                    <p className="text-lg font-bold text-green-600">S/ {availableIncome.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-success-600">S/ {availableIncome.toLocaleString()}</p>
                   </div>
                 </div>
               </div>

@@ -553,9 +553,9 @@ export function FunnelKYCValidation({
         {(blocked || (saveError && attemptsLeft > 0 && attemptsLeft < initialAttemptsLeft)) && (
           <>
             <Separator className="my-10 bg-primary/20 h-px" />
-            <div className={`rounded-lg border p-4 ${blocked ? 'border-destructive/30 bg-destructive/5' : 'border-warning/30 bg-warning/5'}`}>
+            <div className={`rounded-lg border p-4 ${blocked ? 'border-destructive/30 bg-destructive/5' : 'border-warning-100 bg-warning-50'}`}>
               <div className="flex items-start gap-3">
-                <span className={`mt-0.5 shrink-0 text-lg ${blocked ? 'text-destructive' : 'text-warning'}`}>
+                <span className={`mt-0.5 shrink-0 text-lg ${blocked ? 'text-destructive' : 'text-warning-700'}`}>
                   {blocked ? '🔒' : '⚠️'}
                 </span>
                 <div className="space-y-2 w-full">
@@ -576,7 +576,7 @@ export function FunnelKYCValidation({
                       </div>
                       <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all duration-500 ${attemptsLeft === 1 ? 'bg-destructive' : 'bg-warning'}`}
+                          className={`h-full rounded-full transition-all duration-500 ${attemptsLeft === 1 ? 'bg-destructive' : 'bg-warning-500'}`}
                           style={{ width: `${((initialAttemptsLeft - attemptsLeft) / initialAttemptsLeft) * 100}%` }}
                         />
                       </div>

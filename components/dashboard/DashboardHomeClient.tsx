@@ -185,8 +185,8 @@ export function DashboardHomeClient({ userName, applications }: DashboardHomeCli
                       <div className={cn(
                         'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
                         section.status === 'completed'
-                          ? 'bg-secondary/20 text-[#16a34a]'
-                          : 'bg-[#F0FAFE] text-primary'
+                          ? 'bg-secondary/20 text-success-600'
+                          : 'bg-primary-50 text-primary'
                       )}>
                         {section.num}
                       </div>
@@ -247,7 +247,7 @@ export function DashboardHomeClient({ userName, applications }: DashboardHomeCli
                       onClick={() => router.push(`/solicitudes/${app.id}`)}
                       className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-background transition-colors text-left"
                     >
-                      <div className="w-9 h-9 rounded-full bg-[#F0FAFE] flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
                         <FileText className="w-4 h-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -300,7 +300,7 @@ export function DashboardHomeClient({ userName, applications }: DashboardHomeCli
                     <p className="text-sm text-fondea-text">Completa tu expediente para desbloquear esta función.</p>
                     <button
                       onClick={() => setShowDrawer(true)}
-                      className="w-full flex items-center justify-between text-sm text-primary font-medium border border-border rounded-lg px-4 py-2.5 hover:bg-[#F0FAFE] transition-colors"
+                      className="w-full flex items-center justify-between text-sm text-primary font-medium border border-border rounded-lg px-4 py-2.5 hover:bg-primary-50 transition-colors"
                     >
                       <span>Ver qué falta</span>
                       <ArrowRight className="w-4 h-4" />
@@ -388,7 +388,7 @@ export function DashboardHomeClient({ userName, applications }: DashboardHomeCli
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                   <div className="flex items-center gap-2">
-                    <span className={item.done ? 'text-secondary' : 'text-warning'}>
+                    <span className={item.done ? 'text-success-600' : 'text-warning-700'}>
                       {item.done ? '✓' : '⏳'}
                     </span>
                     <span className="text-sm text-dark">{item.label}</span>

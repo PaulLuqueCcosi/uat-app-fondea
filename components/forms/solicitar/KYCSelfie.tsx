@@ -52,8 +52,8 @@ const STATUS_LABEL: Record<FaceStatus, string> = {
 const STATUS_STYLE: Record<FaceStatus, string> = {
   none:   'bg-destructive/10 border-destructive/20 text-destructive',
   red:    'bg-destructive/10 border-destructive/20 text-destructive',
-  orange: 'bg-orange-500/10 border-orange-500/30 text-orange-600',
-  green:  'bg-green-500/10 border-green-500/30 text-green-700',
+  orange: 'bg-warning-500/10 border-warning-500/30 text-warning-700',
+  green:  'bg-success-500/10 border-success-500/30 text-success-700',
 };
 
 // ── Carga dinámica de MediaPipe (singleton) ───────────────────────────────────

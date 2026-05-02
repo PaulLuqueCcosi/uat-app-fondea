@@ -104,7 +104,7 @@ export function ProfileClient() {
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-fondea-text w-32">Estado:</span>
-            <span className={`text-sm font-medium ${data.isAuthenticated ? 'text-green-600' : 'text-error'}`}>
+            <span className={`text-sm font-medium ${data.isAuthenticated ? 'text-success-600' : 'text-error'}`}>
               {data.isAuthenticated ? 'Autenticado ✓' : 'No autenticado ✗'}
             </span>
           </div>
@@ -124,7 +124,7 @@ export function ProfileClient() {
               <span className="text-xs font-medium text-fondea-text w-32">Email:</span>
               <span className="text-sm text-dark">{data.user.email}</span>
               {data.user.emailVerified && (
-                <span className="text-xs text-green-600">✓</span>
+                <span className="text-xs text-success-600">✓</span>
               )}
             </div>
           )}
@@ -134,7 +134,7 @@ export function ProfileClient() {
               <span className="text-xs font-medium text-fondea-text w-32">Teléfono:</span>
               <span className="text-sm text-dark">{data.user.phone}</span>
               {data.user.phoneVerified && (
-                <span className="text-xs text-green-600">✓</span>
+                <span className="text-xs text-success-600">✓</span>
               )}
             </div>
           )}

@@ -93,7 +93,7 @@ export function DashboardSidebar() {
                   'flex items-center rounded-lg text-sm transition-all',
                   collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5',
                   isActive
-                    ? 'bg-[#F0FAFE] text-primary font-semibold'
+                    ? 'bg-primary-50 text-primary font-semibold'
                     : 'text-fondea-text hover:bg-background hover:text-dark'
                 )}
               >
@@ -112,7 +112,7 @@ export function DashboardSidebar() {
                 className={cn(
                   'flex justify-center px-2 py-2.5 rounded-lg text-sm transition-all',
                   isProfileSection
-                    ? 'bg-[#F0FAFE] text-primary'
+                    ? 'bg-primary-50 text-primary'
                     : 'text-fondea-text hover:bg-background hover:text-dark'
                 )}
               >
@@ -125,7 +125,7 @@ export function DashboardSidebar() {
                   className={cn(
                     'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all',
                     isProfileSection
-                      ? 'bg-[#F0FAFE] text-primary'
+                      ? 'bg-primary-50 text-primary'
                       : 'text-fondea-text hover:bg-background hover:text-dark'
                   )}
                 >
@@ -152,7 +152,7 @@ export function DashboardSidebar() {
                           className={cn(
                             'flex items-center gap-2.5 pl-9 pr-3 py-2 rounded-lg text-xs transition-all',
                             isActive
-                              ? 'bg-[#F0FAFE] text-primary font-medium'
+                              ? 'bg-primary-50 text-primary font-medium'
                               : 'text-fondea-text hover:bg-background hover:text-dark'
                           )}
                         >

@@ -33,8 +33,8 @@ export function FunnelMoreInfo() {
     <div className="max-w-3xl mx-auto">
       <Card className="p-8 md:p-12">
         {/* Icon */}
-        <div className="w-20 h-20 mx-auto mb-6 bg-warning/10 rounded-full flex items-center justify-center">
-          <AlertCircle className="w-10 h-10 text-warning" />
+        <div className="w-20 h-20 mx-auto mb-6 bg-warning-50 rounded-full flex items-center justify-center">
+          <AlertCircle className="w-10 h-10 text-warning-700" />
         </div>
 
         <h1 className="text-2xl md:text-3xl font-bold text-dark mb-3 text-center">
@@ -56,10 +56,10 @@ export function FunnelMoreInfo() {
                 onClick={item.action}
                 className="cursor-pointer"
               >
-                <Card className="p-4 border-2 border-warning/20 hover:border-warning/40 transition-colors">
+                <Card className="p-4 border-2 border-warning-100 hover:border-warning-400 transition-colors">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-warning/10 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-5 h-5 text-warning" />
+                    <div className="w-10 h-10 bg-warning-50 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-5 h-5 text-warning-700" />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-dark mb-1">{item.title}</h3>

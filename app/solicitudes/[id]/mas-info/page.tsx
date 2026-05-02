@@ -65,9 +65,9 @@ export default function MasInfoPage() {
 
       <CardContent className="pt-0 space-y-6">
         {/* Mensaje principal */}
-        <div className="bg-warning/10 border border-warning/30 rounded-lg p-4">
+        <div className="bg-warning-50 border border-warning-100 rounded-lg p-4">
           <div className="flex gap-3">
-            <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-warning-700 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-semibold text-foreground mb-1">Tu solicitud está en espera</p>
               <p className="text-muted-foreground">
@@ -90,7 +90,7 @@ export default function MasInfoPage() {
               {pendientes.map((item, index) => (
                 <div
                   key={index}
-                  className="p-4 border-2 border-warning/30 bg-warning/5 rounded-lg"
+                  className="p-4 border-2 border-warning-100 bg-warning-50 rounded-lg"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1">

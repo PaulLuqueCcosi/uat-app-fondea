@@ -49,9 +49,9 @@ export default function AprobadaPage() {
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-foreground">Estado del desembolso</h3>
                 {DEMO_APROBACION.estadoDesembolso === 'EN_PROCESO' ? (
-                  <div className="flex items-center gap-2 px-3 py-1 bg-warning/10 border border-warning/30 rounded-full">
-                    <Clock className="w-4 h-4 text-warning" />
-                    <span className="text-sm font-medium text-warning">En proceso</span>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-warning-50 border border-warning-100 rounded-full">
+                    <Clock className="w-4 h-4 text-warning-700" />
+                    <span className="text-sm font-medium text-warning-700">En proceso</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 px-3 py-1 bg-secondary/20 border border-secondary rounded-full">
@@ -76,12 +76,12 @@ export default function AprobadaPage() {
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                     DEMO_APROBACION.estadoDesembolso === 'COMPLETADO'
                       ? 'bg-secondary'
-                      : 'bg-warning/20 border-2 border-warning'
+                      : 'bg-warning-50 border-2 border-warning-400'
                   }`}>
                     <DollarSign className={`w-5 h-5 ${
                       DEMO_APROBACION.estadoDesembolso === 'COMPLETADO'
                         ? 'text-dark'
-                        : 'text-warning'
+                        : 'text-warning-700'
                     }`} />
                   </div>
                   <div>

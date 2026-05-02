@@ -68,126 +68,116 @@ export default function ServerValidationTest() {
     }
   };
 
-  const getResultColor = () => {
-    if (!result) return 'bg-gray-100';
-    
-    if (result.success && result.serverValidation) {
-      return 'bg-green-100 border-green-300';
-    } else if (result.localSession && !result.serverValidation) {
-      return 'bg-orange-100 border-orange-300';
-    } else {
-      return 'bg-red-100 border-red-300';
-    }
+  const getResultBg = () => {
+    if (!result) return 'bg-neutral-100';
+    if (result.success && result.serverValidation) return 'bg-success-50 border-success-200';
+    if (result.localSession && !result.serverValidation) return 'bg-warning-50 border-warning-200';
+    return 'bg-error-50 border-error-200';
   };
 
   const getStatusIcon = () => {
     if (!result) return '❓';
-    
-    if (result.success && result.serverValidation) {
-      return '✅';
-    } else if (result.localSession && !result.serverValidation) {
-      return '⚠️';
-    } else {
-      return '❌';
-    }
+    if (result.success && result.serverValidation) return '✅';
+    if (result.localSession && !result.serverValidation) return '⚠️';
+    return '❌';
   };
 
   return (
     <div className="mt-6">
       <div className="space-x-4">
-        <button 
+        <button
           onClick={testServerValidation}
           disabled={loading}
-          className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 disabled:opacity-50"
+          className="bg-primary text-primary-foreground px-4 py-2 rounded hover:bg-primary/90 disabled:opacity-50"
         >
           {loading ? '🔄 Probando...' : '🔍 Probar Validación Servidor'}
         </button>
-        
-        <button 
+
+        <button
           onClick={testTokenIntrospection}
           disabled={introspectLoading}
-          className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 disabled:opacity-50"
+          className="bg-secondary text-secondary-foreground px-4 py-2 rounded hover:bg-secondary/90 disabled:opacity-50"
         >
           {introspectLoading ? '🔄 Analizando...' : '🔬 Introspección Profunda'}
         </button>
       </div>
-      
+
       {result && (
-        <div className={`mt-4 p-4 rounded border-2 ${getResultColor()}`}>
+        <div className={`mt-4 p-4 rounded border-2 ${getResultBg()}`}>
           <h3 className="font-bold flex items-center gap-2">
             {getStatusIcon()} Resultado de Validación Servidor
           </h3>
-          
+
           <div className="mt-2 space-y-2">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <strong>Sesión Local:</strong> 
-                <span className={result.localSession ? 'text-green-600' : 'text-red-600'}>
+                <strong>Sesión Local:</strong>
+                <span className={result.localSession ? 'text-success-600' : 'text-error-600'}>
                   {result.localSession ? ' ✓ Válida' : ' ✗ Inválida'}
                 </span>
               </div>
               <div>
-                <strong>Validación Servidor:</strong> 
-                <span className={result.serverValidation ? 'text-green-600' : 'text-red-600'}>
+                <strong>Validación Servidor:</strong>
+                <span className={result.serverValidation ? 'text-success-600' : 'text-error-600'}>
                   {result.serverValidation ? ' ✓ Válida' : ' ✗ Inválida'}
                 </span>
               </div>
             </div>
-            
+
             {result.message && (
               <p className="text-sm font-medium">{result.message}</p>
             )}
-            
+
             {result.error && (
-              <p className="text-sm text-red-600 font-medium">Error: {result.error}</p>
+              <p className="text-sm text-error-600 font-medium">Error: {result.error}</p>
             )}
-            
+
             {result.user && (
               <div className="text-sm">
                 <strong>Usuario:</strong> {result.user.name} ({result.user.email})
               </div>
             )}
-            
+
             {result.tokenInfo && (
               <div className="text-sm">
                 <strong>Token:</strong> {result.tokenInfo.length} chars, validado en {result.tokenInfo.validationTimeMs}ms
               </div>
             )}
-            
+
             {result.errorDetails && (
-              <div className="text-sm text-red-600">
+              <div className="text-sm text-error-600">
                 <strong>Detalles del error:</strong> {result.errorDetails.message}
                 {result.errorDetails.code && ` (${result.errorDetails.code})`}
               </div>
             )}
           </div>
-          
+
           <details className="mt-3">
-            <summary className="cursor-pointer text-sm text-gray-600">Ver respuesta completa</summary>
-            <pre className="mt-2 text-xs bg-gray-50 p-2 rounded overflow-auto">
+            <summary className="cursor-pointer text-sm text-muted-foreground">Ver respuesta completa</summary>
+            <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
               {JSON.stringify(result, null, 2)}
             </pre>
           </details>
         </div>
       )}
-      
+
       {introspectResult && (
-        <div className={`mt-4 p-4 rounded border-2 ${introspectResult.success ? 'bg-blue-100 border-blue-300' : 'bg-red-100 border-red-300'}`}>
+        <div className={`mt-4 p-4 rounded border-2 ${introspectResult.success ? 'bg-primary-50 border-primary-200' : 'bg-error-50 border-error-200'}`}>
           <h3 className="font-bold flex items-center gap-2">
             {introspectResult.success ? '🔬' : '❌'} Introspección Profunda del Token
           </h3>
-          
+
           <div className="mt-2 space-y-2">
             <p className="text-sm font-medium">{introspectResult.message}</p>
-            
+
             {introspectResult.analysis && (
               <div className="text-sm">
-                <strong>Estado:</strong> 
+                <strong>Estado:</strong>
                 <span className={
-                  introspectResult.analysis.sessionStatus === 'fully_valid' ? 'text-green-600' :
-                  introspectResult.analysis.sessionStatus === 'revoked_by_admin' ? 'text-red-600 font-bold' :
-                  introspectResult.analysis.sessionStatus === 'potentially_revoked' ? 'text-orange-600' :
-                  'text-red-600'
+                  introspectResult.analysis.sessionStatus === 'fully_valid' ? 'text-success-600' :
+                  introspectResult.analysis.sessionStatus === 'revoked_by_admin' ? 'text-error-600 font-bold' :
+                  introspectResult.analysis.sessionStatus === 'potentially_revoked' ? 'text-warning-600' :
+                  'text-error-600'
                 }>
                   {' '}
                   {introspectResult.analysis.sessionStatus === 'fully_valid' ? '✓ Completamente válida' :
@@ -195,55 +185,55 @@ export default function ServerValidationTest() {
                    introspectResult.analysis.sessionStatus === 'potentially_revoked' ? '⚠️ Posiblemente revocada' :
                    '✗ Inválida'}
                 </span>
-                
+
                 {introspectResult.analysis.criticalSecurityIssue && (
-                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
-                    <span className="text-red-700 font-bold text-sm">
+                  <div className="mt-2 p-2 bg-error-50 border border-error-200 rounded">
+                    <span className="text-error-700 font-bold text-sm">
                       🚨 ALERTA DE SEGURIDAD: Esta sesión fue revocada por un administrador pero el usuario aún aparece como autenticado localmente.
                     </span>
                   </div>
                 )}
               </div>
             )}
-            
+
             {introspectResult.tests?.tokenRetrieval && (
               <div className="text-sm">
                 <strong>Tests de Token:</strong> {introspectResult.tests.tokenRetrieval.successful}/{introspectResult.tests.tokenRetrieval.total} exitosos
                 {introspectResult.tests.consistency?.inconsistent && (
-                  <span className="text-orange-600 font-medium"> (⚠️ Resultados inconsistentes)</span>
+                  <span className="text-warning-600 font-medium"> (⚠️ Resultados inconsistentes)</span>
                 )}
               </div>
             )}
-            
+
             {introspectResult.tests?.userinfo && (
               <div className="text-sm">
-                <strong>Userinfo API:</strong> 
-                <span className={introspectResult.tests.userinfo.success ? 'text-green-600' : 'text-red-600'}>
+                <strong>Userinfo API:</strong>
+                <span className={introspectResult.tests.userinfo.success ? 'text-success-600' : 'text-error-600'}>
                   {introspectResult.tests.userinfo.success ? ' ✓ Válido' : ' ✗ Inválido'}
                 </span>
                 {introspectResult.tests.userinfo.status && (
-                  <span className="text-gray-600"> (HTTP {introspectResult.tests.userinfo.status})</span>
+                  <span className="text-muted-foreground"> (HTTP {introspectResult.tests.userinfo.status})</span>
                 )}
               </div>
             )}
-            
+
             {introspectResult.analysis?.recommendation && (
-              <div className="text-sm font-medium text-blue-700">
+              <div className="text-sm font-medium text-primary">
                 <strong>Recomendación:</strong> {introspectResult.analysis.recommendation}
               </div>
             )}
           </div>
-          
+
           <details className="mt-3">
-            <summary className="cursor-pointer text-sm text-gray-600">Ver análisis completo</summary>
-            <pre className="mt-2 text-xs bg-gray-50 p-2 rounded overflow-auto">
+            <summary className="cursor-pointer text-sm text-muted-foreground">Ver análisis completo</summary>
+            <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
               {JSON.stringify(introspectResult, null, 2)}
             </pre>
           </details>
         </div>
       )}
-      
-      <div className="mt-4 text-sm text-gray-600">
+
+      <div className="mt-4 text-sm text-muted-foreground">
         <p><strong>¿Cómo interpretar los resultados?</strong></p>
         <ul className="list-disc list-inside mt-1 space-y-1">
           <li><strong>✅ Ambos válidos:</strong> Sesión activa y token válido en servidor</li>

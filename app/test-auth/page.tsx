@@ -28,7 +28,7 @@ export default async function TestAuthPage() {
     if (!isAuthenticated) {
       return (
         <div className="p-8">
-          <h1 className="text-2xl font-bold text-red-600">❌ NO AUTENTICADO</h1>
+          <h1 className="text-2xl font-bold text-error-600">❌ NO AUTENTICADO</h1>
           <p>No hay sesión local - esto debería redirigir</p>
           <div className="mt-4">
             <h3 className="font-bold">Cookies presentes:</h3>
@@ -49,7 +49,7 @@ export default async function TestAuthPage() {
       
       return (
         <div className="p-8">
-          <h1 className="text-2xl font-bold text-green-600">✅ AUTENTICADO</h1>
+          <h1 className="text-2xl font-bold text-success-600">✅ AUTENTICADO</h1>
           <div className="mt-4 space-y-2">
             <p><strong>Usuario:</strong> {claims?.sub}</p>
             <p><strong>Email:</strong> {claims?.email}</p>
@@ -61,7 +61,7 @@ export default async function TestAuthPage() {
             <h3 className="font-bold">Cookies presentes:</h3>
             <ul className="list-disc list-inside">
               {allCookies.map(cookie => (
-                <li key={cookie.name} className={cookie.name.includes('logto') ? 'text-blue-600 font-semibold' : ''}>
+                <li key={cookie.name} className={cookie.name.includes('logto') ? 'text-primary font-semibold' : ''}>
                   {cookie.name}: {cookie.value.substring(0, 50)}...
                 </li>
               ))}
@@ -71,13 +71,13 @@ export default async function TestAuthPage() {
           <div className="mt-6 space-x-4">
             <a 
               href="/api/test/clear-session" 
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              className="bg-destructive text-destructive-foreground px-4 py-2 rounded hover:bg-destructive/90"
             >
               Limpiar Sesión
             </a>
             <a 
               href="/test-auth" 
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              className="bg-primary text-primary-foreground px-4 py-2 rounded hover:bg-primary/90"
             >
               Recargar Página (Hard Refresh)
             </a>
@@ -95,7 +95,7 @@ export default async function TestAuthPage() {
       
       return (
         <div className="p-8">
-          <h1 className="text-2xl font-bold text-orange-600">⚠️ TOKEN INVÁLIDO</h1>
+          <h1 className="text-2xl font-bold text-warning-600">⚠️ TOKEN INVÁLIDO</h1>
           <p>Hay sesión local pero el token es inválido</p>
           <p><strong>Error:</strong> {tokenError?.message}</p>
           
@@ -103,7 +103,7 @@ export default async function TestAuthPage() {
             <h3 className="font-bold">Cookies presentes:</h3>
             <ul className="list-disc list-inside">
               {allCookies.map(cookie => (
-                <li key={cookie.name} className={cookie.name.includes('logto') ? 'text-blue-600 font-semibold' : ''}>
+                <li key={cookie.name} className={cookie.name.includes('logto') ? 'text-primary font-semibold' : ''}>
                   {cookie.name}: {cookie.value.substring(0, 50)}...
                 </li>
               ))}
@@ -118,7 +118,7 @@ export default async function TestAuthPage() {
     
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-red-600">❌ ERROR</h1>
+        <h1 className="text-2xl font-bold text-error-600">❌ ERROR</h1>
         <p><strong>Error:</strong> {error?.message}</p>
         
         <div className="mt-4">

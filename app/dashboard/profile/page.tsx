@@ -63,7 +63,7 @@ export default async function ProfilePage() {
                 </p>
                 <p className="text-sm text-dark">{claims.email}</p>
                 {claims.email_verified && (
-                  <p className="text-xs text-green-600 flex items-center gap-1">
+                  <p className="text-xs text-success-600 flex items-center gap-1">
                     <Shield className="w-3 h-3" />
                     Verificado
                   </p>
@@ -79,7 +79,7 @@ export default async function ProfilePage() {
                 </p>
                 <p className="text-sm text-dark">{claims.phone_number}</p>
                 {claims.phone_number_verified && (
-                  <p className="text-xs text-green-600 flex items-center gap-1">
+                  <p className="text-xs text-success-600 flex items-center gap-1">
                     <Shield className="w-3 h-3" />
                     Verificado
                   </p>

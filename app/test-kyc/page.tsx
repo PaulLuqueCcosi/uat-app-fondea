@@ -40,8 +40,8 @@ export default function TestKYCPage() {
                 </ul>
               </div>
             </div>
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-800">
+            <div className="mt-4 p-3 bg-primary-50 rounded-lg border border-primary-200">
+              <p className="text-sm text-primary-700">
                 <strong>Nota:</strong> Este formulario simula la validación con RENIEC. 
                 En producción se conectaría a la API real de validación de identidad.
               </p>

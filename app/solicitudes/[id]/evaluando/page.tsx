@@ -38,8 +38,8 @@ function ApprovedView({ solicitudId }: { solicitudId: string }) {
 
   return (
     <div className="flex flex-col items-center text-center space-y-6">
-      <div className="w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center">
-        <CheckCircle2 className="w-12 h-12 text-green-500" />
+      <div className="w-24 h-24 rounded-full bg-success-500/10 flex items-center justify-center">
+        <CheckCircle2 className="w-12 h-12 text-success-500" />
       </div>
 
       <div>
@@ -140,7 +140,7 @@ function EvaluatingView({ timeElapsed }: { timeElapsed: number }) {
             }`}
           >
             {step.done
-              ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+              ? <CheckCircle2 className="w-5 h-5 text-success-500 shrink-0" />
               : step.active
                 ? <Loader2 className="w-5 h-5 text-primary shrink-0 animate-spin" />
                 : <Clock className="w-5 h-5 text-muted-foreground shrink-0" />

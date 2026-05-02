@@ -34,11 +34,11 @@ function getStatus(score: number | null): FaceStatus {
   return 'red';
 }
 
-const STATUS_CONFIG: Record<FaceStatus, { color: string; label: string; ovalColor: string }> = {
-  none:   { color: 'rgba(0,0,0,0.75)',          label: 'Buscando rostro…',                ovalColor: 'rgba(255,255,255,0.4)' },
-  red:    { color: 'rgba(220,53,69,0.85)',       label: 'Rostro no detectado',             ovalColor: '#dc3545' },
-  orange: { color: 'rgba(255,140,0,0.85)',       label: 'Acércate más a la cámara',        ovalColor: '#ff8c00' },
-  green:  { color: 'rgba(40,167,69,0.85)',       label: '✓ Listo — puedes capturar',       ovalColor: '#28a745' },
+const STATUS_CONFIG: Record<FaceStatus, { badgeClass: string; label: string; ovalColor: string }> = {
+  none:   { badgeClass: 'bg-black/75',                    label: 'Buscando rostro…',          ovalColor: 'rgba(255,255,255,0.4)' },
+  red:    { badgeClass: 'bg-error-600/85',                label: 'Rostro no detectado',       ovalColor: 'var(--color-error-600)' },
+  orange: { badgeClass: 'bg-warning-700/90',              label: 'Acércate más a la cámara',  ovalColor: 'var(--color-warning-500)' },
+  green:  { badgeClass: 'bg-success-700/90',              label: '✓ Listo — puedes capturar', ovalColor: 'var(--color-success-600)' },
 };
 
 // ── Carga dinámica de MediaPipe ───────────────────────────────────────────────
@@ -377,8 +377,7 @@ export function CameraModal({
               {/* Badge de estado (solo modo face) */}
               {mode === 'face' && (
                 <div
-                  className="px-4 py-1.5 rounded-full text-white text-xs font-semibold transition-all duration-300"
-                  style={{ background: cfg.color }}
+                  className={`px-4 py-1.5 rounded-full text-white text-xs font-semibold transition-all duration-300 ${cfg.badgeClass}`}
                 >
                   {cfg.label}
                   {faceScore !== null && (
@@ -402,7 +401,7 @@ export function CameraModal({
                   fullScreen ? 'w-20 h-20' : 'w-16 h-16'
                 } ${
                   canCapture
-                    ? 'bg-green-500 hover:bg-green-400 text-white shadow-lg shadow-green-500/40'
+                    ? 'bg-success-500 hover:bg-success-400 text-white shadow-lg shadow-success-500/40'
                     : 'bg-white/20 text-white/40 cursor-not-allowed'
                 }`}
               >

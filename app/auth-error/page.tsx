@@ -26,12 +26,12 @@ export default function AuthErrorPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="max-w-md w-full bg-card shadow-lg rounded-lg p-6 text-center">
         <div className="mb-4">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-error-100">
             <svg
-              className="h-6 w-6 text-red-600"
+              className="h-6 w-6 text-error-600"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -46,23 +46,23 @@ export default function AuthErrorPage() {
           </div>
         </div>
         
-        <h1 className="text-lg font-medium text-gray-900 mb-2">
+        <h1 className="text-lg font-medium text-foreground mb-2">
           Sesión Expirada
         </h1>
         
-        <p className="text-sm text-gray-600 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Tu sesión ha expirado o es inválida. Serás redirigido al inicio para volver a iniciar sesión.
         </p>
         
         <div className="space-y-3">
           <button
             onClick={handleRetry}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+            className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-md hover:bg-primary/90 transition-colors"
           >
             Ir al Inicio
           </button>
           
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             Redirigiendo automáticamente en 3 segundos...
           </p>
         </div>

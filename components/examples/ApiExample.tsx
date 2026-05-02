@@ -62,7 +62,7 @@ export default function ApiExample() {
   };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
+    <div className="p-6 bg-card rounded-lg shadow">
       <h3 className="text-lg font-bold mb-4">Ejemplo de Cliente API</h3>
       
       <div className="space-y-4">
@@ -70,11 +70,11 @@ export default function ApiExample() {
           <button
             onClick={testApiCall}
             disabled={loading}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+            className="bg-primary text-primary-foreground px-4 py-2 rounded hover:bg-primary/90 disabled:opacity-50"
           >
             {loading ? '🔄 Cargando...' : '📡 Llamada API Normal'}
           </button>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Hace una llamada normal a tu backend con token
           </p>
         </div>
@@ -83,26 +83,26 @@ export default function ApiExample() {
           <button
             onClick={testUnauthorizedCall}
             disabled={loading}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 disabled:opacity-50"
+            className="bg-destructive text-destructive-foreground px-4 py-2 rounded hover:bg-destructive/90 disabled:opacity-50"
           >
             {loading ? '🔄 Probando...' : '🚫 Simular 401 (Modal)'}
           </button>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Simula un 401 para mostrar el modal de sesión expirada
           </p>
         </div>
       </div>
 
       {result && (
-        <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
+        <div className="mt-4 p-3 bg-muted rounded text-sm">
           <strong>Resultado:</strong>
           <pre className="mt-1 whitespace-pre-wrap">{result}</pre>
         </div>
       )}
 
-      <div className="mt-6 text-sm text-gray-600">
+      <div className="mt-6 text-sm text-muted-foreground">
         <h4 className="font-bold">¿Cómo usar en tu código?</h4>
-        <pre className="mt-2 bg-gray-100 p-3 rounded text-xs overflow-auto">
+        <pre className="mt-2 bg-muted p-3 rounded text-xs overflow-auto">
 {`// En cualquier componente cliente
 import { useApiClient } from '@/lib/api-client';
 

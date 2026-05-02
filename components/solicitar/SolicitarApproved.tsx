@@ -39,7 +39,7 @@ export function FunnelApproved() {
         <div className="relative w-24 h-24 mx-auto mb-6">
           <div className="absolute inset-0 bg-secondary/20 rounded-full animate-ping"></div>
           <div className="relative bg-secondary rounded-full w-24 h-24 flex items-center justify-center">
-            <CheckCircle className="w-14 h-14 text-white" />
+            <CheckCircle className="w-14 h-14 text-accent-900" />
           </div>
         </div>
 

@@ -5,7 +5,7 @@ export default function DemoKYCValidationPage() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8">
         <div className="mb-6 text-center">
-          <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium mb-4">
+          <div className="inline-flex items-center gap-2 bg-warning-100 text-warning-700 px-3 py-1 rounded-full text-sm font-medium mb-4">
             🚧 MODO DEMO - Solo para pruebas
           </div>
           <h1 className="text-2xl font-bold text-foreground">

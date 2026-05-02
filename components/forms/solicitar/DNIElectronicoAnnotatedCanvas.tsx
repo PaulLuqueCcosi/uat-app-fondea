@@ -7,6 +7,16 @@ import { useEffect, useRef } from 'react';
 const IMG_W = 1578;
 const IMG_H = 997;
 
+// ── Color de anotación — usa el token de error del sistema de diseño ──────────
+// Canvas 2D no entiende var(), así que resolvemos el valor en runtime.
+function resolveColor(): string {
+  if (typeof window === 'undefined') return '#DC2626';
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--color-error-600').trim();
+  return raw || '#DC2626';
+}
+
+const ANNOTATION_COLOR = '#DC2626'; // fallback SSR — coincide con --color-error-600
+
 // ── Campos y sus rectángulos ──────────────────────────────────────────────────
 export type DNIElectronicoField = 'dni' | 'firstName' | 'secondName' | 'firstLastName' | 'secondLastName' | 'verificationCode' | 'birth_date' | null;
 
@@ -14,31 +24,31 @@ export type DNIElectronicoField = 'dni' | 'firstName' | 'secondName' | 'firstLas
 const HIGHLIGHTS: Record<NonNullable<DNIElectronicoField>, { x: number; y: number; w: number; h: number; color: string }> = {
     dni: {
         x: 1236, y: 105, w: 226, h: 55,
-        color: '#ff0000',
+        color: ANNOTATION_COLOR,
     },
     firstName: {
         x: 470, y: 507, w: 182, h: 53,
-        color: '#ff0000',
+        color: ANNOTATION_COLOR,
     },
     secondName: {
         x: 660, y: 507, w: 180, h: 53,
-        color: '#ff0000',
+        color: ANNOTATION_COLOR,
     },
     firstLastName: {
         x: 470, y: 274, w: 187, h: 50,
-        color: '#ff0000',
+        color: ANNOTATION_COLOR,
     },
     secondLastName: {
         x: 470, y: 390, w: 213, h: 48,
-        color: '#ff0000',
+        color: ANNOTATION_COLOR,
     },
     verificationCode: {
         x: 1478, y: 105, w: 32, h: 55,
-        color: '#ff0000',
+        color: ANNOTATION_COLOR,
     },
     birth_date: {
         x: 500, y: 661, w: 171, h: 37,
-        color: '#ff0000',
+        color: ANNOTATION_COLOR,
     },
 };
 
@@ -112,6 +122,12 @@ export function DNIElectronicoAnnotatedCanvas({ activeField, debugMode = false, 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        // Resolver el token de color en runtime (Canvas 2D no entiende var())
+        const annotationColor = resolveColor();
+        const highlights = Object.fromEntries(
+            Object.entries(HIGHLIGHTS).map(([k, v]) => [k, { ...v, color: annotationColor }])
+        ) as typeof HIGHLIGHTS;
+
         canvas.width = IMG_W;
         canvas.height = IMG_H;
 
@@ -121,7 +137,7 @@ export function DNIElectronicoAnnotatedCanvas({ activeField, debugMode = false, 
         // En modo debug, mostrar todos los campos siempre
         if (debugMode) {
             // Dibujar todos los rectángulos
-            Object.entries(HIGHLIGHTS).forEach(([key, rect]) => {
+            Object.entries(highlights).forEach(([key, rect]) => {
                 const isActive = key === field;
                 drawRect(ctx, rect.x, rect.y, rect.w, rect.h, rect.color, isActive);
             });
@@ -133,7 +149,7 @@ export function DNIElectronicoAnnotatedCanvas({ activeField, debugMode = false, 
             }
 
             // Dibujar solo el campo activo
-            Object.entries(HIGHLIGHTS).forEach(([key, rect]) => {
+            Object.entries(highlights).forEach(([key, rect]) => {
                 if (field && key === field) {
                     // Recortar el overlay sobre el campo activo para que se vea la imagen
                     ctx.clearRect(rect.x - 2, rect.y - 2, rect.w + 4, rect.h + 4);
