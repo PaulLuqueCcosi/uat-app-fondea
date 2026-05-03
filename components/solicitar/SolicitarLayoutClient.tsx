@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import type { User } from '@/lib/types';
 import { AppNavbar } from '@/components/ui/app-navbar';
 import { FunnelProgressBar } from './SolicitarProgressBar';
@@ -13,6 +14,9 @@ interface FunnelLayoutClientProps {
 }
 
 export function FunnelLayoutClient({ user, onSignOut, children }: FunnelLayoutClientProps) {
+  const pathname = usePathname();
+  const isOrchestrating = pathname === '/solicitar';
+
   return (
     <>
       <AppNavbar
@@ -23,14 +27,14 @@ export function FunnelLayoutClient({ user, onSignOut, children }: FunnelLayoutCl
 
       {/* Mobile: Pasos horizontales arriba, resumen abajo */}
       <div className="md:hidden">
-        <FunnelProgressBar />
+        <FunnelProgressBar isLoading={isOrchestrating} />
         <FunnelLoanSummaryBanner />
       </div>
 
       {/* Desktop/Tablet: Sidebar */}
-      <FunnelSidebar />
+      <FunnelSidebar isLoading={isOrchestrating} />
 
-      {/* Main Content - con margen para el sidebar en desktop */}
+      {/* Main Content */}
       <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-80">
         {children}
       </main>

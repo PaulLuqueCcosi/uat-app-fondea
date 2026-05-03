@@ -96,7 +96,7 @@ export function DashboardHomeClient({ userName, applications }: DashboardHomeCli
             <p className="text-sm sm:text-base text-fondea-text">Completa tu expediente para solicitar tu primer préstamo</p>
           </div>
           <button
-            onClick={() => router.push('/solicitar/labor')}
+          onClick={() => router.push('/solicitar')}
             className="flex items-center justify-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />
@@ -289,7 +289,7 @@ export function DashboardHomeClient({ userName, applications }: DashboardHomeCli
                   <>
                     <p className="text-sm text-fondea-text">Tu perfil está completo. ¡Ya puedes solicitar!</p>
                     <button
-                      onClick={() => router.push('/dashboard/loans')}
+                      onClick={() => router.push('/solicitar')}
                       className="w-full bg-secondary text-dark font-semibold text-sm py-2.5 rounded-lg hover:bg-secondary/90 transition-colors"
                     >
                       Solicitar ahora
