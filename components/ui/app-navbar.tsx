@@ -88,26 +88,25 @@ export function AppNavbar({ user, onSignOut, backLink }: AppNavbarProps) {
     <header className="sticky top-0 z-40 h-16 border-b border-border bg-white/90 backdrop-blur-md">
       <div className="flex h-full items-center justify-between px-4 md:px-6">
 
-        {/* ── Izquierda: back link (opcional) + logo ── */}
+        {/* ── Izquierda: logo + back (opcional) ── */}
         <div className="flex items-center gap-3">
-          {backLink && (
-            <>
-              <Link
-                href={backLink.href}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">
-                  {backLink.label ?? 'Volver'}
-                </span>
-              </Link>
-              <div className="h-5 w-px bg-border hidden sm:block" />
-            </>
-          )}
-
           <Link href="/dashboard" className="flex items-center">
             <Logo height={28} />
           </Link>
+
+          {backLink && (
+            <>
+              <div className="h-5 w-px bg-border" />
+              <button
+                onClick={() => router.back()}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Volver"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Volver
+              </button>
+            </>
+          )}
         </div>
 
         {/* ── Derecha: notificaciones + usuario ── */}
