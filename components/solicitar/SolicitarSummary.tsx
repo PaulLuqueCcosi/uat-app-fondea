@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -119,6 +119,10 @@ interface FunnelSummaryProps {
   };
 }
 
+// ── Configuración ─────────────────────────────────────────────────────────────
+// Cambiar a `true` para mostrar todas las secciones expandidas por defecto
+const DEFAULT_SECTIONS_EXPANDED = false;
+
 export function FunnelSummary({
   kycData,
   laborData,
@@ -135,12 +139,12 @@ export function FunnelSummary({
 
   // Estado para controlar qué secciones están expandidas
   const [expandedSections, setExpandedSections] = useState({
-    kyc: true,
-    labor: true,
-    economic: true,
-    references: true,
-    address: true,
-    bankAccount: true
+    kyc:         DEFAULT_SECTIONS_EXPANDED,
+    labor:       DEFAULT_SECTIONS_EXPANDED,
+    economic:    DEFAULT_SECTIONS_EXPANDED,
+    references:  DEFAULT_SECTIONS_EXPANDED,
+    address:     DEFAULT_SECTIONS_EXPANDED,
+    bankAccount: DEFAULT_SECTIONS_EXPANDED,
   });
 
   // Estado de las declaraciones PEP
@@ -153,6 +157,20 @@ export function FunnelSummary({
   // Estado para mostrar/ocultar CCI
   const [showCCI, setShowCCI] = useState(false);
 
+  // Muestra errores en los checkboxes cuando el usuario intenta enviar sin marcarlos
+  const [showPepErrors, setShowPepErrors] = useState(false);
+
+  // Ref para la sección de declaraciones legales (destino del scroll automático)
+  const declarationsRef = useRef<HTMLDivElement>(null);
+
+  // Scroll automático a las declaraciones tras 4 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -162,8 +180,8 @@ export function FunnelSummary({
 
   const handleSubmit = async () => {
     if (!pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms) {
-      setSaveError('Debes aceptar todas las declaraciones para continuar.');
-      setSaveErrorCategory('validation');
+      setShowPepErrors(true);
+      declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
 
@@ -821,13 +839,13 @@ export function FunnelSummary({
         </Card>
 
         {/* DECLARACIONES LEGALES */}
-        <Card className="p-6 bg-primary/5 border-2 border-primary/20">
+        <Card ref={declarationsRef} className="p-6 bg-primary/5 border-2 border-primary/20">
           <div className="flex gap-4">
             <AlertCircle className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
             <div className="flex-1">
               <h4 className="font-semibold text-foreground mb-4">Declaraciones Legales</h4>
               <div className="space-y-4">
-                <label className="flex items-start gap-3 cursor-pointer group">
+                <label className="flex items-start gap-3 cursor-pointer group rounded-lg p-2 -mx-2">
                   <input
                     type="checkbox"
                     checked={pepDeclarations.not_pep}
@@ -836,10 +854,13 @@ export function FunnelSummary({
                   />
                   <span className="text-sm text-foreground leading-relaxed">
                     Declaro que <strong>no soy Persona Expuesta Políticamente (PEP)</strong>
+                    {showPepErrors && !pepDeclarations.not_pep && (
+                      <span className="block text-xs text-error-500 mt-0.5">Requerido</span>
+                    )}
                   </span>
                 </label>
 
-                <label className="flex items-start gap-3 cursor-pointer group">
+                <label className="flex items-start gap-3 cursor-pointer group rounded-lg p-2 -mx-2">
                   <input
                     type="checkbox"
                     checked={pepDeclarations.not_pep_relative}
@@ -848,10 +869,13 @@ export function FunnelSummary({
                   />
                   <span className="text-sm text-foreground leading-relaxed">
                     Declaro que <strong>no soy pariente de una PEP hasta el 2do grado de consanguinidad o afinidad</strong>
+                    {showPepErrors && !pepDeclarations.not_pep_relative && (
+                      <span className="block text-xs text-error-500 mt-0.5">Requerido</span>
+                    )}
                   </span>
                 </label>
 
-                <label className="flex items-start gap-3 cursor-pointer group">
+                <label className="flex items-start gap-3 cursor-pointer group rounded-lg p-2 -mx-2">
                   <input
                     type="checkbox"
                     checked={pepDeclarations.accept_terms}
@@ -859,7 +883,23 @@ export function FunnelSummary({
                     className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   <span className="text-sm text-foreground leading-relaxed">
-                    Acepto los <strong>Términos y Condiciones</strong> y consiento el uso de mis datos personales
+                    Acepto los{' '}
+                    {process.env.NEXT_PUBLIC_TERMS_URL ? (
+                      <a
+                        href={process.env.NEXT_PUBLIC_TERMS_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold underline underline-offset-2 hover:text-primary transition-colors"
+                      >
+                        Términos y Condiciones
+                      </a>
+                    ) : (
+                      <strong>Términos y Condiciones</strong>
+                    )}{' '}
+                    y consiento el uso de mis datos personales
+                    {showPepErrors && !pepDeclarations.accept_terms && (
+                      <span className="block text-xs text-error-500 mt-0.5">Requerido</span>
+                    )}
                   </span>
                 </label>
               </div>
@@ -892,7 +932,7 @@ export function FunnelSummary({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={loading || !pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms}
+            disabled={loading}
             className="flex-1"
             size="lg"
           >
