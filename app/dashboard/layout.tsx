@@ -1,4 +1,4 @@
-import { requireValidSession, requireValidSessionStrict, performSignOut } from '@/app/actions/auth.actions';
+import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { AppNavbar } from '@/components/ui/app-navbar';
 import { appBackgroundStyle, blobTopRight, blobBottomLeft } from '@/lib/backgroundStyle';

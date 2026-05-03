@@ -140,7 +140,7 @@ function showSessionExpiredModal() {
   // Manejar click en botón
   const loginButton = modal.querySelector('#loginButton');
   loginButton?.addEventListener('click', () => {
-    window.location.href = '/api/iniciar';
+    window.location.href = '/api/logto/sign-in';
   });
   
   // Cerrar con ESC

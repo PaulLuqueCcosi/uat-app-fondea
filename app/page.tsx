@@ -3,12 +3,11 @@ import { redirect } from 'next/navigation';
 import { logtoConfig } from './logto';
 
 /**
- * Ruta raíz — nunca muestra UI, solo redirige:
+ * Ruta raíz — nunca muestra UI, solo redirige.
  *
- * - Autenticado              → /dashboard  (preservando query params si los hay)
- * - No autenticado           → /api/iniciar (que guarda params y dispara Logto)
- *
- * Cualquier query param que llegue aquí se preserva en el flujo.
+ * - Autenticado + ?intencion=ID  → /solicitar?...  (preserva query params)
+ * - Autenticado                  → /dashboard
+ * - No autenticado               → /api/logto/sign-in  (manejado por layout.tsx)
  */
 export default async function Home({
   searchParams,
@@ -20,19 +19,13 @@ export default async function Home({
   const queryString = new URLSearchParams(params).toString();
 
   if (isAuthenticated) {
-    const intencionId = params.intencion;
-    if (intencionId) {
-      // Autenticado + viene con intención → directo al solicitar
+    if (params.intencion) {
       redirect(`/solicitar?${queryString}`);
     }
     redirect('/dashboard');
   }
 
-  // No autenticado → /api/iniciar guarda los params y dispara Logto
-  if (queryString) {
-    redirect(`/api/iniciar?${queryString}`);
-  }
-
-  // Sin params → login directo
-  redirect('/api/iniciar');
+  // No autenticado — el layout ya redirige a /api/logto/sign-in
+  // pero por si acaso llegamos aquí directamente:
+  redirect('/api/logto/sign-in');
 }

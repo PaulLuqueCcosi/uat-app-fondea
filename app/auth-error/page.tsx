@@ -7,22 +7,15 @@ export default function AuthErrorPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Limpiar cualquier estado de autenticación corrupto
-    // y redirigir después de un breve delay
     const timer = setTimeout(() => {
-      router.push('/');
+      router.push('/api/logto/sign-in');
     }, 3000);
 
     return () => clearTimeout(timer);
   }, [router]);
 
   const handleRetry = () => {
-    // Limpiar localStorage si existe
-    if (typeof window !== 'undefined') {
-      localStorage.clear();
-      sessionStorage.clear();
-    }
-    router.push('/');
+    router.push('/api/logto/sign-in');
   };
 
   return (

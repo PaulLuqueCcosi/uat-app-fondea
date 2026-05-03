@@ -1,11 +1,10 @@
 import { redirect } from 'next/navigation';
-import { requireValidSession } from '@/app/actions/auth.actions';
 import { getApplicationDetailAction, getApplicationStatusAction, getApplicationsAction } from '@/app/actions/application.actions';
 import { ApplicationStatusView } from '@/components/solicitudes/ApplicationStatusView';
 import type { ApplicationStatus, EvaluationResult } from '@/lib/types';
 
 export default async function SolicitudPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireValidSession();
+  // El layout raíz ya garantiza sesión activa.
 
   // Next.js 15: params es una Promise
   const { id } = await params;

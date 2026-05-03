@@ -1,17 +1,15 @@
-import { requireValidSession } from '@/app/actions/auth.actions';
 import { getApplicationsAction } from '@/app/actions/application.actions';
 import { DashboardHomeClient } from '@/components/dashboard/DashboardHomeClient';
+import { getUser } from '@/app/actions/auth.actions';
 
-// Forzar renderizado dinámico - NO cache para validación de sesión en tiempo real
+// Forzar renderizado dinámico
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function DashboardPage() {
-  // ✅ VALIDACIÓN ROBUSTA: Verifica sesión contra Logto en cada carga
-  // Esto detecta sesiones revocadas por administrador, tokens expirados, etc.
-  const user = await requireValidSession();
-
-  // Obtener las solicitudes del usuario
+  // El layout raíz ya garantiza que hay sesión activa.
+  // Aquí solo obtenemos los datos del usuario.
+  const user = await getUser();
   const applicationsData = await getApplicationsAction();
 
   return (
