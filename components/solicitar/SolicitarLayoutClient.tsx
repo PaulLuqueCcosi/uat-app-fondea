@@ -1,7 +1,7 @@
 'use client';
 
 import type { User } from '@/lib/types';
-import { FunnelNavbar } from './SolicitarNavbar';
+import { AppNavbar } from '@/components/ui/app-navbar';
 import { FunnelProgressBar } from './SolicitarProgressBar';
 import { FunnelLoanSummaryBanner } from './SolicitarLoanSummaryBanner';
 import { FunnelSidebar } from './SolicitarSidebar';
@@ -15,9 +15,10 @@ interface FunnelLayoutClientProps {
 export function FunnelLayoutClient({ user, onSignOut, children }: FunnelLayoutClientProps) {
   return (
     <>
-      <FunnelNavbar
+      <AppNavbar
         user={user}
         onSignOut={onSignOut}
+        backLink={{ href: '/dashboard', label: 'Volver al Dashboard' }}
       />
 
       {/* Mobile: Pasos horizontales arriba, resumen abajo */}

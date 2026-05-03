@@ -1,6 +1,6 @@
 import { requireValidSession, requireValidSessionStrict, performSignOut } from '@/app/actions/auth.actions';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
-import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
+import { AppNavbar } from '@/components/ui/app-navbar';
 import { appBackgroundStyle, blobTopRight, blobBottomLeft } from '@/lib/backgroundStyle';
 
 // Forzar renderizado dinámico - NO cache para validación de sesión en tiempo real
@@ -25,7 +25,7 @@ export default async function DashboardLayout({
         <div className="absolute -bottom-64 -left-32 w-[550px] h-[550px] rounded-full" style={blobBottomLeft} />
       </div>
 
-      <DashboardNavbar
+      <AppNavbar
         user={user}
         onSignOut={performSignOut}
       />

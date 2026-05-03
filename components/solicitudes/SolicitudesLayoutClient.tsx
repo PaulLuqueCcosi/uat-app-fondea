@@ -1,6 +1,6 @@
 'use client';
 
-import { FunnelNavbar } from '../solicitar/SolicitarNavbar';
+import { AppNavbar } from '@/components/ui/app-navbar';
 import { SolicitudesSidebar } from './SolicitudesSidebar';
 import type { User } from '@/lib/types';
 
@@ -13,9 +13,10 @@ interface SolicitudesLayoutClientProps {
 export function SolicitudesLayoutClient({ user, onSignOut, children }: SolicitudesLayoutClientProps) {
   return (
     <>
-      <FunnelNavbar
+      <AppNavbar
         user={user}
         onSignOut={onSignOut}
+        backLink={{ href: '/dashboard', label: 'Volver al Dashboard' }}
       />
 
       {/* Desktop/Tablet: Sidebar */}

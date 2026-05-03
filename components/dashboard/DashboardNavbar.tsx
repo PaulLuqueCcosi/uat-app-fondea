@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Bell, User, LogOut, Settings, ChevronDown, X } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
 import type { User as UserType } from '@/lib/types';
@@ -13,6 +14,7 @@ interface DashboardNavbarProps {
 
 export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -69,17 +71,25 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
                   <Link
                     href="/dashboard/perfil"
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-dark hover:bg-muted/50 transition-colors"
+                    className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                      pathname === '/dashboard/perfil'
+                        ? 'bg-primary-50 text-primary font-semibold'
+                        : 'text-dark hover:bg-background hover:text-primary'
+                    }`}
                   >
-                    <User className="w-4 h-4 text-fondea-text" />
+                    <User className={`w-4 h-4 ${pathname === '/dashboard/perfil' ? 'text-primary' : 'text-fondea-text'}`} />
                     Mi Perfil
                   </Link>
                   <Link
                     href="/dashboard/configuracion"
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-dark hover:bg-muted/50 transition-colors"
+                    className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                      pathname === '/dashboard/configuracion'
+                        ? 'bg-primary-50 text-primary font-semibold'
+                        : 'text-dark hover:bg-background hover:text-primary'
+                    }`}
                   >
-                    <Settings className="w-4 h-4 text-fondea-text" />
+                    <Settings className={`w-4 h-4 ${pathname === '/dashboard/configuracion' ? 'text-primary' : 'text-fondea-text'}`} />
                     Configuración
                   </Link>
                 </div>
