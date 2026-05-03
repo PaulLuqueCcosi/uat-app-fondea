@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Calendar, CreditCard, AlertTriangle } from 'lucide-react';
+import { Calendar, CreditCard, AlertTriangle, Settings } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIntencionConfig } from '@/lib/useIntencionConfig';
@@ -65,13 +65,24 @@ export function FunnelLoanSummaryCard() {
   return (
     <Card className="mb-6 bg-linear-to-br from-primary/15 via-primary/10 to-primary/5 shadow-sm border-primary/20">
       <CardContent className="p-4 space-y-4">
-        <div>
-          <h3 className="text-xs font-medium text-primary/70 uppercase tracking-wide">
-            Tu Solicitud
-          </h3>
-          <p className="text-2xl font-bold text-primary mt-1">
-            {formatCurrency(config.amount)}
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-xs font-medium text-primary/70 uppercase tracking-wide">
+              Tu Solicitud
+            </h3>
+            <p className="text-2xl font-bold text-primary mt-1">
+              {formatCurrency(config.amount)}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs border-primary/40 text-primary hover:bg-primary/10"
+            onClick={() => router.push('/solicitar/calculadora')}
+          >
+            <Settings className="w-3 h-3 mr-1" />
+            Editar
+          </Button>
         </div>
 
         <div className="space-y-3">
