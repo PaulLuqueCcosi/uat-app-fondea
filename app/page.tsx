@@ -5,9 +5,10 @@ import { logtoConfig } from './logto';
 /**
  * Ruta raíz — nunca muestra UI, solo redirige.
  *
- * - Autenticado + ?intencion=ID  → /solicitar?...  (preserva query params)
- * - Autenticado                  → /dashboard
- * - No autenticado               → /api/logto/sign-in  (manejado por layout.tsx)
+ * Autenticado + ?intencion=ID  → /solicitar?...
+ * Autenticado                  → /dashboard
+ * No autenticado + ?intencion  → /api/logto/sign-in?intencion=ID  (se preserva post-login)
+ * No autenticado               → /api/logto/sign-in
  */
 export default async function Home({
   searchParams,
@@ -20,12 +21,18 @@ export default async function Home({
 
   if (isAuthenticated) {
     if (params.intencion) {
+      console.log('[AUTH:page] autenticado + intencion → /solicitar');
       redirect(`/solicitar?${queryString}`);
     }
+    console.log('[AUTH:page] autenticado → /dashboard');
     redirect('/dashboard');
   }
 
-  // No autenticado — el layout ya redirige a /api/logto/sign-in
-  // pero por si acaso llegamos aquí directamente:
+  if (queryString) {
+    console.log('[AUTH:page] no autenticado + params → sign-in con params');
+    redirect(`/api/logto/sign-in?${queryString}`);
+  }
+
+  console.log('[AUTH:page] no autenticado → sign-in');
   redirect('/api/logto/sign-in');
 }

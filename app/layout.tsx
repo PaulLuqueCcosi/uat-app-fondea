@@ -21,6 +21,7 @@ export default async function RootLayout({
   const { isAuthenticated } = await getLogtoContext(logtoConfig);
 
   if (!isAuthenticated) {
+    console.log('[AUTH:layout] no autenticado → /api/logto/sign-in');
     redirect('/api/logto/sign-in');
   }
 

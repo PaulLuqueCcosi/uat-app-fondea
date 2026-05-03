@@ -81,9 +81,12 @@ function recordToConfig(r: IntencionRecord): IntencionConfig {
 export async function getActiveIntencion(): Promise<IntencionConfig | null> {
   const user = await requireValidSession();
 
+  console.log('[INTENCION] getActiveIntencion → userId:', user.id);
+
   try {
     const db = await readDB();
     const record = db.intenciones.find((r) => r.userId === user.id);
+    console.log('[INTENCION] getActiveIntencion result →', record ? `found: ${record.intencionId}` : 'not found');
     return record ? recordToConfig(record) : null;
   } catch (error) {
     console.error('[INTENCION] Error al obtener intención activa:', error);
@@ -249,6 +252,8 @@ export async function deleteIntencion(intencionId: string): Promise<boolean> {
 export async function getIntencionConfig(intencionId: string): Promise<IntencionConfig | null> {
   const user = await requireValidSession();
 
+  console.log('[INTENCION] getIntencionConfig →', { intencionId, userId: user.id });
+
   // Alias especial: obtener la intención activa del usuario
   if (intencionId === 'active') {
     return getActiveIntencion();
@@ -261,6 +266,7 @@ export async function getIntencionConfig(intencionId: string): Promise<Intencion
     const record = db.intenciones.find(
       (r) => r.intencionId === intencionId && r.userId === user.id
     );
+    console.log('[INTENCION] getIntencionConfig result →', record ? 'found' : 'not found');
     return record ? recordToConfig(record) : null;
   } catch (error) {
     console.error('[INTENCION] Error al obtener config:', error);

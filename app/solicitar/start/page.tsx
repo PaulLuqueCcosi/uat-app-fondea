@@ -43,7 +43,16 @@ export default function SolicitarStartPage() {
     }
 
     getFunnelRedirect()
-      .then((path) => router.replace(path))
+      .then((path) => {
+        // Preservar el intencionId en la URL del destino para que el sidebar
+        // pueda cargarlo sin depender del timing de registerIntencion
+        if (intencionId) {
+          const separator = path.includes('?') ? '&' : '?';
+          router.replace(`${path}${separator}intencion=${intencionId}`);
+        } else {
+          router.replace(path);
+        }
+      })
       .catch(() => router.replace('/solicitar/kyc-validation'));
   }, [router, searchParams]);
 

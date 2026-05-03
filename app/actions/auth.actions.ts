@@ -36,8 +36,11 @@ export async function requireValidSession() {
   const { isAuthenticated, claims } = await getLogtoContext(logtoConfig);
 
   if (!isAuthenticated || !claims) {
+    console.warn('[AUTH:session] no autenticado → /api/logto/sign-in');
     redirect('/api/logto/sign-in');
   }
+
+  console.log('[AUTH:session] válida →', { userId: claims!.sub, email: claims!.email });
 
   return {
     id: claims!.sub || '',
@@ -53,6 +56,7 @@ export async function requireValidSession() {
  * Logto luego redirige de vuelta según "Post Sign-out Redirect URIs" configurado en consola.
  */
 export async function performSignOut() {
+  console.log('[AUTH:sign-out] iniciando cierre de sesión');
   await signOut(logtoConfig);
 }
 

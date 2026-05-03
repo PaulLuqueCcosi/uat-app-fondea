@@ -71,7 +71,12 @@ export async function getKYCData(): Promise<{
     }
 
     if (!res.ok) {
-      console.error('[KYC] Error al obtener estado:', res.status);
+      // 404 es esperado para usuarios nuevos que aún no tienen KYC
+      if (res.status === 404) {
+        console.log('[KYC] Usuario sin KYC previo (404) — estado inicial normal');
+      } else {
+        console.error('[KYC] Error al obtener estado:', res.status);
+      }
       return { data: null, blocked: false, blockedHoursLeft: 0, attemptsLeft: 3 };
     }
 
