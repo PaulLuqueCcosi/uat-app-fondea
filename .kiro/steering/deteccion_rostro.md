@@ -1,5 +1,5 @@
 ---
-inclusion: always
+inclusion: manual
 ---
 
 toma como ejemplo esto proeycto para poder agreagr esto en la toma de foto de una rostro

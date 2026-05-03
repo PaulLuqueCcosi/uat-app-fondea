@@ -22,7 +22,8 @@ import {
   Eye,
   EyeOff,
   CreditCard,
-  ShieldCheck
+  ShieldCheck,
+  Calculator,
 } from 'lucide-react';
 import { submitApplicationAction } from '@/app/actions/application.actions';
 import {
@@ -44,6 +45,7 @@ import {
   ACCOUNT_TYPE_OPTIONS,
 } from '@/lib/constants';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { getIntencionId } from '@/lib/intencion';
 
 // Helper functions para obtener labels
 const getEmploymentLabel = (value?: string) => {
@@ -179,6 +181,15 @@ export function FunnelSummary({
   };
 
   const handleSubmit = async () => {
+    // Validar que existe una intención activa
+    const intencionId = getIntencionId();
+    if (!intencionId) {
+      setSaveError('No tienes un préstamo seleccionado. Ve a la calculadora para elegir monto y plazo.');
+      setSaveErrorCategory('validation');
+      declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
     if (!pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms) {
       setShowPepErrors(true);
       declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });

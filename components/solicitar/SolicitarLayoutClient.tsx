@@ -15,7 +15,7 @@ interface FunnelLayoutClientProps {
 
 export function FunnelLayoutClient({ user, onSignOut, children }: FunnelLayoutClientProps) {
   const pathname = usePathname();
-  const isOrchestrating = pathname === '/solicitar';
+  const isOrchestrating = pathname === '/solicitar' || pathname === '/solicitar/start';
 
   return (
     <>

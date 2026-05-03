@@ -440,7 +440,27 @@ export interface BankAccountProfileStatus {
   overall_verified: boolean;
 }
 
-// ─── UI ──────────────────────────────────────────────────────────────────────
+// ─── Intencion / Loan Config ─────────────────────────────────────────────────
+
+/**
+ * Configuración del préstamo asociada a una intención de la landing.
+ * El backend la genera cuando el usuario selecciona monto y plazo en la landing.
+ */
+export interface IntencionConfig {
+  /** ID de la intención — viene de la landing */
+  intencionId: string;
+  /** Monto solicitado en soles */
+  amount: number;
+  /** Número de cuotas */
+  months: number;
+  /** Cuota mensual calculada */
+  monthlyPayment: number;
+  /** Tasa efectiva mensual (%) */
+  monthlyRate: number;
+  /** Tasa efectiva anual (%) */
+  tea: number;
+}
+
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'disabled' | 'danger';
 
