@@ -138,9 +138,9 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       };
     }
 
-    // 200 — éxito
-    if (res.ok) {
-      return { success: true, httpStatus: res.status };
+    // 200 — identidad verificada ✅
+    if (res.status === 200) {
+      return { success: true, httpStatus: 200 };
     }
 
     let json: any = {};
@@ -148,22 +148,55 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
 
     // 429 — bloqueado por demasiados intentos
     if (res.status === 429) {
+      const hoursLeft = json.blockedHoursLeft ?? json.detail?.blockedHoursLeft ?? 24;
       return {
         success: false,
         httpStatus: 429,
         errorCategory: 'rate_limit',
-        blockedHoursLeft: json.blockedHoursLeft ?? 24,
-        error: json.error ?? `Demasiados intentos. Podrás intentarlo en ${json.blockedHoursLeft ?? 24} horas.`,
+        blockedHoursLeft: hoursLeft,
+        error: `Demasiados intentos fallidos. Tu cuenta quedará bloqueada por ${hoursLeft} hora${hoursLeft !== 1 ? 's' : ''}.`,
       };
     }
 
-    // 400 — datos inválidos o RENIEC rechazó
+    // 422 — datos no coinciden con RENIEC (tiene attemptsLeft y fieldErrors)
+    if (res.status === 422) {
+      const attemptsLeft = json.attemptsLeft;
+      const baseError = json.error ?? 'Los datos no coinciden con los registros de RENIEC.';
+
+      // Construir mensaje con advertencia de intentos si quedan pocos
+      let error = baseError;
+      if (attemptsLeft === 1) {
+        error = `${baseError} ¡Cuidado! Este es tu último intento antes de quedar bloqueado.`;
+      } else if (attemptsLeft !== undefined) {
+        error = `${baseError} Te quedan ${attemptsLeft} intento${attemptsLeft !== 1 ? 's' : ''}.`;
+      }
+
+      return {
+        success: false,
+        httpStatus: 422,
+        errorCategory: 'validation',
+        attemptsLeft,
+        error,
+      };
+    }
+
+    // 400 — formato inválido o DNI no coincide con el perfil (Problem Detail)
+    if (res.status === 400) {
+      const detail = json.detail ?? json.error ?? 'Los datos ingresados tienen un formato inválido. Verifica que sean exactamente como aparecen en tu DNI.';
+      return {
+        success: false,
+        httpStatus: 400,
+        errorCategory: 'validation',
+        error: detail,
+      };
+    }
+
+    // Cualquier otro error
     return {
       success: false,
       httpStatus: res.status,
-      errorCategory: 'validation',
-      attemptsLeft: json.attemptsLeft,
-      error: json.error ?? 'Los datos no coinciden. Verifica que sean exactamente como aparecen en tu DNI.',
+      errorCategory: 'unknown',
+      error: json.error ?? json.detail ?? 'Error inesperado. Por favor, inténtalo nuevamente.',
     };
 
   } catch {

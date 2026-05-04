@@ -549,40 +549,47 @@ export function FunnelKYCValidation({
           </div>
         </div>
 
-        {/* Información adicional sobre intentos y bloqueo */}
-        {(blocked || (saveError && attemptsLeft > 0 && attemptsLeft < initialAttemptsLeft)) && (
+        {/* Panel de intentos y bloqueo — aparece en cualquier error de validación o bloqueo */}
+        {(blocked || (saveError && attemptsLeft !== undefined && attemptsLeft < initialAttemptsLeft)) && (
           <>
             <Separator className="my-10 bg-primary/20 h-px" />
-            <div className={`rounded-lg border p-4 ${blocked ? 'border-destructive/30 bg-destructive/5' : 'border-warning-100 bg-warning-50'}`}>
+            <div className={`rounded-lg border p-4 ${blocked ? 'border-error-200 bg-error-50' : attemptsLeft === 1 ? 'border-error-200 bg-error-50' : 'border-warning-200 bg-warning-50'}`}>
               <div className="flex items-start gap-3">
-                <span className={`mt-0.5 shrink-0 text-lg ${blocked ? 'text-destructive' : 'text-warning-700'}`}>
-                  {blocked ? '🔒' : '⚠️'}
+                <span className="mt-0.5 shrink-0 text-lg">
+                  {blocked ? '🔒' : attemptsLeft === 1 ? '🚨' : '⚠️'}
                 </span>
                 <div className="space-y-2 w-full">
+
+                  {/* Bloqueado */}
                   {blocked && (
-                    <p className="text-sm font-semibold text-destructive">
-                      Verificación bloqueada por {blockedHoursLeft} hora{blockedHoursLeft !== 1 ? 's' : ''}
-                    </p>
+                    <div>
+                      <p className="text-sm font-semibold text-error-700">
+                        Verificación bloqueada por {blockedHoursLeft} hora{blockedHoursLeft !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-xs text-error-600 mt-1">
+                        Has superado el número máximo de intentos. Podrás intentarlo nuevamente cuando expire el bloqueo.
+                      </p>
+                    </div>
                   )}
 
                   {/* Barra de intentos — solo si no está bloqueado */}
-                  {!blocked && attemptsLeft > 0 && (
-                    <div className="pt-2 space-y-1.5">
+                  {!blocked && attemptsLeft !== undefined && (
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Intentos restantes</span>
-                        <span className={`font-semibold ${attemptsLeft === 1 ? 'text-destructive' : 'text-foreground'}`}>
+                        <span className="text-muted-foreground font-medium">Intentos restantes</span>
+                        <span className={`font-bold ${attemptsLeft === 1 ? 'text-error-700' : 'text-warning-700'}`}>
                           {attemptsLeft} de {initialAttemptsLeft}
                         </span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all duration-500 ${attemptsLeft === 1 ? 'bg-destructive' : 'bg-warning-500'}`}
+                          className={`h-full rounded-full transition-all duration-500 ${attemptsLeft === 1 ? 'bg-error-500' : 'bg-warning-500'}`}
                           style={{ width: `${((initialAttemptsLeft - attemptsLeft) / initialAttemptsLeft) * 100}%` }}
                         />
                       </div>
                       {attemptsLeft === 1 && (
-                        <p className="text-xs text-destructive font-medium">
-                          ⚠ Último intento — si falla, quedará bloqueado 24 horas
+                        <p className="text-xs text-error-700 font-semibold">
+                          🚨 Último intento — si falla, tu cuenta quedará bloqueada por 24 horas
                         </p>
                       )}
                     </div>
@@ -591,11 +598,12 @@ export function FunnelKYCValidation({
                   {/* Consejos — solo si no está bloqueado */}
                   {!blocked && (
                     <div className="text-xs text-muted-foreground space-y-1 pt-1 border-t border-border mt-2">
-                      <p className="font-medium pt-2">Revisa lo siguiente:</p>
+                      <p className="font-medium pt-2 text-foreground">Revisa lo siguiente:</p>
                       <ul className="list-disc list-inside space-y-1 ml-1">
-                        <li>Los datos deben coincidir exactamente con tu DNI físico</li>
+                        <li>Los datos deben coincidir <strong>exactamente</strong> con tu DNI físico</li>
                         <li>Nombres y apellidos en mayúsculas, sin tildes</li>
-                        <li>El código debe tener exactamente 1 dígito</li>
+                        <li>El código de verificación es el dígito al final de tu DNI</li>
+                        <li>La fecha de nacimiento en formato DD/MM/AAAA</li>
                       </ul>
                     </div>
                   )}
