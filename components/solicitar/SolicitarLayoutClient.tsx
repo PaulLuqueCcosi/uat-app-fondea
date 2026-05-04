@@ -28,7 +28,7 @@ export function FunnelLayoutClient({ user, onSignOut, children }: FunnelLayoutCl
       {/* Mobile: Pasos horizontales arriba, resumen abajo */}
       <div className="md:hidden">
         <FunnelProgressBar isLoading={isOrchestrating} />
-        <FunnelLoanSummaryBanner />
+        <FunnelLoanSummaryBanner isOrchestrating={isOrchestrating} />
       </div>
 
       {/* Desktop/Tablet: Sidebar */}

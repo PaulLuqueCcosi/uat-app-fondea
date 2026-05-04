@@ -1,196 +1,139 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Settings, Calendar, CreditCard, ChevronDown, ChevronUp, Percent } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Settings, CreditCard, Calendar, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { getLoanSummary } from '@/app/actions/loan.actions';
+import { useIntencionConfig } from '@/lib/useIntencionConfig';
 
-interface LoanData {
-  amount: number;
-  installments: number;
-  installmentAmount: number;
-  firstPaymentDate: string;
+interface FunnelLoanSummaryBannerProps {
+  isOrchestrating?: boolean;
 }
 
-export function FunnelLoanSummaryBanner() {
-  const [loanData, setLoanData] = useState<LoanData | null>(null);
-  const [loading, setLoading] = useState(true);
+export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanSummaryBannerProps) {
+  const router = useRouter();
+  const { config, loading } = useIntencionConfig(isOrchestrating);
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Cerrar al tocar fuera
   useEffect(() => {
-    const fetchLoanData = async () => {
-      try {
-        const data = await getLoanSummary();
-        if (data) {
-          setLoanData(data);
-        }
-      } catch (error) {
-        console.error('Error fetching loan data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLoanData();
-  }, []);
-
-  // Click outside para cerrar
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (expanded && cardRef.current && !cardRef.current.contains(event.target as Node)) {
+    if (!expanded) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
         setExpanded(false);
       }
     };
-
-    if (expanded) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [expanded]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-PE', {
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('es-PE', {
       style: 'currency',
       currency: 'PEN',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    }).format(date);
-  };
-
-  const handleAdjust = () => {
-    // TODO: Implementar la lógica para ajustar monto o plazo
-    console.log('Ajustar monto o plazo');
-  };
 
   if (loading) {
     return (
-      <Card className="rounded-none border-x-0 bg-gradient-to-r from-primary/10 to-primary/5">
-        <CardContent className="py-1.5">
-          <div className="animate-pulse h-6 bg-primary/5 rounded"></div>
-        </CardContent>
-      </Card>
+      <div className="bg-linear-to-r from-primary/10 to-primary/5 border-b border-border px-4 py-2">
+        <div className="animate-pulse h-5 bg-primary/10 rounded w-1/2" />
+      </div>
     );
   }
 
-  if (!loanData) {
-    return null;
-  }
+  if (!config) return null;
+
+  const estimatedInstallment = Math.ceil(config.amount / config.installmentCount);
 
   return (
-    <Card ref={cardRef} className="rounded-none border-x-0 bg-gradient-to-r from-primary/10 to-primary/5">
-      <CardContent className="space-y-2">
-        {/* Collapsed view - inline como los pasos */}
-        <div className="flex items-center justify-between gap-2">
-          {/* Left: Info inline */}
-          <div className="flex items-center gap-3">
-            {/* Monto */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-muted-foreground font-medium">Solicitud:</span>
-              <span className="text-sm font-bold text-primary">
-                {formatCurrency(loanData.amount)}
-              </span>
-            </div>
+    <div ref={cardRef} className="bg-linear-to-r from-primary/10 to-primary/5 border-b border-border">
+      <div className="px-4 py-2.5 flex items-center justify-between gap-2">
 
-            {/* Divider */}
-            <div className="h-4 w-px bg-border hidden sm:block" />
-
-            {/* Cuotas inline */}
-            <div className="hidden sm:flex items-center gap-1.5">
-              <span className="text-[10px] text-muted-foreground font-medium">Cuotas:</span>
-              <span className="text-xs font-semibold text-foreground">
-                {loanData.installments}x de {formatCurrency(loanData.installmentAmount)}
-              </span>
-            </div>
+        {/* Monto + cuotas inline */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] text-muted-foreground font-medium">Solicitud:</span>
+            <span className="text-sm font-bold text-primary">
+              {formatCurrency(config.amount)}
+            </span>
           </div>
-
-          {/* Right: Botones mini */}
-          <div className="flex items-center gap-1">
-            <Button
-              onClick={handleAdjust}
-              size="sm"
-              variant="outline"
-              className="h-6 text-[10px] border-primary/50 text-primary hover:bg-primary/20 hover:border-primary font-medium px-2"
-            >
-              <Settings className="w-2.5 h-2.5 mr-1" />
-              <span className="hidden sm:inline">Ajustar</span>
-            </Button>
-
-            <Button
-              onClick={() => setExpanded(!expanded)}
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0 text-primary hover:bg-primary/10"
-            >
-              {expanded ? (
-                <ChevronUp className="w-3 h-3" />
-              ) : (
-                <ChevronDown className="w-3 h-3" />
-              )}
-            </Button>
+          <div className="h-3.5 w-px bg-border" />
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[10px] text-muted-foreground font-medium shrink-0">Cuotas:</span>
+            <span className="text-xs font-semibold text-foreground truncate">
+              {config.installmentCount}x {formatCurrency(estimatedInstallment)}
+            </span>
           </div>
         </div>
 
-        {/* Expanded view - más compacto */}
-        {expanded && (
-          <div className="pt-3 border-t border-primary/10">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Cuotas (visible en mobile cuando expandido) */}
-              <div className="flex items-start gap-2 sm:hidden">
-                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <CreditCard className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground font-medium">Cuotas</p>
-                  <p className="text-xs font-semibold text-foreground mt-0.5">
-                    {loanData.installments}x de {formatCurrency(loanData.installmentAmount)}
-                  </p>
-                </div>
-              </div>
+        {/* Botones */}
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 text-[10px] border-primary/50 text-primary hover:bg-primary/20 hover:border-primary font-medium px-2"
+            onClick={() => router.push('/solicitar/calculadora')}
+          >
+            <Settings className="w-2.5 h-2.5 mr-1" />
+            Editar
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0 text-primary hover:bg-primary/10"
+            onClick={() => setExpanded(!expanded)}
+            aria-label={expanded ? 'Ocultar detalle' : 'Ver detalle'}
+          >
+            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </Button>
+        </div>
+      </div>
 
-              {/* Primera cuota */}
-              <div className="flex items-start gap-2">
-                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground font-medium">Primera cuota</p>
-                  <p className="text-xs font-semibold text-foreground mt-0.5">
-                    {formatDate(loanData.firstPaymentDate)}
-                  </p>
-                </div>
-              </div>
+      {/* Panel expandido */}
+      {expanded && (
+        <div className="px-4 pb-3 pt-1 border-t border-primary/10 space-y-2.5">
 
-              {/* Total a pagar */}
-              <div className="flex items-start gap-2">
-                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <CreditCard className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground font-medium">Total a pagar</p>
-                  <p className="text-xs font-semibold text-foreground mt-0.5">
-                    {formatCurrency(loanData.installmentAmount * loanData.installments)}
-                  </p>
-                </div>
-              </div>
+          {/* Cuotas detalle */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+              <CreditCard className="w-3 h-3 text-primary" />
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground font-medium">Cuotas</p>
+              <p className="text-xs font-semibold text-foreground">
+                {config.installmentCount}x de {formatCurrency(estimatedInstallment)}
+              </p>
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Plazo */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+              <Calendar className="w-3 h-3 text-primary" />
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground font-medium">Plazo</p>
+              <p className="text-xs font-semibold text-foreground">
+                {config.termDays} días
+              </p>
+            </div>
+          </div>
+
+          {/* Primer préstamo */}
+          {config.isFirstLoan && (
+            <div className="flex items-center gap-1.5 bg-accent-50 border border-accent-200 rounded-md px-2.5 py-1.5">
+              <Star className="w-3 h-3 text-accent-700 shrink-0" />
+              <p className="text-[10px] font-medium text-accent-800">
+                Tu primer préstamo con Fondea
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

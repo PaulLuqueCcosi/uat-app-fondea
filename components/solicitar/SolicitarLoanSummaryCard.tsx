@@ -1,14 +1,18 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { CreditCard, AlertTriangle, Settings } from 'lucide-react';
+import { CreditCard, AlertTriangle, Settings, Calendar, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIntencionConfig } from '@/lib/useIntencionConfig';
 
-export function FunnelLoanSummaryCard() {
+interface FunnelLoanSummaryCardProps {
+  isOrchestrating?: boolean;
+}
+
+export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSummaryCardProps) {
   const router = useRouter();
-  const { config, loading } = useIntencionConfig();
+  const { config, loading } = useIntencionConfig(isOrchestrating);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-PE', {
@@ -23,16 +27,18 @@ export function FunnelLoanSummaryCard() {
     return (
       <Card className="mb-6 border-primary/20 bg-linear-to-br from-primary/10 to-primary/5">
         <CardContent className="p-4 space-y-3 animate-pulse">
-          <div className="h-4 bg-primary/10 rounded w-1/3" />
+          <div className="h-3 bg-primary/10 rounded w-1/3" />
           <div className="h-7 bg-primary/10 rounded w-1/2" />
-          <div className="h-4 bg-primary/10 rounded w-2/3" />
-          <div className="h-4 bg-primary/10 rounded w-1/2" />
+          <div className="h-px bg-primary/10 w-full" />
+          <div className="h-3 bg-primary/10 rounded w-2/3" />
+          <div className="h-3 bg-primary/10 rounded w-1/2" />
+          <div className="h-3 bg-primary/10 rounded w-2/3" />
         </CardContent>
       </Card>
     );
   }
 
-  // Sin intención — error con acción
+  // Sin intención
   if (!config) {
     return (
       <Card className="mb-6 border-warning-200 bg-warning-50">
@@ -61,10 +67,14 @@ export function FunnelLoanSummaryCard() {
     );
   }
 
-  // Config cargada
+  // Cuota estimada simple (monto / cuotas) — hasta que el backend exponga monthlyPayment
+  const estimatedInstallment = Math.ceil(config.amount / config.installmentCount);
+
   return (
     <Card className="mb-6 bg-linear-to-br from-primary/15 via-primary/10 to-primary/5 shadow-sm border-primary/20">
       <CardContent className="p-4 space-y-4">
+
+        {/* Header: monto + botón editar */}
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-xs font-medium text-primary/70 uppercase tracking-wide">
@@ -85,17 +95,44 @@ export function FunnelLoanSummaryCard() {
           </Button>
         </div>
 
-        <div className="flex items-start gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-            <CreditCard className="w-4 h-4 text-primary" />
+        <div className="border-t border-primary/10" />
+
+        {/* Cuotas */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <CreditCard className="w-3.5 h-3.5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground font-medium">Cuotas</p>
             <p className="text-sm font-semibold text-foreground mt-0.5">
-              {config.installmentCount} cuotas
+              {config.installmentCount}x de {formatCurrency(estimatedInstallment)}
             </p>
           </div>
         </div>
+
+        {/* Plazo */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Calendar className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground font-medium">Plazo</p>
+            <p className="text-sm font-semibold text-foreground mt-0.5">
+              {config.termDays} días
+            </p>
+          </div>
+        </div>
+
+        {/* Badge primer préstamo */}
+        {config.isFirstLoan && (
+          <div className="flex items-center gap-1.5 bg-accent-50 border border-accent-200 rounded-lg px-3 py-2">
+            <Star className="w-3.5 h-3.5 text-accent-700 shrink-0" />
+            <p className="text-xs font-medium text-accent-800">
+              Tu primer préstamo con Fondea
+            </p>
+          </div>
+        )}
+
       </CardContent>
     </Card>
   );

@@ -4,42 +4,18 @@ import { useEffect, useState } from 'react';
 import { getIntencionConfig } from '@/app/actions/intencion.actions';
 import type { IntencionConfig } from './types';
 
-const STORAGE_KEY = 'fondea_intencion_config';
-
-function saveConfig(config: IntencionConfig): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-  }
-}
-
-function loadConfig(): IntencionConfig | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as IntencionConfig) : null;
-  } catch {
-    return null;
-  }
-}
-
-function clearConfig(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(STORAGE_KEY);
-  }
-}
-
 /**
- * Hook que obtiene y persiste la configuración del préstamo asociada
- * a la intención de la landing.
+ * Hook que obtiene la configuración del préstamo activo del usuario.
  *
- * Prioridad:
- * 1. Si hay config en localStorage con el mismo intencionId → la usa directamente
- * 2. Si no, llama al server action y guarda el resultado
+ * Acepta `skip` para diferir la llamada al backend mientras el dispatcher
+ * o el orquestador están corriendo (isOrchestrating). Esto evita la race
+ * condition donde el sidebar obtiene la intención anterior antes de que
+ * registerIntencion() haya terminado de asociar la nueva.
  *
- * Esto evita llamadas repetidas al backend mientras el usuario navega
- * entre pasos del funnel.
+ * Cuando `skip` pasa de true → false (el pathname cambia a un paso real),
+ * el efecto se re-ejecuta y obtiene la intención ya registrada.
  */
-export function useIntencionConfig(): {
+export function useIntencionConfig(skip = false): {
   config: IntencionConfig | null;
   loading: boolean;
 } {
@@ -47,18 +23,16 @@ export function useIntencionConfig(): {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Llamar directamente al server action — sin depender de localStorage
-    // El backend identifica al usuario por su token y retorna su intención activa
+    if (skip) {
+      // Mientras orquesta, mantener loading=true y no llamar al backend
+      setLoading(true);
+      return;
+    }
+
+    setLoading(true);
     getIntencionConfig('active')
       .then((data) => {
-        if (data) {
-          setConfig(data);
-          // Sincronizar localStorage como efecto secundario
-          saveConfig(data);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('fondea_intencion_id', data.intencionId);
-          }
-        }
+        setConfig(data ?? null);
       })
       .catch((err) => {
         console.error('[useIntencionConfig] Error:', err);
@@ -66,7 +40,7 @@ export function useIntencionConfig(): {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [skip]);
 
   return { config, loading };
 }

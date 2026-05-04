@@ -444,26 +444,29 @@ export interface BankAccountProfileStatus {
 
 /**
  * Configuración del préstamo asociada a una intención.
- *
- * Campos disponibles actualmente según el backend:
- * - intencionId, amount, installmentCount, status
- *
- * Campos pendientes (dependen del módulo calculator):
- * - monthlyPayment, monthlyRate, tea
+ * Shape completo según GET /api/v1/intentions/active
  */
 export interface IntencionConfig {
-  /** ID de la intención */
+  /** ID de la intención en el sistema */
   intencionId: string;
+  /** ID del producto de préstamo */
+  productId: string;
   /** Monto solicitado en soles */
   amount: number;
+  /** Plazo en días */
+  termDays: number;
   /** Número de cuotas */
   installmentCount: number;
-  /** Estado de la intención en el backend */
-  status?: string;
-  // Los siguientes campos no están disponibles aún — pendiente módulo calculator
-  // monthlyPayment: number;
-  // monthlyRate: number;
-  // tea: number;
+  /** true si es el primer préstamo del usuario */
+  isFirstLoan: boolean;
+  /** Estado de la intención */
+  status: string;
+  /** ID de la intención original de la calculadora externa */
+  calculatorIntentionId: string;
+  /** Fecha de creación ISO */
+  createdAt: string;
+  /** Fecha de última actualización ISO */
+  updatedAt: string;
 }
 
 

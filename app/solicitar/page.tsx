@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Calculator } from 'lucide-react';
 import { registerIntencion, getActiveIntencion } from '@/app/actions/intencion.actions';
-import { saveIntencionId } from '@/lib/intencion';
 import { Button } from '@/components/ui/button';
 
 type Status = 'resolving' | 'no-intencion' | 'error';
@@ -12,9 +11,17 @@ type Status = 'resolving' | 'no-intencion' | 'error';
 /**
  * Dispatcher del funnel.
  *
- * Estado inicial siempre 'resolving' — nunca muestra el aviso de error
- * antes de que termine la resolución async. Esto evita el flash/race condition
- * en la primera visita sin intención.
+ * Caso A: llega con ?intencion=<uuid> (desde la landing)
+ *   → registerIntencion() asocia la intención al usuario en el backend
+ *   → redirige a /solicitar/start limpio (sin ID en URL)
+ *
+ * Caso B: sin ID en URL
+ *   → getActiveIntencion() busca la intención activa del usuario en el backend
+ *   → si existe → /solicitar/start
+ *   → si no → muestra aviso para ir a la calculadora
+ *
+ * El intencionId ya no viaja en la URL más allá de este punto.
+ * El sidebar lo obtiene siempre fresco via GET /api/v1/intentions/active.
  */
 export default function SolicitarDispatcherPage() {
   const router = useRouter();
@@ -27,23 +34,26 @@ export default function SolicitarDispatcherPage() {
     async function resolve() {
       // Caso A: viene de la landing con ID en la URL
       if (intencionIdFromUrl) {
-        saveIntencionId(intencionIdFromUrl);
+        console.log('[DISPATCHER] Caso A — registrando intención:', intencionIdFromUrl);
         await registerIntencion(intencionIdFromUrl);
-        // Pasar el ID como param para que /start lo tenga disponible
-        // sin depender del timing de localStorage
-        router.replace(`/solicitar/start?intencion=${intencionIdFromUrl}`);
+        // El backend ya tiene la asociación usuario ↔ intención.
+        // No necesitamos pasar el ID en la URL — el orquestador y el sidebar
+        // lo obtienen via GET /api/v1/intentions/active.
+        router.replace('/solicitar/start');
         return;
       }
 
-      // Caso B: sin ID → buscar intención activa del usuario en el backend
+      // Caso B: sin ID → verificar si el usuario ya tiene una intención activa
+      console.log('[DISPATCHER] Caso B — buscando intención activa...');
       const active = await getActiveIntencion();
       if (active) {
-        saveIntencionId(active.intencionId);
-        router.replace(`/solicitar/start?intencion=${active.intencionId}`);
+        console.log('[DISPATCHER] Caso B — intención activa encontrada:', active.intencionId);
+        router.replace('/solicitar/start');
         return;
       }
 
       // Caso C: sin intención — mostrar aviso (solo después de resolver)
+      console.log('[DISPATCHER] Caso C — sin intención activa');
       setStatus('no-intencion');
     }
 

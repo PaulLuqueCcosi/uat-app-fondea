@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { getFunnelRedirect } from '@/app/actions/funnel-orchestrator.actions';
-import { saveIntencionId } from '@/lib/intencion';
 
 const MESSAGES = [
   'Verificando tu identidad...',
@@ -18,14 +17,12 @@ const MESSAGE_INTERVAL_MS = 1200;
 /**
  * Orquestador de pasos del funnel.
  *
- * Recibe el intencionId como query param desde el dispatcher
- * y lo persiste en localStorage de forma síncrona antes de evaluar los pasos.
- * Esto garantiza que el card del sidebar tenga el ID disponible
- * cuando se monte en el paso destino.
+ * Evalúa en qué paso del funnel está el usuario y redirige.
+ * El intencionId ya no viaja en la URL — el sidebar lo obtiene
+ * siempre fresco via GET /api/v1/intentions/active.
  */
 export default function SolicitarStartPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
@@ -36,25 +33,13 @@ export default function SolicitarStartPage() {
   }, []);
 
   useEffect(() => {
-    // Persistir el ID síncronamente antes de evaluar pasos
-    const intencionId = searchParams.get('intencion');
-    if (intencionId) {
-      saveIntencionId(intencionId);
-    }
-
     getFunnelRedirect()
       .then((path) => {
-        // Preservar el intencionId en la URL del destino para que el sidebar
-        // pueda cargarlo sin depender del timing de registerIntencion
-        if (intencionId) {
-          const separator = path.includes('?') ? '&' : '?';
-          router.replace(`${path}${separator}intencion=${intencionId}`);
-        } else {
-          router.replace(path);
-        }
+        console.log('[START] redirigiendo a:', path);
+        router.replace(path);
       })
       .catch(() => router.replace('/solicitar/kyc-validation'));
-  }, [router, searchParams]);
+  }, [router]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">

@@ -47,10 +47,16 @@ async function backendFetch(path: string, options: RequestInit = {}): Promise<Re
 
 function mapToConfig(data: any): IntencionConfig {
   return {
-    intencionId:      data.id,
-    amount:           data.amount,
-    installmentCount: data.installmentCount,
-    status:           data.status,
+    intencionId:            data.id,
+    productId:              data.productId,
+    amount:                 data.amount,
+    termDays:               data.termDays,
+    installmentCount:       data.installmentCount,
+    isFirstLoan:            data.isFirstLoan,
+    status:                 data.status,
+    calculatorIntentionId:  data.calculatorIntentionId,
+    createdAt:              data.createdAt,
+    updatedAt:              data.updatedAt,
   };
 }
 
