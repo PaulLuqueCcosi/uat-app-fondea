@@ -77,6 +77,12 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/logto).*)',
+    /*
+     * Ejecutar el middleware en todas las rutas EXCEPTO:
+     * - _next/static, _next/image  → assets internos de Next.js
+     * - Archivos estáticos con extensión (logo.png, favicon.ico, *.svg, etc.)
+     * - api/logto → rutas de auth (sign-in, callback) — nunca tocar
+     */
+    '/((?!_next/static|_next/image|api/logto|[^/]*\\.[^/]*$).*)',
   ],
 };
