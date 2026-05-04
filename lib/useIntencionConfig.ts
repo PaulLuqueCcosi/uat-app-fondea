@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getIntencionConfig } from '@/app/actions/intencion.actions';
+import { getIntencionConfig } from '@/lib/intencion-api';
 import type { IntencionConfig } from './types';
 
 /**

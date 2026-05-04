@@ -9,7 +9,7 @@ import CreditBar from './CreditBar';
 import LoanDetail from './LoanDetail';
 import { fetchLoanConfig, fetchLoanCalculation } from './calc-api';
 import type { LoanConfig, LoanCalculation, ScoreResult } from './calc-api';
-import { createIntencion, updateIntencion } from '@/app/actions/intencion.actions';
+import { createIntencion, updateIntencion } from '@/lib/intencion-api';
 
 // ── Tipos de tamaño ───────────────────────────────────────────────────────────
 // default → calculadora completa (página /calculadora)

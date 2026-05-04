@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Calculator } from 'lucide-react';
-import { registerIntencion, getActiveIntencion } from '@/app/actions/intencion.actions';
+import { registerIntencion, getActiveIntencion } from '@/lib/intencion-api';
 import { Button } from '@/components/ui/button';
 
 type Status = 'resolving' | 'no-intencion' | 'error';
