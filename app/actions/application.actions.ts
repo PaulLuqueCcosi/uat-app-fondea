@@ -40,10 +40,22 @@ export type SubmitApplicationResult = ActionResult & (
  * Envía la solicitud de préstamo al backend.
  * POST /api/v1/applications/submit
  */
-export async function submitApplicationAction(pepDeclarations: PEPDeclarations): Promise<SubmitApplicationResult> {
+export async function submitApplicationAction(
+  pepDeclarations: PEPDeclarations,
+  intentionId: string,
+): Promise<SubmitApplicationResult> {
   await requireValidSession();
 
   try {
+    if (!intentionId?.trim()) {
+      return {
+        success: false,
+        httpStatus: 0,
+        errorCategory: 'validation',
+        error: 'No tienes un préstamo seleccionado. Ve a la calculadora para elegir monto y plazo.',
+      };
+    }
+
     if (!pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms) {
       return {
         success: false,
@@ -55,7 +67,10 @@ export async function submitApplicationAction(pepDeclarations: PEPDeclarations):
 
     const res = await backendFetch('/api/v1/applications/submit', {
       method: 'POST',
-      body: JSON.stringify({ pep_declarations: pepDeclarations }),
+      body: JSON.stringify({
+        intention_id: intentionId,
+        pep_declarations: pepDeclarations,
+      }),
     });
 
     if (!isSuccess(res.status)) {

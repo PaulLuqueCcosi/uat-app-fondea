@@ -45,7 +45,7 @@ import {
   ACCOUNT_TYPE_OPTIONS,
 } from '@/lib/constants';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
-import { getIntencionId } from '@/lib/intencion';
+import { getActiveIntencion } from '@/lib/intencion-api';
 
 // Helper functions para obtener labels
 const getEmploymentLabel = (value?: string) => {
@@ -181,9 +181,9 @@ export function FunnelSummary({
   };
 
   const handleSubmit = async () => {
-    // Validar que existe una intención activa
-    const intencionId = getIntencionId();
-    if (!intencionId) {
+    // Validar que existe una intención activa en el backend
+    const activeIntencion = await getActiveIntencion();
+    if (!activeIntencion) {
       setSaveError('No tienes un préstamo seleccionado. Ve a la calculadora para elegir monto y plazo.');
       setSaveErrorCategory('validation');
       declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -200,7 +200,7 @@ export function FunnelSummary({
     setSaveError(null);
     setSaveErrorCategory(undefined);
     try {
-      const result = await submitApplicationAction(pepDeclarations);
+      const result = await submitApplicationAction(pepDeclarations, activeIntencion.intencionId);
 
       if (!result.success) {
         setSaveError(result.error ?? 'Error al enviar la solicitud. Intenta nuevamente.');
