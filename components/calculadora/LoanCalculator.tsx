@@ -150,6 +150,12 @@ interface LoanCalculatorProps {
   detailMode?: DetailMode;
   /** Ancho flexible (true) o fijo (false, default) */
   flexibleWidth?: boolean;
+  /**
+   * Callback después de un submit exitoso (crear o editar intención).
+   * Si se proporciona, se llama en lugar de navegar a /solicitar/start.
+   * Útil para el modal inline donde no queremos salir de la página.
+   */
+  onSubmitSuccess?: () => void;
   className?: string;
 }
 
@@ -164,6 +170,7 @@ export default function LoanCalculator({
   size = 'default',
   detailMode,
   flexibleWidth = false,
+  onSubmitSuccess,
   className,
 }: LoanCalculatorProps = {}) {
   const router = useRouter();
@@ -303,7 +310,12 @@ export default function LoanCalculator({
         if (!result) throw new Error('create_failed');
       }
 
-      router.push('/solicitar/start');
+      // Si hay callback de éxito (modal inline), usarlo en lugar de navegar
+      if (onSubmitSuccess) {
+        onSubmitSuccess();
+      } else {
+        router.push('/solicitar/start');
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg === 'locked') {
@@ -576,7 +588,7 @@ export default function LoanCalculator({
                         <Skeleton className={cn(isCompact ? 'h-3' : 'h-5')} />
                       ) : (
                         <div
-                          className={cn('font-black tabular-nums leading-none', isCompact ? 'text-xs' : 'text-base')}
+                          className={cn('font-black tabular-nums leading-none', isCompact ? 'text-xs' : 'text-sm')}
                           style={{ color: range.color }}
                         >
                           S/ {s.total.toFixed(2)}

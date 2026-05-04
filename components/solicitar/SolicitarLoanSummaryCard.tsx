@@ -1,10 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CreditCard, AlertTriangle, Settings, Calendar } from 'lucide-react';
+import { CreditCard, AlertTriangle, Pencil, Calendar } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIntencionConfig } from '@/lib/useIntencionConfig';
+import { LoanCalculatorModal } from '@/components/calculadora/LoanCalculatorModal';
+import type { InitialValues } from '@/components/calculadora/LoanCalculator';
 
 interface FunnelLoanSummaryCardProps {
   isOrchestrating?: boolean;
@@ -12,7 +15,8 @@ interface FunnelLoanSummaryCardProps {
 
 export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSummaryCardProps) {
   const router = useRouter();
-  const { config, loading } = useIntencionConfig(isOrchestrating);
+  const { config, loading, refetch } = useIntencionConfig(isOrchestrating);
+  const [calcOpen, setCalcOpen] = useState(false);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-PE', {
@@ -21,6 +25,16 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+
+  // Datos para pre-llenar la calculadora
+  const initialValues: InitialValues | undefined = config
+    ? {
+        intencionId: config.intencionId,
+        amount: config.amount,
+        termDays: config.termDays,
+        installmentCount: config.installmentCount,
+      }
+    : undefined;
 
   if (loading) {
     return (
@@ -39,88 +53,106 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
 
   if (!config) {
     return (
-      <Card className="mb-6 border-warning-200 bg-warning-50">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-warning-700 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-warning-900">
-                Sin préstamo seleccionado
-              </p>
-              <p className="text-xs text-warning-700 leading-relaxed">
-                Debes elegir el monto y plazo antes de continuar.
-              </p>
+      <>
+        <Card className="mb-6 border-warning-200 bg-warning-50">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-warning-700 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-warning-900">
+                  Sin préstamo seleccionado
+                </p>
+                <p className="text-xs text-warning-700 leading-relaxed">
+                  Debes elegir el monto y plazo antes de continuar.
+                </p>
+              </div>
             </div>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full text-xs border-warning-400 text-warning-800 hover:bg-warning-100"
-            onClick={() => router.push('/solicitar/calculadora')}
-          >
-            Ir a la calculadora
-          </Button>
-        </CardContent>
-      </Card>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-xs border-warning-400 text-warning-800 hover:bg-warning-100"
+              onClick={() => setCalcOpen(true)}
+            >
+              Configurar préstamo
+            </Button>
+          </CardContent>
+        </Card>
+
+        <LoanCalculatorModal
+          open={calcOpen}
+          onOpenChange={setCalcOpen}
+          onSuccess={refetch}
+        />
+      </>
     );
   }
 
   const estimatedInstallment = Math.ceil(config.amount / config.installmentCount);
 
   return (
-    <Card className="mb-6 bg-linear-to-br from-primary/15 via-primary/10 to-primary/5 shadow-sm border-primary/20">
-      <CardContent className="p-4 space-y-4">
+    <>
+      <Card className="mb-6 bg-linear-to-br from-primary/15 via-primary/10 to-primary/5 shadow-sm border-primary/20">
+        <CardContent className="p-4 space-y-4">
 
-        {/* Header: monto + botón editar */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-xs font-medium text-primary/70 uppercase tracking-wide">
-              Tu Solicitud
-            </h3>
-            <p className="text-2xl font-bold text-primary mt-1">
-              {formatCurrency(config.amount)}
-            </p>
+          {/* Header: monto + botón editar */}
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-xs font-medium text-primary/70 uppercase tracking-wide">
+                Tu Solicitud
+              </h3>
+              <p className="text-2xl font-bold text-primary mt-1">
+                {formatCurrency(config.amount)}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs border-primary/40 text-primary hover:bg-primary/10"
+              onClick={() => setCalcOpen(true)}
+            >
+              <Pencil className="w-3 h-3 mr-1" />
+              Editar
+            </Button>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-xs border-primary/40 text-primary hover:bg-primary/10"
-            onClick={() => router.push('/solicitar/calculadora')}
-          >
-            <Settings className="w-3 h-3 mr-1" />
-            Editar
-          </Button>
-        </div>
 
-        <div className="border-t border-primary/10" />
+          <div className="border-t border-primary/10" />
 
-        {/* Cuotas */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <CreditCard className="w-3.5 h-3.5 text-primary" />
+          {/* Cuotas */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <CreditCard className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground font-medium">Cuotas</p>
+              <p className="text-sm font-semibold text-foreground mt-0.5">
+                {config.installmentCount}x de {formatCurrency(estimatedInstallment)}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-medium">Cuotas</p>
-            <p className="text-sm font-semibold text-foreground mt-0.5">
-              {config.installmentCount}x de {formatCurrency(estimatedInstallment)}
-            </p>
-          </div>
-        </div>
 
-        {/* Plazo */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Calendar className="w-3.5 h-3.5 text-primary" />
+          {/* Plazo */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Calendar className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground font-medium">Plazo</p>
+              <p className="text-sm font-semibold text-foreground mt-0.5">
+                {config.termDays} días
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-medium">Plazo</p>
-            <p className="text-sm font-semibold text-foreground mt-0.5">
-              {config.termDays} días
-            </p>
-          </div>
-        </div>
 
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Modal de calculadora */}
+      <LoanCalculatorModal
+        open={calcOpen}
+        onOpenChange={setCalcOpen}
+        initialValues={initialValues}
+        onSuccess={refetch}
+      />
+    </>
   );
 }

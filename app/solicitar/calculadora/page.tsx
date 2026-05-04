@@ -1,6 +1,8 @@
 import { getActiveIntencion } from '@/app/actions/intencion.actions';
 import LoanCalculator from '@/components/calculadora/LoanCalculator';
 import type { InitialValues } from '@/components/calculadora/LoanCalculator';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 /**
  * Calculadora de préstamos interna.
@@ -17,28 +19,43 @@ export default async function CalculadoraPage() {
 
   const initialValues: InitialValues | undefined = intencion
     ? {
-        intencionId:      intencion.intencionId,
-        amount:           intencion.amount,
-        termDays:         intencion.termDays,
+        intencionId: intencion.intencionId,
+        amount: intencion.amount,
+        termDays: intencion.termDays,
         installmentCount: intencion.installmentCount,
       }
     : undefined;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 py-8">
-      <div className="w-full max-w-2xl">
-        <div className="text-center mb-8">
+      <div className="w-full max-w-lg">
+        {/* Volver al paso anterior */}
+        <Link
+          href="/solicitar/start"
+          className="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700 transition-colors mb-6 group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+          Volver al proceso
+        </Link>
+
+        {/* Header */}
+        <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">
             {intencion ? 'Modifica tu préstamo' : 'Calculadora de préstamo'}
           </h1>
-          <p className="text-sm sm:text-base text-neutral-600">
+          <p className="text-sm sm:text-base text-neutral-600 leading-relaxed">
             {intencion
-              ? 'Ajusta el monto o plazo y guarda los cambios.'
-              : 'Elige el monto y plazo que mejor se adapte a ti.'}
+              ? 'Ajusta el monto, plazo o número de cuotas. Los cambios se guardarán automáticamente.'
+              : 'Configura el monto y plazo que mejor se adapte a tus necesidades.'}
           </p>
         </div>
+
+        {/* Calculadora */}
         <div className="flex justify-center">
-          <LoanCalculator initialValues={initialValues} />
+          <LoanCalculator
+            initialValues={initialValues}
+            flexibleWidth
+          />
         </div>
       </div>
     </div>

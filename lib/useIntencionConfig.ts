@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getIntencionConfig } from '@/app/actions/intencion.actions';
 import type { IntencionConfig } from './types';
 
@@ -12,19 +12,24 @@ import type { IntencionConfig } from './types';
  * condition donde el sidebar obtiene la intención anterior antes de que
  * registerIntencion() haya terminado de asociar la nueva.
  *
- * Cuando `skip` pasa de true → false (el pathname cambia a un paso real),
- * el efecto se re-ejecuta y obtiene la intención ya registrada.
+ * Devuelve `refetch()` para forzar una recarga (ej: después de editar
+ * la intención desde el modal de la calculadora).
  */
 export function useIntencionConfig(skip = false): {
   config: IntencionConfig | null;
   loading: boolean;
+  refetch: () => void;
 } {
   const [config, setConfig] = useState<IntencionConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [version, setVersion] = useState(0);
+
+  const refetch = useCallback(() => {
+    setVersion((v) => v + 1);
+  }, []);
 
   useEffect(() => {
     if (skip) {
-      // Mientras orquesta, mantener loading=true y no llamar al backend
       setLoading(true);
       return;
     }
@@ -40,7 +45,7 @@ export function useIntencionConfig(skip = false): {
       .finally(() => {
         setLoading(false);
       });
-  }, [skip]);
+  }, [skip, version]);
 
-  return { config, loading };
+  return { config, loading, refetch };
 }
