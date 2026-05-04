@@ -23,8 +23,6 @@ export default async function DevToolsPage() {
     isAuthenticated,
     claims,         // ID token claims (sub, email, name, iat, exp, etc.)
     userInfo,       // Datos del endpoint /oidc/me (más completos, requiere fetchUserInfo: true)
-    accessTokenMap, // Mapa de resource → { token, scope, expiresAt }
-    organizationTokenMap, // Mapa de orgId → token
   } = context;
 
   // Access token para el backend (con aud = LOGTO_API_RESOURCE)
@@ -38,17 +36,6 @@ export default async function DevToolsPage() {
 
   // Decodificar el JWT del access token
   const tokenPayload = accessToken ? decodeJwt(accessToken) : null;
-
-  // Decodificar todos los tokens del accessTokenMap
-  const accessTokenMapDecoded: Record<string, unknown> = {};
-  if (accessTokenMap) {
-    for (const [resource, entry] of Object.entries(accessTokenMap)) {
-      accessTokenMapDecoded[resource] = {
-        ...entry,
-        payload: entry.token ? decodeJwt(entry.token) : null,
-      };
-    }
-  }
 
   // Config activa (sin secrets)
   const activeConfig = {
@@ -70,8 +57,6 @@ export default async function DevToolsPage() {
       accessToken={accessToken}
       tokenError={tokenError}
       tokenPayload={tokenPayload}
-      accessTokenMap={accessTokenMapDecoded}
-      organizationTokenMap={organizationTokenMap ?? null}
       activeConfig={activeConfig}
     />
   );

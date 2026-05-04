@@ -19,8 +19,6 @@ interface DevToolsClientProps {
   accessToken: string | null;
   tokenError: string | null;
   tokenPayload: Record<string, unknown> | null;
-  accessTokenMap: Record<string, unknown> | null;
-  organizationTokenMap: Record<string, unknown> | null;
   activeConfig: Record<string, unknown>;
 }
 
@@ -113,10 +111,10 @@ export function DevToolsClient({
   accessToken,
   tokenError,
   tokenPayload,
-  accessTokenMap,
-  organizationTokenMap,
   activeConfig,
 }: DevToolsClientProps) {
+  const accessTokenMap = null;
+  const organizationTokenMap = null;
   const [showToken, setShowToken] = useState(false);
   const [activeTab, setActiveTab] = useState<
     'token' | 'claims' | 'userinfo' | 'tokenmap' | 'orgs' | 'config' | 'curl'
