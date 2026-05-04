@@ -11,7 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { ApplicationRecord } from '@/lib/types';
+import type { ApplicationRecord, IntencionConfig } from '@/lib/types';
 
 interface ExpedienteSection {
   id: string;
@@ -78,9 +78,10 @@ const progress = 20;
 interface DashboardHomeClientProps {
   userName: string;
   applications: ApplicationRecord[];
+  activeIntencion: IntencionConfig | null;
 }
 
-export function DashboardHomeClient({ userName, applications }: DashboardHomeClientProps) {
+export function DashboardHomeClient({ userName, applications, activeIntencion }: DashboardHomeClientProps) {
   const router = useRouter();
   const [showDrawer, setShowDrawer] = useState(false);
 
@@ -93,15 +94,35 @@ export function DashboardHomeClient({ userName, applications }: DashboardHomeCli
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-dark mb-1">Hola, {userName}</h1>
-            <p className="text-sm sm:text-base text-fondea-text">Completa tu expediente para solicitar tu primer préstamo</p>
+            <p className="text-sm sm:text-base text-fondea-text">
+              {activeIntencion
+                ? 'Tienes una solicitud en curso. Continúa donde lo dejaste.'
+                : 'Completa tu expediente para solicitar tu primer préstamo'}
+            </p>
           </div>
-          <button
-          onClick={() => router.push('/solicitar')}
-            className="flex items-center justify-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl whitespace-nowrap"
-          >
-            <Plus className="w-5 h-5" />
-            Pedir préstamo
-          </button>
+          <div className="flex items-center gap-2">
+            {activeIntencion && (
+              <button
+                onClick={() => router.push('/solicitar/start')}
+                className="flex items-center justify-center gap-2 bg-primary text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl whitespace-nowrap text-sm"
+              >
+                <ArrowRight className="w-4 h-4" />
+                Continuar solicitud
+              </button>
+            )}
+            <button
+              onClick={() => router.push('/solicitar/calculadora')}
+              className={cn(
+                'flex items-center justify-center gap-2 font-semibold px-5 py-2.5 rounded-lg transition-colors whitespace-nowrap text-sm',
+                activeIntencion
+                  ? 'border border-primary/30 text-primary hover:bg-primary/5'
+                  : 'bg-primary text-white hover:bg-primary/90 shadow-lg hover:shadow-xl',
+              )}
+            >
+              <Plus className="w-4 h-4" />
+              {activeIntencion ? 'Nuevo préstamo' : 'Pedir préstamo'}
+            </button>
+          </div>
         </div>
 
         {/* Progress bar */}
@@ -278,32 +299,59 @@ export function DashboardHomeClient({ userName, applications }: DashboardHomeCli
               <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
                 <div className={cn(
                   'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
-                  profileIsComplete ? 'bg-secondary' : 'bg-border'
+                  activeIntencion ? 'bg-primary' : 'bg-border'
                 )}>
                   <FileText className="w-4 h-4 text-white" />
                 </div>
-                <h2 className="font-semibold text-dark">Solicitar Préstamo</h2>
+                <h2 className="font-semibold text-dark">
+                  {activeIntencion ? 'Tu Préstamo' : 'Solicitar Préstamo'}
+                </h2>
               </div>
               <div className="px-5 py-5 flex flex-col gap-3">
-                {profileIsComplete ? (
+                {activeIntencion ? (
                   <>
-                    <p className="text-sm text-fondea-text">Tu perfil está completo. ¡Ya puedes solicitar!</p>
+                    {/* Resumen de la intención activa */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-fondea-text">Monto</span>
+                      <span className="font-semibold text-dark">
+                        {new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 }).format(activeIntencion.amount)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-fondea-text">Plazo</span>
+                      <span className="font-semibold text-dark">{activeIntencion.termDays} días</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-fondea-text">Cuotas</span>
+                      <span className="font-semibold text-dark">{activeIntencion.installmentCount}</span>
+                    </div>
+                    <div className="border-t border-border my-1" />
                     <button
-                      onClick={() => router.push('/solicitar')}
-                      className="w-full bg-secondary text-dark font-semibold text-sm py-2.5 rounded-lg hover:bg-secondary/90 transition-colors"
+                      onClick={() => router.push('/solicitar/start')}
+                      className="w-full bg-primary text-white font-semibold text-sm py-2.5 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                     >
-                      Solicitar ahora
+                      Continuar solicitud
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => router.push('/solicitar/calculadora')}
+                      className="w-full flex items-center justify-between text-sm text-primary font-medium border border-border rounded-lg px-4 py-2.5 hover:bg-primary-50 transition-colors"
+                    >
+                      <span>Nuevo préstamo</span>
+                      <Plus className="w-4 h-4" />
                     </button>
                   </>
                 ) : (
                   <>
-                    <p className="text-sm text-fondea-text">Completa tu expediente para desbloquear esta función.</p>
+                    <p className="text-sm text-fondea-text">
+                      Configura el monto y plazo de tu préstamo para comenzar.
+                    </p>
                     <button
-                      onClick={() => setShowDrawer(true)}
-                      className="w-full flex items-center justify-between text-sm text-primary font-medium border border-border rounded-lg px-4 py-2.5 hover:bg-primary-50 transition-colors"
+                      onClick={() => router.push('/solicitar/calculadora')}
+                      className="w-full bg-primary text-white font-semibold text-sm py-2.5 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                     >
-                      <span>Ver qué falta</span>
-                      <ArrowRight className="w-4 h-4" />
+                      <Plus className="w-4 h-4" />
+                      Pedir préstamo
                     </button>
                   </>
                 )}
