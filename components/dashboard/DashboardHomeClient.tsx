@@ -111,7 +111,7 @@ export function DashboardHomeClient({ userName, applications, activeIntencion }:
               </button>
             )}
             <button
-              onClick={() => router.push('/solicitar/calculadora')}
+              onClick={() => router.push('/dashboard/calculadora')}
               className={cn(
                 'flex items-center justify-center gap-2 font-semibold px-5 py-2.5 rounded-lg transition-colors whitespace-nowrap text-sm',
                 activeIntencion
@@ -334,7 +334,7 @@ export function DashboardHomeClient({ userName, applications, activeIntencion }:
                       <ArrowRight className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => router.push('/solicitar/calculadora')}
+                      onClick={() => router.push('/dashboard/calculadora')}
                       className="w-full flex items-center justify-between text-sm text-primary font-medium border border-border rounded-lg px-4 py-2.5 hover:bg-primary-50 transition-colors"
                     >
                       <span>Nuevo préstamo</span>
@@ -347,7 +347,7 @@ export function DashboardHomeClient({ userName, applications, activeIntencion }:
                       Configura el monto y plazo de tu préstamo para comenzar.
                     </p>
                     <button
-                      onClick={() => router.push('/solicitar/calculadora')}
+                      onClick={() => router.push('/dashboard/calculadora')}
                       className="w-full bg-primary text-white font-semibold text-sm py-2.5 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                     >
                       <Plus className="w-4 h-4" />

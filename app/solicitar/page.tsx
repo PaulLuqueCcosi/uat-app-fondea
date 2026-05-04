@@ -95,7 +95,7 @@ export default function SolicitarDispatcherPage() {
           </p>
         </div>
         <Button
-          onClick={() => router.push('/solicitar/calculadora')}
+          onClick={() => router.push('/dashboard/calculadora')}
           className="w-full"
         >
           Ir a la calculadora
