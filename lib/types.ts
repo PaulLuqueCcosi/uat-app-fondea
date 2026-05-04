@@ -443,22 +443,27 @@ export interface BankAccountProfileStatus {
 // ─── Intencion / Loan Config ─────────────────────────────────────────────────
 
 /**
- * Configuración del préstamo asociada a una intención de la landing.
- * El backend la genera cuando el usuario selecciona monto y plazo en la landing.
+ * Configuración del préstamo asociada a una intención.
+ *
+ * Campos disponibles actualmente según el backend:
+ * - intencionId, amount, installmentCount, status
+ *
+ * Campos pendientes (dependen del módulo calculator):
+ * - monthlyPayment, monthlyRate, tea
  */
 export interface IntencionConfig {
-  /** ID de la intención — viene de la landing */
+  /** ID de la intención */
   intencionId: string;
   /** Monto solicitado en soles */
   amount: number;
   /** Número de cuotas */
-  months: number;
-  /** Cuota mensual calculada */
-  monthlyPayment: number;
-  /** Tasa efectiva mensual (%) */
-  monthlyRate: number;
-  /** Tasa efectiva anual (%) */
-  tea: number;
+  installmentCount: number;
+  /** Estado de la intención en el backend */
+  status?: string;
+  // Los siguientes campos no están disponibles aún — pendiente módulo calculator
+  // monthlyPayment: number;
+  // monthlyRate: number;
+  // tea: number;
 }
 
 

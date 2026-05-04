@@ -30,7 +30,6 @@ Obtiene la intención activa del usuario autenticado. Solo puede haber una inten
   "months": 12,
   "monthlyPayment": 456.23,
   "monthlyRate": 3.5,
-  "tea": 51.1,
   "createdAt": "2026-05-02T10:00:00Z",
   "updatedAt": "2026-05-02T10:00:00Z"
 }
@@ -201,21 +200,6 @@ Elimina una intención. Solo puede eliminarla el usuario dueño. No se puede eli
 
 ---
 
-## Cálculo de cuota mensual
-
-El backend debe calcular `monthlyPayment` usando la fórmula de amortización francesa:
-
-```
-monthlyPayment = amount × r / (1 - (1 + r)^(-n))
-
-donde:
-  r = monthlyRate / 100
-  n = months
-```
-
-El frontend ya tiene esta fórmula implementada en `lib/utils.ts → calculateMonthlyPayment()` como referencia.
-
----
 
 ## Notas de integración
 

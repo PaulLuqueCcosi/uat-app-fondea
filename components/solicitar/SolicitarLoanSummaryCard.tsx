@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Calendar, CreditCard, AlertTriangle, Settings } from 'lucide-react';
+import { CreditCard, AlertTriangle, Settings } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIntencionConfig } from '@/lib/useIntencionConfig';
@@ -85,29 +85,15 @@ export function FunnelLoanSummaryCard() {
           </Button>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-              <CreditCard className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground font-medium">Cuotas</p>
-              <p className="text-sm font-semibold text-foreground mt-0.5">
-                {config.months}x de {formatCurrency(config.monthlyPayment)}
-              </p>
-            </div>
+        <div className="flex items-start gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+            <CreditCard className="w-4 h-4 text-primary" />
           </div>
-
-          <div className="flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-              <Calendar className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground font-medium">TEA</p>
-              <p className="text-sm font-semibold text-foreground mt-0.5">
-                {config.tea}%
-              </p>
-            </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground font-medium">Cuotas</p>
+            <p className="text-sm font-semibold text-foreground mt-0.5">
+              {config.installmentCount} cuotas
+            </p>
           </div>
         </div>
       </CardContent>

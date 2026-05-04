@@ -1,244 +1,245 @@
 'use server';
 
-import { requireValidSession } from './auth.actions';
-import { getAccessTokenRSC } from '@logto/next/server-actions';
+import { getAccessToken } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
 import { IntencionConfig } from '@/lib/types';
-import { calculateMonthlyPayment } from '@/lib/utils';
-import { readFile, writeFile } from 'fs/promises';
-import path from 'path';
 
-// ── Constantes ────────────────────────────────────────────────────────────────
+// ── Helper: fetch autenticado al backend ──────────────────────────────────────
 
-const MONTHLY_RATE = 3.5;
-const TEA = 51.1;
-const DEFAULT_AMOUNT = 5000;
-const DEFAULT_MONTHS = 12;
+async function backendFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const resource = process.env.LOGTO_API_RESOURCE;
+  const baseUrl  = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
+  const fullUrl  = `${baseUrl}${path}`;
+  const method   = options.method ?? 'GET';
 
-// ── JSON store (mock hasta que el backend lo implemente) ──────────────────────
+  console.log(`[BACKEND_FETCH] → ${method} ${fullUrl}`);
+  console.log(`[BACKEND_FETCH] LOGTO_API_RESOURCE="${resource}" | BACKEND_API_URL="${baseUrl}"`);
 
-const DB_PATH = path.join(process.cwd(), 'data', 'intenciones.json');
-
-interface IntencionRecord {
-  intencionId: string;
-  userId: string;
-  amount: number;
-  months: number;
-  monthlyPayment: number;
-  monthlyRate: number;
-  tea: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface IntencionesDB {
-  intenciones: IntencionRecord[];
-}
-
-async function readDB(): Promise<IntencionesDB> {
+  let token: string | undefined;
   try {
-    const raw = await readFile(DB_PATH, 'utf-8');
-    return JSON.parse(raw) as IntencionesDB;
-  } catch {
-    return { intenciones: [] };
+    token = await getAccessToken(logtoConfig, resource);
+    if (!token) {
+      console.error('[BACKEND_FETCH] ⚠️  getAccessToken devolvió undefined/null — ¿sesión expirada o resource incorrecto?');
+    } else {
+      // Loguear solo los primeros 40 chars para no exponer el JWT completo
+      console.log(`[BACKEND_FETCH] token obtenido: ${token.slice(0, 40)}...`);
+    }
+  } catch (tokenError) {
+    console.error('[BACKEND_FETCH] ❌ Error al obtener access token:', tokenError);
+    throw tokenError;
   }
+
+  const res = await fetch(fullUrl, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+
+  console.log(`[BACKEND_FETCH] ← ${res.status} ${res.statusText} | ${method} ${fullUrl}`);
+
+  return res;
 }
 
-async function writeDB(db: IntencionesDB): Promise<void> {
-  await writeFile(DB_PATH, JSON.stringify(db, null, 2), 'utf-8');
-}
+// ── Mapeo respuesta backend → IntencionConfig ─────────────────────────────────
 
-function recordToConfig(r: IntencionRecord): IntencionConfig {
+function mapToConfig(data: any): IntencionConfig {
   return {
-    intencionId:    r.intencionId,
-    amount:         r.amount,
-    months:         r.months,
-    monthlyPayment: r.monthlyPayment,
-    monthlyRate:    r.monthlyRate,
-    tea:            r.tea,
+    intencionId:      data.id,
+    amount:           data.amount,
+    installmentCount: data.installmentCount,
+    status:           data.status,
   };
 }
-
-// ── Helper fetch autenticado (para cuando conectemos el backend) ──────────────
-
-// async function backendFetch(path: string, options: RequestInit = {}): Promise<Response> {
-//   const token = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
-//   const baseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
-//   return fetch(`${baseUrl}${path}`, {
-//     ...options,
-//     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...options.headers },
-//   });
-// }
 
 // ── CRUD ──────────────────────────────────────────────────────────────────────
 
 /**
  * Obtiene la intención activa del usuario autenticado.
- * Retorna null si no tiene ninguna.
+ * Retorna null si no tiene ninguna (404).
  *
- * TODO: GET /api/v1/intentions/active
+ * GET /api/v1/intentions/active
  */
 export async function getActiveIntencion(): Promise<IntencionConfig | null> {
-  const user = await requireValidSession();
-
-  console.log('[INTENCION] getActiveIntencion → userId:', user.id);
-
+  console.log('[INTENCION] getActiveIntencion → consultando backend...');
   try {
-    const db = await readDB();
-    const record = db.intenciones.find((r) => r.userId === user.id);
-    console.log('[INTENCION] getActiveIntencion result →', record ? `found: ${record.intencionId}` : 'not found');
-    return record ? recordToConfig(record) : null;
+    const res = await backendFetch('/api/v1/intentions/active');
+
+    if (res.status === 404) {
+      console.log('[INTENCION] getActiveIntencion → 404: sin intención activa');
+      return null;
+    }
+
+    if (!res.ok) {
+      let errorBody = '(sin body)';
+      try { errorBody = await res.text(); } catch {}
+      console.error(`[INTENCION] getActiveIntencion → error ${res.status}:`, errorBody);
+      return null;
+    }
+
+    const data = await res.json();
+    console.log('[INTENCION] getActiveIntencion → ✅ encontrada:', { id: data.id, status: data.status });
+    return mapToConfig(data);
+
   } catch (error) {
-    console.error('[INTENCION] Error al obtener intención activa:', error);
+    console.error('[INTENCION] getActiveIntencion → network error:', error);
     return null;
   }
 }
 
 /**
  * Registra una intención existente (generada en la landing) al usuario autenticado.
- * Si ya existe una intención con ese ID para el usuario, la retorna sin duplicar.
+ * Si ya existe para ese usuario, la retorna sin duplicar (200).
+ * Si es nueva, la crea y retorna (201).
+ * Si el ID no existe en el sistema, retorna null (404).
  *
- * TODO: POST /api/v1/intentions/{intencionId}/register
+ * POST /api/v1/intentions/{calcId}/register
  */
 export async function registerIntencion(intencionId: string): Promise<IntencionConfig | null> {
-  const user = await requireValidSession();
+  if (!intencionId?.trim()) {
+    console.warn('[INTENCION] registerIntencion → intencionId vacío, abortando');
+    return null;
+  }
 
-  if (!intencionId?.trim()) return null;
+  console.log('[INTENCION] registerIntencion → iniciando para ID:', intencionId);
 
   try {
-    const db = await readDB();
+    const res = await backendFetch(`/api/v1/intentions/${intencionId}/register`, {
+      method: 'POST',
+    });
 
-    // Si ya existe este ID para este usuario, retornar sin duplicar
-    const existing = db.intenciones.find(
-      (r) => r.intencionId === intencionId && r.userId === user.id
-    );
-    if (existing) return recordToConfig(existing);
+    if (res.status === 404) {
+      console.warn('[INTENCION] registerIntencion → 404: ID no existe en el sistema:', intencionId);
+      return null;
+    }
 
-    // Crear nuevo registro
-    const now = new Date().toISOString();
-    const record: IntencionRecord = {
-      intencionId,
-      userId:         user.id,
-      amount:         DEFAULT_AMOUNT,
-      months:         DEFAULT_MONTHS,
-      monthlyPayment: calculateMonthlyPayment(DEFAULT_AMOUNT, MONTHLY_RATE, DEFAULT_MONTHS),
-      monthlyRate:    MONTHLY_RATE,
-      tea:            TEA,
-      createdAt:      now,
-      updatedAt:      now,
-    };
+    if (!res.ok) {
+      // Leer el body del error para saber qué devuelve el backend
+      let errorBody = '(sin body)';
+      try { errorBody = await res.text(); } catch {}
+      console.error(`[INTENCION] registerIntencion → error ${res.status}:`, errorBody);
+      return null;
+    }
 
-    db.intenciones.push(record);
-    await writeDB(db);
+    const data = await res.json();
+    const isNew = res.status === 201;
+    console.log(`[INTENCION] registerIntencion → ✅ ${isNew ? 'NUEVA (201)' : 'EXISTENTE (200)'}`, {
+      id: data.id,
+      amount: data.amount,
+      installmentCount: data.installmentCount,
+      status: data.status,
+    });
+    return mapToConfig(data);
 
-    return recordToConfig(record);
   } catch (error) {
-    console.error('[INTENCION] Error al registrar intención:', error);
+    console.error('[INTENCION] registerIntencion → network error:', error);
     return null;
   }
 }
 
 /**
- * Crea una nueva intención para el usuario (desde la calculadora interna).
- * Si el usuario ya tiene una intención activa, la reemplaza.
+ * Crea una nueva intención desde la calculadora interna.
+ * Si el usuario ya tiene una activa, el backend la reemplaza (REPLACED).
  *
- * TODO: POST /api/v1/intentions
+ * POST /api/v1/intentions
  */
 export async function createIntencion(
   amount: number,
   months: number
 ): Promise<IntencionConfig | null> {
-  const user = await requireValidSession();
-
   try {
-    const db = await readDB();
-    const now = new Date().toISOString();
+    const res = await backendFetch('/api/v1/intentions', {
+      method: 'POST',
+      body: JSON.stringify({ amount, months }),
+    });
 
-    // Eliminar intención previa del usuario si existe
-    db.intenciones = db.intenciones.filter((r) => r.userId !== user.id);
+    if (res.status === 422) {
+      const err = await res.json();
+      console.error('[INTENCION] createIntencion validación fallida:', err);
+      return null;
+    }
 
-    const intencionId = `int-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const record: IntencionRecord = {
-      intencionId,
-      userId:         user.id,
-      amount,
-      months,
-      monthlyPayment: calculateMonthlyPayment(amount, MONTHLY_RATE, months),
-      monthlyRate:    MONTHLY_RATE,
-      tea:            TEA,
-      createdAt:      now,
-      updatedAt:      now,
-    };
+    if (!res.ok) {
+      console.error('[INTENCION] createIntencion error →', res.status);
+      return null;
+    }
 
-    db.intenciones.push(record);
-    await writeDB(db);
+    const data = await res.json();
+    console.log('[INTENCION] createIntencion → created:', data.id);
+    return mapToConfig(data);
 
-    return recordToConfig(record);
   } catch (error) {
-    console.error('[INTENCION] Error al crear intención:', error);
+    console.error('[INTENCION] createIntencion network error:', error);
     return null;
   }
 }
 
 /**
  * Actualiza el monto y/o plazo de una intención existente.
+ * Retorna null si está bloqueada (409) o no existe (404).
  *
- * TODO: PUT /api/v1/intentions/{intencionId}
+ * PUT /api/v1/intentions/{id}
  */
 export async function updateIntencion(
   intencionId: string,
   amount: number,
   months: number
 ): Promise<IntencionConfig | null> {
-  const user = await requireValidSession();
-
   try {
-    const db = await readDB();
-    const idx = db.intenciones.findIndex(
-      (r) => r.intencionId === intencionId && r.userId === user.id
-    );
+    const res = await backendFetch(`/api/v1/intentions/${intencionId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ amount, months }),
+    });
 
-    if (idx === -1) return null;
+    if (res.status === 409) {
+      console.warn('[INTENCION] updateIntencion → intención bloqueada (solicitud enviada)');
+      return null;
+    }
 
-    const updated: IntencionRecord = {
-      ...db.intenciones[idx],
-      amount,
-      months,
-      monthlyPayment: calculateMonthlyPayment(amount, MONTHLY_RATE, months),
-      updatedAt: new Date().toISOString(),
-    };
+    if (!res.ok) {
+      console.error('[INTENCION] updateIntencion error →', res.status);
+      return null;
+    }
 
-    db.intenciones[idx] = updated;
-    await writeDB(db);
+    const data = await res.json();
+    console.log('[INTENCION] updateIntencion → updated:', data.id);
+    return mapToConfig(data);
 
-    return recordToConfig(updated);
   } catch (error) {
-    console.error('[INTENCION] Error al actualizar intención:', error);
+    console.error('[INTENCION] updateIntencion network error:', error);
     return null;
   }
 }
 
 /**
- * Elimina la intención del usuario.
+ * Cancela (soft delete) una intención.
+ * Retorna false si está bloqueada (409) o no existe (404).
  *
- * TODO: DELETE /api/v1/intentions/{intencionId}
+ * DELETE /api/v1/intentions/{id}
  */
 export async function deleteIntencion(intencionId: string): Promise<boolean> {
-  const user = await requireValidSession();
-
   try {
-    const db = await readDB();
-    const before = db.intenciones.length;
-    db.intenciones = db.intenciones.filter(
-      (r) => !(r.intencionId === intencionId && r.userId === user.id)
-    );
+    const res = await backendFetch(`/api/v1/intentions/${intencionId}`, {
+      method: 'DELETE',
+    });
 
-    if (db.intenciones.length === before) return false;
+    if (res.status === 409) {
+      console.warn('[INTENCION] deleteIntencion → intención bloqueada (solicitud enviada)');
+      return false;
+    }
 
-    await writeDB(db);
-    return true;
+    if (res.status === 404) {
+      console.warn('[INTENCION] deleteIntencion → no encontrada:', intencionId);
+      return false;
+    }
+
+    console.log('[INTENCION] deleteIntencion → cancelled:', intencionId);
+    return res.status === 204;
+
   } catch (error) {
-    console.error('[INTENCION] Error al eliminar intención:', error);
+    console.error('[INTENCION] deleteIntencion network error:', error);
     return false;
   }
 }
@@ -247,29 +248,42 @@ export async function deleteIntencion(intencionId: string): Promise<boolean> {
  * Obtiene la config de una intención por ID.
  * Si se pasa 'active', retorna la intención activa del usuario.
  *
- * TODO: GET /api/v1/intentions/{intencionId}
+ * GET /api/v1/intentions/{id}
+ * GET /api/v1/intentions/active
  */
 export async function getIntencionConfig(intencionId: string): Promise<IntencionConfig | null> {
-  const user = await requireValidSession();
-
-  console.log('[INTENCION] getIntencionConfig →', { intencionId, userId: user.id });
-
-  // Alias especial: obtener la intención activa del usuario
   if (intencionId === 'active') {
     return getActiveIntencion();
   }
 
-  if (!intencionId?.trim()) return null;
+  if (!intencionId?.trim()) {
+    console.warn('[INTENCION] getIntencionConfig → intencionId vacío');
+    return null;
+  }
+
+  console.log('[INTENCION] getIntencionConfig → buscando ID:', intencionId);
 
   try {
-    const db = await readDB();
-    const record = db.intenciones.find(
-      (r) => r.intencionId === intencionId && r.userId === user.id
-    );
-    console.log('[INTENCION] getIntencionConfig result →', record ? 'found' : 'not found');
-    return record ? recordToConfig(record) : null;
+    const res = await backendFetch(`/api/v1/intentions/${intencionId}`);
+
+    if (res.status === 404) {
+      console.log('[INTENCION] getIntencionConfig → 404: no encontrada:', intencionId);
+      return null;
+    }
+
+    if (!res.ok) {
+      let errorBody = '(sin body)';
+      try { errorBody = await res.text(); } catch {}
+      console.error(`[INTENCION] getIntencionConfig → error ${res.status}:`, errorBody);
+      return null;
+    }
+
+    const data = await res.json();
+    console.log('[INTENCION] getIntencionConfig → ✅ encontrada:', { id: data.id, status: data.status });
+    return mapToConfig(data);
+
   } catch (error) {
-    console.error('[INTENCION] Error al obtener config:', error);
+    console.error('[INTENCION] getIntencionConfig → network error:', error);
     return null;
   }
 }
