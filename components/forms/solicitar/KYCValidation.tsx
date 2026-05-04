@@ -265,10 +265,10 @@ export function FunnelKYCValidation({
   const verifiedView = (
     <div className="space-y-6">
       {/* Banner de verificación exitosa */}
-      <div className="flex items-center gap-3 rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3">
-        <ShieldCheck className="h-5 w-5 shrink-0 text-secondary" />
+      <div className="flex items-center gap-3 rounded-lg border border-success-200 bg-success-50 px-4 py-3">
+        <ShieldCheck className="h-5 w-5 shrink-0 text-success-600" />
         <div className="flex-1">
-          <p className="text-sm font-semibold text-secondary">Identidad verificada</p>
+          <p className="text-sm font-semibold text-success-700">Identidad verificada</p>
           <p className="text-xs text-muted-foreground">
             Tus datos fueron validados correctamente. Si necesitas corregir algo, puedes editar.
           </p>

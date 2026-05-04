@@ -388,7 +388,7 @@ export default function LoanCalculator({
         <div className="flex justify-center mb-3">
           <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-primary-50 text-primary-700 border border-primary-200">
             <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
-            Editando tu préstamo actual
+            Editando tu solicitud actual
           </span>
         </div>
       )}
