@@ -4,6 +4,46 @@ import { getLogtoContext, getAccessTokenRSC, signOut } from '@logto/next/server-
 import { redirect } from 'next/navigation';
 import { logtoConfig } from '../logto';
 
+// ── Helper: sync de usuario con el backend ────────────────────────────────────
+
+/**
+ * Llama a POST /api/v1/users/sync con el JWT del usuario.
+ * Si el usuario no existe en el backend, lo crea.
+ * Si ya existe, lo devuelve tal cual.
+ *
+ * SIEMPRE se llama antes de cualquier otra operación — es el punto de entrada
+ * que garantiza que la cuenta existe en el backend antes de usarla.
+ *
+ * Fire-and-forget: si falla, logueamos pero no bloqueamos el flujo.
+ */
+async function syncUser(): Promise<void> {
+  try {
+    const token = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
+    if (!token) {
+      console.error('[AUTH:sync] ⚠️  sin token — no se puede sincronizar usuario');
+      return;
+    }
+
+    const baseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
+    const res = await fetch(`${baseUrl}/api/v1/users/sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (res.ok) {
+      const status = res.status === 201 ? 'CREADO' : 'EXISTENTE';
+      console.log(`[AUTH:sync] ✅ usuario sincronizado (${status})`);
+    } else {
+      console.error(`[AUTH:sync] ❌ error ${res.status} al sincronizar usuario`);
+    }
+  } catch (error) {
+    console.error('[AUTH:sync] ❌ network error:', error);
+  }
+}
+
 /**
  * Devuelve el usuario autenticado o null si no hay sesión.
  * No redirige — útil para componentes que necesitan saber si hay usuario
@@ -41,6 +81,10 @@ export async function requireValidSession() {
   }
 
   console.log('[AUTH:session] válida →', { userId: claims!.sub, email: claims!.email });
+
+  // Sincronizar usuario con el backend — SIEMPRE, antes de cualquier otra operación.
+  // Garantiza que la cuenta existe en el backend (la crea si es nueva).
+  await syncUser();
 
   return {
     id: claims!.sub || '',

@@ -535,7 +535,7 @@ export function DevToolsClient({
       )}
 
       {/* Timestamp */}
-      <p className="text-xs text-muted-foreground text-center pb-4">
+      <p className="text-xs text-muted-foreground text-center pb-4" suppressHydrationWarning>
         Datos capturados: {new Date().toLocaleString()} — Esta página no usa cache.
       </p>
     </div>
