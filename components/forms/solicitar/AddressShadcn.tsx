@@ -427,6 +427,13 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
           <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
             <SectionHeader title="Dirección" description="Busca tu dirección con Google" />
             <div className="md:col-span-2 space-y-8">
+              {/* Aviso sobre precisión de Google */}
+              <div className="flex gap-2.5 rounded-lg border border-primary/20 bg-primary-50/50 px-3.5 py-3">
+                <MapPin className="w-4 h-4 text-primary-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-neutral-600 leading-relaxed">
+                  Asegúrate de que la dirección sugerida sea exacta. Si no coincide con tu ubicación real, elige el método <span className="font-medium text-neutral-800">Manual</span> para ingresar los datos tú mismo.
+                </p>
+              </div>
               <FormField
                 control={form.control}
                 name="google_address"

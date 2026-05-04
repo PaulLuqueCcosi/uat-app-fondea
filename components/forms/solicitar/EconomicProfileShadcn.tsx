@@ -381,11 +381,11 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                     </div>
                     <Input
                       type="number"
-                      placeholder="0.00"
+                      placeholder="0"
                       {...field}
                       className="w-full pl-10"
                       min="0"
-                      step="0.01"
+                      step="1"
                     />
                   </div>
                   <FormDescription>Incluye alimentación, transporte, servicios, etc.</FormDescription>
