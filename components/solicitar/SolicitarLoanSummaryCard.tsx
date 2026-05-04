@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { CreditCard, AlertTriangle, Settings, Calendar, Star } from 'lucide-react';
+import { CreditCard, AlertTriangle, Settings, Calendar } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIntencionConfig } from '@/lib/useIntencionConfig';
@@ -22,7 +22,6 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
       maximumFractionDigits: 0,
     }).format(amount);
 
-  // Cargando
   if (loading) {
     return (
       <Card className="mb-6 border-primary/20 bg-linear-to-br from-primary/10 to-primary/5">
@@ -38,7 +37,6 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
     );
   }
 
-  // Sin intención
   if (!config) {
     return (
       <Card className="mb-6 border-warning-200 bg-warning-50">
@@ -67,7 +65,6 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
     );
   }
 
-  // Cuota estimada simple (monto / cuotas) — hasta que el backend exponga monthlyPayment
   const estimatedInstallment = Math.ceil(config.amount / config.installmentCount);
 
   return (
@@ -122,16 +119,6 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
             </p>
           </div>
         </div>
-
-        {/* Badge primer préstamo */}
-        {config.isFirstLoan && (
-          <div className="flex items-center gap-1.5 bg-accent-50 border border-accent-200 rounded-lg px-3 py-2">
-            <Star className="w-3.5 h-3.5 text-accent-700 shrink-0" />
-            <p className="text-xs font-medium text-accent-800">
-              Tu primer préstamo con Fondea
-            </p>
-          </div>
-        )}
 
       </CardContent>
     </Card>

@@ -2,9 +2,8 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Settings, CreditCard, Calendar, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { Settings, CreditCard, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useIntencionConfig } from '@/lib/useIntencionConfig';
 
 interface FunnelLoanSummaryBannerProps {
@@ -17,7 +16,6 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Cerrar al tocar fuera
   useEffect(() => {
     if (!expanded) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -51,9 +49,8 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
 
   return (
     <div ref={cardRef} className="bg-linear-to-r from-primary/10 to-primary/5 border-b border-border">
+      {/* Fila principal siempre visible */}
       <div className="px-4 py-2.5 flex items-center justify-between gap-2">
-
-        {/* Monto + cuotas inline */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[10px] text-muted-foreground font-medium">Solicitud:</span>
@@ -70,7 +67,6 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
           </div>
         </div>
 
-        {/* Botones */}
         <div className="flex items-center gap-1 shrink-0">
           <Button
             size="sm"
@@ -96,8 +92,6 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
       {/* Panel expandido */}
       {expanded && (
         <div className="px-4 pb-3 pt-1 border-t border-primary/10 space-y-2.5">
-
-          {/* Cuotas detalle */}
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
               <CreditCard className="w-3 h-3 text-primary" />
@@ -110,7 +104,6 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
             </div>
           </div>
 
-          {/* Plazo */}
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
               <Calendar className="w-3 h-3 text-primary" />
@@ -122,16 +115,6 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
               </p>
             </div>
           </div>
-
-          {/* Primer préstamo */}
-          {config.isFirstLoan && (
-            <div className="flex items-center gap-1.5 bg-accent-50 border border-accent-200 rounded-md px-2.5 py-1.5">
-              <Star className="w-3 h-3 text-accent-700 shrink-0" />
-              <p className="text-[10px] font-medium text-accent-800">
-                Tu primer préstamo con Fondea
-              </p>
-            </div>
-          )}
         </div>
       )}
     </div>

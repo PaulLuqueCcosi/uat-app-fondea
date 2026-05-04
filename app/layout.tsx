@@ -27,7 +27,7 @@ export default async function RootLayout({
 
   return (
     <html lang="es" className={cn("font-sans", geist.variable)}>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased" suppressHydrationWarning>{children}</body>
     </html>
   );
 }
