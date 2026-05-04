@@ -56,8 +56,6 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
 
   if (!config) return null;
 
-  const estimatedInstallment = Math.ceil(config.amount / config.installmentCount);
-
   return (
     <>
       <div ref={cardRef} className="bg-linear-to-r from-primary/10 to-primary/5 border-b border-border">
@@ -74,7 +72,7 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-[10px] text-muted-foreground font-medium shrink-0">Cuotas:</span>
               <span className="text-xs font-semibold text-foreground truncate">
-                {config.installmentCount}x {formatCurrency(estimatedInstallment)}
+                {config.installmentCount}
               </span>
             </div>
           </div>
@@ -111,7 +109,7 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
               <div>
                 <p className="text-[10px] text-muted-foreground font-medium">Cuotas</p>
                 <p className="text-xs font-semibold text-foreground">
-                  {config.installmentCount}x de {formatCurrency(estimatedInstallment)}
+                  {config.installmentCount} {config.installmentCount === 1 ? 'cuota' : 'cuotas'}
                 </p>
               </div>
             </div>
