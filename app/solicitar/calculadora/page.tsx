@@ -1,27 +1,46 @@
-import { Calculator } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { getActiveIntencion } from '@/app/actions/intencion.actions';
+import LoanCalculator from '@/components/calculadora/LoanCalculator';
+import type { InitialValues } from '@/components/calculadora/LoanCalculator';
 
 /**
- * Calculadora de préstamos.
- * Permite al usuario elegir monto y plazo antes de iniciar el funnel.
+ * Calculadora de préstamos interna.
  *
- * TODO: implementar la calculadora interactiva con createIntencion()
+ * - Si el usuario tiene una intención ACTIVE → la calculadora se pre-llena
+ *   con sus datos y el submit hace PUT /api/v1/intentions/{id} (editar).
+ * - Si no tiene ninguna → valores por defecto y el submit hace
+ *   POST /api/v1/intentions (crear nueva).
+ *
+ * En ambos casos, tras el submit redirige a /solicitar/start.
  */
-export default function CalculadoraPage() {
+export default async function CalculadoraPage() {
+  const intencion = await getActiveIntencion();
+
+  const initialValues: InitialValues | undefined = intencion
+    ? {
+        intencionId:      intencion.intencionId,
+        amount:           intencion.amount,
+        termDays:         intencion.termDays,
+        installmentCount: intencion.installmentCount,
+      }
+    : undefined;
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-      <Card className="w-full max-w-md text-center">
-        <CardContent className="py-12 space-y-4">
-          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-            <Calculator className="w-7 h-7 text-primary" />
-          </div>
-          <h1 className="text-xl font-bold text-foreground">Calculadora de préstamo</h1>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Aquí podrás elegir el monto y plazo de tu préstamo antes de continuar con tu solicitud.
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 py-8">
+      <div className="w-full max-w-2xl">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">
+            {intencion ? 'Modifica tu préstamo' : 'Calculadora de préstamo'}
+          </h1>
+          <p className="text-sm sm:text-base text-neutral-600">
+            {intencion
+              ? 'Ajusta el monto o plazo y guarda los cambios.'
+              : 'Elige el monto y plazo que mejor se adapte a ti.'}
           </p>
-          <p className="text-xs text-muted-foreground/60">Próximamente disponible</p>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex justify-center">
+          <LoanCalculator initialValues={initialValues} />
+        </div>
+      </div>
     </div>
   );
 }

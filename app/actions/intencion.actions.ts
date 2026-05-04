@@ -150,15 +150,31 @@ export async function registerIntencion(intencionId: string): Promise<IntencionC
  * Si el usuario ya tiene una activa, el backend la reemplaza (REPLACED).
  *
  * POST /api/v1/intentions
+ *
+ * El backend requiere productId e isFirstLoan en el body.
+ * productId se lee de NEXT_PUBLIC_PRODUCT_ID (misma variable que usa la calculadora pública).
  */
 export async function createIntencion(
   amount: number,
-  months: number
+  termDays: number,
+  installmentCount: number,
 ): Promise<IntencionConfig | null> {
+  const productId = process.env.NEXT_PUBLIC_PRODUCT_ID;
+  if (!productId) {
+    console.error('[INTENCION] createIntencion → NEXT_PUBLIC_PRODUCT_ID no está configurado');
+    return null;
+  }
+
   try {
     const res = await backendFetch('/api/v1/intentions', {
       method: 'POST',
-      body: JSON.stringify({ amount, months }),
+      body: JSON.stringify({
+        productId,
+        amount,
+        termDays,
+        installmentCount,
+        isFirstLoan: true,
+      }),
     });
 
     if (res.status === 422) {
@@ -183,7 +199,7 @@ export async function createIntencion(
 }
 
 /**
- * Actualiza el monto y/o plazo de una intención existente.
+ * Actualiza el monto, plazo y cuotas de una intención existente.
  * Retorna null si está bloqueada (409) o no existe (404).
  *
  * PUT /api/v1/intentions/{id}
@@ -191,12 +207,13 @@ export async function createIntencion(
 export async function updateIntencion(
   intencionId: string,
   amount: number,
-  months: number
+  termDays: number,
+  installmentCount: number,
 ): Promise<IntencionConfig | null> {
   try {
     const res = await backendFetch(`/api/v1/intentions/${intencionId}`, {
       method: 'PUT',
-      body: JSON.stringify({ amount, months }),
+      body: JSON.stringify({ amount, termDays, installmentCount }),
     });
 
     if (res.status === 409) {
