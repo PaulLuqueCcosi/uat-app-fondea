@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { backendFetch, proxyResponse } from '../../intenciones/helpers';
+import { backendFetch, proxyResponse } from '@/lib/backend-fetch';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
 
     const res = await backendFetch('/api/simulate/landing', {
       method: 'POST',
+      context: 'CALCULADORA',
       body: JSON.stringify({
         productId,
         amount,

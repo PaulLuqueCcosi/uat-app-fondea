@@ -1,47 +1,7 @@
 'use server';
 
-import { getAccessToken } from '@logto/next/server-actions';
-import { logtoConfig } from '@/app/logto';
 import { IntencionConfig } from '@/lib/types';
-
-// ── Helper: fetch autenticado al backend ──────────────────────────────────────
-
-async function backendFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  const resource = process.env.LOGTO_API_RESOURCE;
-  const baseUrl  = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
-  const fullUrl  = `${baseUrl}${path}`;
-  const method   = options.method ?? 'GET';
-
-  console.log(`[BACKEND_FETCH] → ${method} ${fullUrl}`);
-  console.log(`[BACKEND_FETCH] LOGTO_API_RESOURCE="${resource}" | BACKEND_API_URL="${baseUrl}"`);
-
-  let token: string | undefined;
-  try {
-    token = await getAccessToken(logtoConfig, resource);
-    if (!token) {
-      console.error('[BACKEND_FETCH] ⚠️  getAccessToken devolvió undefined/null — ¿sesión expirada o resource incorrecto?');
-    } else {
-      // Loguear solo los primeros 40 chars para no exponer el JWT completo
-      console.log(`[BACKEND_FETCH] token obtenido: ${token.slice(0, 40)}...`);
-    }
-  } catch (tokenError) {
-    console.error('[BACKEND_FETCH] ❌ Error al obtener access token:', tokenError);
-    throw tokenError;
-  }
-
-  const res = await fetch(fullUrl, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
-
-  console.log(`[BACKEND_FETCH] ← ${res.status} ${res.statusText} | ${method} ${fullUrl}`);
-
-  return res;
-}
+import { backendFetch } from '@/lib/backend-fetch';
 
 // ── Mapeo respuesta backend → IntencionConfig ─────────────────────────────────
 
@@ -71,7 +31,7 @@ function mapToConfig(data: any): IntencionConfig {
 export async function getActiveIntencion(): Promise<IntencionConfig | null> {
   console.log('[INTENCION] getActiveIntencion → consultando backend...');
   try {
-    const res = await backendFetch('/api/v1/intentions/active');
+    const res = await backendFetch('/api/v1/intentions/active', { context: 'INTENCION' });
 
     if (res.status === 404) {
       console.log('[INTENCION] getActiveIntencion → 404: sin intención activa');
@@ -114,6 +74,7 @@ export async function registerIntencion(intencionId: string): Promise<IntencionC
   try {
     const res = await backendFetch(`/api/v1/intentions/${intencionId}/register`, {
       method: 'POST',
+      context: 'INTENCION',
     });
 
     if (res.status === 404) {
@@ -168,6 +129,7 @@ export async function createIntencion(
   try {
     const res = await backendFetch('/api/v1/intentions', {
       method: 'POST',
+      context: 'INTENCION',
       body: JSON.stringify({
         productId,
         amount,
@@ -213,6 +175,7 @@ export async function updateIntencion(
   try {
     const res = await backendFetch(`/api/v1/intentions/${intencionId}`, {
       method: 'PUT',
+      context: 'INTENCION',
       body: JSON.stringify({ amount, termDays, installmentCount }),
     });
 
@@ -246,6 +209,7 @@ export async function deleteIntencion(intencionId: string): Promise<boolean> {
   try {
     const res = await backendFetch(`/api/v1/intentions/${intencionId}`, {
       method: 'DELETE',
+      context: 'INTENCION',
     });
 
     if (res.status === 409) {
@@ -287,7 +251,7 @@ export async function getIntencionConfig(intencionId: string): Promise<Intencion
   console.log('[INTENCION] getIntencionConfig → buscando ID:', intencionId);
 
   try {
-    const res = await backendFetch(`/api/v1/intentions/${intencionId}`);
+    const res = await backendFetch(`/api/v1/intentions/${intencionId}`, { context: 'INTENCION' });
 
     if (res.status === 404) {
       console.log('[INTENCION] getIntencionConfig → 404: no encontrada:', intencionId);

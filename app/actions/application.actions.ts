@@ -2,24 +2,13 @@
 
 import { requireValidSession } from './auth.actions';
 import { ApplicationRecord, PEPDeclarations, ActionResult } from '@/lib/types';
-import { getAccessTokenRSC } from '@logto/next/server-actions';
-import { logtoConfig } from '@/app/logto';
+import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { parseBackendResponse, networkError } from '@/lib/action-utils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function backendFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  const token = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
-  const baseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
-  return fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
-}
+const backendFetch = (path: string, options?: RequestInit) =>
+  _backendFetch(path, { ...options, context: 'APPLICATION' });
 
 function isSuccess(status: number): boolean {
   return status >= 200 && status < 300;

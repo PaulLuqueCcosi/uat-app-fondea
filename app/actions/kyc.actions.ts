@@ -2,8 +2,7 @@
 
 import { KYCData, ActionResult } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
-import { getAccessTokenRSC } from '@logto/next/server-actions';
-import { logtoConfig } from '@/app/logto';
+import { backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
 
 // ── Respuesta pública al frontend ────────────────────────────────────────────
@@ -26,31 +25,9 @@ export type KYCSaveResult =
 
 // ── Helper: fetch autenticado al backend ─────────────────────────────────────
 
-async function backendFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  let token: string | undefined;
-
-  try {
-    token = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
-  } catch (err) {
-    console.warn('[backendFetch] No se pudo obtener el access token:', err);
-    // Devolver una Response sintética con 503 para que el caller lo maneje
-    return new Response(JSON.stringify({ error: 'token_unavailable' }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const baseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
-
-  return fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
-}
+// Usa el backendFetch centralizado de lib/backend-fetch.ts con contexto KYC
+const kycFetch = (path: string, options?: RequestInit) =>
+  backendFetch(path, { ...options, context: 'KYC' });
 
 // ── GET: Estado KYC ──────────────────────────────────────────────────────────
 
@@ -64,7 +41,7 @@ export async function getKYCData(): Promise<{
   await requireValidSession();
 
   try {
-    const res = await backendFetch('/api/v1/kyc/status');
+    const res = await kycFetch('/api/v1/kyc/status');
 
     if (res.status === 503) {
       return { data: null, blocked: false, blockedHoursLeft: 0, attemptsLeft: 3, backendUnavailable: true };
@@ -123,7 +100,7 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       birthDate:        birthDateISO,
     };
 
-    const res = await backendFetch('/api/v1/kyc/validate', {
+    const res = await kycFetch('/api/v1/kyc/validate', {
       method: 'POST',
       body: JSON.stringify(body),
     });

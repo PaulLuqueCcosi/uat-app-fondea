@@ -2,8 +2,7 @@
 
 import { AddressProfile, AddressProfileStatus, ActionResult } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
-import { getAccessTokenRSC } from '@logto/next/server-actions';
-import { logtoConfig } from '@/app/logto';
+import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { parseBackendResponse, networkError } from '@/lib/action-utils';
 
 // Importar los datos locales de ubigeo
@@ -11,20 +10,8 @@ import departamentosData from '@/lib/ubigeo_departamentos.json';
 import provinciasData from '@/lib/ubigeo_provincias.json';
 import distritosData from '@/lib/ubigeo_distritos.json';
 
-// ── Helpers internos ──────────────────────────────────────────────────────────
-
-async function backendFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  const token = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
-  const baseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
-  return fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
-}
+const backendFetch = (path: string, options?: RequestInit) =>
+  _backendFetch(path, { ...options, context: 'ADDRESS' });
 
 function toTitleCase(str: string): string {
   return str.toLowerCase().split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');

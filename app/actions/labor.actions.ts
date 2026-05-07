@@ -10,25 +10,11 @@ import {
   ActionResult,
 } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
-import { getAccessTokenRSC } from '@logto/next/server-actions';
-import { logtoConfig } from '@/app/logto';
+import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { parseBackendResponse, networkError } from '@/lib/action-utils';
 
-// ── Helper: fetch autenticado al backend ──────────────────────────────────────
-
-async function backendFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  const token = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
-  const baseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
-
-  return fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
-}
+const backendFetch = (path: string, options?: RequestInit) =>
+  _backendFetch(path, { ...options, context: 'LABOR' });
 
 // ── Mappers: backend (camelCase) ↔ frontend (snake_case) ─────────────────────
 
