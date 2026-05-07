@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CreditCard, AlertTriangle, Pencil, Calendar } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useIntencionConfig } from '@/lib/useIntencionConfig';
+import { useIntencionConfig } from '@/hooks/useIntencionConfig';
 import { LoanCalculatorPortalModal } from '@/components/LoanCalculator';
 import type { PortalInitialValues } from '@/components/LoanCalculator';
 

@@ -73,16 +73,23 @@ export async function requireValidSession() {
 
   console.log('[AUTH:session] válida →', { userId: claims!.sub, email: claims!.email });
 
-  // Sincronizar usuario con el backend — SIEMPRE, antes de cualquier otra operación.
-  // Garantiza que la cuenta existe en el backend (la crea si es nueva).
-  await syncUser();
-
   return {
     id: claims!.sub || '',
     name: claims!.name || claims!.username || 'Usuario',
     email: claims!.email || '',
     phone: claims!.phone_number || '',
   };
+}
+
+/**
+ * Valida sesión Y sincroniza usuario con el backend.
+ * Usar SOLO en Server Actions (no en layouts/pages) porque syncUser
+ * necesita poder escribir cookies (refresh token).
+ */
+export async function requireValidSessionAndSync() {
+  const user = await requireValidSession();
+  await syncUser();
+  return user;
 }
 
 /**

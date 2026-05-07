@@ -1,0 +1,53 @@
+// ─── References ──────────────────────────────────────────────────────────────
+
+export interface Reference {
+  id: string;
+  name: string;
+  phone: string;
+  relationship: string;
+  yearsKnown?: number;
+}
+
+export interface ReferencesData {
+  references: Reference[];
+}
+
+export type FamilyRelationship =
+  | 'MADRE'
+  | 'PADRE'
+  | 'HERMANO'
+  | 'HIJO'
+  | 'CONYUGE'
+  | 'TIO'
+  | 'PRIMO'
+  | 'ABUELO'
+  | 'OTRO';
+
+export type NonFamilyRelationship =
+  | 'COLEGA'
+  | 'AMIGO'
+  | 'VECINO'
+  | 'CONOCIDO'
+  | 'OTRO';
+
+export interface ReferencesProfile {
+  family_reference: {
+    name: string;
+    phone: string;
+    relationship: FamilyRelationship;
+    relationship_other?: string;
+  };
+  non_family_reference: {
+    name: string;
+    phone: string;
+    relationship: NonFamilyRelationship;
+    relationship_other?: string;
+    years_known: number;
+  };
+  verified?: boolean;
+}
+
+export interface ReferencesProfileStatus {
+  profile: (ReferencesProfile & { verified: boolean }) | null;
+  overall_verified: boolean;
+}

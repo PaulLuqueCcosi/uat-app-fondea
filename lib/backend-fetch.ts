@@ -9,7 +9,7 @@
  * - API routes (app/api/ route handlers)
  */
 
-import { getAccessToken } from '@logto/next/server-actions';
+import { getAccessTokenRSC } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ export async function backendFetch(
   // 2. Obtener token
   let token: string | undefined;
   try {
-    token = await getAccessToken(logtoConfig, RESOURCE);
+    token = await getAccessTokenRSC(logtoConfig, RESOURCE);
   } catch (err) {
     console.error(`${tag} ❌ Error al obtener access token:`, err instanceof Error ? err.message : err);
     return syntheticResponse(401, { error: 'token_error', detail: 'No se pudo obtener el access token' });

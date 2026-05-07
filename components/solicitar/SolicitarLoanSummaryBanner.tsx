@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Pencil, CreditCard, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useIntencionConfig } from '@/lib/useIntencionConfig';
+import { useIntencionConfig } from '@/hooks/useIntencionConfig';
 import { LoanCalculatorPortalModal } from '@/components/LoanCalculator';
 import type { PortalInitialValues } from '@/components/LoanCalculator';
 
