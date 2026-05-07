@@ -9,24 +9,8 @@
  * seguir usando las server actions de app/actions/intencion.actions.ts.
  */
 
-import type { IntencionConfig } from './types';
-
-// ── Mapeo ────────────────────────────────────────────────────────────────────
-
-function mapToConfig(data: Record<string, unknown>): IntencionConfig {
-  return {
-    intencionId:           data.id as string,
-    productId:             data.productId as string,
-    amount:                data.amount as number,
-    termDays:              data.termDays as number,
-    installmentCount:      data.installmentCount as number,
-    isFirstLoan:           data.isFirstLoan as boolean,
-    status:                data.status as string,
-    calculatorIntentionId: data.calculatorIntentionId as string,
-    createdAt:             data.createdAt as string,
-    updatedAt:             data.updatedAt as string,
-  };
-}
+import type { IntencionConfig } from '../types';
+import { mapIntencionFromBackend } from '../mappers/intencion.mapper';
 
 // ── GET /api/intenciones/active ──────────────────────────────────────────────
 
@@ -37,7 +21,7 @@ export async function getActiveIntencion(): Promise<IntencionConfig | null> {
     console.error('[intencion-api] getActive →', res.status, await res.text());
     return null;
   }
-  return mapToConfig(await res.json());
+  return mapIntencionFromBackend(await res.json());
 }
 
 // ── GET /api/intenciones/{id} ────────────────────────────────────────────────
@@ -50,7 +34,7 @@ export async function getIntencionById(id: string): Promise<IntencionConfig | nu
     console.error('[intencion-api] getById →', res.status, await res.text());
     return null;
   }
-  return mapToConfig(await res.json());
+  return mapIntencionFromBackend(await res.json());
 }
 
 /**
@@ -71,7 +55,7 @@ export async function registerIntencion(calcId: string): Promise<IntencionConfig
     console.error('[intencion-api] register →', res.status, await res.text());
     return null;
   }
-  return mapToConfig(await res.json());
+  return mapIntencionFromBackend(await res.json());
 }
 
 // ── POST /api/intenciones ────────────────────────────────────────────────────
@@ -90,7 +74,7 @@ export async function createIntencion(
     console.error('[intencion-api] create →', res.status, await res.text());
     return null;
   }
-  return mapToConfig(await res.json());
+  return mapIntencionFromBackend(await res.json());
 }
 
 // ── PUT /api/intenciones/{id} ────────────────────────────────────────────────
@@ -111,7 +95,7 @@ export async function updateIntencion(
     console.error('[intencion-api] update →', res.status, await res.text());
     return null;
   }
-  return mapToConfig(await res.json());
+  return mapIntencionFromBackend(await res.json());
 }
 
 // ── DELETE /api/intenciones/{id} ─────────────────────────────────────────────

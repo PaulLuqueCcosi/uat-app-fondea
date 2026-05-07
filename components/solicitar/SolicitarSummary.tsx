@@ -45,7 +45,7 @@ import {
   ACCOUNT_TYPE_OPTIONS,
 } from '@/lib/constants';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
-import { getActiveIntencion } from '@/lib/intencion-api';
+import { getActiveIntencion } from '@/lib/client-api/intenciones';
 
 // Helper functions para obtener labels
 const getEmploymentLabel = (value?: string) => {

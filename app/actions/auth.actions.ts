@@ -3,6 +3,7 @@
 import { getLogtoContext, getAccessTokenRSC, signOut } from '@logto/next/server-actions';
 import { redirect } from 'next/navigation';
 import { logtoConfig } from '../logto';
+import { backendFetch } from '@/lib/backend-fetch';
 
 // ── Helper: sync de usuario con el backend ────────────────────────────────────
 
@@ -18,19 +19,9 @@ import { logtoConfig } from '../logto';
  */
 async function syncUser(): Promise<void> {
   try {
-    const token = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
-    if (!token) {
-      console.error('[AUTH:sync] ⚠️  sin token — no se puede sincronizar usuario');
-      return;
-    }
-
-    const baseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
-    const res = await fetch(`${baseUrl}/api/v1/users/sync`, {
+    const res = await backendFetch('/api/v1/users/sync', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+      context: 'AUTH_SYNC',
     });
 
     if (res.ok) {

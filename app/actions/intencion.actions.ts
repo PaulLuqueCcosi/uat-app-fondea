@@ -2,23 +2,7 @@
 
 import { IntencionConfig } from '@/lib/types';
 import { backendFetch } from '@/lib/backend-fetch';
-
-// ── Mapeo respuesta backend → IntencionConfig ─────────────────────────────────
-
-function mapToConfig(data: any): IntencionConfig {
-  return {
-    intencionId:            data.id,
-    productId:              data.productId,
-    amount:                 data.amount,
-    termDays:               data.termDays,
-    installmentCount:       data.installmentCount,
-    isFirstLoan:            data.isFirstLoan,
-    status:                 data.status,
-    calculatorIntentionId:  data.calculatorIntentionId,
-    createdAt:              data.createdAt,
-    updatedAt:              data.updatedAt,
-  };
-}
+import { mapIntencionFromBackend } from '@/lib/mappers/intencion.mapper';
 
 // ── CRUD ──────────────────────────────────────────────────────────────────────
 
@@ -47,7 +31,7 @@ export async function getActiveIntencion(): Promise<IntencionConfig | null> {
 
     const data = await res.json();
     console.log('[INTENCION] getActiveIntencion → ✅ encontrada:', { id: data.id, status: data.status });
-    return mapToConfig(data);
+    return mapIntencionFromBackend(data);
 
   } catch (error) {
     console.error('[INTENCION] getActiveIntencion → network error:', error);
@@ -98,7 +82,7 @@ export async function registerIntencion(intencionId: string): Promise<IntencionC
       installmentCount: data.installmentCount,
       status: data.status,
     });
-    return mapToConfig(data);
+    return mapIntencionFromBackend(data);
 
   } catch (error) {
     console.error('[INTENCION] registerIntencion → network error:', error);
@@ -152,7 +136,7 @@ export async function createIntencion(
 
     const data = await res.json();
     console.log('[INTENCION] createIntencion → created:', data.id);
-    return mapToConfig(data);
+    return mapIntencionFromBackend(data);
 
   } catch (error) {
     console.error('[INTENCION] createIntencion network error:', error);
@@ -191,7 +175,7 @@ export async function updateIntencion(
 
     const data = await res.json();
     console.log('[INTENCION] updateIntencion → updated:', data.id);
-    return mapToConfig(data);
+    return mapIntencionFromBackend(data);
 
   } catch (error) {
     console.error('[INTENCION] updateIntencion network error:', error);
@@ -267,7 +251,7 @@ export async function getIntencionConfig(intencionId: string): Promise<Intencion
 
     const data = await res.json();
     console.log('[INTENCION] getIntencionConfig → ✅ encontrada:', { id: data.id, status: data.status });
-    return mapToConfig(data);
+    return mapIntencionFromBackend(data);
 
   } catch (error) {
     console.error('[INTENCION] getIntencionConfig → network error:', error);
