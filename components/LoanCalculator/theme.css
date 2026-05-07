@@ -35,7 +35,7 @@
   --lc-text:           var(--color-neutral-800);
   --lc-muted:          var(--color-neutral-500);
   --lc-border:         var(--color-neutral-200);
-  --lc-bg:             var(--color-card, #ffffff);
+  --lc-bg:             var(--card, #ffffff);
 
   /* ── Header del detalle ───────────────────*/
   --lc-header-bg:      var(--color-primary-500);

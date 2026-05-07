@@ -159,7 +159,7 @@ export default function LoanCalculator({
             "rounded-2xl shadow-2xl shrink-0 bg-white border border-neutral-200 relative w-full",
             dedicated ? "p-4 sm:p-5 md:p-6" : "p-3 sm:p-4"
           )}
-          style={{ backgroundColor: "var(--lc-bg)", color: "var(--lc-text)", maxWidth: `${CARD_MAX_WIDTH}px` }}
+          style={{ color: "var(--lc-text)", maxWidth: `${CARD_MAX_WIDTH}px` }}
         >
           <AmountSlider
             monto={monto}
