@@ -4,8 +4,8 @@ import { useRef, useState, useEffect } from 'react';
 import { Pencil, CreditCard, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIntencionConfig } from '@/lib/useIntencionConfig';
-import { LoanCalculatorModal } from '@/components/calculadora/LoanCalculatorModal';
-import type { InitialValues } from '@/components/calculadora/LoanCalculator';
+import { LoanCalculatorPortalModal } from '@/components/LoanCalculator';
+import type { PortalInitialValues } from '@/components/LoanCalculator';
 
 interface FunnelLoanSummaryBannerProps {
   isOrchestrating?: boolean;
@@ -37,7 +37,7 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
     }).format(amount);
 
   // Datos para pre-llenar la calculadora
-  const initialValues: InitialValues | undefined = config
+  const initialValues: PortalInitialValues | undefined = config
     ? {
         intencionId: config.intencionId,
         amount: config.amount,
@@ -130,7 +130,7 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
       </div>
 
       {/* Modal de calculadora */}
-      <LoanCalculatorModal
+      <LoanCalculatorPortalModal
         open={calcOpen}
         onOpenChange={setCalcOpen}
         initialValues={initialValues}

@@ -6,8 +6,8 @@ import { CreditCard, AlertTriangle, Pencil, Calendar } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIntencionConfig } from '@/lib/useIntencionConfig';
-import { LoanCalculatorModal } from '@/components/calculadora/LoanCalculatorModal';
-import type { InitialValues } from '@/components/calculadora/LoanCalculator';
+import { LoanCalculatorPortalModal } from '@/components/LoanCalculator';
+import type { PortalInitialValues } from '@/components/LoanCalculator';
 
 interface FunnelLoanSummaryCardProps {
   isOrchestrating?: boolean;
@@ -27,7 +27,7 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
     }).format(amount);
 
   // Datos para pre-llenar la calculadora
-  const initialValues: InitialValues | undefined = config
+  const initialValues: PortalInitialValues | undefined = config
     ? {
         intencionId: config.intencionId,
         amount: config.amount,
@@ -78,7 +78,7 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
           </CardContent>
         </Card>
 
-        <LoanCalculatorModal
+        <LoanCalculatorPortalModal
           open={calcOpen}
           onOpenChange={setCalcOpen}
           onSuccess={refetch}
@@ -145,7 +145,7 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
       </Card>
 
       {/* Modal de calculadora */}
-      <LoanCalculatorModal
+      <LoanCalculatorPortalModal
         open={calcOpen}
         onOpenChange={setCalcOpen}
         initialValues={initialValues}

@@ -1,4 +1,4 @@
-import LoanCalculator from '@/components/calculadora/LoanCalculator';
+import LoanCalculatorPortal from '@/components/LoanCalculator/LoanCalculatorPortal';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -30,8 +30,8 @@ export default function CalculadoraPage() {
         </p>
       </div>
 
-      {/* Calculadora — ya tiene su propia card con sombra y bordes */}
-      <LoanCalculator flexibleWidth />
+      {/* Calculadora del portal — crea intención y navega a /solicitar/start */}
+      <LoanCalculatorPortal dedicated detailMode="modal" />
     </div>
   );
 }

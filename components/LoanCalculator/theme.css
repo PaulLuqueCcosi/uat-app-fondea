@@ -1,0 +1,49 @@
+/*
+ * ╔══════════════════════════════════════════════════════╗
+ * ║         LOAN CALCULATOR — Design Tokens              ║
+ * ║                                                      ║
+ * ║  Usa el sistema de color oficial del proyecto        ║
+ * ║  Definido en: doc/colores.md                         ║
+ * ║                                                      ║
+ * ║  Para usar en otro proyecto:                         ║
+ * ║  1. Copia la carpeta LoanCalculator/ completa        ║
+ * ║  2. Copia la paleta de colores desde doc/colores.md  ║
+ * ║  3. Importa el componente — listo                    ║
+ * ╚══════════════════════════════════════════════════════╝
+ */
+
+:root {
+  /* ── Primario / Brand ─────────────────────
+     Color principal: botones, sliders, dots  */
+  --lc-primary:        var(--color-primary-500);
+  --lc-primary-dark:   var(--color-primary-600);
+  --lc-primary-light:  var(--color-primary-50);
+
+  /* ── Puntaje Bajo (rojo) ──────────────────*/
+  --lc-bajo:           var(--color-error-600);
+  --lc-bajo-light:     var(--color-error-50);
+
+  /* ── Puntaje Medio (naranja/ámbar) ────────*/
+  --lc-medio:          var(--color-warning-500);
+  --lc-medio-light:    var(--color-warning-50);
+
+  /* ── Puntaje Alto (verde) ─────────────────*/
+  --lc-alto:           var(--color-success-500);
+  --lc-alto-light:     var(--color-success-50);
+
+  /* ── Neutrales ────────────────────────────*/
+  --lc-text:           var(--color-neutral-800);
+  --lc-muted:          var(--color-neutral-500);
+  --lc-border:         var(--color-neutral-200);
+  --lc-bg:             var(--color-card, #ffffff);
+
+  /* ── Header del detalle ───────────────────*/
+  --lc-header-bg:      var(--color-primary-500);
+  --lc-header-text:    var(--color-white, #ffffff);
+
+  /* ── Gauge (arco de colores) ──────────────*/
+  --lc-gauge-low:      var(--color-error-500);
+  --lc-gauge-mid-low:  var(--color-warning-500);
+  --lc-gauge-mid:      var(--color-accent-500);
+  --lc-gauge-high:     var(--color-success-500);
+}
