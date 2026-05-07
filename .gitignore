@@ -44,3 +44,4 @@ next-env.d.ts
 # mock database (solo para desarrollo local)
 /mock-db/*.json
 .kiro/
+.vscode/

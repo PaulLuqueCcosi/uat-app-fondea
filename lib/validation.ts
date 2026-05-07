@@ -115,3 +115,64 @@ export function isValidAccountNumber(accountNumber: string): boolean {
   const cleaned = accountNumber.replace(/\D/g, '');
   return cleaned.length >= 10 && cleaned.length <= 20;
 }
+
+// ─── Zod Schemas Reutilizables ───────────────────────────────────────────────
+// Usar en formularios: import { dniSchema, phoneSchema } from '@/lib/validation'
+
+import { z } from 'zod';
+
+/** DNI peruano — 8 dígitos exactos */
+export const dniSchema = z
+  .string()
+  .min(1, 'Ingresa tu DNI')
+  .regex(/^\d{8}$/, 'El DNI debe tener exactamente 8 dígitos');
+
+/** Código de verificación del DNI — 3 dígitos */
+export const verificationCodeSchema = z
+  .string()
+  .min(1, 'Ingresa el código de verificación')
+  .regex(/^\d{3}$/, 'El código debe tener 3 dígitos');
+
+/** Nombre o apellido — solo letras, espacios y acentos, mín 2 chars */
+export const nameSchema = z
+  .string()
+  .min(2, 'Mínimo 2 caracteres')
+  .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo se permiten letras');
+
+/** Teléfono peruano — 9 dígitos, empieza con 9 */
+export const phoneSchema = z
+  .string()
+  .min(1, 'Ingresa tu número de teléfono')
+  .regex(/^9\d{8}$/, 'Debe comenzar con 9 y tener 9 dígitos');
+
+/** CCI — exactamente 20 dígitos */
+export const cciSchema = z
+  .string()
+  .min(1, 'Ingresa tu CCI')
+  .regex(/^\d{20}$/, 'El CCI debe tener exactamente 20 dígitos');
+
+/** Email */
+export const emailSchema = z
+  .string()
+  .min(1, 'Ingresa tu email')
+  .email('Formato de email inválido');
+
+/** Monto monetario — string que se parsea a número positivo */
+export const moneySchema = (fieldName = 'monto') => z
+  .string()
+  .min(1, `Ingresa el ${fieldName}`)
+  .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+    message: `El ${fieldName} debe ser mayor a 0`,
+  });
+
+/** RUC peruano — 11 dígitos */
+export const rucSchema = z
+  .string()
+  .min(1, 'Ingresa el RUC')
+  .regex(/^\d{11}$/, 'El RUC debe tener exactamente 11 dígitos');
+
+/** Fecha en formato DD/MM/YYYY */
+export const dateSchema = z
+  .string()
+  .min(1, 'Ingresa la fecha')
+  .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Formato: DD/MM/YYYY');

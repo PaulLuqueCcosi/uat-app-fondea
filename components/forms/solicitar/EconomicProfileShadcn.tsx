@@ -31,6 +31,7 @@ import { EconomicProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { DataRow } from '@/components/ui/data-row';
 
 interface FunnelEconomicProfileProps {
   dashboardMode?: boolean;
@@ -47,20 +48,6 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
     <div className="space-y-1">
       <h2 className="font-semibold text-primary">{title}</h2>
       <p className="text-muted-foreground text-sm">{description}</p>
-    </div>
-  );
-}
-
-function DataRow({ label, value }: { label: string; value?: string | number | boolean }) {
-  const display = value === undefined || value === null || value === ''
-    ? '—'
-    : typeof value === 'boolean'
-      ? (value ? 'Sí' : 'No')
-      : String(value);
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground">{display}</span>
     </div>
   );
 }

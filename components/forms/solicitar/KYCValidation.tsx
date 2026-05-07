@@ -31,6 +31,7 @@ import type { KYCSaveResult } from '@/app/actions/kyc.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { DataRow } from '@/components/ui/data-row';
 import { useState, useEffect } from 'react';
 
 interface FunnelKYCValidationProps {
@@ -713,25 +714,6 @@ function ButtonSpinner({ label }: { label: string }) {
   );
 }
 
-// ── Componente auxiliar: fila de dato en readonly ────────────────────────────
-function DataRow({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string;
-  value?: string | null;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className={`text-sm font-medium text-foreground ${mono ? 'font-mono' : ''}`}>
-        {value || '—'}
-      </span>
-    </div>
-  );
-}
 
 // ── Componente auxiliar: card de ayuda DNI ───────────────────────────────────
 function DNIHelpCard({ activeField, onFieldClick }: { activeField: DNIField; onFieldClick?: (field: DNIField) => void }) {

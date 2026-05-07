@@ -28,6 +28,7 @@ import { saveReferencesProfile } from '@/app/actions/references.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { DataRow } from '@/components/ui/data-row';
 
 interface FunnelReferencesProps {
   dashboardMode?: boolean;
@@ -106,16 +107,6 @@ const referencesFormSchema = z.object({
 });
 
 type ReferencesFormValues = z.infer<typeof referencesFormSchema>;
-
-function DataRow({ label, value }: { label: string; value?: string | number }) {
-  const display = value === undefined || value === null || value === '' ? '—' : String(value);
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground">{display}</span>
-    </div>
-  );
-}
 
 export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: FunnelReferencesProps) {
   const router = useRouter();

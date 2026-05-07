@@ -27,6 +27,7 @@ import { FormHeader } from '@/components/ui/form-header';
 import { saveBankAccountProfile } from '@/app/actions/bank-account.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
+import { DataRow } from '@/components/ui/data-row';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 
 interface FunnelBankAccountProps {
@@ -44,16 +45,6 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
     <div className="space-y-1">
       <h2 className="font-semibold text-primary">{title}</h2>
       <p className="text-muted-foreground text-sm">{description}</p>
-    </div>
-  );
-}
-
-function DataRow({ label, value }: { label: string; value?: string }) {
-  const display = value === undefined || value === null || value === '' ? '—' : String(value);
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground">{display}</span>
     </div>
   );
 }

@@ -37,6 +37,7 @@ import type { AddressProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { DataRow } from '@/components/ui/data-row';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -52,15 +53,6 @@ function SectionHeader({ title, description }: { title: string; description: str
     <div className="space-y-1">
       <h2 className="font-semibold text-primary">{title}</h2>
       <p className="text-muted-foreground text-sm">{description}</p>
-    </div>
-  );
-}
-
-function DataRow({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground">{value || '—'}</span>
     </div>
   );
 }
