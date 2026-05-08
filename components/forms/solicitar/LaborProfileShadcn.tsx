@@ -15,6 +15,7 @@ import {
   LABOR_CONFIG,
 } from '@/lib/constants';
 import { saveLaborProfile } from '@/app/actions/labor.actions';
+import type { LaborSaveResult } from '@/app/actions/labor.actions';
 import { useState } from 'react';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
@@ -145,6 +146,9 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
+  /** Módulo bloqueado por max intentos de validación de RUC */
+  const [blocked, setBlocked] = useState(false);
+  const [blockedHoursLeft, setBlockedHoursLeft] = useState(0);
 
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedSituation, setSavedSituation] = useState(initialData?.situation ?? null);
@@ -227,6 +231,11 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
       );
 
       if (!result.success) {
+        // 429 — módulo bloqueado
+        if (result.errorCategory === 'rate_limit') {
+          setBlocked(true);
+          setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
+        }
         setSaveError(result.error);
         setSaveErrorCategory(result.errorCategory);
         return;
@@ -392,6 +401,17 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
   const editForm = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+
+        {/* Error de guardado — arriba del formulario */}
+        {saveError && (
+          <>
+            <SaveErrorBanner
+              error={saveError}
+              errorCategory={saveErrorCategory}
+            />
+            <Separator className="my-10 bg-primary/20 h-px" />
+          </>
+        )}
 
         {/* Situación laboral */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
@@ -685,12 +705,26 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
           </div>
         </div>
 
-        {/* Error de guardado */}
-        {saveError && (
-          <SaveErrorBanner
-            error={saveError}
-            errorCategory={saveErrorCategory}
-          />
+        {/* Panel de bloqueo — aparece cuando el módulo está bloqueado por max intentos de RUC */}
+        {blocked && (
+          <>
+            <Separator className="my-10 bg-primary/20 h-px" />
+            <div className="rounded-lg border border-error-200 bg-error-50 p-4">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 shrink-0 text-lg">🔒</span>
+                <div className="space-y-2 w-full">
+                  <div>
+                    <p className="text-sm font-semibold text-error-700">
+                      Módulo bloqueado por {blockedHoursLeft} hora{blockedHoursLeft !== 1 ? 's' : ''}
+                    </p>
+                    <p className="text-xs text-error-600 mt-1">
+                      Has superado el número máximo de intentos de validación de RUC. Podrás intentarlo nuevamente cuando expire el bloqueo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
         <Separator className="my-10 bg-primary/20 h-px" />
@@ -707,7 +741,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                 Atrás
               </Button>
             )}
-            <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+            <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || blocked}>
               {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
                 <span className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />

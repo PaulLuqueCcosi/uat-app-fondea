@@ -7,14 +7,110 @@ import {
   LaborProfileStatus,
   EmploymentStatus,
   AdditionalIncome,
-  ActionResult,
 } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
-import { parseBackendResponse, networkError } from '@/lib/action-utils';
+import { networkError } from '@/lib/action-utils';
 
 const backendFetch = (path: string, options?: RequestInit) =>
   _backendFetch(path, { ...options, context: 'LABOR' });
+
+// ── Tipo de resultado extendido para Labor ────────────────────────────────────
+
+/**
+ * Extiende ActionResult con campos específicos de Labor:
+ * - blockedHoursLeft: horas restantes cuando el módulo está bloqueado (429)
+ *
+ * El módulo se bloquea cuando la validación de RUC falla 3 veces.
+ * El bloqueo afecta a TODO el módulo (situation, details, income).
+ */
+export type LaborSaveResult =
+  | { success: true; httpStatus: number }
+  | {
+      success: false;
+      httpStatus: number;
+      errorCategory: import('@/lib/types').ErrorCategory;
+      error: string;
+      blockedHoursLeft?: number;
+    };
+
+// ── Helper: parsear respuesta de labor ────────────────────────────────────────
+
+async function parseLaborResponse(res: Response): Promise<LaborSaveResult> {
+  // 200/201 — éxito
+  if (res.ok) {
+    return { success: true, httpStatus: res.status };
+  }
+
+  let json: any = {};
+  try { json = await res.json(); } catch { /* body vacío o no-JSON */ }
+
+  // 429 — módulo bloqueado por max intentos de RUC
+  if (res.status === 429) {
+    return {
+      success: false,
+      httpStatus: 429,
+      errorCategory: 'rate_limit',
+      blockedHoursLeft: json.blockedHoursLeft ?? 24,
+      error: json.detail ?? 'Demasiados intentos fallidos. Podrás intentarlo nuevamente en 24 horas.',
+    };
+  }
+
+  // 422 — RUC inválido/inactivo/no titular (consume intento)
+  if (res.status === 422) {
+    const fieldError = json.fieldErrors?.businessRuc;
+    const message = fieldError ?? json.detail ?? 'Error en la validación del RUC.';
+    return {
+      success: false,
+      httpStatus: 422,
+      errorCategory: 'validation',
+      error: message,
+    };
+  }
+
+  // 503 — error técnico del proveedor de RUC (no consume intento)
+  if (res.status === 503) {
+    return {
+      success: false,
+      httpStatus: 503,
+      errorCategory: 'server',
+      error: json.detail ?? 'Servicio de validación temporalmente no disponible. No se consumió un intento. Inténtalo en unos minutos.',
+    };
+  }
+
+  // 400 — error de formato o regla de negocio
+  if (res.status === 400) {
+    // Extraer el primer fieldError si existe, sino usar detail
+    const firstFieldError = json.fieldErrors
+      ? Object.values(json.fieldErrors)[0] as string
+      : undefined;
+    const message = firstFieldError ?? json.detail ?? 'Error de validación en los datos ingresados.';
+    return {
+      success: false,
+      httpStatus: 400,
+      errorCategory: 'validation',
+      error: message,
+    };
+  }
+
+  // 401 — sesión expirada
+  if (res.status === 401) {
+    return {
+      success: false,
+      httpStatus: 401,
+      errorCategory: 'auth',
+      error: 'Tu sesión expiró. Por favor, vuelve a iniciar sesión.',
+    };
+  }
+
+  // Cualquier otro error
+  return {
+    success: false,
+    httpStatus: res.status,
+    errorCategory: 'unknown',
+    error: json.detail ?? json.error ?? 'Error inesperado. Por favor, inténtalo nuevamente.',
+  };
+}
 
 // ── Mappers: backend (camelCase) ↔ frontend (snake_case) ─────────────────────
 
@@ -83,7 +179,7 @@ export async function getLaborProfileStatus(): Promise<LaborProfileStatus> {
 
 export async function saveLaborSituation(
   employment_status: EmploymentStatus
-): Promise<ActionResult> {
+): Promise<LaborSaveResult> {
   await requireValidSession();
 
   try {
@@ -91,7 +187,7 @@ export async function saveLaborSituation(
       method: 'PUT',
       body: JSON.stringify({ employmentStatus: employment_status }),
     });
-    return parseBackendResponse(res);
+    return parseLaborResponse(res);
   } catch {
     console.error('[LABOR] Error al guardar situación');
     return networkError();
@@ -102,7 +198,7 @@ export async function saveLaborSituation(
 
 export async function saveLaborDetails(
   details: Omit<LaborDetails, 'verified'>
-): Promise<ActionResult> {
+): Promise<LaborSaveResult> {
   await requireValidSession();
 
   try {
@@ -114,7 +210,7 @@ export async function saveLaborDetails(
         businessRuc:     details.business_ruc ?? null,
       }),
     });
-    return parseBackendResponse(res);
+    return parseLaborResponse(res);
   } catch {
     console.error('[LABOR] Error al guardar detalles');
     return networkError();
@@ -125,7 +221,7 @@ export async function saveLaborDetails(
 
 export async function saveLaborIncome(
   income: Omit<LaborIncome, 'verified'>
-): Promise<ActionResult> {
+): Promise<LaborSaveResult> {
   await requireValidSession();
 
   try {
@@ -143,7 +239,7 @@ export async function saveLaborIncome(
         })),
       }),
     });
-    return parseBackendResponse(res);
+    return parseLaborResponse(res);
   } catch {
     console.error('[LABOR] Error al guardar ingresos');
     return networkError();
@@ -156,7 +252,7 @@ export async function saveLaborProfile(
   situation: EmploymentStatus,
   details: Omit<LaborDetails, 'verified'>,
   income: Omit<LaborIncome, 'verified'>
-): Promise<ActionResult> {
+): Promise<LaborSaveResult> {
   await requireValidSession();
 
   try {
@@ -182,7 +278,7 @@ export async function saveLaborProfile(
         },
       }),
     });
-    return parseBackendResponse(res);
+    return parseLaborResponse(res);
   } catch {
     console.error('[LABOR] Error al guardar perfil completo');
     return networkError();
