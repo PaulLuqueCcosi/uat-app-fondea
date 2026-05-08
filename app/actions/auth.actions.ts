@@ -12,12 +12,12 @@ import { backendFetch } from '@/lib/backend-fetch';
  * Si el usuario no existe en el backend, lo crea.
  * Si ya existe, lo devuelve tal cual.
  *
- * SIEMPRE se llama antes de cualquier otra operación — es el punto de entrada
- * que garantiza que la cuenta existe en el backend antes de usarla.
+ * Llamar desde client components via server action antes de la primera
+ * interacción con el backend (ej: en el dispatcher del funnel).
  *
  * Fire-and-forget: si falla, logueamos pero no bloqueamos el flujo.
  */
-async function syncUser(): Promise<void> {
+export async function syncUser(): Promise<void> {
   try {
     const res = await backendFetch('/api/v1/users/sync', {
       method: 'POST',

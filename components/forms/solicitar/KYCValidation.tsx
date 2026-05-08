@@ -28,6 +28,7 @@ import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveKYCData } from '@/app/actions/kyc.actions';
 import type { KYCSaveResult } from '@/app/actions/kyc.actions';
+import { performSignOut } from '@/app/actions/auth.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
@@ -129,6 +130,8 @@ export function FunnelKYCValidation({
   const [wasVerified, setWasVerified] = useState(initialData?.verified === true);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
+  /** Cuando el backend indica que la cuenta no tiene DNI y necesita re-login */
+  const [needsRelogin, setNeedsRelogin] = useState(false);
 
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedData, setSavedData] = useState(initialData ?? null);
@@ -226,6 +229,14 @@ export function FunnelKYCValidation({
       const result: KYCSaveResult = await saveKYCData(kycData);
 
       if (!result.success) {
+        // 409 — cuenta sin DNI, necesita re-login
+        if (result.action === 're-login') {
+          setNeedsRelogin(true);
+          setSaveError(result.error);
+          setIsVerifying(false);
+          return;
+        }
+
         if (result.errorCategory === 'rate_limit') {
           setBlocked(true);
           setBlockedHoursLeft(result.blockedHoursLeft ?? 0);
@@ -643,6 +654,32 @@ export function FunnelKYCValidation({
       </form>
     </Form>
   );
+
+  // ── Vista re-login (409 — cuenta sin DNI) ─────────────────────────────────
+  if (needsRelogin) {
+    return (
+      <Card className="w-full max-w-lg mx-auto">
+        <CardContent className="pt-8 pb-8">
+          <div className="flex flex-col items-center gap-5 text-center">
+            <div className="w-14 h-14 rounded-full bg-warning-50 flex items-center justify-center">
+              <Info className="w-7 h-7 text-warning-700" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-base font-semibold text-neutral-900">
+                Cuenta incompleta
+              </h2>
+              <p className="text-sm text-neutral-600 leading-relaxed max-w-sm">
+                {saveError || 'No se encontró un documento registrado en tu cuenta. Por favor, cierra sesión e inicia sesión nuevamente.'}
+              </p>
+            </div>
+            <Button onClick={() => performSignOut()} className="w-full max-w-xs">
+              Cerrar sesión e iniciar de nuevo
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // ── Contenido activo según estado ────────────────────────────────────────
   const content = isVerified && !isEditing ? verifiedView : editForm;

@@ -1,6 +1,6 @@
 'use server';
 
-import { KYCData, ActionResult } from '@/lib/types';
+import { KYCData } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
@@ -21,6 +21,8 @@ export type KYCSaveResult =
       error: string;
       blockedHoursLeft?: number;
       attemptsLeft?: number;
+      /** Cuando el backend indica que el usuario debe re-loguearse (409) */
+      action?: 're-login';
     };
 
 // ── Helper: fetch autenticado al backend ─────────────────────────────────────
@@ -135,6 +137,17 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       };
     }
 
+    // 409 — cuenta sin DNI registrado (necesita re-login)
+    if (res.status === 409) {
+      return {
+        success: false,
+        httpStatus: 409,
+        errorCategory: 'conflict',
+        action: 're-login',
+        error: json.detail ?? 'No se encontró un documento registrado en tu cuenta. Por favor, cierra sesión e inicia sesión nuevamente.',
+      };
+    }
+
     // 422 — datos no coinciden con RENIEC (tiene attemptsLeft y fieldErrors)
     if (res.status === 422) {
       const attemptsLeft = json.attemptsLeft;
@@ -157,7 +170,7 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       };
     }
 
-    // 400 — formato inválido o DNI no coincide con el perfil (Problem Detail)
+    // 400 — formato inválido o edad fuera de rango (Problem Detail, no consume intento)
     if (res.status === 400) {
       const detail = json.detail ?? json.error ?? 'Los datos ingresados tienen un formato inválido. Verifica que sean exactamente como aparecen en tu DNI.';
       return {
@@ -165,6 +178,16 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
         httpStatus: 400,
         errorCategory: 'validation',
         error: detail,
+      };
+    }
+
+    // 500 — error técnico del proveedor (no consume intento, puede reintentar)
+    if (res.status >= 500) {
+      return {
+        success: false,
+        httpStatus: res.status,
+        errorCategory: 'server',
+        error: 'Error técnico al verificar tus datos. No se consumió un intento. Por favor, inténtalo de nuevo en unos minutos.',
       };
     }
 
