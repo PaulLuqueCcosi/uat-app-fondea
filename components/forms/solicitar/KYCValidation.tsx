@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CreditCard, Info, CheckCircle2, Pencil, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { CreditCard, Info, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
 import { isValidDNI } from '@/lib/validation';
 import { KYCData } from '@/lib/types';
@@ -32,6 +32,7 @@ import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { DataRow } from '@/components/ui/data-row';
+import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { useState, useEffect } from 'react';
 
 interface FunnelKYCValidationProps {
@@ -124,6 +125,8 @@ export function FunnelKYCValidation({
 
   const [isVerified, setIsVerified] = useState(initialData?.verified === true);
   const [isEditing, setIsEditing] = useState(!initialData?.verified);
+  /** true si el usuario ya tenía datos verificados antes de editar */
+  const [wasVerified, setWasVerified] = useState(initialData?.verified === true);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
 
@@ -197,6 +200,7 @@ export function FunnelKYCValidation({
 
   const handleEdit = () => {
     // Al editar, el estado verificado se pierde — el backend re-validará al guardar
+    setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
     setSaveError(null);
@@ -266,25 +270,11 @@ export function FunnelKYCValidation({
   const verifiedView = (
     <div className="space-y-6">
       {/* Banner de verificación exitosa */}
-      <div className="flex items-center gap-3 rounded-lg border border-success-200 bg-success-50 px-4 py-3">
-        <ShieldCheck className="h-5 w-5 shrink-0 text-success-600" />
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-success-700">Identidad verificada</p>
-          <p className="text-xs text-muted-foreground">
-            Tus datos fueron validados correctamente. Si necesitas corregir algo, puedes editar.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleEdit}
-          className="shrink-0 gap-1.5"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          Editar
-        </Button>
-      </div>
+      <VerifiedBanner
+        title="Identidad verificada"
+        description="Tus datos fueron validados correctamente. Si necesitas corregir algo, puedes editar."
+        onEdit={handleEdit}
+      />
 
       {/* Resumen de datos en readonly */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -619,15 +609,27 @@ export function FunnelKYCValidation({
         {/* Botones */}
         {!dashboardMode && (
           <div className="flex flex-col sm:flex-row justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={() => router.back()}
-              disabled={isVerifying}
-            >
-              Atrás
-            </Button>
+            {wasVerified ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }}
+                disabled={isVerifying}
+              >
+                Cancelar
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => router.back()}
+                disabled={isVerifying}
+              >
+                Atrás
+              </Button>
+            )}
             <Button type="submit" className="w-full sm:w-auto" disabled={isVerifying || blocked}>
               {isVerifying ? <ButtonSpinner label="Verificando..." /> : (
                 <span className="flex items-center gap-2">

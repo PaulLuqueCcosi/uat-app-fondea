@@ -26,9 +26,11 @@ import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveReferencesProfile } from '@/app/actions/references.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { useFormSubmission } from '@/hooks/use-form-submission';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { DataRow } from '@/components/ui/data-row';
+import { VerifiedBanner } from '@/components/ui/verified-banner';
 
 interface FunnelReferencesProps {
   dashboardMode?: boolean;
@@ -113,13 +115,40 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
-  const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
-
-  // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
-  const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
+  const {
+    isVerified,
+    isEditing,
+    isFirstTime,
+    saveError,
+    saveErrorCategory,
+    savedData: savedProfile,
+    handleSubmit: submitForm,
+    startEditing,
+    cancelEditing,
+  } = useFormSubmission(
+    async (data: ReferencesFormValues) => {
+      const referencesProfile = {
+        family_reference: {
+          name: data.family_name,
+          phone: data.family_phone,
+          relationship: data.family_relation as FamilyRelationship,
+          relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
+        },
+        non_family_reference: {
+          name: data.non_family_name,
+          phone: data.non_family_phone,
+          relationship: data.non_family_relation as NonFamilyRelationship,
+          relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
+          years_known: Number(data.years_known),
+        },
+      };
+      return saveReferencesProfile(referencesProfile);
+    },
+    {
+      initialVerified: initialData?.overall_verified,
+      initialData: initialData?.profile,
+    },
+  );
 
   const nextPath = currentStep?.nextPath || '/solicitar/additional';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -141,54 +170,13 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
     },
   });
 
-  const handleEdit = () => {
-    setIsVerified(false);
-    setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-  };
-
   const watchFamilyRelation = form.watch('family_relation');
   const watchNonFamilyRelation = form.watch('non_family_relation');
 
   const onSubmit = async (data: ReferencesFormValues) => {
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    try {
-      const referencesProfile = {
-        family_reference: {
-          name: data.family_name,
-          phone: data.family_phone,
-          relationship: data.family_relation as FamilyRelationship,
-          relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
-        },
-        non_family_reference: {
-          name: data.non_family_name,
-          phone: data.non_family_phone,
-          relationship: data.non_family_relation as NonFamilyRelationship,
-          relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
-          years_known: Number(data.years_known),
-        },
-      };
-
-      const result = await saveReferencesProfile(referencesProfile);
-
-      if (!result.success) {
-        setSaveError(result.error);
-        setSaveErrorCategory(result.errorCategory);
-        return;
-      }
-
-      setSavedProfile({ ...referencesProfile, verified: true });
-      setIsVerified(true);
-      setIsEditing(false);
-
-      if (!dashboardMode) {
-        autoNavigate.start();
-      }
-    } catch {
-      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
-      setSaveErrorCategory('network');
+    const success = await submitForm(data);
+    if (success && !dashboardMode) {
+      autoNavigate.start();
     }
   };
 
@@ -206,19 +194,11 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
 
   const verifiedView = (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 rounded-lg border border-success-200 bg-success-50 px-4 py-3">
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-success-600" />
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-success-700">Referencias guardadas</p>
-          <p className="text-xs text-muted-foreground">
-            Tus referencias están registradas. Puedes editarlas si algo cambió.
-          </p>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={handleEdit} className="shrink-0 gap-1.5">
-          <Pencil className="h-3.5 w-3.5" />
-          Editar
-        </Button>
-      </div>
+      <VerifiedBanner
+        title="Referencias guardadas"
+        description="Tus referencias están registradas. Puedes editarlas si algo cambió."
+        onEdit={startEditing}
+      />
 
       {/* Referencias en 2 columnas */}
       <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -461,15 +441,22 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
         {/* Botones de acción */}
         {!dashboardMode && (
           <div className="flex flex-col sm:flex-row justify-end gap-3">
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
-              Atrás
-            </Button>
+            {!isFirstTime && (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={cancelEditing}>
+                Cancelar
+              </Button>
+            )}
+            {isFirstTime && (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
+                Atrás
+              </Button>
+            )}
             <Button
               type="submit"
               className="w-full sm:w-auto"
               disabled={form.formState.isSubmitting}
             >
-              {form.formState.isSubmitting ? 'Guardando...' : 'Continuar'}
+              {form.formState.isSubmitting ? 'Guardando...' : isFirstTime ? 'Continuar' : 'Guardar cambios'}
             </Button>
           </div>
         )}

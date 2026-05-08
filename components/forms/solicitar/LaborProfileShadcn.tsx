@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, Trash2, Briefcase, Pencil, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Briefcase, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
 import type { LaborProfileStatus, EmploymentStatus, AdditionalIncomeType, LaborIndustry, IncomeReceiptMethod } from '@/lib/types';
 import {
@@ -20,6 +20,7 @@ import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { DataRow } from '@/components/ui/data-row';
+import { VerifiedBanner } from '@/components/ui/verified-banner';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -184,7 +185,6 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
   const isSubmitting = form.formState.isSubmitting;
 
   const handleEdit = () => {
-    setIsVerified(false);
     setIsEditing(true);
     setSaveError(null);
     setSaveErrorCategory(undefined);
@@ -276,19 +276,11 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
 
   const verifiedView = (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 rounded-lg border border-success-200 bg-success-50 px-4 py-3">
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-success-600" />
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-success-700">Perfil laboral guardado</p>
-          <p className="text-xs text-muted-foreground">
-            Tu información laboral está registrada. Puedes editarla si algo cambió.
-          </p>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={handleEdit} className="shrink-0 gap-1.5">
-          <Pencil className="h-3.5 w-3.5" />
-          Editar
-        </Button>
-      </div>
+      <VerifiedBanner
+        title="Perfil laboral guardado"
+        description="Tu información laboral está registrada. Puedes editarla si algo cambió."
+        onEdit={handleEdit}
+      />
 
       {/* Situación Laboral */}
       <div>
@@ -706,14 +698,20 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         {/* Botones — solo en modo funnel */}
         {!dashboardMode && (
           <div className="flex flex-col sm:flex-row justify-end gap-3">
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()} disabled={isSubmitting}>
-              Atrás
-            </Button>
+            {isVerified ? (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { setIsEditing(false); setSaveError(null); }} disabled={isSubmitting}>
+                Cancelar
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()} disabled={isSubmitting}>
+                Atrás
+              </Button>
+            )}
             <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
               {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
                 <span className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
-                  Continuar
+                  {isVerified ? 'Guardar cambios' : 'Continuar'}
                 </span>
               )}
             </Button>

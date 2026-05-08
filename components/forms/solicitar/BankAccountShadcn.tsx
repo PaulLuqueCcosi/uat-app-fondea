@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Building2, Wallet, CreditCard, Pencil, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Building2, Wallet, CreditCard, Eye, EyeOff } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
 import { useState } from 'react';
 import { BankAccountProfileStatus } from '@/lib/types';
@@ -26,8 +26,10 @@ import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveBankAccountProfile } from '@/app/actions/bank-account.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { useFormSubmission } from '@/hooks/use-form-submission';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { DataRow } from '@/components/ui/data-row';
+import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 
 interface FunnelBankAccountProps {
@@ -82,15 +84,32 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
-
-  const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
-  const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
   const [showCCI, setShowCCI] = useState(false);
 
-  // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
-  const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
+  const {
+    isVerified,
+    isEditing,
+    isFirstTime,
+    saveError,
+    saveErrorCategory,
+    savedData,
+    handleSubmit: submitForm,
+    startEditing,
+    cancelEditing,
+  } = useFormSubmission(
+    async (data: BankAccountFormValues) => {
+      const bankAccountProfile = {
+        bank: data.bank,
+        account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
+        cci: data.cci,
+      };
+      return saveBankAccountProfile(bankAccountProfile);
+    },
+    {
+      initialVerified: initialData?.overall_verified,
+      initialData: initialData?.profile,
+    },
+  );
 
   const nextPath = currentStep?.nextPath || '/solicitar/summary';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -106,66 +125,27 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
     },
   });
 
-  const handleEdit = () => {
-    setIsVerified(false);
-    setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-  };
-
   const onSubmit = async (data: BankAccountFormValues) => {
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    try {
-      const bankAccountProfile = {
-        bank: data.bank,
-        account_type: data.account_type as any,
-        cci: data.cci,
-      };
-
-      const result = await saveBankAccountProfile(bankAccountProfile);
-
-      if (!result.success) {
-        setSaveError(result.error);
-        setSaveErrorCategory(result.errorCategory);
-        return;
-      }
-
-      setSavedProfile({ ...bankAccountProfile, verified: true });
-      setIsVerified(true);
-      setIsEditing(false);
-
-      if (!dashboardMode) {
-        autoNavigate.start();
-      }
-    } catch {
-      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
-      setSaveErrorCategory('network');
+    const success = await submitForm(data);
+    if (success && !dashboardMode) {
+      autoNavigate.start();
     }
   };
 
   // ── Vista readonly (datos guardados) ────────────────────────────────────────
-  const bankLabel = BANKS.find(b => b.value === savedProfile?.bank)?.label ?? savedProfile?.bank ?? '—';
-  const accountTypeLabel = ACCOUNT_TYPES.find(t => t.value === savedProfile?.account_type)?.label ?? '—';
+  const bankLabel = BANKS.find(b => b.value === savedData?.bank)?.label ?? savedData?.bank ?? '—';
+  const accountTypeLabel = ACCOUNT_TYPES.find(t => t.value === savedData?.account_type)?.label ?? '—';
 
-  const maskedCCI = savedProfile?.cci ? '****' + savedProfile.cci.slice(-4) : '—';
-  const displayCCI = showCCI ? savedProfile?.cci : maskedCCI;
+  const maskedCCI = savedData?.cci ? '****' + savedData.cci.slice(-4) : '—';
+  const displayCCI = showCCI ? savedData?.cci : maskedCCI;
 
   const verifiedView = (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 rounded-lg border border-success-200 bg-success-50 px-4 py-3">
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-success-600" />
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-success-700">Cuenta bancaria guardada</p>
-          <p className="text-xs text-muted-foreground">
-            Tu cuenta para el desembolso está registrada. Puedes editarla si algo cambió.
-          </p>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={handleEdit} className="shrink-0 gap-1.5">
-          <Pencil className="h-3.5 w-3.5" />
-          Editar
-        </Button>
-      </div>
+      <VerifiedBanner
+        title="Cuenta bancaria guardada"
+        description="Tu cuenta para el desembolso está registrada. Puedes editarla si algo cambió."
+        onEdit={startEditing}
+      />
 
       {/* Info importante */}
       <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
@@ -322,15 +302,22 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
         {/* Botones de acción */}
         {!dashboardMode && (
           <div className="flex flex-col sm:flex-row justify-end gap-3">
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
-              Atrás
-            </Button>
+            {!isFirstTime && (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={cancelEditing}>
+                Cancelar
+              </Button>
+            )}
+            {isFirstTime && (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
+                Atrás
+              </Button>
+            )}
             <Button
               type="submit"
               className="w-full sm:w-auto"
               disabled={form.formState.isSubmitting}
             >
-              {form.formState.isSubmitting ? 'Guardando...' : 'Continuar'}
+              {form.formState.isSubmitting ? 'Guardando...' : isFirstTime ? 'Continuar' : 'Guardar cambios'}
             </Button>
           </div>
         )}

@@ -69,19 +69,31 @@ export function useFormSubmission<TData, TSubmit = TData>(
     setSaveErrorCategory(undefined);
   };
 
+  /** Cancela la edición y vuelve a la vista readonly (solo si ya guardó antes) */
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setSaveError(null);
+    setSaveErrorCategory(undefined);
+  };
+
   const clearError = () => {
     setSaveError(null);
     setSaveErrorCategory(undefined);
   };
 
   return {
+    /** Ya guardó al menos una vez */
     isVerified,
+    /** Está en modo formulario (editando o primera vez) */
     isEditing,
+    /** true = primera vez llenando, false = editando algo ya guardado */
+    isFirstTime: isEditing && !isVerified,
     saveError,
     saveErrorCategory,
     savedData,
     handleSubmit,
     startEditing,
+    cancelEditing,
     clearError,
   };
 }

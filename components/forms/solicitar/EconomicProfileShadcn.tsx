@@ -29,9 +29,11 @@ import { saveEconomicProfile } from '@/app/actions/economic.actions';
 import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/lib/constants';
 import { EconomicProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { useFormSubmission } from '@/hooks/use-form-submission';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { DataRow } from '@/components/ui/data-row';
+import { VerifiedBanner } from '@/components/ui/verified-banner';
 
 interface FunnelEconomicProfileProps {
   dashboardMode?: boolean;
@@ -97,13 +99,41 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
-  const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
-
-  // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
-  const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
+  const {
+    isVerified,
+    isEditing,
+    isFirstTime,
+    saveError,
+    saveErrorCategory,
+    savedData: savedProfile,
+    handleSubmit: submitForm,
+    startEditing,
+    cancelEditing,
+  } = useFormSubmission(
+    async (data: EconomicFormValues) => {
+      const economicProfile = {
+        loan_purpose: data.loan_purpose as any,
+        monthly_expenses: Number(data.monthly_expenses),
+        has_debts: data.has_debts,
+        debts: data.has_debts ? data.debts?.map(debt => ({
+          id: debt.entity + '-' + Date.now(),
+          entity: debt.entity,
+          type: debt.type,
+          amount: Number(debt.amount),
+          monthlyPayment: Number(debt.monthly_payment),
+        })) || [] : [],
+        has_property: data.has_property,
+        has_vehicle: data.has_vehicle,
+        has_services: data.has_services,
+        education_level: data.education_level as any,
+      };
+      return saveEconomicProfile(economicProfile);
+    },
+    {
+      initialVerified: initialData?.overall_verified,
+      initialData: initialData?.profile,
+    },
+  );
 
   const nextPath = currentStep?.nextPath || '/solicitar/references';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -136,52 +166,10 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
 
   const hasDebts = form.watch('has_debts');
 
-  const handleEdit = () => {
-    setIsVerified(false);
-    setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-  };
-
   const onSubmit = async (data: EconomicFormValues) => {
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    try {
-      const economicProfile = {
-        loan_purpose: data.loan_purpose as any,
-        monthly_expenses: Number(data.monthly_expenses),
-        has_debts: data.has_debts,
-        debts: data.has_debts ? data.debts?.map(debt => ({
-          id: debt.entity + '-' + Date.now(),
-          entity: debt.entity,
-          type: debt.type,
-          amount: Number(debt.amount),
-          monthlyPayment: Number(debt.monthly_payment),
-        })) || [] : [],
-        has_property: data.has_property,
-        has_vehicle: data.has_vehicle,
-        has_services: data.has_services,
-        education_level: data.education_level as any,
-      };
-
-      const result = await saveEconomicProfile(economicProfile);
-
-      if (!result.success) {
-        setSaveError(result.error);
-        setSaveErrorCategory(result.errorCategory);
-        return;
-      }
-
-      setSavedProfile({ ...economicProfile, verified: true });
-      setIsVerified(true);
-      setIsEditing(false);
-
-      if (!dashboardMode) {
-        autoNavigate.start();
-      }
-    } catch {
-      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
-      setSaveErrorCategory('network');
+    const success = await submitForm(data);
+    if (success && !dashboardMode) {
+      autoNavigate.start();
     }
   };
 
@@ -191,19 +179,11 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
 
   const verifiedView = (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 rounded-lg border border-success-200 bg-success-50 px-4 py-3">
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-success-600" />
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-success-700">Perfil económico guardado</p>
-          <p className="text-xs text-muted-foreground">
-            Tu información económica está registrada. Puedes editarla si algo cambió.
-          </p>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={handleEdit} className="shrink-0 gap-1.5">
-          <Pencil className="h-3.5 w-3.5" />
-          Editar
-        </Button>
-      </div>
+      <VerifiedBanner
+        title="Perfil económico guardado"
+        description="Tu información económica está registrada. Puedes editarla si algo cambió."
+        onEdit={startEditing}
+      />
 
       {/* Propósito del préstamo */}
       <div>
@@ -632,15 +612,22 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
         {/* Botones de acción */}
         {!dashboardMode && (
           <div className="flex flex-col sm:flex-row justify-end gap-3">
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
-              Atrás
-            </Button>
+            {!isFirstTime && (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={cancelEditing}>
+                Cancelar
+              </Button>
+            )}
+            {isFirstTime && (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
+                Atrás
+              </Button>
+            )}
             <Button
               type="submit"
               className="w-full sm:w-auto"
               disabled={form.formState.isSubmitting}
             >
-              {form.formState.isSubmitting ? 'Guardando...' : 'Continuar'}
+              {form.formState.isSubmitting ? 'Guardando...' : isFirstTime ? 'Continuar' : 'Guardar cambios'}
             </Button>
           </div>
         )}
