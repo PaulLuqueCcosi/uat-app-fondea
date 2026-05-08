@@ -27,9 +27,12 @@ export function useFormSubmission<TData, TSubmit = TData>(
     initialVerified?: boolean;
     initialData?: TData | null;
     onSuccess?: (data: TSubmit) => void;
+    /** Transforma los datos del submit al formato de la vista readonly.
+     *  Si no se provee, usa cast directo (solo funciona si TSubmit === TData). */
+    mapToSavedData?: (data: TSubmit) => TData;
   } = {},
 ) {
-  const { initialVerified = false, initialData = null, onSuccess } = options;
+  const { initialVerified = false, initialData = null, onSuccess, mapToSavedData } = options;
 
   const [isVerified, setIsVerified] = useState(initialVerified);
   const [isEditing, setIsEditing] = useState(!initialVerified);
@@ -51,7 +54,8 @@ export function useFormSubmission<TData, TSubmit = TData>(
       }
 
       // Guardar los datos para la vista readonly
-      setSavedData(data as unknown as TData);
+      const dataForView = mapToSavedData ? mapToSavedData(data) : (data as unknown as TData);
+      setSavedData(dataForView);
       setIsVerified(true);
       setIsEditing(false);
       onSuccess?.(data);

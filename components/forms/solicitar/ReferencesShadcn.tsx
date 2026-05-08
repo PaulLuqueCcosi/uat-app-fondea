@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { Users, UserCheck, Pencil, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
 import { useState } from 'react';
-import { ReferencesProfileStatus, FamilyRelationship, NonFamilyRelationship } from '@/lib/types';
+import { ReferencesProfileStatus, ReferencesProfile, FamilyRelationship, NonFamilyRelationship } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -125,7 +125,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
     handleSubmit: submitForm,
     startEditing,
     cancelEditing,
-  } = useFormSubmission(
+  } = useFormSubmission<ReferencesProfile & { verified?: boolean }, ReferencesFormValues>(
     async (data: ReferencesFormValues) => {
       const referencesProfile = {
         family_reference: {
@@ -147,6 +147,22 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
     {
       initialVerified: initialData?.overall_verified,
       initialData: initialData?.profile,
+      mapToSavedData: (data) => ({
+        family_reference: {
+          name: data.family_name,
+          phone: data.family_phone,
+          relationship: data.family_relation as FamilyRelationship,
+          relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
+        },
+        non_family_reference: {
+          name: data.non_family_name,
+          phone: data.non_family_phone,
+          relationship: data.non_family_relation as NonFamilyRelationship,
+          relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
+          years_known: Number(data.years_known),
+        },
+        verified: true,
+      }),
     },
   );
 

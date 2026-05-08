@@ -132,6 +132,23 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
     {
       initialVerified: initialData?.overall_verified,
       initialData: initialData?.profile,
+      mapToSavedData: (data) => ({
+        loan_purpose: data.loan_purpose as any,
+        monthly_expenses: Number(data.monthly_expenses),
+        has_debts: data.has_debts,
+        debts: data.has_debts ? data.debts?.map(debt => ({
+          id: debt.entity + '-' + Date.now(),
+          entity: debt.entity,
+          type: debt.type,
+          amount: Number(debt.amount),
+          monthlyPayment: Number(debt.monthly_payment),
+        })) || [] : [],
+        has_property: data.has_property,
+        has_vehicle: data.has_vehicle,
+        has_services: data.has_services,
+        education_level: data.education_level as any,
+        verified: true,
+      }),
     },
   );
 
