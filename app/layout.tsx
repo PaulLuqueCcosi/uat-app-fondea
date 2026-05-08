@@ -21,7 +21,9 @@ export default async function RootLayout({
   const { isAuthenticated } = await getLogtoContext(logtoConfig);
 
   if (!isAuthenticated) {
-    console.log('[AUTH:layout] no autenticado → /api/logto/sign-in');
+    // El middleware ya maneja el redirect con ?intencion preservado.
+    // Este redirect es solo un safety net para cuando la cookie existe
+    // pero el token expiró (middleware dejó pasar, pero Logto dice no válido).
     redirect('/api/logto/sign-in');
   }
 
