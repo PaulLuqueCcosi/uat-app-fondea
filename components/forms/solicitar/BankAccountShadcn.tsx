@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveBankAccountProfile } from '@/app/actions/bank-account.actions';
+import type { BankAccountSaveResult } from '@/app/actions/bank-account.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { useFormSubmission } from '@/hooks/use-form-submission';
 import { ContinueButton } from '@/components/ui/continue-button';
@@ -85,6 +86,10 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
   const [showCCI, setShowCCI] = useState(false);
+  /** Módulo bloqueado por max intentos de validación de CCI */
+  const [blocked, setBlocked] = useState(false);
+  const [blockedHoursLeft, setBlockedHoursLeft] = useState(0);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(undefined);
 
   const {
     isVerified,
@@ -103,7 +108,20 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
         account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
         cci: data.cci,
       };
-      return saveBankAccountProfile(bankAccountProfile);
+      const result = await saveBankAccountProfile(bankAccountProfile);
+
+      // Manejar campos extendidos (attemptsLeft, blockedHoursLeft)
+      if (!result.success) {
+        if (result.errorCategory === 'rate_limit') {
+          setBlocked(true);
+          setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
+        }
+        if (result.attemptsLeft !== undefined) {
+          setAttemptsLeft(result.attemptsLeft);
+        }
+      }
+
+      return result;
     },
     {
       initialVerified: initialData?.overall_verified,
@@ -297,6 +315,53 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
           </div>
         </div>
 
+        {/* Panel de bloqueo/intentos — aparece cuando hay error de validación de CCI */}
+        {(blocked || (saveError && attemptsLeft !== undefined)) && (
+          <>
+            <Separator className="my-10 bg-primary/20 h-px" />
+            <div className={`rounded-lg border p-4 ${blocked ? 'border-error-200 bg-error-50' : attemptsLeft === 1 ? 'border-error-200 bg-error-50' : 'border-warning-200 bg-warning-50'}`}>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 shrink-0 text-lg">
+                  {blocked ? '🔒' : attemptsLeft === 1 ? '🚨' : '⚠️'}
+                </span>
+                <div className="space-y-2 w-full">
+                  {blocked && (
+                    <div>
+                      <p className="text-sm font-semibold text-error-700">
+                        Módulo bloqueado por {blockedHoursLeft} hora{blockedHoursLeft !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-xs text-error-600 mt-1">
+                        Has superado el número máximo de intentos. Podrás intentarlo nuevamente cuando expire el bloqueo.
+                      </p>
+                    </div>
+                  )}
+                  {!blocked && attemptsLeft !== undefined && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground font-medium">Intentos restantes</span>
+                        <span className={`font-bold ${attemptsLeft === 1 ? 'text-error-700' : 'text-warning-700'}`}>
+                          {attemptsLeft} de 3
+                        </span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${attemptsLeft === 1 ? 'bg-error-500' : 'bg-warning-500'}`}
+                          style={{ width: `${((3 - attemptsLeft) / 3) * 100}%` }}
+                        />
+                      </div>
+                      {attemptsLeft === 1 && (
+                        <p className="text-xs text-error-700 font-semibold">
+                          🚨 Último intento — si falla, tu cuenta quedará bloqueada por 24 horas
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         <Separator className="my-10 bg-primary/20 h-px" />
 
         {/* Botones de acción */}
@@ -315,7 +380,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
             <Button
               type="submit"
               className="w-full sm:w-auto"
-              disabled={form.formState.isSubmitting}
+              disabled={form.formState.isSubmitting || blocked}
             >
               {form.formState.isSubmitting ? 'Guardando...' : isFirstTime ? 'Continuar' : 'Guardar cambios'}
             </Button>
