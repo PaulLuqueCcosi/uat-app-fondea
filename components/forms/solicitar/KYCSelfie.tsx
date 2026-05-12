@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
-import { verifyBiometric } from '@/app/actions/loan.actions';
+import { uploadDocumentAction } from '@/app/actions/document.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
@@ -141,7 +141,15 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export function FunnelKYCSelfie() {
+
+interface FunnelKYCSelfieProps {
+  /** ID de la solicitud — pasado desde el server component */
+  applicationId?: string;
+  /** URL de preview de la selfie ya subida */
+  initialSelfieUrl?: string | null;
+}
+
+export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSelfieProps) {
   const router    = useRouter();
   const pathname  = usePathname();
   const params    = useParams();
@@ -151,16 +159,16 @@ export function FunnelKYCSelfie() {
   const [error, setError]       = useState('');
 
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
-  const solicitudId       = params.id as string | undefined;
+  const solicitudId       = applicationId || (params.id as string | undefined);
 
-  // Selfie
+  // Selfie — inicializar con datos del backend si existen
   const [selfieFile,    setSelfieFile]    = useState<File | null>(null);
-  const [selfiePreview, setSelfiePreview] = useState<string>('');
-  const [verified,      setVerified]      = useState(false);
+  const [selfiePreview, setSelfiePreview] = useState<string>(initialSelfieUrl ?? '');
+  const [verified,      setVerified]      = useState(!!initialSelfieUrl);
 
   // Análisis de imagen subida
   const [analyzing,    setAnalyzing]    = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<FaceStatus | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<FaceStatus | null>(initialSelfieUrl ? 'green' : null);
   const [uploadScore,  setUploadScore]  = useState<number | null>(null);
 
   // Modal
@@ -223,10 +231,15 @@ export function FunnelKYCSelfie() {
     reader.readAsDataURL(file);
   };
 
-  // ── Verificación biométrica (backend) ────────────────────────────────────
+  // ── Subida de selfie al backend ────────────────────────────────────────────
   const handleVerify = async () => {
-    if (!selfieFile || !selfiePreview) {
+    if (!selfieFile) {
       setError('Debes capturar o subir una selfie primero');
+      return;
+    }
+
+    if (!solicitudId) {
+      setError('No se encontró la solicitud activa.');
       return;
     }
 
@@ -234,7 +247,10 @@ export function FunnelKYCSelfie() {
     setError('');
 
     try {
-      const result = await verifyBiometric(selfiePreview);
+      const formData = new FormData();
+      formData.append('file', selfieFile);
+
+      const result = await uploadDocumentAction(solicitudId, 'SELFIE', formData);
       if (result.success) {
         setVerified(true);
         setTimeout(() => {
@@ -245,10 +261,10 @@ export function FunnelKYCSelfie() {
           }
         }, 1500);
       } else {
-        setError(result.error || 'No pudimos verificar tu identidad. Intenta nuevamente.');
+        setError(result.error || 'No pudimos subir tu selfie. Intenta nuevamente.');
       }
     } catch (err) {
-      console.error('Error verifying biometric:', err);
+      console.error('Error uploading selfie:', err);
       setError('Error en la verificación. Intenta nuevamente.');
     } finally {
       setLoading(false);
@@ -266,6 +282,16 @@ export function FunnelKYCSelfie() {
   };
 
   const handleContinue = async () => {
+    // Si ya está verificada (del backend), solo navegar
+    if (verified && !selfieFile) {
+      if (isInSolicitudFlow && solicitudId) {
+        router.push(`/solicitudes/${solicitudId}/contrato`);
+      } else {
+        router.push(currentStep?.nextPath || '/solicitar/contract');
+      }
+      return;
+    }
+
     if (!selfieFile) {
       setError('Debes capturar o subir una selfie');
       return;
@@ -507,7 +533,7 @@ export function FunnelKYCSelfie() {
               <Button
                 type="button"
                 onClick={handleContinue}
-                disabled={!selfieFile || loading || analyzing || (uploadStatus !== null && uploadStatus !== 'green')}
+                disabled={(!selfieFile && !verified) || loading || analyzing || (uploadStatus !== null && uploadStatus !== 'green')}
                 className="w-full sm:w-auto"
               >
                 {loading ? (

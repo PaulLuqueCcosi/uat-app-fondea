@@ -5,7 +5,8 @@ import { useRouter, usePathname, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2, RefreshCw } from 'lucide-react';
-import { uploadDocument } from '@/app/actions/loan.actions';
+import { uploadDocumentAction } from '@/app/actions/document.actions';
+import type { DocumentType } from '@/app/actions/document.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
@@ -25,7 +26,16 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
   );
 }
 
-export function FunnelKYCDocuments() {
+interface FunnelKYCDocumentsProps {
+  /** ID de la solicitud — pasado desde el server component */
+  applicationId?: string;
+  /** URL de preview del DNI frente ya subido */
+  initialFrontUrl?: string | null;
+  /** URL de preview del DNI reverso ya subido */
+  initialBackUrl?: string | null;
+}
+
+export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBackUrl }: FunnelKYCDocumentsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
@@ -33,17 +43,17 @@ export function FunnelKYCDocuments() {
 
   // Detectar si estamos en el flujo de solicitudes
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
-  const solicitudId = params.id as string | undefined;
+  const solicitudId = applicationId || (params.id as string | undefined);
   const [loading, setLoading] = useState<'front' | 'back' | null>(null);
   const [error, setError] = useState('');
 
-  // Estado para las fotos
+  // Estado para las fotos — inicializar con datos del backend si existen
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [backFile, setBackFile] = useState<File | null>(null);
-  const [frontPreview, setFrontPreview] = useState<string>('');
-  const [backPreview, setBackPreview] = useState<string>('');
-  const [frontUploaded, setFrontUploaded] = useState(false);
-  const [backUploaded, setBackUploaded] = useState(false);
+  const [frontPreview, setFrontPreview] = useState<string>(initialFrontUrl ?? '');
+  const [backPreview, setBackPreview] = useState<string>(initialBackUrl ?? '');
+  const [frontUploaded, setFrontUploaded] = useState(!!initialFrontUrl);
+  const [backUploaded, setBackUploaded] = useState(!!initialBackUrl);
 
   // Estado para el modal
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
@@ -98,13 +108,17 @@ export function FunnelKYCDocuments() {
 
   const handleUpload = async (side: 'front' | 'back') => {
     const file = side === 'front' ? frontFile : backFile;
-    if (!file) return;
+    if (!file || !solicitudId) return;
 
     setLoading(side);
     setError('');
 
     try {
-      const result = await uploadDocument(file, side);
+      const docType: DocumentType = side === 'front' ? 'DNI_FRONT' : 'DNI_BACK';
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const result = await uploadDocumentAction(solicitudId, docType, formData);
       if (result.success) {
         if (side === 'front') {
           setFrontUploaded(true);
@@ -112,7 +126,7 @@ export function FunnelKYCDocuments() {
           setBackUploaded(true);
         }
       } else {
-        setError('Error al subir la imagen. Por favor, intenta nuevamente.');
+        setError(result.error || 'Error al subir la imagen. Por favor, intenta nuevamente.');
       }
     } catch (err) {
       console.error(`Error uploading ${side}:`, err);
@@ -136,9 +150,28 @@ export function FunnelKYCDocuments() {
   };
 
   const handleContinue = async () => {
-    // Validar que ambas fotos estén seleccionadas
-    if (!frontFile || !backFile) {
-      setError('Debes capturar o subir ambas imágenes del DNI');
+    // Si ambas ya están subidas (del backend o de este session), solo navegar
+    if (frontUploaded && backUploaded) {
+      if (isInSolicitudFlow && solicitudId) {
+        router.push(`/solicitudes/${solicitudId}/kyc-selfie`);
+      } else {
+        router.push(currentStep?.nextPath || '/solicitar/kyc-selfie');
+      }
+      return;
+    }
+
+    // Validar que ambas fotos estén seleccionadas si no están subidas
+    if (!frontUploaded && !frontFile) {
+      setError('Debes capturar o subir la imagen del frente del DNI');
+      return;
+    }
+    if (!backUploaded && !backFile) {
+      setError('Debes capturar o subir la imagen del reverso del DNI');
+      return;
+    }
+
+    if (!solicitudId) {
+      setError('No se encontró la solicitud activa.');
       return;
     }
 
@@ -148,9 +181,11 @@ export function FunnelKYCDocuments() {
     if (!frontUploaded) {
       setLoading('front');
       try {
-        const result = await uploadDocument(frontFile, 'front');
+        const formData = new FormData();
+        formData.append('file', frontFile);
+        const result = await uploadDocumentAction(solicitudId, 'DNI_FRONT', formData);
         if (!result.success) {
-          setError('Error al subir la imagen del frente');
+          setError(result.error || 'Error al subir la imagen del frente');
           setLoading(null);
           return;
         }
@@ -166,9 +201,11 @@ export function FunnelKYCDocuments() {
     if (!backUploaded) {
       setLoading('back');
       try {
-        const result = await uploadDocument(backFile, 'back');
+        const formData = new FormData();
+        formData.append('file', backFile);
+        const result = await uploadDocumentAction(solicitudId, 'DNI_BACK', formData);
         if (!result.success) {
-          setError('Error al subir la imagen del reverso');
+          setError(result.error || 'Error al subir la imagen del reverso');
           setLoading(null);
           return;
         }
@@ -435,7 +472,7 @@ export function FunnelKYCDocuments() {
               <Button
                 type="button"
                 onClick={handleContinue}
-                disabled={!frontFile || !backFile || loading !== null}
+                disabled={(!frontFile && !frontUploaded) || (!backFile && !backUploaded) || loading !== null}
                 className="w-full sm:w-auto"
               >
                 {loading ? 'Subiendo...' : 'Continuar'}

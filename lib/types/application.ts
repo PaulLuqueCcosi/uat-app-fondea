@@ -9,19 +9,29 @@ import type { AccountType } from './common';
 // ─── Application ─────────────────────────────────────────────────────────────
 
 /**
- * Status reales del backend (pipeline de evaluación):
+ * Status reales del backend (pipeline completo):
  * - SUBMITTED: solicitud enviada, pendiente de procesamiento
  * - PROCESSING: evaluación en curso (business validation + scoring)
- * - PRE_APPROVED: pre-aprobada (pendiente de firma/desembolso)
+ * - PRE_APPROVED: pre-aprobada, pendiente de documentos
+ * - PENDING_DOCUMENTS: esperando subida de DNI + selfie
+ * - PENDING_SIGNATURE: documentos OK, esperando firma de contrato
+ * - APPROVED: contrato firmado, lista para desembolso
+ * - REJECTED_BY_USER: el usuario rechazó la pre-aprobación
  * - REJECTED: rechazada por scoring o validación de negocio
  * - FAILED: error técnico en el pipeline (puede reintentar)
+ * - EXPIRED: solicitud expirada (7 días sin completar)
  */
 export type ApplicationStatus =
   | 'SUBMITTED'
   | 'PROCESSING'
   | 'PRE_APPROVED'
+  | 'PENDING_DOCUMENTS'
+  | 'PENDING_SIGNATURE'
+  | 'APPROVED'
+  | 'REJECTED_BY_USER'
   | 'REJECTED'
-  | 'FAILED';
+  | 'FAILED'
+  | 'EXPIRED';
 
 /**
  * Códigos de fallo técnico del pipeline.

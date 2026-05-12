@@ -69,12 +69,20 @@ export async function backendFetch(
   const startMs = Date.now();
   let res: Response;
 
+  // Si el body es FormData, no setear Content-Type (fetch lo pone con boundary)
+  const isFormData = fetchOptions.body instanceof FormData;
+  const defaultHeaders: Record<string, string> = {
+    'Authorization': `Bearer ${token}`,
+  };
+  if (!isFormData) {
+    defaultHeaders['Content-Type'] = 'application/json';
+  }
+
   try {
     res = await fetch(fullUrl, {
       ...fetchOptions,
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        ...defaultHeaders,
         ...(extraHeaders as Record<string, string> ?? {}),
       },
     });
