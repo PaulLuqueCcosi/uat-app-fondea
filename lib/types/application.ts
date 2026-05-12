@@ -8,17 +8,29 @@ import type { AccountType } from './common';
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
+/**
+ * Status reales del backend (pipeline de evaluación):
+ * - SUBMITTED: solicitud enviada, pendiente de procesamiento
+ * - PROCESSING: evaluación en curso (business validation + scoring)
+ * - PRE_APPROVED: pre-aprobada (pendiente de firma/desembolso)
+ * - REJECTED: rechazada por scoring o validación de negocio
+ * - FAILED: error técnico en el pipeline (puede reintentar)
+ */
 export type ApplicationStatus =
-  | 'draft'
-  | 'submitted'
-  | 'evaluating'
-  | 'approved'
-  | 'more_info'
-  | 'rejected'
-  | 'signed'
-  | 'disbursing';
+  | 'SUBMITTED'
+  | 'PROCESSING'
+  | 'PRE_APPROVED'
+  | 'REJECTED'
+  | 'FAILED';
 
-export type EvaluationResult = 'approved' | 'rejected' | 'more_info';
+/**
+ * Códigos de fallo técnico del pipeline.
+ * Solo presentes cuando status === 'FAILED'.
+ */
+export type ApplicationFailureCode =
+  | 'BUSINESS_VALIDATION_FAILED'
+  | 'SCORE_CALCULATION_FAILED'
+  | 'EVALUATION_ERROR';
 
 export interface LoanApplication {
   id: string;
@@ -34,12 +46,13 @@ export interface LoanApplication {
 
 export interface ApplicationRecord {
   id: string;
-  userId: string;
   status: ApplicationStatus;
-  result?: EvaluationResult;
-  submittedAt: string;
+  submittedAt?: string;
   evaluatedAt?: string;
+  creditScore?: number;
+  rejectionReason?: string;
   canRetryAt?: string;
+  failureCode?: ApplicationFailureCode;
 }
 
 // ─── Bank Account ────────────────────────────────────────────────────────────

@@ -276,7 +276,7 @@ export function DashboardHomeClient({ userName, applications, activeIntencion }:
                           Solicitud #{app.id.slice(0, 8)}
                         </p>
                         <p className="text-xs text-fondea-text">
-                          {formatDate(app.submittedAt)}
+                          {app.submittedAt ? formatDate(app.submittedAt) : '—'}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">

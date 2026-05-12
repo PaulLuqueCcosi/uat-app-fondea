@@ -1,7 +1,7 @@
 'use server';
 
 import { requireValidSession } from './auth.actions';
-import { ApplicationRecord, PEPDeclarations, ActionResult } from '@/lib/types';
+import { ApplicationRecord, ApplicationStatus, PEPDeclarations, ActionResult } from '@/lib/types';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { parseBackendResponse, networkError } from '@/lib/action-utils';
 
@@ -15,11 +15,29 @@ function isSuccess(status: number): boolean {
 }
 
 /**
- * Extiende ActionResult con los datos de la solicitud creada.
+ * Mapea la respuesta del backend (snake_case) a ApplicationRecord (camelCase).
+ */
+function mapApplicationFromBackend(data: any): ApplicationRecord {
+  return {
+    id: data.id,
+    status: data.status as ApplicationStatus,
+    submittedAt: data.submitted_at ?? undefined,
+    evaluatedAt: data.evaluated_at ?? undefined,
+    creditScore: data.credit_score ?? undefined,
+    rejectionReason: data.rejection_reason ?? undefined,
+    canRetryAt: data.can_retry_at ?? undefined,
+    failureCode: data.failure_code ?? undefined,
+  };
+}
+
+// ── Tipos de resultado ────────────────────────────────────────────────────────
+
+/**
+ * Resultado del submit.
  * En éxito incluye applicationId y status devueltos por el backend.
  */
 export type SubmitApplicationResult = ActionResult & (
-  | { success: true; applicationId: string; status: string }
+  | { success: true; applicationId: string; status: ApplicationStatus }
   | { success: false }
 );
 
@@ -28,6 +46,19 @@ export type SubmitApplicationResult = ActionResult & (
 /**
  * Envía la solicitud de préstamo al backend.
  * POST /api/v1/applications/submit
+ *
+ * Body esperado por el backend:
+ * {
+ *   "intention_id": "uuid",
+ *   "pep_declarations": { "not_pep": true, "not_pep_relative": true, "accept_terms": true }
+ * }
+ *
+ * Response del backend:
+ * {
+ *   "success": true,
+ *   "application_id": "uuid",
+ *   "status": "SUBMITTED" | "PROCESSING" | "PRE_APPROVED" | "REJECTED" | "FAILED"
+ * }
  */
 export async function submitApplicationAction(
   pepDeclarations: PEPDeclarations,
@@ -67,31 +98,41 @@ export async function submitApplicationAction(
     }
 
     const data = await res.json();
+
     return {
       success: true,
       httpStatus: res.status,
-      applicationId: data.applicationId,
-      status: data.status,
+      // El backend devuelve application_id (snake_case)
+      applicationId: data.application_id,
+      status: data.status as ApplicationStatus,
     };
   } catch {
     console.error('[APPLICATION] Error al enviar solicitud');
-    return {
-      success: false,
-      httpStatus: 0,
-      errorCategory: 'network',
-      error: 'Error de conexión. Verifica tu internet e inténtalo nuevamente.',
-    } as SubmitApplicationResult;
+    return networkError() as SubmitApplicationResult;
   }
 }
 
 /**
- * Consulta el estado de una solicitud específica (para polling).
+ * Consulta el estado de una solicitud específica (para long polling).
  * GET /api/v1/applications/{id}/status
+ *
+ * Response del backend:
+ * {
+ *   "status": "SUBMITTED" | "PROCESSING" | "PRE_APPROVED" | "REJECTED" | "FAILED",
+ *   "credit_score": 750,
+ *   "rejection_reason": "...",
+ *   "can_retry_at": "2026-06-01T00:00:00Z",
+ *   "failure_code": "BUSINESS_VALIDATION_FAILED" | "SCORE_CALCULATION_FAILED" | "EVALUATION_ERROR"
+ * }
+ *
+ * Usado por SolicitudView para polling cada N segundos.
  */
 export async function getApplicationStatusAction(applicationId: string): Promise<{
-  status: string;
-  result?: string;
-  canRetryAt?: string | null;
+  status: ApplicationStatus;
+  creditScore?: number;
+  rejectionReason?: string;
+  canRetryAt?: string;
+  failureCode?: string;
 } | null> {
   await requireValidSession();
 
@@ -103,9 +144,11 @@ export async function getApplicationStatusAction(applicationId: string): Promise
 
     const data = await res.json();
     return {
-      status: data.status,
-      result: data.result,
-      canRetryAt: data.canRetryAt,
+      status: data.status as ApplicationStatus,
+      creditScore: data.credit_score ?? undefined,
+      rejectionReason: data.rejection_reason ?? undefined,
+      canRetryAt: data.can_retry_at ?? undefined,
+      failureCode: data.failure_code ?? undefined,
     };
   } catch (error) {
     console.error('[APPLICATION] Error al consultar estado:', error);
@@ -130,7 +173,7 @@ export async function getApplicationsAction(): Promise<{
 
     const data = await res.json();
     return {
-      applications: data.applications ?? [],
+      applications: (data.applications ?? []).map(mapApplicationFromBackend),
       total: data.total ?? 0,
     };
   } catch (error) {
@@ -142,6 +185,8 @@ export async function getApplicationsAction(): Promise<{
 /**
  * Obtiene la solicitud activa del usuario (la más reciente no terminal).
  * GET /api/v1/applications/active
+ *
+ * Retorna null si no hay solicitud activa (404 del backend).
  */
 export async function getActiveApplicationAction(): Promise<ApplicationRecord | null> {
   await requireValidSession();
@@ -153,19 +198,9 @@ export async function getActiveApplicationAction(): Promise<ApplicationRecord | 
     if (!isSuccess(res.status)) return null;
 
     const data = await res.json();
-
-    // El backend puede retornar null si no hay aplicación activa
     if (!data) return null;
 
-    return {
-      id: data.id,
-      userId: data.userId ?? '',
-      status: data.status,
-      result: data.result,
-      submittedAt: data.submittedAt,
-      evaluatedAt: data.evaluatedAt,
-      canRetryAt: data.canRetryAt,
-    };
+    return mapApplicationFromBackend(data);
   } catch (error) {
     console.error('[APPLICATION] Error al obtener aplicación activa:', error);
     return null;
@@ -180,33 +215,13 @@ export async function getApplicationDetailAction(applicationId: string): Promise
   await requireValidSession();
 
   try {
-    console.log('[APPLICATION] Fetching detail for ID:', applicationId);
     const res = await backendFetch(`/api/v1/applications/${applicationId}`);
-    console.log('[APPLICATION] Response status:', res.status);
 
-    if (res.status === 404) {
-      console.log('[APPLICATION] 404 - Aplicación no encontrada');
-      return null;
-    }
-    if (!isSuccess(res.status)) {
-      console.log('[APPLICATION] Error status:', res.status);
-      const errorText = await res.text();
-      console.log('[APPLICATION] Error response:', errorText);
-      return null;
-    }
+    if (res.status === 404) return null;
+    if (!isSuccess(res.status)) return null;
 
     const data = await res.json();
-    console.log('[APPLICATION] Data recibida:', data);
-
-    return {
-      id: data.id,
-      userId: data.userId ?? '',
-      status: data.status,
-      result: data.result,
-      submittedAt: data.submittedAt,
-      evaluatedAt: data.evaluatedAt,
-      canRetryAt: data.canRetryAt,
-    };
+    return mapApplicationFromBackend(data);
   } catch (error) {
     console.error('[APPLICATION] Error al obtener detalle:', error);
     return null;
