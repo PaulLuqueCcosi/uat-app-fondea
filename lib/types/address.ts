@@ -2,6 +2,8 @@ import type { ReferralSource } from './common';
 
 // ─── Address / Additional ────────────────────────────────────────────────────
 
+export type AddressStatus = 'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING';
+
 export interface AdditionalData {
   address: string;
   district: string;
@@ -31,4 +33,6 @@ export interface AddressProfile {
 export interface AddressProfileStatus {
   profile: (AddressProfile & { verified: boolean }) | null;
   overall_verified: boolean;
+  /** Estado del backend (VERIFIED, EXPIRED, REPLACED, PENDING) */
+  status?: AddressStatus;
 }

@@ -1,5 +1,7 @@
 // ─── References ──────────────────────────────────────────────────────────────
 
+export type ReferencesStatus = 'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING';
+
 export interface Reference {
   id: string;
   name: string;
@@ -50,4 +52,6 @@ export interface ReferencesProfile {
 export interface ReferencesProfileStatus {
   profile: (ReferencesProfile & { verified: boolean }) | null;
   overall_verified: boolean;
+  /** Estado del backend (VERIFIED, EXPIRED, REPLACED, PENDING) */
+  status?: ReferencesStatus;
 }

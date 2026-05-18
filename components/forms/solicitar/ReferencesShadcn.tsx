@@ -4,10 +4,15 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Users, UserCheck, Pencil, CheckCircle2 } from 'lucide-react';
+import { Users, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
-import { useState } from 'react';
-import { ReferencesProfileStatus, ReferencesProfile, FamilyRelationship, NonFamilyRelationship } from '@/lib/types';
+import { useState, useEffect } from 'react';
+import {
+  ReferencesProfileStatus,
+  ReferencesProfile,
+  FamilyRelationship,
+  NonFamilyRelationship,
+} from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -25,12 +30,21 @@ import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveReferencesProfile } from '@/app/actions/references.actions';
+import type { ReferencesSaveResult } from '@/app/actions/references.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
-import { useFormSubmission } from '@/hooks/use-form-submission';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
+import { AlertBanner } from '@/components/ui/alert-banner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 interface FunnelReferencesProps {
   dashboardMode?: boolean;
@@ -38,23 +52,23 @@ interface FunnelReferencesProps {
 }
 
 const FAMILY_RELATIONS = [
-  { value: 'MADRE',          label: 'Madre' },
-  { value: 'PADRE',          label: 'Padre' },
-  { value: 'HERMANO',        label: 'Hermano/a' },
-  { value: 'HIJO',           label: 'Hijo/a' },
-  { value: 'CONYUGE',        label: 'Cónyuge' },
-  { value: 'TIO',            label: 'Tío/a' },
-  { value: 'PRIMO',          label: 'Primo/a' },
-  { value: 'ABUELO',         label: 'Abuelo/a' },
-  { value: 'OTRO',           label: 'Otro' },
+  { value: 'MADRE',    label: 'Madre' },
+  { value: 'PADRE',    label: 'Padre' },
+  { value: 'HERMANO',  label: 'Hermano/a' },
+  { value: 'HIJO',     label: 'Hijo/a' },
+  { value: 'CONYUGE',  label: 'Cónyuge' },
+  { value: 'TIO',      label: 'Tío/a' },
+  { value: 'PRIMO',    label: 'Primo/a' },
+  { value: 'ABUELO',   label: 'Abuelo/a' },
+  { value: 'OTRO',     label: 'Otro' },
 ];
 
 const NON_FAMILY_RELATIONS = [
-  { value: 'COLEGA',         label: 'Colega' },
-  { value: 'AMIGO',          label: 'Amigo/a' },
-  { value: 'VECINO',         label: 'Vecino/a' },
-  { value: 'CONOCIDO',       label: 'Conocido/a' },
-  { value: 'OTRO',           label: 'Otro' },
+  { value: 'COLEGA',    label: 'Colega' },
+  { value: 'AMIGO',     label: 'Amigo/a' },
+  { value: 'VECINO',    label: 'Vecino/a' },
+  { value: 'CONOCIDO',  label: 'Conocido/a' },
+  { value: 'OTRO',      label: 'Otro' },
 ];
 
 /** Devuelve el label legible de una relación, usando relationship_other si es OTRO */
@@ -110,61 +124,44 @@ const referencesFormSchema = z.object({
 
 type ReferencesFormValues = z.infer<typeof referencesFormSchema>;
 
+// ── Componente auxiliar: spinner para botones ────────────────────────────────
+function ButtonSpinner({ label }: { label: string }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span role="status" aria-label="Cargando" className="block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+      <span>{label}</span>
+    </span>
+  );
+}
+
 export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: FunnelReferencesProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  const {
-    isVerified,
-    isEditing,
-    isFirstTime,
-    saveError,
-    saveErrorCategory,
-    savedData: savedProfile,
-    handleSubmit: submitForm,
-    startEditing,
-    cancelEditing,
-  } = useFormSubmission<ReferencesProfile & { verified?: boolean }, ReferencesFormValues>(
-    async (data: ReferencesFormValues) => {
-      const referencesProfile = {
-        family_reference: {
-          name: data.family_name,
-          phone: data.family_phone,
-          relationship: data.family_relation as FamilyRelationship,
-          relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
-        },
-        non_family_reference: {
-          name: data.non_family_name,
-          phone: data.non_family_phone,
-          relationship: data.non_family_relation as NonFamilyRelationship,
-          relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
-          years_known: Number(data.years_known),
-        },
-      };
-      return saveReferencesProfile(referencesProfile);
-    },
-    {
-      initialVerified: initialData?.overall_verified,
-      initialData: initialData?.profile,
-      mapToSavedData: (data) => ({
-        family_reference: {
-          name: data.family_name,
-          phone: data.family_phone,
-          relationship: data.family_relation as FamilyRelationship,
-          relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
-        },
-        non_family_reference: {
-          name: data.non_family_name,
-          phone: data.non_family_phone,
-          relationship: data.non_family_relation as NonFamilyRelationship,
-          relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
-          years_known: Number(data.years_known),
-        },
-        verified: true,
-      }),
-    },
-  );
+  const [isVerified, setIsVerified] = useState(initialData?.overall_verified ?? false);
+  const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
+  const [blocked, setBlocked] = useState(false);
+  const [blockedHoursLeft, setBlockedHoursLeft] = useState(0);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(undefined);
+  const [maxAttempts, setMaxAttempts] = useState<number | undefined>(undefined);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [wasVerified, setWasVerified] = useState(initialData?.overall_verified ?? false);
+
+  // Datos guardados en este submit
+  const [savedProfile, setSavedProfile] = useState<ReferencesProfile & { verified?: boolean } | null>(initialData?.profile ?? null);
+
+  const currentStatus = initialData?.status;
+  const isExpired = currentStatus === 'EXPIRED';
+
+  // Forzar modo edición si está expirado
+  useEffect(() => {
+    if (isExpired && !isEditing) {
+      setIsEditing(true);
+    }
+  }, [isExpired, isEditing]);
 
   const nextPath = currentStep?.nextPath || '/solicitar/additional';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -188,10 +185,97 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
 
   const watchFamilyRelation = form.watch('family_relation');
   const watchNonFamilyRelation = form.watch('non_family_relation');
+  const isSubmitting = form.formState.isSubmitting;
+
+  const handleEdit = () => {
+    if (isVerified) {
+      setShowConfirmDialog(true);
+      return;
+    }
+    setIsEditing(true);
+    setSaveError(null);
+    setSaveErrorCategory(undefined);
+    setBlocked(false);
+    setBlockedHoursLeft(0);
+    setAttemptsLeft(undefined);
+    setMaxAttempts(undefined);
+  };
+
+  const confirmEdit = () => {
+    setShowConfirmDialog(false);
+    setWasVerified(true);
+    setIsVerified(false);
+    setIsEditing(true);
+    setSaveError(null);
+    setSaveErrorCategory(undefined);
+    setBlocked(false);
+    setBlockedHoursLeft(0);
+    setAttemptsLeft(undefined);
+    setMaxAttempts(undefined);
+  };
 
   const onSubmit = async (data: ReferencesFormValues) => {
-    const success = await submitForm(data);
-    if (success && !dashboardMode) {
+    setSaveError(null);
+    setSaveErrorCategory(undefined);
+    setBlocked(false);
+    setBlockedHoursLeft(0);
+    setAttemptsLeft(undefined);
+    setMaxAttempts(undefined);
+
+    const referencesProfile = {
+      family_reference: {
+        name: data.family_name,
+        phone: data.family_phone,
+        relationship: data.family_relation as FamilyRelationship,
+        relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
+      },
+      non_family_reference: {
+        name: data.non_family_name,
+        phone: data.non_family_phone,
+        relationship: data.non_family_relation as NonFamilyRelationship,
+        relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
+        years_known: Number(data.years_known),
+      },
+    };
+
+    const result: ReferencesSaveResult = await saveReferencesProfile(referencesProfile);
+
+    if (!result.success) {
+      if (result.errorCategory === 'rate_limit') {
+        setBlocked(true);
+        setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
+      }
+      if (result.httpStatus === 422) {
+        setAttemptsLeft(result.attemptsLeft);
+        setMaxAttempts(result.maxAttempts);
+      }
+      setSaveError(result.error);
+      setSaveErrorCategory(result.errorCategory);
+      return;
+    }
+
+    // Guardar los datos para la vista readonly
+    setSavedProfile({
+      family_reference: {
+        name: data.family_name,
+        phone: data.family_phone,
+        relationship: data.family_relation as FamilyRelationship,
+        relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
+      },
+      non_family_reference: {
+        name: data.non_family_name,
+        phone: data.non_family_phone,
+        relationship: data.non_family_relation as NonFamilyRelationship,
+        relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
+        years_known: Number(data.years_known),
+      },
+      verified: true,
+    });
+
+    setIsVerified(true);
+    setIsEditing(false);
+
+    if (!dashboardMode) {
       autoNavigate.start();
     }
   };
@@ -213,7 +297,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
       <VerifiedBanner
         title="Referencias guardadas"
         description="Tus referencias están registradas. Puedes editarlas si algo cambió."
-        onEdit={startEditing}
+        onEdit={handleEdit}
       />
 
       {/* Referencias en 2 columnas */}
@@ -259,15 +343,34 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
     </div>
   );
 
+  // ── Banner de expirado (se muestra dentro del formulario) ────────────────
+  const expiredBanner = isExpired && (
+    <>
+      <AlertBanner
+        variant="warning"
+        title="Tu verificación ha expirado"
+        description="El tiempo de validez de tu verificación terminó. Revisa y corrige tus datos, luego vuelve a enviar para validar."
+      />
+      <Separator className="my-10 bg-primary/20 h-px" />
+    </>
+  );
+
   // ── Formulario editable ──────────────────────────────────────────────────────
   const editForm = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+
+        {/* Banner de expirado */}
+        {expiredBanner}
+
         {saveError && (
-          <SaveErrorBanner
-            error={saveError}
-            errorCategory={saveErrorCategory}
-          />
+          <>
+            <SaveErrorBanner
+              error={saveError}
+              errorCategory={saveErrorCategory}
+            />
+            <Separator className="my-10 bg-primary/20 h-px" />
+          </>
         )}
 
         {/* Referencias en 2 columnas */}
@@ -457,22 +560,26 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
         {/* Botones de acción */}
         {!dashboardMode && (
           <div className="flex flex-col sm:flex-row justify-end gap-3">
-            {!isFirstTime && (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={cancelEditing}>
+            {wasVerified || isVerified ? (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }} disabled={isSubmitting}>
                 Cancelar
               </Button>
-            )}
-            {isFirstTime && (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
+            ) : (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()} disabled={isSubmitting}>
                 Atrás
               </Button>
             )}
             <Button
               type="submit"
               className="w-full sm:w-auto"
-              disabled={form.formState.isSubmitting}
+              disabled={isSubmitting || blocked}
             >
-              {form.formState.isSubmitting ? 'Guardando...' : isFirstTime ? 'Continuar' : 'Guardar cambios'}
+              {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {isVerified ? 'Guardar cambios' : 'Continuar'}
+                </span>
+              )}
             </Button>
           </div>
         )}
@@ -486,30 +593,90 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
   if (dashboardMode) {
     return (
       <>
-        {content}
-        {isEditing && (
-          <StickyBottomBar
-            ctaLabel="Guardar cambios"
-            onCta={form.handleSubmit(onSubmit)}
-            loading={form.formState.isSubmitting}
-          />
-        )}
+        <div className="max-w-4xl mx-auto">
+          <Card className="w-full">
+            <CardContent className="pt-6">
+              {content}
+            </CardContent>
+          </Card>
+          {(!isVerified || isEditing) && (
+            <StickyBottomBar
+              ctaLabel={isSubmitting ? 'Guardando...' : 'Guardar cambios'}
+              onCta={form.handleSubmit(onSubmit)}
+              loading={isSubmitting}
+            />
+          )}
+        </div>
+
+        {/* Modal de confirmación al editar */}
+        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                ⚠️ ¿Editar referencias?
+              </DialogTitle>
+              <DialogDescription>
+                Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
+                Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={confirmEdit}>
+                Sí, editar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </>
     );
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader className="pb-4">
-        <FormHeader
-          icon={currentStep?.icon || Users}
-          title="Referencias personales"
-          description="Necesitamos al menos 2 referencias de personas que te conozcan"
-        />
-      </CardHeader>
-      <CardContent className="pt-0">
-        {content}
-      </CardContent>
-    </Card>
+    <>
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader className="pb-4">
+          <FormHeader
+            icon={currentStep?.icon || Users}
+            title="Referencias personales"
+            description={
+              isVerified && !isEditing
+                ? 'Tus referencias están registradas'
+                : isExpired && !isEditing
+                ? 'Tu verificación ha expirado, debes validar nuevamente'
+                : 'Necesitamos al menos 2 referencias de personas que te conozcan'
+            }
+          />
+        </CardHeader>
+        <CardContent className="pt-0">
+          {content}
+        </CardContent>
+      </Card>
+
+      {/* Modal de confirmación al editar */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              ⚠️ ¿Editar referencias?
+            </DialogTitle>
+            <DialogDescription>
+              Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={confirmEdit}>
+              Sí, editar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
