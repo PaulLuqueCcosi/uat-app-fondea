@@ -2,6 +2,8 @@ import type { LoanPurpose, EducationLevel } from './common';
 
 // ─── Economic ────────────────────────────────────────────────────────────────
 
+export type EconomicStatus = 'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING';
+
 export interface Debt {
   id: string;
   entity: string;
@@ -38,4 +40,6 @@ export interface EconomicProfile {
 export interface EconomicProfileStatus {
   profile: (EconomicProfile & { verified: boolean }) | null;
   overall_verified: boolean;
+  /** Estado del backend (VERIFIED, EXPIRED, REPLACED, PENDING) */
+  status?: EconomicStatus;
 }
