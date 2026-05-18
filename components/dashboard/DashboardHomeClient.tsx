@@ -93,7 +93,7 @@ export function DashboardHomeClient({ userName, applications, activeIntencion }:
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-dark mb-1">Hola, {userName}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-primary-500 mb-1">Hola, {userName}</h1>
             <p className="text-sm sm:text-base text-fondea-text">
               {activeIntencion
                 ? 'Tienes una solicitud en curso. Continúa donde lo dejaste.'

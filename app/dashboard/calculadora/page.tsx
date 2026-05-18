@@ -1,5 +1,6 @@
-import LoanCalculatorPortal from '@/components/LoanCalculator/LoanCalculatorPortal';
 import { PageHeader } from '@/components/ui/page-header';
+import { PageTitle } from '@/components/ui/page-title';
+import { CalculadoraClient } from '@/components/dashboard/CalculadoraClient';
 
 /**
  * Calculadora de préstamos — vive en el dashboard, fuera del funnel.
@@ -17,20 +18,14 @@ export default function CalculadoraPage() {
         ]}
       />
 
-      <div className="flex flex-1 flex-col gap-4 p-4">
-        <div className="max-w-[460px] mx-auto w-full">
-          <div className="mb-4">
-            <h1 className="text-lg font-bold text-neutral-900 mb-0.5">
-              Simula tu préstamo
-            </h1>
-            <p className="text-[13px] text-neutral-500 leading-relaxed">
-              Configura monto, plazo y cuotas. Compara costos según tu perfil y solicítalo cuando estés listo.
-            </p>
-          </div>
+      <div className="flex flex-1 flex-col p-4 md:p-6 bg-background">
+        <PageTitle
+          title="Simula tu préstamo"
+          description="Configura monto, plazo y cuotas. Compara costos según tu perfil y solicítalo cuando estés listo."
+        />
 
-          {/* Calculadora del portal — crea intención y navega a /solicitar/start */}
-          <LoanCalculatorPortal dedicated detailMode="sidebar" />
-        </div>
+        {/* Client component — maneja detailMode responsivo */}
+        <CalculadoraClient />
       </div>
     </>
   );
