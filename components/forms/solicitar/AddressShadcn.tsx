@@ -129,8 +129,9 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
 
-  const currentStatus = initialData?.status;
-  const isExpired = currentStatus === 'EXPIRED';
+  // Status local — se actualiza después de submit exitoso
+  const [localStatus, setLocalStatus] = useState(initialData?.status);
+  const isExpired = localStatus === 'EXPIRED';
 
   const nextPath = currentStep?.nextPath || '/solicitar/references';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -146,13 +147,13 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
   const [labelProv, setLabelProv] = useState<string>('');
   const [labelDist, setLabelDist] = useState<string>('');
 
-  // Forzar modo edición si está expirado
+  // Forzar modo edición si está expirado (solo si no está verificado)
   useEffect(() => {
-    if (isExpired && !isEditing) {
+    if (isExpired && !isEditing && !isVerified) {
       setIsEditing(true);
       setIsVerified(false);
     }
-  }, [isExpired, isEditing]);
+  }, [isExpired, isEditing, isVerified]);
 
   // Carga inicial de departamentos
   useEffect(() => {
@@ -323,6 +324,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
     });
     setIsVerified(true);
     setIsEditing(false);
+    setLocalStatus('VERIFIED');
 
     if (!dashboardMode) {
       autoNavigate.start();

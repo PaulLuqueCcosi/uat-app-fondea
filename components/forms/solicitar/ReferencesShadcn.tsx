@@ -153,15 +153,16 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
   // Datos guardados en este submit
   const [savedProfile, setSavedProfile] = useState<ReferencesProfile & { verified?: boolean } | null>(initialData?.profile ?? null);
 
-  const currentStatus = initialData?.status;
-  const isExpired = currentStatus === 'EXPIRED';
+  // Status local — se actualiza después de submit exitoso
+  const [localStatus, setLocalStatus] = useState(initialData?.status);
+  const isExpired = localStatus === 'EXPIRED';
 
-  // Forzar modo edición si está expirado
+  // Forzar modo edición si está expirado (solo si no está verificado)
   useEffect(() => {
-    if (isExpired && !isEditing) {
+    if (isExpired && !isEditing && !isVerified) {
       setIsEditing(true);
     }
-  }, [isExpired, isEditing]);
+  }, [isExpired, isEditing, isVerified]);
 
   const nextPath = currentStep?.nextPath || '/solicitar/additional';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -274,6 +275,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
 
     setIsVerified(true);
     setIsEditing(false);
+    setLocalStatus('VERIFIED');
 
     if (!dashboardMode) {
       autoNavigate.start();

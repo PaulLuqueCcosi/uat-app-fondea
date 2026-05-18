@@ -10,11 +10,6 @@ const backendFetch = (path: string, options?: RequestInit) =>
 
 // ── Tipo de resultado extendido ───────────────────────────────────────────────
 
-/**
- * Extiende ActionResult con campos específicos de BankAccount:
- * - attemptsLeft: intentos restantes cuando la validación de CCI falla (422)
- * - blockedHoursLeft: horas restantes cuando está bloqueado (429)
- */
 export type BankAccountSaveResult =
   | { success: true; httpStatus: number }
   | {
@@ -24,63 +19,76 @@ export type BankAccountSaveResult =
       error: string;
       attemptsLeft?: number;
       blockedHoursLeft?: number;
+      maxAttempts?: number;
     };
 
 // ── Helper: parsear respuesta de bank-account ─────────────────────────────────
 
 async function parseBankAccountResponse(res: Response): Promise<BankAccountSaveResult> {
-  // 200 — éxito (CCI validado, titular coincide)
-  if (res.ok) {
+  // 200/201 — éxito
+  if (res.status === 200 || res.status === 201) {
     return { success: true, httpStatus: res.status };
   }
 
   let json: any = {};
-  try { json = await res.json(); } catch { /* body vacío */ }
+  try { json = await res.json(); } catch { /* body vacío o no-JSON */ }
+
+  // 503 — error técnico del proveedor (no consume intento)
+  if (res.status === 503) {
+    return {
+      success: false,
+      httpStatus: 503,
+      errorCategory: 'server',
+      error: json.message ?? json.detail ?? 'Servicio de validación temporalmente no disponible. No se consumió un intento. Inténtalo en unos minutos.',
+    };
+  }
 
   // 429 — bloqueado por max intentos
   if (res.status === 429) {
+    const hoursLeft = json.blocked_hours_left ?? json.blockedHoursLeft ?? 24;
     return {
       success: false,
       httpStatus: 429,
       errorCategory: 'rate_limit',
-      blockedHoursLeft: json.blockedHoursLeft ?? 24,
-      error: json.detail ?? 'Demasiados intentos fallidos. Podrás intentarlo nuevamente en 24 horas.',
+      blockedHoursLeft: hoursLeft,
+      error: json.message ?? `Demasiados intentos fallidos. Tu cuenta quedará bloqueada por ${hoursLeft} hora${hoursLeft !== 1 ? 's' : ''}.`,
     };
   }
 
-  // 422 — CCI inválido o usuario no es titular (consume intento)
+  // 422 — datos no válidos (consume intento)
   if (res.status === 422) {
-    const fieldError = json.fieldErrors?.cci;
-    const message = json.error ?? fieldError ?? 'La cuenta no pudo ser validada.';
+    const attemptsLeft = json.attempts_left ?? json.attemptsLeft;
+    const maxAttempts = json.max_attempts ?? 3;
+    const baseError = json.message ?? json.detail ?? 'La cuenta bancaria no es válida.';
+
+    let error = baseError;
+    if (attemptsLeft === 1) {
+      error = `${baseError} ¡Cuidado! Este es tu último intento antes de quedar bloqueado.`;
+    } else if (attemptsLeft !== undefined) {
+      error = `${baseError} Te quedan ${attemptsLeft} intento${attemptsLeft !== 1 ? 's' : ''}.`;
+    }
+
     return {
       success: false,
       httpStatus: 422,
       errorCategory: 'validation',
-      attemptsLeft: json.attemptsLeft,
-      error: message,
+      attemptsLeft,
+      maxAttempts,
+      error,
     };
   }
 
-  // 500 — error técnico del proveedor (no consume intento)
-  if (res.status >= 500) {
-    return {
-      success: false,
-      httpStatus: res.status,
-      errorCategory: 'server',
-      error: json.detail ?? 'Error técnico al validar tu cuenta. No se consumió un intento. Inténtalo en unos minutos.',
-    };
-  }
-
-  // 400 — error de formato
+  // 400 — error de formato (no consume intento)
   if (res.status === 400) {
     const firstFieldError = json.fieldErrors
       ? Object.values(json.fieldErrors)[0] as string
       : undefined;
+    const message = firstFieldError ?? json.message ?? json.detail ?? 'Los datos ingresados tienen un formato inválido. Verifica que sean correctos.';
     return {
       success: false,
       httpStatus: 400,
       errorCategory: 'validation',
-      error: firstFieldError ?? json.detail ?? 'Error de validación en los datos ingresados.',
+      error: message,
     };
   }
 
@@ -99,7 +107,19 @@ async function parseBankAccountResponse(res: Response): Promise<BankAccountSaveR
     success: false,
     httpStatus: res.status,
     errorCategory: 'unknown',
-    error: json.detail ?? json.error ?? 'Error inesperado. Por favor, inténtalo nuevamente.',
+    error: json.message ?? json.detail ?? json.error ?? 'Error inesperado. Por favor, inténtalo nuevamente.',
+  };
+}
+
+// ── Mapper ──────────────────────────────────────────────────────────────────────
+
+function mapProfileFromBackend(raw: any): BankAccountProfile & { verified: boolean } {
+  return {
+    bank_name: raw.bank_name ?? raw.bank ?? '',
+    account_type: raw.account_type ?? '',
+    cci: raw.cci ?? '',
+    account_number: raw.account_number ?? '',
+    verified: true,
   };
 }
 
@@ -107,70 +127,111 @@ async function parseBankAccountResponse(res: Response): Promise<BankAccountSaveR
 
 export async function getBankAccountProfileStatus(): Promise<BankAccountProfileStatus> {
   await requireValidSession();
-
   try {
     const res = await backendFetch('/api/v1/bank-account/status');
-    if (!res.ok) return { profile: null, overall_verified: false };
+
+    // 404 es esperado para usuarios nuevos
+    if (res.status === 404) {
+      console.log('[BANK_ACCOUNT] Usuario sin cuenta bancaria previa (404) — estado inicial normal');
+      return { profile: null, overall_verified: false };
+    }
+
+    if (!res.ok) {
+      console.error('[BANK_ACCOUNT] Error al obtener estado:', res.status);
+      return { profile: null, overall_verified: false };
+    }
 
     const json = await res.json();
 
-    console.log('[BANK_ACCOUNT] GET status →', JSON.stringify(json)?.slice(0, 200));
-
-    // El backend devuelve { profile: { bank, account_type, cci, verified }, overall_verified }
-    const raw = json?.profile;
-    if (!raw || !raw.bank) {
-      return { profile: null, overall_verified: json?.overall_verified ?? false };
+    // El backend devuelve el nuevo formato con submission.submission_data
+    let parsedData: Record<string, any> | null = null;
+    if (json.submission?.submission_data) {
+      try {
+        parsedData = JSON.parse(json.submission.submission_data);
+      } catch {
+        console.error('[BANK_ACCOUNT] Error parseando submission_data');
+      }
     }
 
-    const profile: BankAccountProfile & { verified: boolean } = {
-      bank:         raw.bank,
-      account_type: raw.accountType ?? raw.account_type,
-      cci:          raw.cci,
-      verified:     raw.verified ?? false,
-    };
+    const status = json.status as import('@/lib/types').BankAccountStatus | undefined;
+    const verified = status === 'VERIFIED';
 
-    return { profile, overall_verified: json.overall_verified ?? raw.verified ?? false };
+    return {
+      profile: parsedData ? mapProfileFromBackend(parsedData) : null,
+      overall_verified: verified,
+      status,
+    };
   } catch (error) {
     console.error('[BANK_ACCOUNT] Error al obtener estado:', error);
     return { profile: null, overall_verified: false };
   }
 }
 
-// ── POST: Guardar cuenta bancaria ─────────────────────────────────────────────
+// ── PUT: Validar cuenta bancaria ───────────────────────────────────────────────
 
 export async function saveBankAccountProfile(
   data: Omit<BankAccountProfile, 'verified'>
 ): Promise<BankAccountSaveResult> {
   await requireValidSession();
-
-  console.log('[BANK_ACCOUNT] saveBankAccountProfile recibido:', JSON.stringify(data));
-
   try {
-    // Validación defensiva — Zod debería prevenir esto, pero por seguridad
-    if (!data.account_type) {
-      return {
-        success: false,
-        httpStatus: 0,
-        errorCategory: 'validation',
-        error: 'Selecciona el tipo de cuenta.',
-      };
-    }
-
     const body = {
-      bank: data.bank.trim(),
+      bank_name: data.bank_name,
       account_type: data.account_type,
       cci: data.cci,
+      account_number: data.account_number,
     };
 
-    console.log('[BANK_ACCOUNT] POST → body:', JSON.stringify(body));
-
-    const res = await backendFetch('/api/v1/bank-account/profile', {
-      method: 'POST',
+    const res = await backendFetch('/api/v1/bank-account/validate', {
+      method: 'PUT',
       body: JSON.stringify(body),
     });
     return parseBankAccountResponse(res);
   } catch {
     console.error('[BANK_ACCOUNT] Error al guardar');
     return networkError();
+  }
+}
+
+// ── GET: Revelar número de cuenta ─────────────────────────────────────────────
+
+export type RevealResult =
+  | { success: true; value: string; warning: string }
+  | { success: false; error: string };
+
+export async function revealAccountNumber(): Promise<RevealResult> {
+  await requireValidSession();
+  try {
+    const res = await backendFetch('/api/v1/bank-account/reveal');
+    if (!res.ok) {
+      return { success: false, error: 'No se pudo revelar el número de cuenta' };
+    }
+    const json = await res.json();
+    return {
+      success: true,
+      value: json.account_number,
+      warning: json.warning,
+    };
+  } catch {
+    return { success: false, error: 'Error al revelar el número de cuenta' };
+  }
+}
+
+// ── GET: Revelar CCI ────────────────────────────────────────────────────────────
+
+export async function revealCCI(): Promise<RevealResult> {
+  await requireValidSession();
+  try {
+    const res = await backendFetch('/api/v1/bank-account/reveal-cci');
+    if (!res.ok) {
+      return { success: false, error: 'No se pudo revelar el CCI' };
+    }
+    const json = await res.json();
+    return {
+      success: true,
+      value: json.account_number,
+      warning: json.warning,
+    };
+  } catch {
+    return { success: false, error: 'Error al revelar el CCI' };
   }
 }

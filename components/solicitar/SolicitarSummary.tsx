@@ -774,7 +774,7 @@ export function FunnelSummary({
                   <h3 className="text-lg font-semibold text-foreground">Cuenta para Desembolso</h3>
                   {!expandedSections.bankAccount && (
                     <p className="text-sm text-muted-foreground">
-                      {bankAccountData.profile?.bank || 'No especificado'} • •••{bankAccountData.profile?.cci?.slice(-4) || '****'}
+                      {bankAccountData.profile?.bank_name || 'No especificado'} • •••{bankAccountData.profile?.cci?.slice(-4) || '****'}
                     </p>
                   )}
                   {expandedSections.bankAccount && (
@@ -812,7 +812,7 @@ export function FunnelSummary({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Banco</p>
-                  <p className="font-medium text-foreground">{bankAccountData.profile?.bank || 'No especificado'}</p>
+                  <p className="font-medium text-foreground">{bankAccountData.profile?.bank_name || 'No especificado'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Tipo de cuenta</p>

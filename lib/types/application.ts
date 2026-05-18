@@ -75,15 +75,19 @@ export interface BankAccount {
 }
 
 export interface BankAccountProfile {
-  bank: string;
+  bank_name: string;
   account_type: AccountType;
   cci: string;
+  account_number: string;
   verified?: boolean;
 }
+
+export type BankAccountStatus = 'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING';
 
 export interface BankAccountProfileStatus {
   profile: (BankAccountProfile & { verified: boolean }) | null;
   overall_verified: boolean;
+  status?: BankAccountStatus;
 }
 
 // ─── PEP Declarations ────────────────────────────────────────────────────────
