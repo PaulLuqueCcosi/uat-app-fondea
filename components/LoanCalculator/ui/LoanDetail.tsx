@@ -55,6 +55,7 @@ interface Props {
   cuotas: number;
   calculating: boolean;
   onClose: () => void;
+  maxWidth?: number;
 }
 
 function Skeleton({ className }: { className?: string }) {
@@ -72,6 +73,7 @@ export default function LoanDetail({
   cuotas,
   calculating,
   onClose,
+  maxWidth = DETAIL_MAX_WIDTH,
 }: Props) {
   const loading = calculating || !scoreData;
   const color = scoreData?.color ?? "var(--lc-primary)";
@@ -99,7 +101,7 @@ export default function LoanDetail({
   return (
     <div
       className="rounded-2xl shadow-lg overflow-hidden w-full shrink-0 font-sans flex flex-col"
-      style={{ backgroundColor: "var(--lc-bg)", color: "var(--lc-text)", maxHeight: "100%", maxWidth: `${DETAIL_MAX_WIDTH}px`, minWidth: "320px" }}
+      style={{ backgroundColor: "var(--lc-bg)", color: "var(--lc-text)", maxHeight: "100%", maxWidth: `${maxWidth}px`, minWidth: "320px" }}
     >
       {/* Header */}
       <div

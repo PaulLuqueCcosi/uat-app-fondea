@@ -27,6 +27,7 @@ export default function LoanCalculator({
   submitLabel = "Solicitar Préstamo →",
   initialSelection,
   className,
+  detailMaxWidth = DETAIL_MAX_WIDTH,
 }: LoanCalculatorProps = {}) {
   const api = useLoanCalculatorApi();
 
@@ -297,6 +298,7 @@ export default function LoanCalculator({
                   cuotas={cuotas ?? 1}
                   calculating={calculating}
                   onClose={() => setDetailKey(null)}
+                  maxWidth={detailMaxWidth}
                 />
               </div>
             ) : (
@@ -313,6 +315,7 @@ export default function LoanCalculator({
                       cuotas={cuotas ?? 1}
                       calculating={calculating}
                       onClose={() => setDetailKey(null)}
+                      maxWidth={detailMaxWidth}
                     />
                   </div>
                 </div>

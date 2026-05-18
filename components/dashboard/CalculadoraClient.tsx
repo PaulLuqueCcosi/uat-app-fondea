@@ -1,23 +1,35 @@
 'use client';
 
+import { useMemo } from 'react';
 import LoanCalculatorPortal from '@/components/LoanCalculator/LoanCalculatorPortal';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useContainerWidth } from '@/hooks/useContainerWidth';
+import { DETAIL_SIDEBAR_BREAKPOINT } from '@/components/LoanCalculator/core/constants';
 
 /**
  * CalculadoraClient — Wrapper responsivo de la calculadora del dashboard.
  *
- * - Mobile: detailMode="modal" → el detalle aparece como overlay
- * - Desktop: detailMode="sidebar" → el detalle aparece al lado de la calculadora
+ * Usa ResizeObserver para medir el contenedor en tiempo real y elegir automáticamente
+ * entre modal y sidebar según el espacio disponible:
+ * - Si contenedor ≥ 751px: detailMode="sidebar" (detalle al lado)
+ * - Si contenedor < 751px: detailMode="modal" (detalle como overlay)
  */
 export function CalculadoraClient() {
-  const isMobile = useIsMobile();
+  const { ref, width } = useContainerWidth();
+
+  // Calcular modo automáticamente según el ancho del contenedor
+  const detailMode = useMemo(() => {
+    return width >= DETAIL_SIDEBAR_BREAKPOINT ? 'sidebar' : undefined;
+  }, [width]);
 
   return (
-    <div className="w-fit mx-auto">
-      <LoanCalculatorPortal
-        dedicated
-        detailMode={isMobile ? undefined : 'sidebar'}
-      />
+    <div ref={ref} className="w-full">
+      <div className="flex justify-center">
+        <LoanCalculatorPortal
+          dedicated
+          detailMode={detailMode}
+          detailMaxWidth={420}
+        />
+      </div>
     </div>
   );
 }

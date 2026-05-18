@@ -172,6 +172,8 @@ export interface LoanCalculatorProps {
   initialSelection?: InitialSelection;
   /** Clase CSS adicional */
   className?: string;
+  /** Ancho máximo del panel de detalle en px (default: 380) */
+  detailMaxWidth?: number;
 }
 
 // ── Info para componentes internos ─────────────────────────────────────────────
