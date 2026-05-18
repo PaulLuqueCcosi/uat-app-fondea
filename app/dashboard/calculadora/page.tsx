@@ -1,6 +1,5 @@
 import LoanCalculatorPortal from '@/components/LoanCalculator/LoanCalculatorPortal';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { PageHeader } from '@/components/ui/page-header';
 
 /**
  * Calculadora de préstamos — vive en el dashboard, fuera del funnel.
@@ -10,28 +9,29 @@ import Link from 'next/link';
  */
 export default function CalculadoraPage() {
   return (
-    <div className="max-w-[460px] mx-auto py-4 sm:py-8">
-      {/* Back */}
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-primary-600 transition-colors group mb-4"
-      >
-        <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-        Dashboard
-      </Link>
+    <>
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Calculadora' },
+        ]}
+      />
 
-      {/* Título pegado a la calculadora */}
-      <div className="mb-4">
-        <h1 className="text-lg font-bold text-neutral-900 mb-0.5">
-          Simula tu préstamo
-        </h1>
-        <p className="text-[13px] text-neutral-500 leading-relaxed">
-          Configura monto, plazo y cuotas. Compara costos según tu perfil y solicítalo cuando estés listo.
-        </p>
+      <div className="flex flex-1 flex-col gap-4 p-4">
+        <div className="max-w-[460px] mx-auto w-full">
+          <div className="mb-4">
+            <h1 className="text-lg font-bold text-neutral-900 mb-0.5">
+              Simula tu préstamo
+            </h1>
+            <p className="text-[13px] text-neutral-500 leading-relaxed">
+              Configura monto, plazo y cuotas. Compara costos según tu perfil y solicítalo cuando estés listo.
+            </p>
+          </div>
+
+          {/* Calculadora del portal — crea intención y navega a /solicitar/start */}
+          <LoanCalculatorPortal dedicated detailMode="sidebar" />
+        </div>
       </div>
-
-      {/* Calculadora del portal — crea intención y navega a /solicitar/start */}
-      <LoanCalculatorPortal dedicated detailMode="sidebar" />
-    </div>
+    </>
   );
 }

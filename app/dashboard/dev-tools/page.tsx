@@ -1,6 +1,7 @@
 import { getAccessTokenRSC, getLogtoContext } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
 import { DevToolsClient } from '@/components/dashboard/DevToolsClient';
+import { PageHeader } from '@/components/ui/page-header';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -50,14 +51,25 @@ export default async function DevToolsPage() {
   };
 
   return (
-    <DevToolsClient
-      isAuthenticated={isAuthenticated}
-      claims={claims ?? null}
-      userInfo={userInfo ?? null}
-      accessToken={accessToken}
-      tokenError={tokenError}
-      tokenPayload={tokenPayload}
-      activeConfig={activeConfig}
-    />
+    <>
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Dev Tools' },
+        ]}
+      />
+
+      <div className="flex flex-1 flex-col gap-4 p-4">
+        <DevToolsClient
+          isAuthenticated={isAuthenticated}
+          claims={claims ?? null}
+          userInfo={userInfo ?? null}
+          accessToken={accessToken}
+          tokenError={tokenError}
+          tokenPayload={tokenPayload}
+          activeConfig={activeConfig}
+        />
+      </div>
+    </>
   );
 }

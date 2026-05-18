@@ -9,6 +9,14 @@
         "mcp"
       ],
       "enabled": true
+    },
+    "fondea-specs": {
+      "type": "local",
+      "command": [
+        "node",
+        "E:\\FONDEA_FINTECH\\backend\\mcp-server\\dist\\index.js"
+      ],
+      "enabled": true
     }
   }
 }

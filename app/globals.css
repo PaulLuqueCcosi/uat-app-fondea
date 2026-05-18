@@ -91,8 +91,8 @@
   --sidebar-foreground:    #1E293B;
   --sidebar-primary:       #00A1CD;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent:        #A3E635;
-  --sidebar-accent-foreground: #1E293B;
+  --sidebar-accent:        var(--color-primary-50);
+  --sidebar-accent-foreground: var(--color-primary-700);
   --sidebar-border:        #E2E8F0;
   --sidebar-ring:          #00A1CD;
 }
