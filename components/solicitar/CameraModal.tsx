@@ -303,10 +303,9 @@ export function CameraModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        fullScreen={fullScreen}
         className={
           fullScreen
-            ? 'bg-black p-0'
+            ? 'fixed inset-0 w-screen h-screen max-w-none rounded-none bg-black p-0'
             : 'bg-black p-0 w-[95vw] h-[90vh] max-w-2xl rounded-2xl overflow-hidden'
         }
       >

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { getIntencionConfig } from '@/lib/client-api/intenciones';
-import type { IntencionConfig } from './types';
+import type { IntencionConfig } from '@/lib/types/intencion';
 
 /**
  * Hook que obtiene la configuración del préstamo activo del usuario.

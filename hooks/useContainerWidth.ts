@@ -19,7 +19,7 @@ import { useRef, useState, useEffect } from 'react';
 export function useContainerWidth(debounceMs = 150) {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   useEffect(() => {
     if (!ref.current) return;

@@ -47,14 +47,11 @@ export default async function DashboardSectionPage({
   return (
     <PageContainer>
       <PageHeader
-        title={sectionInfo.title}
-        description={sectionInfo.description}
         breadcrumbs={[
           { label: 'Dashboard', href: '/dashboard' },
           { label: 'Expediente', href: '/dashboard/section/kyc-validation' },
           { label: sectionInfo.title }
         ]}
-        showBackButton
       />
 
       {sectionMap[section]}

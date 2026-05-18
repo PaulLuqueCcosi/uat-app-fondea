@@ -30,9 +30,8 @@ export const StickyBottomBar: React.FC<StickyBottomBarProps> = ({
         <div />
       )}
       <Button
-        loading={loading}
         onClick={onCta}
-        disabled={ctaDisabled}
+        disabled={ctaDisabled || loading}
         className="flex-shrink-0"
       >
         {ctaLabel}

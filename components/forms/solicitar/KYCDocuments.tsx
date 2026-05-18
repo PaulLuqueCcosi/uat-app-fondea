@@ -181,6 +181,11 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
     if (!frontUploaded) {
       setLoading('front');
       try {
+        if (!frontFile) {
+          setError('No hay archivo para subir');
+          setLoading(null);
+          return;
+        }
         const formData = new FormData();
         formData.append('file', frontFile);
         const result = await uploadDocumentAction(solicitudId, 'DNI_FRONT', formData);
@@ -201,6 +206,11 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
     if (!backUploaded) {
       setLoading('back');
       try {
+        if (!backFile) {
+          setError('No hay archivo para subir');
+          setLoading(null);
+          return;
+        }
         const formData = new FormData();
         formData.append('file', backFile);
         const result = await uploadDocumentAction(solicitudId, 'DNI_BACK', formData);
