@@ -5,16 +5,9 @@ import { usePathname, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle2, FileText, Camera, PenLine, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getLoanSummary } from '@/app/actions/loan.actions';
+import { getApplicationFullDetailAction, type ApplicationFullDetail } from '@/app/actions/application.actions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, CreditCard } from 'lucide-react';
-
-interface LoanData {
-  amount: number;
-  installments: number;
-  installmentAmount: number;
-  firstPaymentDate: string;
-}
 
 const SOLICITUD_STEPS = [
   {
@@ -45,13 +38,15 @@ export function SolicitudesSidebar() {
   const params = useParams();
   const solicitudId = params.id as string | undefined;
 
-  const [loanData, setLoanData] = useState<LoanData | null>(null);
+  const [loanData, setLoanData] = useState<ApplicationFullDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!solicitudId) return;
+
     const fetchLoanData = async () => {
       try {
-        const data = await getLoanSummary();
+        const data = await getApplicationFullDetailAction(solicitudId);
         if (data) {
           setLoanData(data);
         }
@@ -63,7 +58,7 @@ export function SolicitudesSidebar() {
     };
 
     fetchLoanData();
-  }, []);
+  }, [solicitudId]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-PE', {
@@ -112,7 +107,7 @@ export function SolicitudesSidebar() {
                     Tu Solicitud
                   </h3>
                   <p className="text-2xl font-bold text-primary mt-1">
-                    {formatCurrency(loanData.amount)}
+                    {formatCurrency(loanData.principal)}
                   </p>
                 </div>
                 <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -130,7 +125,7 @@ export function SolicitudesSidebar() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground font-medium">Cuotas</p>
                     <p className="text-sm font-semibold text-foreground mt-0.5">
-                      {loanData.installments}x de {formatCurrency(loanData.installmentAmount)}
+                      {loanData.installment_count}x de {formatCurrency(loanData.monthly_payment)}
                     </p>
                   </div>
                 </div>
@@ -143,7 +138,7 @@ export function SolicitudesSidebar() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground font-medium">Primera cuota</p>
                     <p className="text-sm font-semibold text-foreground mt-0.5">
-                      {formatDate(loanData.firstPaymentDate)}
+                      {formatDate(loanData.first_due_date)}
                     </p>
                   </div>
                 </div>

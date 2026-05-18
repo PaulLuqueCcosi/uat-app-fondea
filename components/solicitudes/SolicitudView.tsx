@@ -10,7 +10,12 @@ import {
   Loader2, Clock, CheckCircle2, XCircle, AlertCircle, AlertTriangle,
   ArrowRight, RefreshCw, Home, DollarSign, FileText, Camera, PenLine, X,
 } from 'lucide-react';
-import { getApplicationStatusAction } from '@/app/actions/application.actions';
+import {
+  getApplicationStatusAction,
+  getApplicationFullDetailAction,
+  cancelApplicationAction,
+  type ApplicationFullDetail,
+} from '@/app/actions/application.actions';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -38,6 +43,12 @@ export function SolicitudView({ initialApplication }: SolicitudViewProps) {
   const router = useRouter();
   const [application, setApplication] = useState(initialApplication);
   const [timeElapsed, setTimeElapsed] = useState(0);
+  const [fullDetail, setFullDetail] = useState<ApplicationFullDetail | null>(null);
+
+  // Cargar detalle completo (datos financieros reales)
+  useEffect(() => {
+    getApplicationFullDetailAction(initialApplication.id).then(setFullDetail);
+  }, [initialApplication.id]);
 
   const status = application.status;
   const isPolling = status === 'SUBMITTED' || status === 'PROCESSING';
@@ -106,15 +117,15 @@ export function SolicitudView({ initialApplication }: SolicitudViewProps) {
   }
 
   if (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS') {
-    return <PreApprovedView application={application} />;
+    return <PreApprovedView application={application} fullDetail={fullDetail} />;
   }
 
   if (status === 'PENDING_SIGNATURE') {
-    return <PreApprovedView application={application} />;
+    return <PreApprovedView application={application} fullDetail={fullDetail} />;
   }
 
   if (status === 'APPROVED') {
-    return <ApprovedView application={application} />;
+    return <ApprovedView application={application} fullDetail={fullDetail} />;
   }
 
   if (status === 'REJECTED' || status === 'REJECTED_BY_USER') {
@@ -214,18 +225,31 @@ function EvaluatingView({ timeElapsed }: { timeElapsed: number }) {
 
 // ── Vista: Pre-aprobada ───────────────────────────────────────────────────────
 
-function PreApprovedView({ application }: { application: ApplicationRecord }) {
+function PreApprovedView({
+  application,
+  fullDetail,
+}: {
+  application: ApplicationRecord;
+  fullDetail: ApplicationFullDetail | null;
+}) {
   const router = useRouter();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const handleCancel = async () => {
     setCancelling(true);
+    setCancelError(null);
     try {
-      // TODO: Llamar API para cancelar solicitud cuando exista
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      router.push('/dashboard');
+      const result = await cancelApplicationAction('Usuario canceló la solicitud desde la web');
+      if (result.success) {
+        router.push('/dashboard');
+        return;
+      }
+      setCancelError(result.error ?? 'No se pudo cancelar la solicitud');
+      setCancelling(false);
     } catch {
+      setCancelError('Error al cancelar la solicitud');
       setCancelling(false);
     }
   };
@@ -242,6 +266,62 @@ function PreApprovedView({ application }: { application: ApplicationRecord }) {
         </CardHeader>
 
         <CardContent className="pt-0 space-y-6">
+          {/* Resumen del préstamo con datos reales */}
+          {fullDetail && (
+            <Card className="border-2 border-primary/20 bg-primary/5">
+              <div className="p-5">
+                <h3 className="text-sm font-semibold text-primary mb-4">Resumen de tu préstamo</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Monto solicitado</p>
+                    <p className="text-xl font-bold text-foreground">S/ {fullDetail.principal.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Cuotas</p>
+                    <p className="text-xl font-bold text-foreground">{fullDetail.installment_count}x</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pago mensual</p>
+                    <p className="text-xl font-bold text-foreground">S/ {fullDetail.monthly_payment.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total a pagar</p>
+                    <p className="text-xl font-bold text-foreground">S/ {fullDetail.total_to_pay.toLocaleString()}</p>
+                  </div>
+                </div>
+
+                {fullDetail.schedule && fullDetail.schedule.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-primary/10">
+                    <p className="text-xs text-muted-foreground mb-2">Cronograma de pagos</p>
+                    <div className="space-y-1">
+                      {fullDetail.schedule.map((inst) => (
+                        <div key={inst.installment_no} className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Cuota {inst.installment_no} — {formatDate(inst.due_date)}</span>
+                          <span className="font-medium text-foreground">S/ {inst.amount.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 pt-4 border-t border-primary/10 grid grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Intereses + fees:</span>{' '}
+                    <span className="font-medium text-foreground">S/ {fullDetail.total_fees_original.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Descuentos:</span>{' '}
+                    <span className="font-medium text-success-600">-S/ {fullDetail.total_discounts.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">IGV:</span>{' '}
+                    <span className="font-medium text-foreground">S/ {fullDetail.total_igv.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Score crediticio si está disponible */}
           {application.creditScore && (
             <Card className="border-2 border-success-100 bg-success-50">
@@ -334,6 +414,11 @@ function PreApprovedView({ application }: { application: ApplicationRecord }) {
               <p className="text-sm text-muted-foreground">
                 Si cancelas esta solicitud, perderás la pre-aprobación y tendrás que volver a solicitar desde el inicio.
               </p>
+              {cancelError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {cancelError}
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={() => setShowCancelModal(false)} disabled={cancelling} className="flex-1">
                   Volver
@@ -487,7 +572,13 @@ function FailedView({ application }: { application: ApplicationRecord }) {
 
 // ── Vista: Aprobada (contrato firmado) ────────────────────────────────────────
 
-function ApprovedView({ application }: { application: ApplicationRecord }) {
+function ApprovedView({
+  application,
+  fullDetail,
+}: {
+  application: ApplicationRecord;
+  fullDetail: ApplicationFullDetail | null;
+}) {
   const router = useRouter();
 
   return (
@@ -505,6 +596,31 @@ function ApprovedView({ application }: { application: ApplicationRecord }) {
             Tu contrato fue firmado exitosamente. El desembolso se realizará en las próximas 24-48 horas.
           </p>
         </div>
+
+        {/* Resumen del préstamo aprobado */}
+        {fullDetail && (
+          <div className="w-full bg-muted/50 rounded-lg p-5 text-left space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Resumen de tu préstamo aprobado</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Monto</p>
+                <p className="text-lg font-bold text-foreground">S/ {fullDetail.principal.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total a pagar</p>
+                <p className="text-lg font-bold text-foreground">S/ {fullDetail.total_to_pay.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Cuotas</p>
+                <p className="text-lg font-bold text-foreground">{fullDetail.installment_count}x de S/ {fullDetail.monthly_payment.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Primera cuota</p>
+                <p className="text-lg font-bold text-foreground">{formatDate(fullDetail.first_due_date)}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-success-50 border border-success-100 rounded-lg p-4 w-full">
           <div className="flex gap-3">

@@ -218,8 +218,106 @@ export async function getActiveApplicationAction(): Promise<ApplicationRecord | 
   }
 }
 
+// ── Tipos para detalle completo ─────────────────────────────────────────────
+
+export interface InstallmentDetail {
+  installment_no: number;
+  due_date: string;
+  amount: number;
+}
+
+export interface ApplicationFullDetail {
+  application_id: string;
+  product_id: string;
+  product_name: string;
+  principal: number;
+  term_days: number;
+  installment_count: number;
+  is_first_loan: boolean;
+  credit_score_used: number;
+  total_fees_original: number;
+  total_discounts: number;
+  total_igv: number;
+  total_to_pay: number;
+  monthly_payment: number;
+  first_due_date: string;
+  schedule: InstallmentDetail[];
+}
+
+// ── GET: Detalle completo de una solicitud (datos financieros) ────────────────
+
+export async function getApplicationFullDetailAction(
+  applicationId: string
+): Promise<ApplicationFullDetail | null> {
+  await requireValidSession();
+
+  try {
+    const res = await backendFetch(`/api/v1/applications/${applicationId}/detail`);
+
+    if (res.status === 404) return null;
+    if (!isSuccess(res.status)) return null;
+
+    const data = await res.json();
+    return {
+      application_id: data.application_id,
+      product_id: data.product_id,
+      product_name: data.product_name,
+      principal: data.principal,
+      term_days: data.term_days,
+      installment_count: data.installment_count,
+      is_first_loan: data.is_first_loan,
+      credit_score_used: data.credit_score_used,
+      total_fees_original: data.total_fees_original,
+      total_discounts: data.total_discounts,
+      total_igv: data.total_igv,
+      total_to_pay: data.total_to_pay,
+      monthly_payment: data.monthly_payment,
+      first_due_date: data.first_due_date,
+      schedule: data.schedule ?? [],
+    };
+  } catch (error) {
+    console.error('[APPLICATION] Error al obtener detalle completo:', error);
+    return null;
+  }
+}
+
+// ── DELETE: Cancelar/rechazar solicitud activa ──────────────────────────────
+
+export interface CancelApplicationResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function cancelApplicationAction(
+  reason: string
+): Promise<CancelApplicationResult> {
+  await requireValidSession();
+
+  try {
+    const res = await backendFetch('/api/v1/applications/active', {
+      method: 'DELETE',
+      body: JSON.stringify({ reason }),
+    });
+
+    if (res.status === 204 || res.status === 200) {
+      return { success: true };
+    }
+
+    let json: any = {};
+    try { json = await res.json(); } catch { /* body vacío */ }
+
+    return {
+      success: false,
+      error: json.message ?? json.detail ?? 'No se pudo cancelar la solicitud',
+    };
+  } catch {
+    console.error('[APPLICATION] Error al cancelar solicitud');
+    return { success: false, error: 'Error de conexión al cancelar la solicitud' };
+  }
+}
+
 /**
- * Obtiene el detalle completo de una solicitud específica.
+ * Obtiene el detalle básico de una solicitud específica.
  * GET /api/v1/applications/{id}
  */
 export async function getApplicationDetailAction(applicationId: string): Promise<ApplicationRecord | null> {
