@@ -12,7 +12,7 @@ const MESSAGES = [
   'Preparando tu solicitud...',
 ];
 
-const MESSAGE_INTERVAL_MS = 1200;
+const MESSAGE_INTERVAL_MS = 1500;
 
 /**
  * Orquestador de pasos del funnel.

@@ -22,7 +22,8 @@ export async function getFunnelRedirect(): Promise<string> {
 
   // ── Bloque 1: KYC ────────────────────────────────────────────────────────
   const kyc = await getKYCData();
-  if (!kyc.data?.verified) return '/solicitar/kyc-validation';
+  // Solo VERIFIED permite avanzar; EXPIRED, REPLACED o sin datos → volver a KYC
+  if (kyc.data?.status !== 'VERIFIED') return '/solicitar/kyc-validation';
 
   // ── Bloque 2: resto en paralelo ──────────────────────────────────────────
   const [labor, economic, address, references, bankAccount] = await Promise.all([

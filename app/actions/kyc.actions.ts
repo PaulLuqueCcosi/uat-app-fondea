@@ -1,6 +1,6 @@
 'use server';
 
-import { KYCData } from '@/lib/types';
+import { KYCData, KycStatus } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
@@ -21,6 +21,7 @@ export type KYCSaveResult =
       error: string;
       blockedHoursLeft?: number;
       attemptsLeft?: number;
+      maxAttempts?: number;
       /** Cuando el backend indica que el usuario debe re-loguearse (409) */
       action?: 're-login';
     };
@@ -61,21 +62,51 @@ export async function getKYCData(): Promise<{
 
     const json = await res.json();
 
+    // El backend puede devolver dos formatos:
+    // 1. Formato plano: { data: { dni, firstName, ..., birthDate } }
+    // 2. Formato verificado: { status: "VERIFIED", submission: { submission_data: '{"dni":...}' } }
+    const raw = json.data ?? null;
+    const backendStatus: KycStatus | undefined = json.status as KycStatus | undefined;
+
+    // Si viene con estructura de submission (KYC con estado del backend)
+    let parsedData: Record<string, any> | null = raw;
+    if (!raw && json.submission?.submission_data) {
+      try {
+        parsedData = JSON.parse(json.submission.submission_data);
+      } catch {
+        console.error('[KYC] Error parseando submission_data');
+      }
+    }
+
     // Mapear birthDate → birth_date para el frontend, convirtiendo YYYY-MM-DD → DD/MM/YYYY
-    const rawDate: string | undefined = json.data?.birthDate ?? json.data?.birth_date;
+    const rawDate: string | undefined = parsedData?.birthDate ?? parsedData?.birth_date;
     const birth_date = rawDate?.match(/^\d{4}-\d{2}-\d{2}$/)
       ? rawDate.split('-').reverse().join('/')   // "2003-06-19" → "19/06/2003"
       : rawDate;
 
-    const data: KYCData | null = json.data
-      ? { ...json.data, birth_date }
+    // Status del backend (VERIFIED, EXPIRED, REPLACED, PENDING)
+    const status = backendStatus ?? parsedData?.status;
+    const verified = status === 'VERIFIED';
+
+    const data: KYCData | null = parsedData
+      ? {
+          dni: parsedData.dni ?? '',
+          firstName: parsedData.firstName ?? '',
+          secondName: parsedData.secondName ?? '',
+          firstLastName: parsedData.firstLastName ?? '',
+          secondLastName: parsedData.secondLastName ?? '',
+          verificationCode: parsedData.verificationCode ?? '',
+          birth_date: birth_date ?? '',
+          status,
+          verified,
+        }
       : null;
 
     return {
       data,
       blocked: json.blocked ?? false,
-      blockedHoursLeft: json.blockedHoursLeft ?? 0,
-      attemptsLeft: json.attemptsLeft ?? 3,
+      blockedHoursLeft: json.blocked_hours_left ?? json.blockedHoursLeft ?? 0,
+      attemptsLeft: json.attempts_left ?? json.attemptsLeft ?? 3,
     };
   } catch (error) {
     console.error('[KYC] Error de conexión al obtener estado:', error);
@@ -83,7 +114,7 @@ export async function getKYCData(): Promise<{
   }
 }
 
-// ── POST: Validar KYC ────────────────────────────────────────────────────────
+// ── PUT: Validar KYC ────────────────────────────────────────────────────────
 
 export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
   await requireValidSession();
@@ -103,7 +134,7 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
     };
 
     const res = await kycFetch('/api/v1/kyc/validate', {
-      method: 'POST',
+      method: 'PUT',
       body: JSON.stringify(body),
     });
 
@@ -117,9 +148,9 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       };
     }
 
-    // 200 — identidad verificada ✅
-    if (res.status === 200) {
-      return { success: true, httpStatus: 200 };
+    // 200/201 — identidad verificada ✅ (PUT puede devolver ambos)
+    if (res.status === 200 || res.status === 201) {
+      return { success: true, httpStatus: res.status };
     }
 
     let json: any = {};
@@ -127,13 +158,13 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
 
     // 429 — bloqueado por demasiados intentos
     if (res.status === 429) {
-      const hoursLeft = json.blockedHoursLeft ?? json.detail?.blockedHoursLeft ?? 24;
+      const hoursLeft = json.blocked_hours_left ?? json.blockedHoursLeft ?? json.detail?.blockedHoursLeft ?? 24;
       return {
         success: false,
         httpStatus: 429,
         errorCategory: 'rate_limit',
         blockedHoursLeft: hoursLeft,
-        error: `Demasiados intentos fallidos. Tu cuenta quedará bloqueada por ${hoursLeft} hora${hoursLeft !== 1 ? 's' : ''}.`,
+        error: json.message ?? `Demasiados intentos fallidos. Tu cuenta quedará bloqueada por ${hoursLeft} hora${hoursLeft !== 1 ? 's' : ''}.`,
       };
     }
 
@@ -144,14 +175,15 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
         httpStatus: 409,
         errorCategory: 'conflict',
         action: 're-login',
-        error: json.detail ?? 'No se encontró un documento registrado en tu cuenta. Por favor, cierra sesión e inicia sesión nuevamente.',
+        error: json.message ?? json.detail ?? 'No se encontró un documento registrado en tu cuenta. Por favor, cierra sesión e inicia sesión nuevamente.',
       };
     }
 
-    // 422 — datos no coinciden con RENIEC (tiene attemptsLeft y fieldErrors)
+    // 422 — datos no coinciden (attempts_left, message, error_code)
     if (res.status === 422) {
-      const attemptsLeft = json.attemptsLeft;
-      const baseError = json.error ?? 'Los datos no coinciden con los registros de RENIEC.';
+      const attemptsLeft = json.attempts_left ?? json.attemptsLeft;
+      const maxAttempts = json.max_attempts ?? 3;
+      const baseError = json.message ?? json.error ?? 'Los datos no coinciden con los registros de RENIEC.';
 
       // Construir mensaje con advertencia de intentos si quedan pocos
       let error = baseError;
@@ -166,13 +198,14 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
         httpStatus: 422,
         errorCategory: 'validation',
         attemptsLeft,
+        maxAttempts,
         error,
       };
     }
 
     // 400 — formato inválido o edad fuera de rango (Problem Detail, no consume intento)
     if (res.status === 400) {
-      const detail = json.detail ?? json.error ?? 'Los datos ingresados tienen un formato inválido. Verifica que sean exactamente como aparecen en tu DNI.';
+      const detail = json.message ?? json.detail ?? json.error ?? 'Los datos ingresados tienen un formato inválido. Verifica que sean exactamente como aparecen en tu DNI.';
       return {
         success: false,
         httpStatus: 400,
@@ -196,7 +229,7 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       success: false,
       httpStatus: res.status,
       errorCategory: 'unknown',
-      error: json.error ?? json.detail ?? 'Error inesperado. Por favor, inténtalo nuevamente.',
+      error: json.message ?? json.error ?? json.detail ?? 'Error inesperado. Por favor, inténtalo nuevamente.',
     };
 
   } catch {

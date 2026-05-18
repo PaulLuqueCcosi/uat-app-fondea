@@ -34,7 +34,18 @@ import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
+import { AlertBanner } from '@/components/ui/alert-banner';
 import { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Clock, AlertTriangle } from 'lucide-react';
 
 interface FunnelKYCValidationProps {
   dashboardMode?: boolean;
@@ -124,17 +135,19 @@ export function FunnelKYCValidation({
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  const [isVerified, setIsVerified] = useState(initialData?.verified === true);
-  const [isEditing, setIsEditing] = useState(!initialData?.verified);
-  /** true si el usuario ya tenía datos verificados antes de editar */
-  const [wasVerified, setWasVerified] = useState(initialData?.verified === true);
+  const [isVerified, setIsVerified] = useState(initialData?.status === 'VERIFIED');
+  const [isEditing, setIsEditing] = useState(initialData?.status !== 'VERIFIED');
+  const [wasVerified, setWasVerified] = useState(initialData?.status === 'VERIFIED');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
-  /** Cuando el backend indica que la cuenta no tiene DNI y necesita re-login */
   const [needsRelogin, setNeedsRelogin] = useState(false);
 
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedData, setSavedData] = useState(initialData ?? null);
+
+  const currentStatus = savedData?.status ?? initialData?.status;
+  const isExpired = currentStatus === 'EXPIRED';
 
   const nextPath = currentStep?.nextPath || '/solicitar/kyc-documents';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -156,6 +169,13 @@ export function FunnelKYCValidation({
     }
   };
 
+  // Forzar modo edición si está expirado
+  useEffect(() => {
+    if (isExpired && !isEditing) {
+      setIsEditing(true);
+    }
+  }, [isExpired, isEditing]);
+
   // Cuenta regresiva del bloqueo (en horas)
   useEffect(() => {
     if (!blocked || blockedHoursLeft <= 0) return;
@@ -176,13 +196,14 @@ export function FunnelKYCValidation({
   const form = useForm<KYCValidationFormValues>({
     resolver: zodResolver(kycValidationSchema),
     defaultValues: {
-      dni: initialData?.dni ?? '',
-      firstName: initialData?.firstName ?? '',
-      secondName: initialData?.secondName ?? '',
-      firstLastName: initialData?.firstLastName ?? '',
-      secondLastName: initialData?.secondLastName ?? '',
-      verificationCode: initialData?.verificationCode ?? '',
-      birth_date: initialData?.birth_date ?? '',
+      // REPLACED → formulario limpio; VERIFIED/EXPIRED → pre-llenar
+      dni: initialData?.status === 'REPLACED' ? '' : (initialData?.dni ?? ''),
+      firstName: initialData?.status === 'REPLACED' ? '' : (initialData?.firstName ?? ''),
+      secondName: initialData?.status === 'REPLACED' ? '' : (initialData?.secondName ?? ''),
+      firstLastName: initialData?.status === 'REPLACED' ? '' : (initialData?.firstLastName ?? ''),
+      secondLastName: initialData?.status === 'REPLACED' ? '' : (initialData?.secondLastName ?? ''),
+      verificationCode: initialData?.status === 'REPLACED' ? '' : (initialData?.verificationCode ?? ''),
+      birth_date: initialData?.status === 'REPLACED' ? '' : (initialData?.birth_date ?? ''),
     },
   });
 
@@ -202,7 +223,11 @@ export function FunnelKYCValidation({
   }, [isEditing, savedData, form]);
 
   const handleEdit = () => {
-    // Al editar, el estado verificado se pierde — el backend re-validará al guardar
+    setShowConfirmDialog(true);
+  };
+
+  const confirmEdit = () => {
+    setShowConfirmDialog(false);
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
@@ -259,6 +284,7 @@ export function FunnelKYCValidation({
         secondLastName: data.secondLastName,
         verificationCode: data.verificationCode,
         birth_date: data.birth_date,
+        status: 'VERIFIED',
         verified: true,
       });
 
@@ -332,10 +358,32 @@ export function FunnelKYCValidation({
     </div>
   );
 
+  // ── Banner de expirado (se muestra dentro del formulario) ────────────────
+  const expiredBanner = isExpired && (
+    <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+          <Clock className="w-4 h-4 text-amber-700" />
+        </div>
+        <div className="space-y-0.5">
+          <p className="text-sm font-semibold text-amber-900">
+            Tu verificación ha expirado
+          </p>
+          <p className="text-sm text-amber-800 leading-relaxed">
+            El tiempo de validez de tu verificación terminó. Revisa y corrige tus datos, luego vuelve a enviar para validar.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   // ── Formulario editable ──────────────────────────────────────────────────
   const editForm = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+        {/* Banner de expirado */}
+        {expiredBanner}
+
         {/* Error de guardado */}
         {saveError && (
           <>
@@ -551,67 +599,37 @@ export function FunnelKYCValidation({
           </div>
         </div>
 
-        {/* Panel de intentos y bloqueo — aparece en cualquier error de validación o bloqueo */}
+        {/* Panel de intentos y bloqueo */}
         {(blocked || (saveError && attemptsLeft !== undefined && attemptsLeft < initialAttemptsLeft)) && (
           <>
             <Separator className="my-10 bg-primary/20 h-px" />
-            <div className={`rounded-lg border p-4 ${blocked ? 'border-error-200 bg-error-50' : attemptsLeft === 1 ? 'border-error-200 bg-error-50' : 'border-warning-200 bg-warning-50'}`}>
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 shrink-0 text-lg">
-                  {blocked ? '🔒' : attemptsLeft === 1 ? '🚨' : '⚠️'}
-                </span>
-                <div className="space-y-2 w-full">
-
-                  {/* Bloqueado */}
-                  {blocked && (
-                    <div>
-                      <p className="text-sm font-semibold text-error-700">
-                        Verificación bloqueada por {blockedHoursLeft} hora{blockedHoursLeft !== 1 ? 's' : ''}
-                      </p>
-                      <p className="text-xs text-error-600 mt-1">
-                        Has superado el número máximo de intentos. Podrás intentarlo nuevamente cuando expire el bloqueo.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Barra de intentos — solo si no está bloqueado */}
-                  {!blocked && attemptsLeft !== undefined && (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground font-medium">Intentos restantes</span>
-                        <span className={`font-bold ${attemptsLeft === 1 ? 'text-error-700' : 'text-warning-700'}`}>
-                          {attemptsLeft} de {initialAttemptsLeft}
-                        </span>
-                      </div>
-                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${attemptsLeft === 1 ? 'bg-error-500' : 'bg-warning-500'}`}
-                          style={{ width: `${((initialAttemptsLeft - attemptsLeft) / initialAttemptsLeft) * 100}%` }}
-                        />
-                      </div>
-                      {attemptsLeft === 1 && (
-                        <p className="text-xs text-error-700 font-semibold">
-                          🚨 Último intento — si falla, tu cuenta quedará bloqueada por 24 horas
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Consejos — solo si no está bloqueado */}
-                  {!blocked && (
-                    <div className="text-xs text-muted-foreground space-y-1 pt-1 border-t border-border mt-2">
-                      <p className="font-medium pt-2 text-foreground">Revisa lo siguiente:</p>
-                      <ul className="list-disc list-inside space-y-1 ml-1">
-                        <li>Los datos deben coincidir <strong>exactamente</strong> con tu DNI físico</li>
-                        <li>Nombres y apellidos en mayúsculas, sin tildes</li>
-                        <li>El código de verificación es el dígito al final de tu DNI</li>
-                        <li>La fecha de nacimiento en formato DD/MM/AAAA</li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
+            {blocked ? (
+              <AlertBanner
+                variant="error"
+                title={`Bloqueado por ${blockedHoursLeft} hora${blockedHoursLeft !== 1 ? 's' : ''}`}
+                description="Has superado el número máximo de intentos. Podrás intentarlo nuevamente cuando expire el bloqueo."
+                blockedHoursLeft={blockedHoursLeft}
+              />
+            ) : (
+              <AlertBanner
+                variant={attemptsLeft === 1 ? 'error' : 'warning'}
+                title={attemptsLeft === 1 ? 'Último intento' : 'Datos no válidos'}
+                description={saveError ?? ''}
+                attemptsLeft={attemptsLeft}
+                maxAttempts={initialAttemptsLeft}
+              />
+            )}
+            {!blocked && (
+              <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border mt-4">
+                <p className="font-medium text-foreground">Revisa lo siguiente:</p>
+                <ul className="list-disc list-inside space-y-1 ml-1">
+                  <li>Los datos deben coincidir <strong>exactamente</strong> con tu DNI físico</li>
+                  <li>Nombres y apellidos en mayúsculas, sin tildes</li>
+                  <li>El código de verificación es el dígito al final de tu DNI</li>
+                  <li>La fecha de nacimiento en formato DD/MM/AAAA</li>
+                </ul>
               </div>
-            </div>
+            )}
           </>
         )}
 
@@ -682,57 +700,107 @@ export function FunnelKYCValidation({
   }
 
   // ── Contenido activo según estado ────────────────────────────────────────
-  const content = isVerified && !isEditing ? verifiedView : editForm;
+  const content = isVerified && !isEditing && !isExpired
+    ? verifiedView
+    : editForm;
 
   if (dashboardMode) {
     return (
+      <>
+        <div className="flex flex-col xl:flex-row gap-6 lg:gap-8 xl:items-start xl:justify-center max-w-7xl mx-auto">
+          <div className="flex-1 xl:max-w-2xl">
+            <Card className="w-full">
+              <CardContent className="pt-6">
+                {content}
+              </CardContent>
+            </Card>
+            {(!isVerified || isEditing) && (
+              <StickyBottomBar
+                ctaLabel={isVerifying ? 'Verificando...' : 'Verificar datos'}
+                onCta={form.handleSubmit(onSubmit)}
+                loading={isVerifying}
+                ctaDisabled={blocked}
+              />
+            )}
+          </div>
+          <div className="xl:shrink-0">
+            {/* Solo mostrar ayuda del DNI cuando está editando */}
+            {(!isVerified || isEditing) && <DNIHelpCard activeField={activeField} onFieldClick={focusField} />}
+          </div>
+        </div>
+
+        {/* Modal de confirmación al editar */}
+        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>¿Editar verificación?</DialogTitle>
+              <DialogDescription>
+                Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
+                Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={confirmEdit}>
+                Sí, editar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  return (
+    <>
       <div className="flex flex-col xl:flex-row gap-6 lg:gap-8 xl:items-start xl:justify-center max-w-7xl mx-auto">
         <div className="flex-1 xl:max-w-2xl">
           <Card className="w-full">
-            <CardContent className="pt-6">
-              {content}
-            </CardContent>
+            <CardHeader className="pb-4">
+              <FormHeader
+                icon={currentStep?.icon || CreditCard}
+                title="Verificación de identidad"
+                description={
+                  isVerified && !isEditing
+                    ? 'Tu identidad ha sido verificada correctamente'
+                    : currentStatus === 'EXPIRED' && !isEditing
+                    ? 'Tu verificación ha expirado, debes validar nuevamente'
+                    : 'Ingresa tus datos exactamente como aparecen en tu DNI'
+                }
+              />
+            </CardHeader>
+            <CardContent className="pt-0">{content}</CardContent>
           </Card>
-          {(!isVerified || isEditing) && (
-            <StickyBottomBar
-              ctaLabel={isVerifying ? 'Verificando...' : 'Verificar datos'}
-              onCta={form.handleSubmit(onSubmit)}
-              loading={isVerifying}
-              ctaDisabled={blocked}
-            />
-          )}
         </div>
         <div className="xl:shrink-0">
           {/* Solo mostrar ayuda del DNI cuando está editando */}
           {(!isVerified || isEditing) && <DNIHelpCard activeField={activeField} onFieldClick={focusField} />}
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="flex flex-col xl:flex-row gap-6 lg:gap-8 xl:items-start xl:justify-center max-w-7xl mx-auto">
-      <div className="flex-1 xl:max-w-2xl">
-        <Card className="w-full">
-          <CardHeader className="pb-4">
-            <FormHeader
-              icon={currentStep?.icon || CreditCard}
-              title="Verificación de identidad"
-              description={
-                isVerified && !isEditing
-                  ? 'Tu identidad ha sido verificada correctamente'
-                  : 'Ingresa tus datos exactamente como aparecen en tu DNI'
-              }
-            />
-          </CardHeader>
-          <CardContent className="pt-0">{content}</CardContent>
-        </Card>
-      </div>
-      <div className="xl:shrink-0">
-        {/* Solo mostrar ayuda del DNI cuando está editando */}
-        {(!isVerified || isEditing) && <DNIHelpCard activeField={activeField} onFieldClick={focusField} />}
-      </div>
-    </div>
+      {/* Modal de confirmación al editar */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Editar verificación?</DialogTitle>
+            <DialogDescription>
+              Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={confirmEdit}>
+              Sí, editar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
