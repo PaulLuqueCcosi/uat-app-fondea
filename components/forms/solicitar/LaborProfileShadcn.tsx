@@ -546,7 +546,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                     render={({ field }) => (
                       <FormItem className="flex flex-col items-start gap-1">
                         <FormLabel>Tiempo en la empresa</FormLabel>
-                        <Input type="number" placeholder="2" {...field} className="w-full" min="0" step="0.1" />
+                        <Input type="number" placeholder="2" {...field} className="w-full" min="0" step="1" />
                         <FormDescription>¿Cuántos años llevas en tu empresa actual?</FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -564,7 +564,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                     render={({ field }) => (
                       <FormItem className="flex flex-col items-start gap-1">
                         <FormLabel>Años con tu actividad</FormLabel>
-                        <Input type="number" placeholder="3" {...field} className="w-full" min="0" />
+                        <Input type="number" placeholder="3" {...field} className="w-full" min="0" step="1" />
                         <FormDescription>¿Cuántos años llevas en esta actividad?</FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -581,7 +581,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                       render={({ field }) => (
                         <FormItem className="flex flex-col items-start gap-1">
                           <FormLabel>Años con tu negocio</FormLabel>
-                          <Input type="number" placeholder="5" {...field} className="w-full" min="0" />
+                          <Input type="number" placeholder="5" {...field} className="w-full" min="0" step="1" />
                           <FormDescription>¿Cuántos años tiene tu negocio?</FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -628,7 +628,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                     <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                       <span className="text-sm font-medium">S/</span>
                     </div>
-                    <Input type="number" placeholder="0.00" {...field} className="w-full pl-10" min="0" step="0.01" />
+                              <Input type="number" placeholder="0" {...field} className="w-full pl-10" min="0" step="1" />
                   </div>
                   <FormDescription>Después de impuestos (promedio últimos 3 meses)</FormDescription>
                   <FormMessage />
@@ -745,7 +745,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                               <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                 <span className="text-sm font-medium">S/</span>
                               </div>
-                              <Input type="number" placeholder="0.00" {...field} className="w-full pl-10" min="0" step="0.01" />
+                    <Input type="number" placeholder="0" {...field} className="w-full pl-10" min="0" step="1" />
                             </div>
                             <FormMessage />
                           </FormItem>

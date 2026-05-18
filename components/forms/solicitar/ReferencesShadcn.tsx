@@ -443,7 +443,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1">
                     <FormLabel>¿Hace cuántos años se conocen?</FormLabel>
-                    <Input type="number" placeholder="5" {...field} className="w-full" min="1" />
+                    <Input type="number" placeholder="5" {...field} className="w-full" min="1" step="1" />
                     <FormMessage />
                   </FormItem>
                 )}

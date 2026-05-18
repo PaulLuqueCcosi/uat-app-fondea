@@ -465,14 +465,14 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                     <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                       <span className="text-sm font-medium">S/</span>
                     </div>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      {...field}
-                      className="w-full pl-10"
-                      min="0"
-                      step="1"
-                    />
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              {...field}
+                              className="w-full pl-10"
+                              min="0"
+                              step="1"
+                            />
                   </div>
                   <FormDescription>Incluye alimentación, transporte, servicios, etc.</FormDescription>
                   <FormMessage />
@@ -577,11 +577,11 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                             </div>
                             <Input
                               type="number"
-                              placeholder="0.00"
+                              placeholder="0"
                               {...field}
                               className="w-full pl-10"
                               min="0"
-                              step="0.01"
+                              step="1"
                             />
                           </div>
                           <FormMessage />
@@ -601,11 +601,11 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                             </div>
                             <Input
                               type="number"
-                              placeholder="0.00"
+                              placeholder="0"
                               {...field}
                               className="w-full pl-10"
                               min="0"
-                              step="0.01"
+                              step="1"
                             />
                           </div>
                           <FormMessage />

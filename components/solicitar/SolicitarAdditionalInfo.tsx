@@ -194,6 +194,7 @@ export function FunnelAdditionalInfo({ dashboardMode }: FunnelAdditionalInfoProp
               onChange={(e) => updateField('yearsAtAddress', Number(e.target.value))}
               placeholder="Ej: 3"
               min={0}
+              step={1}
               className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </FormField>
@@ -238,6 +239,7 @@ export function FunnelAdditionalInfo({ dashboardMode }: FunnelAdditionalInfoProp
               onChange={(e) => updateField('dependents', Number(e.target.value))}
               placeholder="0"
               min={0}
+              step={1}
               className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </FormField>
