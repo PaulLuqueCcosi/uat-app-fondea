@@ -1,25 +1,39 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, usePathname, useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FileText, Download, Check, AlertCircle, PenLine } from 'lucide-react';
-import { signContract } from '@/app/actions/loan.actions';
+import { signContractAction, getContractAction } from '@/app/actions/application.actions';
 
-export function FunnelContract() {
+interface FunnelContractProps {
+  applicationId?: string;
+}
+
+export function FunnelContract({ applicationId }: FunnelContractProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const params = useParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [fullName, setFullName] = useState('');
+  const [contractText, setContractText] = useState<string>('');
 
   // Detectar si estamos en el flujo de solicitudes
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
-  const solicitudId = params.id as string | undefined;
+  const solicitudId = applicationId;
+
+  // Cargar contrato del backend
+  useEffect(() => {
+    if (!solicitudId) return;
+    getContractAction(solicitudId).then((data) => {
+      if (data?.contractText) {
+        setContractText(data.contractText);
+      }
+    });
+  }, [solicitudId]);
 
   const handleSubmit = async () => {
     if (!accepted) {
@@ -37,14 +51,25 @@ export function FunnelContract() {
       return;
     }
 
+    if (!solicitudId) {
+      setError('No se encontró la solicitud activa');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
-      await signContract(fullName);
+      const result = await signContractAction(solicitudId, fullName);
+
+      if (!result.success) {
+        setError(result.error ?? 'Error al firmar el contrato');
+        setLoading(false);
+        return;
+      }
 
       // Redirigir según el flujo
-      if (isInSolicitudFlow && solicitudId) {
+      if (isInSolicitudFlow) {
         router.push(`/solicitudes/${solicitudId}/aprobada`);
       } else {
         router.push('/solicitar/contract-signed');
@@ -86,76 +111,18 @@ export function FunnelContract() {
             </Button>
           </div>
 
-          {/* Contract content (simplified) */}
+          {/* Contract content from backend */}
           <div className="bg-background rounded-lg p-6 max-h-96 overflow-y-auto border border-border text-sm space-y-4">
-            <h4 className="font-bold text-dark">CONTRATO DE MUTUO DINERARIO</h4>
-
-            <p className="text-fondea-text">
-              Conste por el presente documento, el CONTRATO DE MUTUO DINERARIO que celebran:
-            </p>
-
-            <div>
-              <p className="font-semibold text-dark">EL MUTUANTE:</p>
-              <p className="text-fondea-text">
-                FONDEA S.A.C., con RUC N° 20123456789, con domicilio en Av. Javier Prado Este 123,
-                San Isidro, Lima.
-              </p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-dark">EL MUTUATARIO:</p>
-              <p className="text-fondea-text">
-                [Tu nombre completo según DNI], identificado con DNI N° [tu DNI], con domicilio en
-                [tu dirección].
-              </p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-dark">PRIMERA: OBJETO DEL CONTRATO</p>
-              <p className="text-fondea-text">
-                Por el presente contrato, EL MUTUANTE se obliga a entregar a EL MUTUATARIO la suma
-                de [monto del préstamo] soles, en calidad de préstamo, el cual será devuelto en un
-                plazo de [plazo] meses.
-              </p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-dark">SEGUNDA: TASA DE INTERÉS</p>
-              <p className="text-fondea-text">
-                Las partes acuerdan que el préstamo generará intereses a una tasa efectiva anual
-                (TEA) de 51.1%, calculados sobre el saldo del capital prestado.
-              </p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-dark">TERCERA: FORMA DE PAGO</p>
-              <p className="text-fondea-text">
-                EL MUTUATARIO se obliga a pagar [número de cuotas] cuotas mensuales de [monto de
-                cuota] soles cada una, mediante depósito en la cuenta bancaria que EL MUTUANTE
-                indique.
-              </p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-dark">CUARTA: PENALIDADES</p>
-              <p className="text-fondea-text">
-                En caso de mora en el pago de alguna cuota, se aplicará un interés moratorio del 5%
-                mensual sobre el monto vencido.
-              </p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-dark">QUINTA: DECLARACIÓN JURADA</p>
-              <p className="text-fondea-text">
-                EL MUTUATARIO declara bajo juramento que toda la información proporcionada es
-                verídica y que cuenta con capacidad económica para cumplir con las obligaciones
-                asumidas.
-              </p>
-            </div>
-
-            <p className="text-fondea-text italic">
-              [Este es un resumen simplificado. El contrato completo está disponible para descarga.]
-            </p>
+            {contractText ? (
+              <div className="whitespace-pre-wrap text-fondea-text">
+                {contractText}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Cargando contrato...</p>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -240,12 +207,11 @@ export function FunnelContract() {
 
             <Button
               onClick={handleSubmit}
-              loading={loading}
-              disabled={!accepted || !fullName.trim() || fullName.trim().length < 5}
+              disabled={!accepted || !fullName.trim() || fullName.trim().length < 5 || loading}
               className="w-full"
               size="lg"
             >
-              Firmar y finalizar →
+              {loading ? 'Firmando...' : 'Firmar y finalizar →'}
             </Button>
           </div>
         </Card>

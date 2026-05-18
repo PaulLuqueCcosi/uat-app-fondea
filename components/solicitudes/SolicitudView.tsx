@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,10 @@ import {
   cancelApplicationAction,
   type ApplicationFullDetail,
 } from '@/app/actions/application.actions';
+import {
+  listDocumentsAction,
+  type DocumentListResult,
+} from '@/app/actions/document.actions';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -44,14 +49,19 @@ export function SolicitudView({ initialApplication }: SolicitudViewProps) {
   const [application, setApplication] = useState(initialApplication);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [fullDetail, setFullDetail] = useState<ApplicationFullDetail | null>(null);
-
-  // Cargar detalle completo (datos financieros reales)
-  useEffect(() => {
-    getApplicationFullDetailAction(initialApplication.id).then(setFullDetail);
-  }, [initialApplication.id]);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const status = application.status;
   const isPolling = status === 'SUBMITTED' || status === 'PROCESSING';
+  const justApproved = showCelebration && (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS');
+
+  // Cargar detalle completo (datos financieros reales)
+  // Se recarga cuando status cambia de polling a terminal (ej: PRE_APPROVED)
+  useEffect(() => {
+    if (!isPolling) {
+      getApplicationFullDetailAction(application.id).then(setFullDetail);
+    }
+  }, [application.id, isPolling]);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -94,6 +104,11 @@ export function SolicitudView({ initialApplication }: SolicitudViewProps) {
             canRetryAt: data.canRetryAt,
             failureCode: data.failureCode as any,
           }));
+          // Celebrar si es pre-aprobado
+          if (newStatus === 'PRE_APPROVED' || newStatus === 'PENDING_DOCUMENTS') {
+            setShowCelebration(true);
+            setTimeout(() => setShowCelebration(false), 2500);
+          }
         }
       } catch (e) {
         console.error('[POLLING] Error:', e);
@@ -111,6 +126,11 @@ export function SolicitudView({ initialApplication }: SolicitudViewProps) {
   }
 
   // ── Render según status ───────────────────────────────────────────────────
+
+  // Animación de celebración al aprobarse
+  if (justApproved) {
+    return <ApprovedCelebration />;
+  }
 
   if (isPolling) {
     return <EvaluatingView timeElapsed={timeElapsed} />;
@@ -236,6 +256,21 @@ function PreApprovedView({
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [docList, setDocList] = useState<DocumentListResult | null>(null);
+
+  // Cargar documentos para saber qué pasos están completados
+  useEffect(() => {
+    listDocumentsAction(application.id).then(setDocList);
+  }, [application.id]);
+
+  const isDniUploaded = !!docList?.documents.find(
+    (d) => d.type === 'DNI_FRONT' && d.status === 'UPLOADED'
+  ) && !!docList?.documents.find(
+    (d) => d.type === 'DNI_BACK' && d.status === 'UPLOADED'
+  );
+  const isSelfieUploaded = !!docList?.documents.find(
+    (d) => d.type === 'SELFIE' && d.status === 'UPLOADED'
+  );
 
   const handleCancel = async () => {
     setCancelling(true);
@@ -343,20 +378,51 @@ function PreApprovedView({
 
             <div className="space-y-2">
               {[
-                { icon: FileText, title: '1. Verificar tu identidad (DNI)', desc: 'Sube fotos de tu DNI (adelante y atrás)' },
-                { icon: Camera, title: '2. Verificación biométrica', desc: 'Toma una selfie para confirmar tu identidad' },
-                { icon: PenLine, title: '3. Firmar el contrato', desc: 'Revisa y firma digitalmente tu contrato' },
+                {
+                  icon: FileText,
+                  title: '1. Verificar tu identidad (DNI)',
+                  desc: 'Sube fotos de tu DNI (adelante y atrás)',
+                  done: isDniUploaded,
+                  path: `/solicitudes/${application.id}/kyc-documentos`,
+                },
+                {
+                  icon: Camera,
+                  title: '2. Verificación biométrica',
+                  desc: 'Toma una selfie para confirmar tu identidad',
+                  done: isSelfieUploaded,
+                  path: `/solicitudes/${application.id}/kyc-selfie`,
+                },
+                {
+                  icon: PenLine,
+                  title: '3. Firmar el contrato',
+                  desc: 'Revisa y firma digitalmente tu contrato',
+                  done: false,
+                  path: `/solicitudes/${application.id}/contrato`,
+                },
               ].map((step, i) => (
-                <div key={i} className="flex items-center gap-3 p-4 border border-border rounded-lg bg-background">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <step.icon className="w-4 h-4 text-primary" />
+                <button
+                  key={i}
+                  onClick={() => router.push(step.path)}
+                  className="w-full flex items-center gap-3 p-4 border border-border rounded-lg bg-background hover:border-primary/50 transition-colors text-left"
+                >
+                  <div className={cn(
+                    'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
+                    step.done ? 'bg-success-100' : 'bg-primary/10'
+                  )}>
+                    {step.done ? (
+                      <CheckCircle2 className="w-4 h-4 text-success-600" />
+                    ) : (
+                      <step.icon className="w-4 h-4 text-primary" />
+                    )}
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-foreground">{step.title}</p>
                     <p className="text-sm text-muted-foreground">{step.desc}</p>
                   </div>
-                  <Badge variant="pending">Pendiente</Badge>
-                </div>
+                  <Badge variant={step.done ? 'success' : 'pending'}>
+                    {step.done ? 'Completado' : 'Pendiente'}
+                  </Badge>
+                </button>
               ))}
             </div>
           </div>
@@ -513,6 +579,74 @@ function RejectedView({ application }: { application: ApplicationRecord }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ── Animación de celebración (pre-aprobado) ────────────────────────────────────
+
+function ApprovedCelebration() {
+  const [phase, setPhase] = useState<'enter' | 'show' | 'exit'>('enter');
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      setPhase('show');
+    });
+    const timer = setTimeout(() => setPhase('exit'), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className={cn(
+      'fixed inset-0 z-50 flex items-center justify-center transition-all duration-700',
+      phase === 'enter' ? 'bg-black/0 backdrop-blur-0' : 'bg-black/30 backdrop-blur-sm'
+    )}>
+      <div className={cn(
+        'flex flex-col items-center gap-6 transition-all duration-700 ease-out',
+        phase === 'enter' ? 'scale-0 opacity-0' : 'scale-100 opacity-100',
+        phase === 'exit' ? 'scale-125 opacity-0' : ''
+      )}>
+        {/* Check animado */}
+        <div className="relative">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle
+              cx="60" cy="60" r="55"
+              fill="#10B981"
+              className="transition-all duration-500 ease-out origin-center"
+              style={{
+                transform: phase === 'enter' ? 'scale(0)' : 'scale(1)',
+              }}
+            />
+            <path
+              d="M35 60 L52 77 L85 44"
+              fill="none"
+              stroke="white"
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="origin-center"
+              strokeDasharray="80"
+              strokeDashoffset={phase === 'show' ? '0' : '80'}
+              style={{ transition: 'stroke-dashoffset 0.6s ease-out 0.3s' }}
+            />
+          </svg>
+          {/* Sparkles */}
+          <div className="absolute -top-2 -right-2 text-2xl animate-bounce">✨</div>
+          <div className="absolute -bottom-1 -left-3 text-xl animate-pulse">⭐</div>
+        </div>
+
+        <div className={cn(
+          'text-center space-y-2 transition-all duration-500 delay-500',
+          phase === 'enter' ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'
+        )}>
+          <h2 className="text-3xl font-bold text-white drop-shadow-lg">
+            ¡Pre-aprobado!
+          </h2>
+          <p className="text-white/80 text-lg">
+            Tu solicitud ha sido aprobada
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 

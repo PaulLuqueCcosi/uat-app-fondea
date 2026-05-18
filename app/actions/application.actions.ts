@@ -316,6 +316,81 @@ export async function cancelApplicationAction(
   }
 }
 
+// ── POST: Firmar contrato ───────────────────────────────────────────────────
+
+export async function signContractAction(
+  applicationId: string,
+  signedName: string,
+): Promise<ActionResult> {
+  await requireValidSession();
+
+  try {
+    const res = await backendFetch(
+      `/api/v1/applications/${applicationId}/signature`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signed_name: signedName }),
+      },
+    );
+
+    if (!isSuccess(res.status)) {
+      return await parseBackendResponse(res);
+    }
+
+    return { success: true, httpStatus: res.status };
+  } catch {
+    console.error('[APPLICATION] Error al firmar contrato');
+    return networkError();
+  }
+}
+
+// ── GET: Obtener contrato ─────────────────────────────────────────────────────
+
+export async function getContractAction(applicationId: string): Promise<{
+  contractText: string;
+  downloadUrl?: string;
+} | null> {
+  await requireValidSession();
+
+  try {
+    const res = await backendFetch(`/api/v1/applications/${applicationId}/contract`);
+
+    if (!isSuccess(res.status)) return null;
+
+    const data = await res.json();
+    return {
+      contractText: data.contract_text ?? data.text ?? '',
+      downloadUrl: data.download_url ?? data.url ?? undefined,
+    };
+  } catch {
+    console.error('[APPLICATION] Error al obtener contrato');
+    return null;
+  }
+}
+
+// ── POST: Generar contrato ────────────────────────────────────────────────────
+
+export async function generateContractAction(applicationId: string): Promise<ActionResult> {
+  await requireValidSession();
+
+  try {
+    const res = await backendFetch(
+      `/api/v1/applications/${applicationId}/contract/generate`,
+      { method: 'POST' },
+    );
+
+    if (!isSuccess(res.status)) {
+      return await parseBackendResponse(res);
+    }
+
+    return { success: true, httpStatus: res.status };
+  } catch {
+    console.error('[APPLICATION] Error al generar contrato');
+    return networkError();
+  }
+}
+
 /**
  * Obtiene el detalle básico de una solicitud específica.
  * GET /api/v1/applications/{id}

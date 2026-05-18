@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle2, FileText, Camera, PenLine, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getApplicationFullDetailAction, type ApplicationFullDetail } from '@/app/actions/application.actions';
+import { getApplicationStatusAction, getApplicationFullDetailAction, type ApplicationFullDetail } from '@/app/actions/application.actions';
+import { listDocumentsAction, type DocumentListResult } from '@/app/actions/document.actions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, CreditCard } from 'lucide-react';
 
@@ -39,26 +40,56 @@ export function SolicitudesSidebar() {
   const solicitudId = params.id as string | undefined;
 
   const [loanData, setLoanData] = useState<ApplicationFullDetail | null>(null);
+  const [docList, setDocList] = useState<DocumentListResult | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Cargar detalle y documentos
+  const loadData = useCallback(async () => {
+    if (!solicitudId) return;
+    const [loan, docs] = await Promise.all([
+      getApplicationFullDetailAction(solicitudId),
+      listDocumentsAction(solicitudId),
+    ]);
+    if (loan) setLoanData(loan);
+    if (docs) setDocList(docs);
+    setLoading(false);
+  }, [solicitudId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Polling de status para recargar detalle cuando la evaluación termine
   useEffect(() => {
     if (!solicitudId) return;
 
-    const fetchLoanData = async () => {
-      try {
-        const data = await getApplicationFullDetailAction(solicitudId);
-        if (data) {
-          setLoanData(data);
-        }
-      } catch (error) {
-        console.error('Error fetching loan data:', error);
-      } finally {
-        setLoading(false);
+    let cancelled = false;
+    const pollStatus = async () => {
+      if (cancelled) return;
+      const data = await getApplicationStatusAction(solicitudId);
+      if (!data || cancelled) return;
+      const s = data.status;
+      // Si ya no está en evaluación, recargar detalle completo
+      if (s !== 'SUBMITTED' && s !== 'PROCESSING') {
+        const detail = await getApplicationFullDetailAction(solicitudId);
+        if (detail && !cancelled) setLoanData(detail);
+        return; // dejar de consultar
       }
+      setTimeout(pollStatus, 3000);
     };
-
-    fetchLoanData();
+    pollStatus();
+    return () => { cancelled = true; };
   }, [solicitudId]);
+
+  // Determinar si cada paso está completado basado en documentos subidos
+  const isDniUploaded = !!docList?.documents.find(
+    (d) => d.type === 'DNI_FRONT' && d.status === 'UPLOADED'
+  ) && !!docList?.documents.find(
+    (d) => d.type === 'DNI_BACK' && d.status === 'UPLOADED'
+  );
+  const isSelfieUploaded = !!docList?.documents.find(
+    (d) => d.type === 'SELFIE' && d.status === 'UPLOADED'
+  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-PE', {
@@ -152,18 +183,35 @@ export function SolicitudesSidebar() {
         </div>
 
         <nav className="space-y-1">
-          {/* Grupo de formularios completados (bloqueados) */}
+          {/* Paso 1: Resumen de la solicitud */}
           <div className="relative">
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 className="w-4 h-4 text-dark" />
+            <Link
+              href={`/solicitudes/${solicitudId}`}
+              className={cn(
+                'flex items-start gap-3 p-3 rounded-lg transition-colors group relative',
+                pathname === `/solicitudes/${solicitudId}`
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-dark hover:bg-background'
+              )}
+            >
+              <div className="relative z-10 flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-dark" />
+                </div>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-dark">Formularios</p>
-                <p className="text-xs text-fondea-text mt-0.5">Información completada</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-fondea-text">Paso 1</span>
+                </div>
+                <p className={cn(
+                  'text-sm font-medium mt-0.5',
+                  pathname === `/solicitudes/${solicitudId}` ? 'text-primary' : 'text-dark'
+                )}>
+                  Resumen
+                </p>
+                <p className="text-xs text-fondea-text mt-0.5">Revisa tu solicitud</p>
               </div>
-              <Lock className="w-4 h-4 text-fondea-text" />
-            </div>
+            </Link>
 
             {/* Línea conectora */}
             <div className="absolute left-[26px] top-[44px] w-px h-[calc(100%-4px)] bg-secondary" />
@@ -172,10 +220,15 @@ export function SolicitudesSidebar() {
           {/* Pasos activos de solicitud */}
           {SOLICITUD_STEPS.map((step, index) => {
             const Icon = step.icon;
-            const isCompleted = index < currentStepIndex;
-            const isCurrent = index === currentStepIndex;
             const stepPath = `/solicitudes/${solicitudId}/${step.path}`;
             const isActive = pathname === stepPath;
+
+            // Determinar si el paso está completado basado en documentos
+            let isCompleted = false;
+            if (step.id === 'kyc-docs') isCompleted = isDniUploaded;
+            if (step.id === 'kyc-selfie') isCompleted = isSelfieUploaded;
+
+            const isCurrent = index === currentStepIndex;
 
             return (
               <Link
@@ -205,7 +258,7 @@ export function SolicitudesSidebar() {
                 <div className="relative z-10 flex-shrink-0">
                   {isCompleted ? (
                     <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                      <Icon className="w-4 h-4 text-dark" />
+                      <CheckCircle2 className="w-4 h-4 text-dark" />
                     </div>
                   ) : isCurrent ? (
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
@@ -223,6 +276,11 @@ export function SolicitudesSidebar() {
                     <span className="text-xs font-medium text-fondea-text">
                       Paso {index + 2}
                     </span>
+                    {isCompleted && (
+                      <span className="text-[10px] bg-success-100 text-success-700 px-1.5 py-0.5 rounded-full">
+                        Completado
+                      </span>
+                    )}
                   </div>
                   <p
                     className={cn(
