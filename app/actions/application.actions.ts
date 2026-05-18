@@ -93,11 +93,22 @@ export async function submitApplicationAction(
       }),
     });
 
+    // Log completo de la respuesta del backend
+    const resClone = res.clone();
+    const rawBody = await resClone.text();
+    console.log('[APPLICATION] Submit response:', {
+      status: res.status,
+      statusText: res.statusText,
+      body: rawBody,
+    });
+
     if (!isSuccess(res.status)) {
       return await parseBackendResponse(res) as Extract<ActionResult, { success: false }>;
     }
 
-    const data = await res.json();
+    const data = JSON.parse(rawBody);
+
+    console.log('[APPLICATION] Submit parsed data:', data);
 
     return {
       success: true,

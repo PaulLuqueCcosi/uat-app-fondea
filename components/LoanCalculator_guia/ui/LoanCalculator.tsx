@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useLoanCalculatorApi } from "../core/LoanCalculatorProvider";
@@ -25,7 +23,6 @@ export default function LoanCalculator({
   detailMode,
   dedicated = false,
   submitLabel = "Solicitar Préstamo →",
-  initialSelection,
   className,
 }: LoanCalculatorProps = {}) {
   const api = useLoanCalculatorApi();
@@ -76,37 +73,14 @@ export default function LoanCalculator({
     api.fetchConfig()
       .then((cfg) => {
         setConfig(cfg);
-
-        // Si hay initialSelection, pre-llenar con esos valores (validando que existan en config)
-        if (initialSelection) {
-          const amountIdx = initialSelection.amount
-            ? cfg.amounts.findIndex(a => a.value === initialSelection.amount)
-            : 0;
-          const validAmountIdx = amountIdx >= 0 ? amountIdx : 0;
-          setSelectedAmountIndex(validAmountIdx);
-
-          const amount = cfg.amounts[validAmountIdx];
-          const validTerm = initialSelection.termDays && amount?.terms.some(t => t.value === initialSelection.termDays)
-            ? initialSelection.termDays
-            : amount?.terms[0]?.value ?? null;
-          setPlazo(validTerm);
-
-          const term = amount?.terms.find(t => t.value === validTerm);
-          const validInst = initialSelection.installmentCount && term?.installments.some(i => i.value === initialSelection.installmentCount)
-            ? initialSelection.installmentCount
-            : term?.installments[0]?.value ?? null;
-          setCuotas(validInst);
-        } else {
-          setSelectedAmountIndex(0);
-          const firstAmount = cfg.amounts[0];
-          const firstTerm = firstAmount?.terms[0];
-          setPlazo(firstTerm?.value ?? null);
-          const firstInstallment = firstTerm?.installments[0];
-          setCuotas(firstInstallment?.value ?? null);
-        }
+        setSelectedAmountIndex(0);
+        const firstAmount = cfg.amounts[0];
+        const firstTerm = firstAmount?.terms[0];
+        setPlazo(firstTerm?.value ?? null);
+        const firstInstallment = firstTerm?.installments[0];
+        setCuotas(firstInstallment?.value ?? null);
       })
       .catch(() => setConfigError(true));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
 
   // ── Calculate ──────────────────────────────────────────────────────────────
@@ -261,10 +235,7 @@ export default function LoanCalculator({
                   selectedRangeCode: activeCode || undefined,
                   metadata,
                 });
-                // Solo redirigir si portalUrl es una URL real (no vacía ni placeholder)
-                if (api.portalUrl && !api.portalUrl.startsWith("__")) {
-                  window.location.href = `${api.portalUrl}/?intencion=${intention.id}`;
-                }
+                window.location.href = `${api.portalUrl}/?intencion=${intention.id}`;
               } catch {
                 setRequestError(true);
                 setRequesting(false);

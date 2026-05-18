@@ -1,11 +1,6 @@
-// @ts-nocheck
 /**
  * Adapter de API para Fondea (este proyecto)
  * Implementa el contrato LoanCalculatorApi usando el backend de Fondea
- *
- * NOTA: Este adapter usa process.env.NEXT_PUBLIC_* porque está diseñado
- * para la landing que corre en Next.js. En el portal se usa
- * fondeaPortalApi.ts en su lugar.
  */
 
 import type {
@@ -25,10 +20,10 @@ import type {
 
 // ── Config desde env ──────────────────────────────────────────────────────────
 
-const PRODUCT_ID     = process.env.NEXT_PUBLIC_PRODUCT_ID       ?? "03d17890-251f-4946-bb91-49d35ff62800";
-const BASE_URL       = process.env.NEXT_PUBLIC_BACKEND_API_URL  ?? "http://localhost:9599/api";
-const INTENTIONS_URL = process.env.NEXT_PUBLIC_INTENTIONS_API_URL ?? BASE_URL;
-const PORTAL_URL     = process.env.NEXT_PUBLIC_LOAN_REQUEST_URL ?? "https://solicitar.fondea.pe";
+const PRODUCT_ID     = import.meta.env.VITE_PRODUCT_ID       || "03d17890-251f-4946-bb91-49d35ff62800";
+const BASE_URL       = import.meta.env.VITE_API_BASE_URL     || "http://localhost:9599/api";
+const INTENTIONS_URL = import.meta.env.VITE_INTENTIONS_API_URL || BASE_URL;
+const PORTAL_URL     = import.meta.env.VITE_LOAN_REQUEST_URL || "https://solicitar.fondea.pe";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -62,10 +57,9 @@ async function fetchConfig(): Promise<LoanConfig> {
   if (!res.ok) throw new Error(`fetchConfig: ${res.status}`);
   const data = await res.json();
 
-  // Score ranges
+  // Score ranges — nueva key: "scoreRanges"
   const rawRanges = data.scoreRanges ?? data.creditScoreRanges ?? [];
   const ranges = rawRanges
-    .filter((r: any) => r.isActive !== false)
     .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
     .map((r: any, idx: number) => ({
       code: r.code,
@@ -127,7 +121,7 @@ async function fetchCalculation(
     const fees: FeeItem[] = Object.entries(sim.fees).map(([key, f]: [string, any]) => ({
       key,
       name: f.name,
-      label: f.label ?? f.name,
+      label: f.label,
       originalAmount: f.originalAmount,
       discountAmount: f.discountAmount,
       finalAmount: f.finalAmount,
@@ -154,7 +148,7 @@ async function fetchCalculation(
       .map((d: any) => ({
         key: d.name,
         name: d.name,
-        label: d.label ?? d.name,
+        label: d.label,
         type: d.type,
         calculationType: d.calculationType,
         totalDiscountAmount: d.totalDiscountAmount,

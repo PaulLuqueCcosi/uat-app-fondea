@@ -31,7 +31,7 @@ export default function CalculadoraPage() {
       </div>
 
       {/* Calculadora del portal — crea intención y navega a /solicitar/start */}
-      <LoanCalculatorPortal dedicated detailMode="modal" />
+      <LoanCalculatorPortal dedicated detailMode="sidebar" />
     </div>
   );
 }

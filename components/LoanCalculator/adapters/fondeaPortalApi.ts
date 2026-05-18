@@ -12,6 +12,9 @@
 import type {
   LoanCalculatorApi,
   LoanConfig,
+  LoanConfigAmount,
+  LoanConfigTerm,
+  LoanConfigInstallment,
   LoanCalculation,
   ScoreResult,
   IntentionRequest,
@@ -20,10 +23,6 @@ import type {
   DiscountItem,
   ScheduleItem,
 } from "../core";
-
-// ── Config desde env ──────────────────────────────────────────────────────────
-
-const PRODUCT_ID = process.env.NEXT_PUBLIC_PRODUCT_ID ?? "03d17890-251f-4946-bb91-49d35ff62800";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -57,8 +56,10 @@ async function fetchConfig(): Promise<LoanConfig> {
   if (!res.ok) throw new Error(`fetchConfig: ${res.status}`);
   const data = await res.json();
 
-  const ranges = data.creditScoreRanges
-    .filter((r: any) => r.isActive)
+  // Score ranges
+  const rawRanges = data.scoreRanges ?? data.creditScoreRanges ?? [];
+  const ranges = rawRanges
+    .filter((r: any) => r.isActive !== false)
     .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
     .map((r: any, idx: number) => ({
       code: r.code,
@@ -66,11 +67,23 @@ async function fetchConfig(): Promise<LoanConfig> {
       color: FIXED_COLORS[idx]?.color ?? r.color,
     }));
 
+  // Amounts con estructura jerárquica (amounts → terms → installments)
+  const amounts: LoanConfigAmount[] = (data.amounts ?? []).map((a: any) => ({
+    value: a.value,
+    label: a.label,
+    terms: (a.terms ?? []).map((t: any): LoanConfigTerm => ({
+      value: t.value,
+      label: t.label,
+      installments: (t.installments ?? []).map((i: any): LoanConfigInstallment => ({
+        value: i.value,
+        label: i.label,
+      })),
+    })),
+  }));
+
   return {
     productId: data.product.id,
-    amounts: data.amounts,
-    terms: data.terms,
-    installments: data.installments,
+    amounts,
     creditScoreRanges: ranges,
   };
 }
@@ -110,19 +123,40 @@ async function fetchCalculation(
     const fees: FeeItem[] = Object.entries(sim.fees).map(([key, f]: [string, any]) => ({
       key,
       name: f.name,
+      label: f.label ?? f.name,
       originalAmount: f.originalAmount,
       discountAmount: f.discountAmount,
       finalAmount: f.finalAmount,
+      discountHistory: (f.discountHistory ?? []).map((h: any) => ({
+        code: h.code,
+        label: h.label,
+        amountBefore: h.amountBefore,
+        discountAmount: h.discountAmount,
+        amountAfter: h.amountAfter,
+        value: h.value,
+      })),
     }));
 
-    const discounts: DiscountItem[] = Object.entries(sim.discounts)
-      .map(([key, d]: [string, any]) => ({
-        key,
+    // Aplanar discounts.percentage y discounts.fixed
+    const allDiscounts: any[] = [];
+    if (sim.discounts?.percentage) {
+      allDiscounts.push(...Object.values(sim.discounts.percentage));
+    }
+    if (sim.discounts?.fixed) {
+      allDiscounts.push(...Object.values(sim.discounts.fixed));
+    }
+
+    const discounts: DiscountItem[] = allDiscounts
+      .map((d: any) => ({
+        key: d.name,
         name: d.name,
+        label: d.label ?? d.name,
+        type: d.type,
         calculationType: d.calculationType,
         totalDiscountAmount: d.totalDiscountAmount,
+        value: d.value,
       }))
-      .sort((a: any, b: any) => a.order - b.order);
+      .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
     const schedule: ScheduleItem[] = sim.schedule.map((s: any) => ({
       installmentNo: s.installmentNo,
@@ -143,6 +177,8 @@ async function fetchCalculation(
       totalFeesOriginal: sim.summary.totalFeesOriginal,
       totalPercentageDiscounts: sim.summary.totalPercentageDiscounts,
       totalFeesWithPercentageDiscounts: sim.summary.totalFeesWithPercentageDiscounts,
+      totalFixedDiscounts: sim.summary.totalFixedDiscounts ?? 0,
+      totalFeesWithFixedDiscounts: sim.summary.totalFeesWithFixedDiscounts ?? 0,
       totalFeesResult: sim.summary.totalFeesResult,
       igv: sim.summary.totalIgvFromTotalFeesResult,
       schedule,

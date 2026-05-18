@@ -1,12 +1,13 @@
 /**
  * GET /api/calculadora/options
  *
- * Proxy autenticado → GET /api/products/{productId}/options
+ * Proxy → GET /api/products/{productId}/options (servidor de calculadora)
  * Devuelve las opciones de configuración del producto (montos, plazos, cuotas, rangos).
  */
 
 import { NextResponse } from 'next/server';
-import { backendFetch, proxyResponse } from '@/lib/backend-fetch';
+import { calculatorFetch } from '@/lib/calculator-fetch';
+import { proxyResponse } from '@/lib/backend-fetch';
 
 export async function GET() {
   const productId = process.env.NEXT_PUBLIC_PRODUCT_ID;
@@ -17,9 +18,11 @@ export async function GET() {
       { status: 500 },
     );
   }
-
+  console.log("Ingresa para pedir las opciones")
   try {
-    const res = await backendFetch(`/api/products/${productId}/options`, { context: 'CALCULADORA' });
+    const res = await calculatorFetch(`/api/products/${productId}/options`, {
+      context: 'CALCULADORA',
+    });
     return proxyResponse(res);
   } catch (error) {
     console.error('[API] GET /api/calculadora/options → error:', error);

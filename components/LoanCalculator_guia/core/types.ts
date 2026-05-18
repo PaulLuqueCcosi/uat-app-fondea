@@ -152,13 +152,6 @@ export interface LoanCalculatorTheme {
 
 export type DetailMode = "sidebar" | "modal";
 
-/** Valores iniciales para pre-llenar la calculadora (modo edición) */
-export interface InitialSelection {
-  amount?: number;
-  termDays?: number;
-  installmentCount?: number;
-}
-
 export interface LoanCalculatorProps {
   /** Callback cuando el panel de detalles se abre/cierra */
   onDetailToggle?: (isOpen: boolean) => void;
@@ -168,8 +161,6 @@ export interface LoanCalculatorProps {
   dedicated?: boolean;
   /** Texto del botón de acción */
   submitLabel?: string;
-  /** Valores iniciales para pre-llenar monto/plazo/cuotas (modo edición) */
-  initialSelection?: InitialSelection;
   /** Clase CSS adicional */
   className?: string;
 }

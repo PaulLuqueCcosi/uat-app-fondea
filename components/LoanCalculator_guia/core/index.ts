@@ -12,12 +12,10 @@ export type {
   ScoreResult,
   ScheduleItem,
   FeeItem,
-  FeeDiscountHistory,
   DiscountItem,
   IntentionRequest,
   IntentionResponse,
   DetailMode,
-  InitialSelection,
   RangeInfo,
   ScoreData,
 } from "./types";

@@ -1,14 +1,15 @@
 /**
  * POST /api/calculadora/simulate
  *
- * Proxy autenticado → POST /api/simulate/landing
+ * Proxy → POST /api/simulate/landing (servidor de calculadora)
  * Ejecuta la simulación del préstamo con los parámetros dados.
  *
  * Body esperado: { productId, amount, termDays, installmentCount, isFirstLoan }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { backendFetch, proxyResponse } from '@/lib/backend-fetch';
+import { calculatorFetch } from '@/lib/calculator-fetch';
+import { proxyResponse } from '@/lib/backend-fetch';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const res = await backendFetch('/api/simulate/landing', {
+    const res = await calculatorFetch('/api/simulate/landing', {
       method: 'POST',
       context: 'CALCULADORA',
       body: JSON.stringify({
