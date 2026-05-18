@@ -130,7 +130,7 @@ async function parseLaborResponse(res: Response): Promise<LaborSaveResult> {
 
 function mapSituationFromBackend(raw: any): LaborSituation & { verified: boolean } {
   return {
-    employment_status: raw.employmentStatus ?? raw.situation,
+    employment_status: raw.employment_status ?? raw.employmentStatus ?? raw.situation,
     verified: true,
   };
 }
@@ -138,21 +138,21 @@ function mapSituationFromBackend(raw: any): LaborSituation & { verified: boolean
 function mapDetailsFromBackend(raw: any): LaborDetails & { verified: boolean } {
   return {
     industry: raw.industry,
-    years_of_activity: raw.yearsOfActivity,
-    business_ruc: raw.businessRuc ?? undefined,
+    years_of_activity: raw.years_of_activity ?? raw.yearsOfActivity,
+    business_ruc: raw.business_ruc ?? raw.businessRuc ?? undefined,
     verified: true,
   };
 }
 
 function mapIncomeFromBackend(raw: any): LaborIncome & { verified: boolean } {
   return {
-    monthly_income: raw.monthlyIncome,
-    income_receipt_method: raw.incomeReceiptMethod,
-    has_additional_income: raw.hasAdditionalIncome,
-    additional_incomes: (raw.additionalIncomes ?? []).map((i: any): AdditionalIncome => ({
+    monthly_income: raw.monthly_income ?? raw.monthlyIncome,
+    income_receipt_method: raw.income_receipt_method ?? raw.incomeReceiptMethod,
+    has_additional_income: raw.has_additional_income ?? raw.hasAdditionalIncome,
+    additional_incomes: (raw.additional_incomes ?? raw.additionalIncomes ?? []).map((i: any): AdditionalIncome => ({
       id: i.id ?? crypto.randomUUID(),
       type: i.type,
-      custom_type: i.customType,
+      custom_type: i.custom_type ?? i.customType,
       amount: i.amount,
       description: i.description,
     })),

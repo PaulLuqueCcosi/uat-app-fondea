@@ -122,20 +122,20 @@ async function parseEconomicResponse(res: Response): Promise<EconomicSaveResult>
 
 function mapProfileFromBackend(raw: any): EconomicProfile & { verified: boolean } {
   return {
-    loan_purpose:     raw.loanPurpose,
-    monthly_expenses: raw.monthlyExpenses,
-    has_debts:        raw.hasDebts,
+    loan_purpose:     raw.loan_purpose ?? raw.loanPurpose,
+    monthly_expenses: raw.monthly_expenses ?? raw.monthlyExpenses,
+    has_debts:        raw.has_debts ?? raw.hasDebts,
     debts: (raw.debts ?? []).map((d: any): Debt => ({
       id:             d.id ?? crypto.randomUUID(),
-      entity:         d.creditor ?? d.entity ?? '',
+      entity:         d.entity ?? d.creditor ?? '',
       type:           d.type,
       amount:         d.amount,
-      monthlyPayment: d.monthlyPayment ?? 0,
+      monthlyPayment: d.monthly_payment ?? d.monthlyPayment ?? 0,
     })),
-    has_property:    raw.hasProperty,
-    has_vehicle:     raw.hasVehicle,
-    has_services:    raw.hasServices,
-    education_level: raw.educationLevel,
+    has_property:    raw.has_property ?? raw.hasProperty,
+    has_vehicle:     raw.has_vehicle ?? raw.hasVehicle,
+    has_services:    raw.has_services ?? raw.hasServices,
+    education_level: raw.education_level ?? raw.educationLevel,
     verified:        true,
   };
 }

@@ -19,8 +19,6 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
-  Eye,
-  EyeOff,
   CreditCard,
   ShieldCheck,
   Calculator,
@@ -107,6 +105,21 @@ const getRelationLabel = (
   return map?.[relationship] ?? relationship;
 };
 
+/** Devuelve el label y variant del Badge según el estado real del backend */
+function getStatusBadge(status?: string): { label: string; variant: 'success' | 'warning' | 'secondary' } {
+  switch (status) {
+    case 'VERIFIED':
+      return { label: 'Verificado', variant: 'success' };
+    case 'EXPIRED':
+      return { label: 'Expirado', variant: 'warning' };
+    case 'REPLACED':
+      return { label: 'Reemplazado', variant: 'secondary' };
+    case 'PENDING':
+    default:
+      return { label: 'Pendiente', variant: 'secondary' };
+  }
+}
+
 interface FunnelSummaryProps {
   kycData: KYCData | null;
   laborData: LaborProfileStatus;
@@ -122,8 +135,8 @@ interface FunnelSummaryProps {
 }
 
 // ── Configuración ─────────────────────────────────────────────────────────────
-// Cambiar a `true` para mostrar todas las secciones expandidas por defecto
-const DEFAULT_SECTIONS_EXPANDED = false;
+// Todas las secciones expandidas por defecto para facilitar la revisión
+const DEFAULT_SECTIONS_EXPANDED = true;
 
 export function FunnelSummary({
   kycData,
@@ -155,9 +168,6 @@ export function FunnelSummary({
     not_pep_relative: false,
     accept_terms: false,
   });
-
-  // Estado para mostrar/ocultar CCI
-  const [showCCI, setShowCCI] = useState(false);
 
   // Muestra errores en los checkboxes cuando el usuario intenta enviar sin marcarlos
   const [showPepErrors, setShowPepErrors] = useState(false);
@@ -361,9 +371,10 @@ export function FunnelSummary({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={laborData.overall_verified ? "success" : "secondary"}>
-                  {laborData.overall_verified ? "Completo" : "Pendiente"}
-                </Badge>
+                {(() => {
+                  const badge = getStatusBadge(laborData.status);
+                  return <Badge variant={badge.variant}>{badge.label}</Badge>;
+                })()}
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -488,9 +499,10 @@ export function FunnelSummary({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={economicData.overall_verified ? "success" : "secondary"}>
-                  {economicData.overall_verified ? "Completo" : "Pendiente"}
-                </Badge>
+                {(() => {
+                  const badge = getStatusBadge(economicData.status);
+                  return <Badge variant={badge.variant}>{badge.label}</Badge>;
+                })()}
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -619,9 +631,10 @@ export function FunnelSummary({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={referencesData.overall_verified ? "success" : "secondary"}>
-                  {referencesData.overall_verified ? "Completo" : "Pendiente"}
-                </Badge>
+                {(() => {
+                  const badge = getStatusBadge(referencesData.status);
+                  return <Badge variant={badge.variant}>{badge.label}</Badge>;
+                })()}
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -699,9 +712,10 @@ export function FunnelSummary({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={addressData.overall_verified ? "success" : "secondary"}>
-                  {addressData.overall_verified ? "Completo" : "Pendiente"}
-                </Badge>
+                {(() => {
+                  const badge = getStatusBadge(addressData.status);
+                  return <Badge variant={badge.variant}>{badge.label}</Badge>;
+                })()}
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -783,9 +797,10 @@ export function FunnelSummary({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={bankAccountData.overall_verified ? "success" : "secondary"}>
-                  {bankAccountData.overall_verified ? "Completo" : "Pendiente"}
-                </Badge>
+                {(() => {
+                  const badge = getStatusBadge(bankAccountData.status);
+                  return <Badge variant={badge.variant}>{badge.label}</Badge>;
+                })()}
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -818,31 +833,17 @@ export function FunnelSummary({
                   <p className="text-sm text-muted-foreground mb-1">Tipo de cuenta</p>
                   <p className="font-medium text-foreground">{getAccountTypeLabel(bankAccountData.profile?.account_type)}</p>
                 </div>
-                <div className="md:col-span-2">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Número de cuenta</p>
+                  <p className="font-mono text-sm text-foreground">
+                    {bankAccountData.profile?.account_number || 'No especificado'}
+                  </p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground mb-1">CCI</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono text-sm text-foreground flex-1">
-                      {bankAccountData.profile?.cci
-                        ? showCCI
-                          ? bankAccountData.profile.cci
-                          : '•••••••••••••••' + bankAccountData.profile.cci.slice(-4)
-                        : 'No especificado'}
-                    </p>
-                    {bankAccountData.profile?.cci && (
-                      <button
-                        type="button"
-                        onClick={() => setShowCCI(!showCCI)}
-                        className="p-2 hover:bg-muted rounded-md transition-colors"
-                        aria-label={showCCI ? 'Ocultar CCI' : 'Mostrar CCI'}
-                      >
-                        {showCCI ? (
-                          <EyeOff className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    )}
-                  </div>
+                  <p className="font-mono text-sm text-foreground">
+                    {bankAccountData.profile?.cci || 'No especificado'}
+                  </p>
                 </div>
               </div>
             </div>

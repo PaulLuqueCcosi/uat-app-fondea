@@ -117,8 +117,9 @@ function mapProfileFromBackend(raw: any): BankAccountProfile & { verified: boole
   return {
     bank_name: raw.bank_name ?? raw.bank ?? '',
     account_type: raw.account_type ?? '',
-    cci: raw.cci ?? '',
-    account_number: raw.account_number ?? '',
+    // El backend puede devolver cci_masked/account_number_masked en submission_data
+    cci: raw.cci ?? raw.cci_masked ?? '',
+    account_number: raw.account_number ?? raw.account_number_masked ?? '',
     verified: true,
   };
 }
