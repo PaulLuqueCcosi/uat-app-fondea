@@ -2,6 +2,7 @@
 
 import { getLogtoContext, getAccessTokenRSC, signOut } from '@logto/next/server-actions';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { logtoConfig } from '../logto';
 import { backendFetch } from '@/lib/backend-fetch';
 
@@ -99,6 +100,11 @@ export async function requireValidSessionAndSync() {
  */
 export async function performSignOut() {
   console.log('[AUTH:sign-out] iniciando cierre de sesión');
+
+  // Limpiar cookie de intención para que no contamine el próximo login
+  const cookieStore = await cookies();
+  cookieStore.delete('fondea_intencion_id');
+
   await signOut(logtoConfig);
 }
 

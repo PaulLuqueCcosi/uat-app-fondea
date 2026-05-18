@@ -30,34 +30,39 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const response = NextResponse.next();
-
-  // 1. Si viene ?intencion= en la URL, guardarlo en cookie httpOnly
-  //    para que sobreviva el ciclo de login/logout
   const intencionFromUrl = searchParams.get('intencion');
-  if (intencionFromUrl) {
-    response.cookies.set(INTENCION_COOKIE, intencionFromUrl, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60, // 1 hora
-      path: '/',
-    });
-    console.log('[AUTH:middleware] intencionId guardado en cookie →', intencionFromUrl);
-  }
 
-  // 2. Verificar presencia de cookie de sesión Logto
+  // Verificar presencia de cookie de sesión Logto
   const hasSession = request.cookies.getAll().some(
     (c) => c.name.startsWith('logto_') && c.value.length > 20
   );
 
   if (hasSession) {
-    // Hay sesión → dejar pasar (con la cookie de intencion ya seteada si aplica)
+    // Hay sesión (o al menos cookie de sesión — puede estar expirada).
+    // Si viene ?intencion= en la URL, seteamos la cookie como safety net:
+    // si el token expiró, el layout redirigirá a sign-in y el sign-in
+    // necesita poder recuperar el intencionId de la cookie.
+    const response = NextResponse.next();
+    if (intencionFromUrl) {
+      response.cookies.set(INTENCION_COOKIE, intencionFromUrl, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 5 * 60, // 5 minutos — solo para sobrevivir un posible re-auth
+        path: '/',
+      });
+    }
     return response;
   }
 
-  // Sin sesión → redirigir a sign-in
-  // Prioridad: intencionId de la URL actual > intencionId de cookie previa
+  // ─── Sin sesión ─────────────────────────────────────────────────────────────
+  // Necesitamos la cookie para que el intencionId sobreviva el ciclo OIDC
+
+  if (intencionFromUrl) {
+    // No hacemos NextResponse.next() aquí — vamos directo al redirect
+    // La cookie se setea en el redirect response
+  }
+
   const intencionFromCookie = request.cookies.get(INTENCION_COOKIE)?.value;
   const intencionId = intencionFromUrl ?? intencionFromCookie;
 
@@ -72,7 +77,21 @@ export function middleware(request: NextRequest) {
     redirectTo: signInUrl.pathname + signInUrl.search,
   });
 
-  return NextResponse.redirect(signInUrl);
+  const response = NextResponse.redirect(signInUrl);
+
+  // Guardar en cookie para que sobreviva el ciclo OIDC
+  if (intencionFromUrl) {
+    response.cookies.set(INTENCION_COOKIE, intencionFromUrl, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60, // 1 hora
+      path: '/',
+    });
+    console.log('[AUTH:middleware] intencionId guardado en cookie →', intencionFromUrl);
+  }
+
+  return response;
 }
 
 export const config = {
