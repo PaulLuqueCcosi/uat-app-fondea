@@ -16,12 +16,13 @@ import {
 } from '@/lib/constants';
 import { saveLaborProfile } from '@/app/actions/labor.actions';
 import type { LaborSaveResult } from '@/app/actions/labor.actions';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
+import { AlertBanner } from '@/components/ui/alert-banner';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -39,6 +40,14 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -149,11 +158,28 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
   /** Módulo bloqueado por max intentos de validación de RUC */
   const [blocked, setBlocked] = useState(false);
   const [blockedHoursLeft, setBlockedHoursLeft] = useState(0);
+  /** Intentos restantes para 422 */
+  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(undefined);
+  const [maxAttempts, setMaxAttempts] = useState<number | undefined>(undefined);
+  /** Modal de confirmación al editar datos ya verificados */
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  /** Indica si el usuario venía de un estado verificado (para mostrar "Cancelar" en vez de "Atrás") */
+  const [wasVerified, setWasVerified] = useState(initialData?.overall_verified === true);
 
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedSituation, setSavedSituation] = useState(initialData?.situation ?? null);
   const [savedDetails,   setSavedDetails]   = useState(initialData?.details   ?? null);
   const [savedIncome,    setSavedIncome]     = useState(initialData?.income    ?? null);
+
+  const currentStatus = initialData?.status;
+  const isExpired = currentStatus === 'EXPIRED';
+
+  // Forzar modo edición si está expirado
+  useEffect(() => {
+    if (isExpired && !isEditing) {
+      setIsEditing(true);
+    }
+  }, [isExpired, isEditing]);
 
   const nextPath = currentStep?.nextPath || '/solicitar/economic';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -189,9 +215,30 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
   const isSubmitting = form.formState.isSubmitting;
 
   const handleEdit = () => {
+    if (isVerified) {
+      setShowConfirmDialog(true);
+      return;
+    }
     setIsEditing(true);
     setSaveError(null);
     setSaveErrorCategory(undefined);
+    setBlocked(false);
+    setBlockedHoursLeft(0);
+    setAttemptsLeft(undefined);
+    setMaxAttempts(undefined);
+  };
+
+  const confirmEdit = () => {
+    setShowConfirmDialog(false);
+    setWasVerified(true);
+    setIsVerified(false);
+    setIsEditing(true);
+    setSaveError(null);
+    setSaveErrorCategory(undefined);
+    setBlocked(false);
+    setBlockedHoursLeft(0);
+    setAttemptsLeft(undefined);
+    setMaxAttempts(undefined);
   };
 
   // Cuando cambia el tipo de empleo, resetear campos de detalles del tipo anterior
@@ -208,6 +255,10 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
   const onSubmit = async (data: LaborFormValues) => {
     setSaveError(null);
     setSaveErrorCategory(undefined);
+    setBlocked(false);
+    setBlockedHoursLeft(0);
+    setAttemptsLeft(undefined);
+    setMaxAttempts(undefined);
     try {
       const result = await saveLaborProfile(
         data.employment_status as EmploymentStatus,
@@ -235,6 +286,11 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         if (result.errorCategory === 'rate_limit') {
           setBlocked(true);
           setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
+        }
+        // 422 — guardar intentos restantes
+        if (result.httpStatus === 422) {
+          setAttemptsLeft(result.attemptsLeft);
+          setMaxAttempts(result.maxAttempts);
         }
         setSaveError(result.error);
         setSaveErrorCategory(result.errorCategory);
@@ -397,10 +453,25 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
     </div>
   );
 
+  // ── Banner de expirado (se muestra dentro del formulario) ────────────────
+  const expiredBanner = isExpired && (
+    <>
+      <AlertBanner
+        variant="warning"
+        title="Tu verificación ha expirado"
+        description="El tiempo de validez de tu verificación terminó. Revisa y corrige tus datos, luego vuelve a enviar para validar."
+      />
+      <Separator className="my-10 bg-primary/20 h-px" />
+    </>
+  );
+
   // ── Formulario editable ──────────────────────────────────────────────────────
   const editForm = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+
+        {/* Banner de expirado */}
+        {expiredBanner}
 
         {/* Error de guardado — arriba del formulario */}
         {saveError && (
@@ -597,7 +668,18 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                       checked={field.value}
                       onCheckedChange={(checked) => {
                         field.onChange(checked);
-                        if (!checked) form.setValue('additional_incomes', []);
+                        if (!checked) {
+                          form.setValue('additional_incomes', []);
+                        } else if (fields.length === 0) {
+                          // En formulario nuevo, agregar automáticamente el primer ingreso adicional
+                          append({
+                            id: crypto.randomUUID(),
+                            type: '',
+                            custom_type: '',
+                            amount: '',
+                            description: '',
+                          });
+                        }
                       }}
                     />
                   </div>
@@ -732,8 +814,8 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
         {/* Botones — solo en modo funnel */}
         {!dashboardMode && (
           <div className="flex flex-col sm:flex-row justify-end gap-3">
-            {isVerified ? (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { setIsEditing(false); setSaveError(null); }} disabled={isSubmitting}>
+            {wasVerified || isVerified ? (
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }} disabled={isSubmitting}>
                 Cancelar
               </Button>
             ) : (
@@ -760,37 +842,89 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
 
   if (dashboardMode) {
     return (
-      <div className="max-w-3xl mx-auto">
-        <Card className="w-full">
-          <CardContent className="pt-6">
-            {content}
-          </CardContent>
-        </Card>
-        {(!isVerified || isEditing) && (
-          <StickyBottomBar
-            ctaLabel={isSubmitting ? 'Guardando...' : 'Guardar cambios'}
-            onCta={form.handleSubmit(onSubmit)}
-            loading={isSubmitting}
-          />
-        )}
-      </div>
+      <>
+        <div className="max-w-3xl mx-auto">
+          <Card className="w-full">
+            <CardContent className="pt-6">
+              {content}
+            </CardContent>
+          </Card>
+          {(!isVerified || isEditing) && (
+            <StickyBottomBar
+              ctaLabel={isSubmitting ? 'Guardando...' : 'Guardar cambios'}
+              onCta={form.handleSubmit(onSubmit)}
+              loading={isSubmitting}
+            />
+          )}
+        </div>
+
+        {/* Modal de confirmación al editar */}
+        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+              ¿Editar perfil laboral?
+            </DialogTitle>
+              <DialogDescription>
+                Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
+                Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={confirmEdit}>
+                Sí, editar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
   return (
-    <Card className="w-full max-w-3xl mx-auto">
-      <CardHeader className="pb-4">
-        <FormHeader
-          icon={currentStep?.icon || Briefcase}
-          title="Perfil laboral"
-          description={
-            isVerified && !isEditing
-              ? 'Tu información laboral está registrada'
-              : 'Cuéntanos sobre tu trabajo e ingresos para evaluar tu solicitud'
-          }
-        />
-      </CardHeader>
-      <CardContent className="pt-0">{content}</CardContent>
-    </Card>
+    <>
+      <Card className="w-full max-w-3xl mx-auto">
+        <CardHeader className="pb-4">
+          <FormHeader
+            icon={currentStep?.icon || Briefcase}
+            title="Perfil laboral"
+            description={
+              isVerified && !isEditing
+                ? 'Tu información laboral está registrada'
+                : isExpired && !isEditing
+                ? 'Tu verificación ha expirado, debes validar nuevamente'
+                : 'Cuéntanos sobre tu trabajo e ingresos para evaluar tu solicitud'
+            }
+          />
+        </CardHeader>
+        <CardContent className="pt-0">{content}</CardContent>
+      </Card>
+
+      {/* Modal de confirmación al editar */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              ⚠️ ¿Editar perfil laboral?
+            </DialogTitle>
+            <DialogDescription>
+              Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={confirmEdit}>
+              Sí, editar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

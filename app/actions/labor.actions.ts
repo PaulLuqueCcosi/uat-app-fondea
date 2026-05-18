@@ -20,9 +20,8 @@ const backendFetch = (path: string, options?: RequestInit) =>
 /**
  * Extiende ActionResult con campos específicos de Labor:
  * - blockedHoursLeft: horas restantes cuando el módulo está bloqueado (429)
- *
- * El módulo se bloquea cuando la validación de RUC falla 3 veces.
- * El bloqueo afecta a TODO el módulo (situation, details, income).
+ * - attemptsLeft:     intentos restantes cuando el backend devuelve 422
+ * - maxAttempts:      máximo de intentos (3)
  */
 export type LaborSaveResult =
   | { success: true; httpStatus: number }
@@ -32,59 +31,74 @@ export type LaborSaveResult =
       errorCategory: import('@/lib/types').ErrorCategory;
       error: string;
       blockedHoursLeft?: number;
+      attemptsLeft?: number;
+      maxAttempts?: number;
     };
 
 // ── Helper: parsear respuesta de labor ────────────────────────────────────────
 
 async function parseLaborResponse(res: Response): Promise<LaborSaveResult> {
   // 200/201 — éxito
-  if (res.ok) {
+  if (res.status === 200 || res.status === 201) {
     return { success: true, httpStatus: res.status };
   }
 
   let json: any = {};
   try { json = await res.json(); } catch { /* body vacío o no-JSON */ }
 
-  // 429 — módulo bloqueado por max intentos de RUC
-  if (res.status === 429) {
-    return {
-      success: false,
-      httpStatus: 429,
-      errorCategory: 'rate_limit',
-      blockedHoursLeft: json.blockedHoursLeft ?? 24,
-      error: json.detail ?? 'Demasiados intentos fallidos. Podrás intentarlo nuevamente en 24 horas.',
-    };
-  }
-
-  // 422 — RUC inválido/inactivo/no titular (consume intento)
-  if (res.status === 422) {
-    const fieldError = json.fieldErrors?.businessRuc;
-    const message = fieldError ?? json.detail ?? 'Error en la validación del RUC.';
-    return {
-      success: false,
-      httpStatus: 422,
-      errorCategory: 'validation',
-      error: message,
-    };
-  }
-
-  // 503 — error técnico del proveedor de RUC (no consume intento)
+  // 503 — error técnico del proveedor (no consume intento)
   if (res.status === 503) {
     return {
       success: false,
       httpStatus: 503,
       errorCategory: 'server',
-      error: json.detail ?? 'Servicio de validación temporalmente no disponible. No se consumió un intento. Inténtalo en unos minutos.',
+      error: json.message ?? json.detail ?? 'Servicio de validación temporalmente no disponible. No se consumió un intento. Inténtalo en unos minutos.',
     };
   }
 
-  // 400 — error de formato o regla de negocio
+  // 429 — módulo bloqueado por max intentos
+  if (res.status === 429) {
+    const hoursLeft = json.blocked_hours_left ?? json.blockedHoursLeft ?? 24;
+    return {
+      success: false,
+      httpStatus: 429,
+      errorCategory: 'rate_limit',
+      blockedHoursLeft: hoursLeft,
+      error: json.message ?? `Demasiados intentos fallidos. Tu cuenta quedará bloqueada por ${hoursLeft} hora${hoursLeft !== 1 ? 's' : ''}.`,
+    };
+  }
+
+  // 422 — datos no válidos (consume intento, attempts_left, field_errors)
+  if (res.status === 422) {
+    const attemptsLeft = json.attempts_left ?? json.attemptsLeft;
+    const maxAttempts = json.max_attempts ?? 3;
+    const baseError = json.message ?? json.detail ?? 'Los datos laborales no son válidos.';
+
+    // Construir mensaje con advertencia de intentos si quedan pocos
+    let error = baseError;
+    if (attemptsLeft === 1) {
+      error = `${baseError} ¡Cuidado! Este es tu último intento antes de quedar bloqueado.`;
+    } else if (attemptsLeft !== undefined) {
+      error = `${baseError} Te quedan ${attemptsLeft} intento${attemptsLeft !== 1 ? 's' : ''}.`;
+    }
+
+    return {
+      success: false,
+      httpStatus: 422,
+      errorCategory: 'validation',
+      attemptsLeft,
+      maxAttempts,
+      error,
+    };
+  }
+
+  // 400 — error de formato (no consume intento, ProblemDetail o Spring validation)
   if (res.status === 400) {
-    // Extraer el primer fieldError si existe, sino usar detail
+    // Extraer el primer fieldError si existe, sino usar detail/message
     const firstFieldError = json.fieldErrors
       ? Object.values(json.fieldErrors)[0] as string
       : undefined;
-    const message = firstFieldError ?? json.detail ?? 'Error de validación en los datos ingresados.';
+    const message = firstFieldError ?? json.message ?? json.detail ?? 'Los datos ingresados tienen un formato inválido. Verifica que sean correctos.';
     return {
       success: false,
       httpStatus: 400,
@@ -108,7 +122,7 @@ async function parseLaborResponse(res: Response): Promise<LaborSaveResult> {
     success: false,
     httpStatus: res.status,
     errorCategory: 'unknown',
-    error: json.detail ?? json.error ?? 'Error inesperado. Por favor, inténtalo nuevamente.',
+    error: json.message ?? json.detail ?? json.error ?? 'Error inesperado. Por favor, inténtalo nuevamente.',
   };
 }
 
@@ -116,8 +130,8 @@ async function parseLaborResponse(res: Response): Promise<LaborSaveResult> {
 
 function mapSituationFromBackend(raw: any): LaborSituation & { verified: boolean } {
   return {
-    employment_status: raw.employmentStatus,
-    verified: raw.verified ?? false,
+    employment_status: raw.employmentStatus ?? raw.situation,
+    verified: true,
   };
 }
 
@@ -126,7 +140,7 @@ function mapDetailsFromBackend(raw: any): LaborDetails & { verified: boolean } {
     industry: raw.industry,
     years_of_activity: raw.yearsOfActivity,
     business_ruc: raw.businessRuc ?? undefined,
-    verified: raw.verified ?? false,
+    verified: true,
   };
 }
 
@@ -136,17 +150,15 @@ function mapIncomeFromBackend(raw: any): LaborIncome & { verified: boolean } {
     income_receipt_method: raw.incomeReceiptMethod,
     has_additional_income: raw.hasAdditionalIncome,
     additional_incomes: (raw.additionalIncomes ?? []).map((i: any): AdditionalIncome => ({
-      id: i.id,
+      id: i.id ?? crypto.randomUUID(),
       type: i.type,
       custom_type: i.customType,
       amount: i.amount,
       description: i.description,
     })),
-    verified: raw.verified ?? false,
+    verified: true,
   };
 }
-
-// ── Manejo de errores del backend ─────────────────────────────────────────────
 
 // ── GET: Estado completo ──────────────────────────────────────────────────────
 
@@ -156,6 +168,12 @@ export async function getLaborProfileStatus(): Promise<LaborProfileStatus> {
   try {
     const res = await backendFetch('/api/v1/labor/status');
 
+    // 404 es esperado para usuarios nuevos que aún no tienen Labor
+    if (res.status === 404) {
+      console.log('[LABOR] Usuario sin Labor previo (404) — estado inicial normal');
+      return { situation: null, details: null, income: null, overall_verified: false };
+    }
+
     if (!res.ok) {
       console.error('[LABOR] Error al obtener estado:', res.status);
       return { situation: null, details: null, income: null, overall_verified: false };
@@ -163,11 +181,25 @@ export async function getLaborProfileStatus(): Promise<LaborProfileStatus> {
 
     const json = await res.json();
 
+    // El backend devuelve el nuevo formato con submission.submission_data
+    let parsedData: Record<string, any> | null = null;
+    if (json.submission?.submission_data) {
+      try {
+        parsedData = JSON.parse(json.submission.submission_data);
+      } catch {
+        console.error('[LABOR] Error parseando submission_data');
+      }
+    }
+
+    const status = json.status as import('@/lib/types').LaborStatus | undefined;
+    const verified = status === 'VERIFIED';
+
     return {
-      situation: json.situation ? mapSituationFromBackend(json.situation) : null,
-      details:   json.details   ? mapDetailsFromBackend(json.details)     : null,
-      income:    json.income     ? mapIncomeFromBackend(json.income)       : null,
-      overall_verified: json.overallVerified ?? false,
+      situation: parsedData?.situation ? mapSituationFromBackend(parsedData) : null,
+      details:   parsedData?.details   ? mapDetailsFromBackend(parsedData.details)   : null,
+      income:    parsedData?.income    ? mapIncomeFromBackend(parsedData.income)     : null,
+      overall_verified: verified,
+      status,
     };
   } catch (error) {
     console.error('[LABOR] Error de conexión al obtener estado:', error);
@@ -175,78 +207,7 @@ export async function getLaborProfileStatus(): Promise<LaborProfileStatus> {
   }
 }
 
-// ── PUT: Situación laboral ────────────────────────────────────────────────────
-
-export async function saveLaborSituation(
-  employment_status: EmploymentStatus
-): Promise<LaborSaveResult> {
-  await requireValidSession();
-
-  try {
-    const res = await backendFetch('/api/v1/labor/situation', {
-      method: 'PUT',
-      body: JSON.stringify({ employmentStatus: employment_status }),
-    });
-    return parseLaborResponse(res);
-  } catch {
-    console.error('[LABOR] Error al guardar situación');
-    return networkError();
-  }
-}
-
-// ── PUT: Detalles laborales ───────────────────────────────────────────────────
-
-export async function saveLaborDetails(
-  details: Omit<LaborDetails, 'verified'>
-): Promise<LaborSaveResult> {
-  await requireValidSession();
-
-  try {
-    const res = await backendFetch('/api/v1/labor/details', {
-      method: 'PUT',
-      body: JSON.stringify({
-        industry:        details.industry,
-        yearsOfActivity: details.years_of_activity,
-        businessRuc:     details.business_ruc ?? null,
-      }),
-    });
-    return parseLaborResponse(res);
-  } catch {
-    console.error('[LABOR] Error al guardar detalles');
-    return networkError();
-  }
-}
-
-// ── PUT: Ingresos ─────────────────────────────────────────────────────────────
-
-export async function saveLaborIncome(
-  income: Omit<LaborIncome, 'verified'>
-): Promise<LaborSaveResult> {
-  await requireValidSession();
-
-  try {
-    const res = await backendFetch('/api/v1/labor/income', {
-      method: 'PUT',
-      body: JSON.stringify({
-        monthlyIncome:       income.monthly_income,
-        incomeReceiptMethod: income.income_receipt_method,
-        hasAdditionalIncome: income.has_additional_income,
-        additionalIncomes: (income.has_additional_income ? income.additional_incomes : []).map(i => ({
-          type:        i.type,
-          customType:  i.type === 'OTRO' ? i.custom_type : undefined,
-          amount:      i.amount,
-          description: i.description ?? undefined,
-        })),
-      }),
-    });
-    return parseLaborResponse(res);
-  } catch {
-    console.error('[LABOR] Error al guardar ingresos');
-    return networkError();
-  }
-}
-
-// ── PUT: Perfil completo (wrapper con rollback en backend) ────────────────────
+// ── PUT: Validar perfil laboral completo ───────────────────────────────────────
 
 export async function saveLaborProfile(
   situation: EmploymentStatus,
@@ -256,7 +217,7 @@ export async function saveLaborProfile(
   await requireValidSession();
 
   try {
-    const res = await backendFetch('/api/v1/labor/profile', {
+    const res = await backendFetch('/api/v1/labor/validate', {
       method: 'PUT',
       body: JSON.stringify({
         situation: situation,
@@ -280,7 +241,7 @@ export async function saveLaborProfile(
     });
     return parseLaborResponse(res);
   } catch {
-    console.error('[LABOR] Error al guardar perfil completo');
+    console.error('[LABOR] Error al guardar perfil laboral');
     return networkError();
   }
 }

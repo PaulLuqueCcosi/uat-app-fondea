@@ -6,6 +6,8 @@ export type EmploymentStatus =
   | 'EMPRESARIO'
   | 'FREELANCE';
 
+export type LaborStatus = 'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING';
+
 export type LaborIndustry =
   | 'TECNOLOGIA'
   | 'SALUD'
@@ -92,6 +94,8 @@ export interface LaborProfileStatus {
   details: (LaborDetails & { verified: boolean }) | null;
   income: (LaborIncome & { verified: boolean }) | null;
   overall_verified: boolean;
+  /** Estado del backend (VERIFIED, EXPIRED, REPLACED, PENDING) */
+  status?: LaborStatus;
 }
 
 export interface LaborData {
