@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 import { LoanCalculatorProvider } from './core';
 import { LoanCalculator } from './ui';
 import { fondeaPortalApi, updateIntention } from './adapters/fondeaPortalApi';
-import type { LoanCalculatorApi, LoanCalculatorProps, IntentionRequest, IntentionResponse } from './core';
+import type { LoanCalculatorApi, LoanCalculatorProps, IntentionRequest, IntentionResponse, LoanCalculatorTheme } from './core';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -40,6 +40,20 @@ interface LoanCalculatorPortalProps extends Omit<LoanCalculatorProps, 'submitLab
    */
   onSubmitSuccess?: () => void;
 }
+
+// ── Theme por defecto (basado en la paleta del proyecto) ──────────────────────
+
+const DEFAULT_PORTAL_THEME: LoanCalculatorTheme = {
+  primary: 'var(--color-primary-500)',      // #00A1CD
+  primaryDark: 'var(--color-primary-600)',  // #0087AD
+  primaryLight: 'var(--color-primary-50)',  // #E0F7FD
+  text: 'var(--color-neutral-800)',         // #2D373D
+  muted: 'var(--color-neutral-500)',        // #7A8E9A
+  border: 'var(--color-neutral-200)',       // #DDE4EA
+  background: '#FFFFFF',                    // Blanco
+  headerBg: 'var(--color-primary-500)',     // #00A1CD
+  headerText: '#FFFFFF',                    // Blanco
+};
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -86,7 +100,7 @@ export default function LoanCalculatorPortal({
   }), [isEditing, initialValues, onSubmitSuccess, router]);
 
   return (
-    <LoanCalculatorProvider api={portalApi}>
+    <LoanCalculatorProvider api={portalApi} theme={DEFAULT_PORTAL_THEME}>
       <LoanCalculator
         {...calcProps}
         submitLabel={isEditing ? 'Guardar cambios →' : 'Solicitar Préstamo →'}

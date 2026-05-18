@@ -13,7 +13,7 @@ export function CalculadoraClient() {
   const isMobile = useIsMobile();
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className="w-fit mx-auto">
       <LoanCalculatorPortal
         dedicated
         detailMode={isMobile ? undefined : 'sidebar'}
