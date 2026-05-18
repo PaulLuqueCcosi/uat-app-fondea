@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useLoanCalculatorApi } from "../core/LoanCalculatorProvider";
-import { GAUGE_VALUES, CARD_MAX_WIDTH } from "../core/constants";
+import { GAUGE_VALUES, CARD_MAX_WIDTH, DETAIL_MAX_WIDTH } from "../core/constants";
 import type { LoanConfig, LoanCalculation, ScoreResult, LoanCalculatorProps } from "../core/types";
 import CreditProfileGauge from "./CreditProfileGauge";
 import LoanDetail from "./LoanDetail";
@@ -266,6 +266,8 @@ export default function LoanCalculator({
                 if (api.portalUrl && !api.portalUrl.startsWith("__")) {
                   window.location.href = `${api.portalUrl}/?intencion=${intention.id}`;
                 }
+                // Resetear estado después de éxito
+                setRequesting(false);
               } catch {
                 setRequestError(true);
                 setRequesting(false);
