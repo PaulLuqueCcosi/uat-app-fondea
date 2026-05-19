@@ -4,8 +4,8 @@ import { useState, useRef } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2, RefreshCw } from 'lucide-react';
-import { uploadDocumentAction } from '@/app/actions/document.actions';
+import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2, RefreshCw, Loader2 } from 'lucide-react';
+import { uploadDocumentAction, deleteDocumentAction } from '@/app/actions/document.actions';
 import type { DocumentType } from '@/app/actions/document.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
@@ -46,6 +46,8 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
   const solicitudId = applicationId || (params.id as string | undefined);
   const [loading, setLoading] = useState<'front' | 'back' | null>(null);
   const [error, setError] = useState('');
+  const [deleteError, setDeleteError] = useState<{ side: 'front' | 'back'; message: string } | null>(null);
+  const [deleting, setDeleting] = useState<'front' | 'back' | null>(null);
 
   // Estado para las fotos — inicializar con datos del backend si existen
   const [frontFile, setFrontFile] = useState<File | null>(null);
@@ -136,7 +138,25 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
     }
   };
 
-  const handleDelete = (side: 'front' | 'back') => {
+  const handleDelete = async (side: 'front' | 'back') => {
+    const docType: DocumentType = side === 'front' ? 'DNI_FRONT' : 'DNI_BACK';
+    setDeleteError(null);
+    setDeleting(side);
+
+    // Si ya estaba subido al backend, intentar eliminar
+    const wasUploaded = side === 'front' ? frontUploaded : backUploaded;
+    if (wasUploaded && solicitudId) {
+      const result = await deleteDocumentAction(solicitudId, docType);
+      if (!result.success) {
+        setDeleteError({
+          side,
+          message: 'No se puede eliminar este documento porque la solicitud ya avanzó de etapa.',
+        });
+        setDeleting(null);
+        return;
+      }
+    }
+
     if (side === 'front') {
       setFrontFile(null);
       setFrontPreview('');
@@ -147,6 +167,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
       setBackUploaded(false);
     }
     setError('');
+    setDeleting(null);
   };
 
   const handleContinue = async () => {
@@ -324,10 +345,14 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete('front')}
+                        disabled={deleting === 'front' || loading === 'front'}
                         className="w-full sm:w-auto"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Eliminar
+                        {deleting === 'front' ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
+                        ) : (
+                          <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
+                        )}
                       </Button>
                       <Button
                         type="button"
@@ -355,6 +380,14 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         </div>
                       )}
                     </div>
+
+                    {/* Error inline al intentar eliminar */}
+                    {deleteError?.side === 'front' && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-50 border border-warning-100 text-warning-700">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <p className="text-xs">{deleteError.message}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -422,10 +455,14 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete('back')}
+                        disabled={deleting === 'back' || loading === 'back'}
                         className="w-full sm:w-auto"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Eliminar
+                        {deleting === 'back' ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
+                        ) : (
+                          <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
+                        )}
                       </Button>
                       <Button
                         type="button"
@@ -453,6 +490,14 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         </div>
                       )}
                     </div>
+
+                    {/* Error inline al intentar eliminar */}
+                    {deleteError?.side === 'back' && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-50 border border-warning-100 text-warning-700">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <p className="text-xs">{deleteError.message}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
-import { uploadDocumentAction } from '@/app/actions/document.actions';
+import { uploadDocumentAction, deleteDocumentAction } from '@/app/actions/document.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
@@ -157,6 +157,8 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
 
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
   const solicitudId       = applicationId || (params.id as string | undefined);
@@ -278,13 +280,27 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    setDeleteError(null);
+    setDeleting(true);
+
+    // Si ya estaba subida al backend, intentar eliminar
+    if (verified && solicitudId) {
+      const result = await deleteDocumentAction(solicitudId, 'SELFIE');
+      if (!result.success) {
+        setDeleteError('No se puede eliminar este documento porque la solicitud ya avanzó de etapa.');
+        setDeleting(false);
+        return;
+      }
+    }
+
     setSelfieFile(null);
     setSelfiePreview('');
     setVerified(false);
     setUploadStatus(null);
     setUploadScore(null);
     setError('');
+    setDeleting(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -463,11 +479,14 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
                         variant="ghost"
                         size="sm"
                         onClick={handleDelete}
-                        disabled={loading || analyzing}
+                        disabled={loading || analyzing || deleting}
                         className="w-full sm:w-auto"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Eliminar
+                        {deleting ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
+                        ) : (
+                          <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
+                        )}
                       </Button>
                       <Button
                         type="button"
@@ -504,6 +523,14 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
                         </div>
                       )}
                     </div>
+
+                    {/* Error inline al intentar eliminar */}
+                    {deleteError && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-50 border border-warning-100 text-warning-700">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <p className="text-xs">{deleteError}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
