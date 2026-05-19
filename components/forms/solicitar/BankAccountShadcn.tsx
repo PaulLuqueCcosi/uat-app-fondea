@@ -394,7 +394,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
               name="bank_name"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Banco</FormLabel>
+                  <FormLabel>Banco *</FormLabel>
                   <NativeSelect {...field} className="w-full">
                     <NativeSelectOption value="">Selecciona tu banco</NativeSelectOption>
                     {BANKS.map((opt) => (
@@ -414,7 +414,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
               name="account_type"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Tipo de cuenta</FormLabel>
+                  <FormLabel>Tipo de cuenta *</FormLabel>
                   <NativeSelect {...field} className="w-full">
                     <NativeSelectOption value="">Selecciona el tipo</NativeSelectOption>
                     {ACCOUNT_TYPES.map((opt) => (
@@ -433,7 +433,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
               name="account_number"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Número de cuenta</FormLabel>
+                  <FormLabel>Número de cuenta *</FormLabel>
                   <Input
                     placeholder="12345678901234"
                     {...field}
@@ -455,7 +455,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
               name="cci"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Código de Cuenta Interbancario (CCI)</FormLabel>
+                  <FormLabel>Código de Cuenta Interbancario (CCI) *</FormLabel>
                   <Input
                     placeholder="00212345678901234567"
                     {...field}

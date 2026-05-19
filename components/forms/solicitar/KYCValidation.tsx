@@ -420,7 +420,7 @@ export function FunnelKYCValidation({
               name="dni"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Número de DNI</FormLabel>
+                  <FormLabel>Número de DNI *</FormLabel>
                   <Input
                     placeholder="12345678"
                     {...field}
