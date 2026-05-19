@@ -26,7 +26,7 @@ export function FunnelSidebar({ isLoading = false }: FunnelSidebarProps) {
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-80 bg-white border-r border-border fixed left-0 top-16 bottom-0 overflow-y-auto">
+    <aside className="hidden md:flex flex-col w-80 bg-white border-r border-border fixed left-0 top-16 bottom-0 overflow-y-auto scrollbar-primary">
       <div className="p-6">
         {/* Card de resumen de solicitud */}
         <FunnelLoanSummaryCard isOrchestrating={isLoading} />
