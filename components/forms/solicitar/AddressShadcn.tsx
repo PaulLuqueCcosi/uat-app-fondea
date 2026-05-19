@@ -38,8 +38,9 @@ import {
   getDistritosAction,
   type UbigeoOption,
 } from '@/app/actions/additional-address.actions';
-import { GoogleAddressAutocomplete } from '@/components/forms/solicitar/GoogleAddressAutocomplete';
-import type { AddressDetail } from '@/app/actions/additional-address.actions';
+// COMENTADO: GoogleAddressAutocomplete — solo usaremos opción manual por ahora
+// import { GoogleAddressAutocomplete } from '@/components/forms/solicitar/GoogleAddressAutocomplete';
+// import type { AddressDetail } from '@/app/actions/additional-address.actions';
 import { saveAddressProfile, getAddressProfileStatus } from '@/app/actions/additional-address.actions';
 import type { AddressProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
@@ -140,7 +141,8 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
   const [departamentos,    setDepartamentos]    = useState<UbigeoOption[]>([]);
   const [provincias,       setProvincias]       = useState<UbigeoOption[]>([]);
   const [distritos,        setDistritos]        = useState<UbigeoOption[]>([]);
-  const [googlePrefilled,  setGooglePrefilled]  = useState(false);
+  // COMENTADO: googlePrefilled — solo usaremos opción manual
+  // const [googlePrefilled,  setGooglePrefilled]  = useState(false);
 
   // Labels resueltos para la vista resumen (nombre legible del ubigeo)
   const [labelDep,  setLabelDep]  = useState<string>('');
@@ -182,6 +184,8 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
   }, [initialData]);
 
   // Efecto adicional para recargar ubigeo cuando se entra en modo edición
+  // COMENTADO: Solo usaremos opción manual
+  /*
   useEffect(() => {
     if (isEditing && initialData?.profile) {
       const p = initialData.profile;
@@ -197,6 +201,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
       }
     }
   }, [isEditing, initialData, provincias.length, distritos.length]);
+  */
 
   // Resuelve el label del departamento cuando la lista carga
   useEffect(() => {
@@ -411,7 +416,8 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
           </>
         )}
 
-        {/* Selector de tipo */}
+        {/* Selector de tipo — COMENTADO: Solo mostrar opción Manual por ahora */}
+        {/* 
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
           <SectionHeader title="Método de ingreso" description="Elige cómo ingresar tu dirección" />
           <div className="md:col-span-2">
@@ -482,14 +488,23 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
         </div>
 
         <Separator className="my-10 bg-primary/20 h-px" />
+        */}
 
-        {/* Campos según tipo */}
-        {addressType === 'google' ? (
+        {/* Forzar address_type a 'manual' por defecto */}
+        {(() => {
+          if (!form.getValues('address_type')) {
+            form.setValue('address_type', 'manual');
+          }
+          return null;
+        })()}
+
+        {/* Campos según tipo — SOLO MOSTRAR MANUAL */}
+        {/* addressType === 'google' ? (
           <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
             <SectionHeader title="Dirección" description="Busca tu dirección con Google" />
             <div className="md:col-span-2 space-y-8">
               {/* Aviso sobre precisión de Google */}
-              <div className="flex gap-2.5 rounded-lg border border-primary/20 bg-primary-50/50 px-3.5 py-3">
+              {/* <div className="flex gap-2.5 rounded-lg border border-primary/20 bg-primary-50/50 px-3.5 py-3">
                 <MapPin className="w-4 h-4 text-primary-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-neutral-600 leading-relaxed">
                   Asegúrate de que la dirección sugerida sea exacta. Si no coincide con tu ubicación real, elige el método <span className="font-medium text-neutral-800">Manual</span> para ingresar los datos tú mismo.
@@ -548,7 +563,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
               />
 
               {/* Selects ubigeo — siempre visibles en modo Google */}
-              <div className="space-y-4">
+              {/* <div className="space-y-4">
                 {googlePrefilled && (
                   <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary">
                     <span>✦</span>
@@ -578,7 +593,27 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
               {renderUbigeoSelects()}
             </div>
           </div>
-        )}
+        ) */}
+
+        {/* SOLO MOSTRAR OPCIÓN MANUAL */}
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+          <SectionHeader title="Dirección" description="Ingresa tu dirección manualmente" />
+          <div className="space-y-8 md:col-span-2">
+            <FormField
+              control={form.control}
+              name="street_address"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-1">
+                  <FormLabel>Calle y número *</FormLabel>
+                  <Input placeholder="Av. Javier Prado 1234, Dpto 501" {...field} className="w-full" />
+                  <FormDescription>Incluye referencia o número de departamento</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {renderUbigeoSelects()}
+          </div>
+        </div>
 
         <Separator className="my-10 bg-primary/20 h-px" />
 
@@ -591,7 +626,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
               name="referral_source"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>¿De dónde nos conociste?</FormLabel>
+                  <FormLabel>¿De dónde nos conociste? *</FormLabel>
                   <NativeSelect {...field} className="w-full">
                     <NativeSelectOption value="">Selecciona una opción</NativeSelectOption>
                     {REFERRAL_SOURCE_OPTIONS.map((opt) => (
@@ -609,7 +644,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
                 name="referral_other"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1">
-                    <FormLabel>Especifica cómo</FormLabel>
+                    <FormLabel>Especifica cómo *</FormLabel>
                     <Input placeholder="Ej: Evento, recomendación, etc." {...field} className="w-full" />
                     <FormMessage />
                   </FormItem>
@@ -680,7 +715,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
           name="region"
           render={({ field }) => (
             <FormItem className="flex flex-col gap-1">
-              <FormLabel>Departamento</FormLabel>
+              <FormLabel>Departamento *</FormLabel>
               <NativeSelect
                 {...field}
                 className="w-full"
@@ -690,7 +725,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
                   form.setValue('district', '');
                   setProvincias([]);
                   setDistritos([]);
-                  setGooglePrefilled(false);
+                  // setGooglePrefilled(false); // COMENTADO: solo usaremos opción manual
                   if (e.target.value) getProvinciasAction(e.target.value).then(setProvincias);
                 }}
               >
@@ -710,7 +745,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
             name="province"
             render={({ field }) => (
               <FormItem className="flex flex-col gap-1">
-                <FormLabel>Provincia</FormLabel>
+                <FormLabel>Provincia *</FormLabel>
                 <NativeSelect
                   {...field}
                   className="w-full"
@@ -718,7 +753,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
                     field.onChange(e);
                     form.setValue('district', '');
                     setDistritos([]);
-                    setGooglePrefilled(false);
+                    // setGooglePrefilled(false); // COMENTADO: solo usaremos opción manual
                     if (e.target.value) getDistritosAction(e.target.value).then(setDistritos);
                   }}
                 >
@@ -739,13 +774,13 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
             name="district"
             render={({ field }) => (
               <FormItem className="flex flex-col gap-1">
-                <FormLabel>Distrito</FormLabel>
+                <FormLabel>Distrito *</FormLabel>
                 <NativeSelect
                   {...field}
                   className="w-full"
                   onChange={(e) => {
                     field.onChange(e);
-                    setGooglePrefilled(false);
+                    // setGooglePrefilled(false); // COMENTADO: solo usaremos opción manual
                   }}
                 >
                   <NativeSelectOption value="">Selecciona el distrito</NativeSelectOption>
