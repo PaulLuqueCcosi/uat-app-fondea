@@ -661,57 +661,89 @@ function ApprovedCelebration() {
     requestAnimationFrame(() => {
       setPhase('show');
     });
-    const timer = setTimeout(() => setPhase('exit'), 2000);
+    const timer = setTimeout(() => setPhase('exit'), 2500);
     return () => clearTimeout(timer);
   }, []);
 
   return (
     <div className={cn(
       'fixed inset-0 z-50 flex items-center justify-center transition-all duration-700',
-      phase === 'enter' ? 'bg-black/0 backdrop-blur-0' : 'bg-black/30 backdrop-blur-sm'
+      phase === 'enter' ? 'bg-primary-900/0 backdrop-blur-0' : 'bg-primary-900/40 backdrop-blur-sm'
     )}>
+      {/* Círculos decorativos de fondo */}
       <div className={cn(
-        'flex flex-col items-center gap-6 transition-all duration-700 ease-out',
-        phase === 'enter' ? 'scale-0 opacity-0' : 'scale-100 opacity-100',
-        phase === 'exit' ? 'scale-125 opacity-0' : ''
+        'absolute inset-0 overflow-hidden transition-opacity duration-1000',
+        phase === 'enter' ? 'opacity-0' : 'opacity-100'
       )}>
-        {/* Check animado */}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary-400/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/3 right-1/4 w-48 h-48 bg-accent-400/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '500ms' }} />
+      </div>
+
+      <div className={cn(
+        'flex flex-col items-center gap-8 transition-all duration-700 ease-out relative',
+        phase === 'enter' ? 'scale-0 opacity-0' : 'scale-100 opacity-100',
+        phase === 'exit' ? 'scale-110 opacity-0' : ''
+      )}>
+        {/* Check animado con colores de marca */}
         <div className="relative">
-          <svg width="120" height="120" viewBox="0 0 120 120">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            {/* Anillo exterior */}
             <circle
-              cx="60" cy="60" r="55"
-              fill="#10B981"
+              cx="70" cy="70" r="65"
+              fill="none"
+              stroke="var(--color-primary-200)"
+              strokeWidth="3"
+              className="transition-all duration-500 ease-out origin-center"
+              style={{
+                transform: phase === 'enter' ? 'scale(0)' : 'scale(1)',
+                opacity: phase === 'show' ? 0.6 : 0,
+              }}
+            />
+            {/* Círculo principal */}
+            <circle
+              cx="70" cy="70" r="55"
+              fill="var(--color-primary-500)"
               className="transition-all duration-500 ease-out origin-center"
               style={{
                 transform: phase === 'enter' ? 'scale(0)' : 'scale(1)',
               }}
             />
+            {/* Check */}
             <path
-              d="M35 60 L52 77 L85 44"
+              d="M42 70 L60 88 L98 50"
               fill="none"
               stroke="white"
-              strokeWidth="6"
+              strokeWidth="7"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="origin-center"
-              strokeDasharray="80"
-              strokeDashoffset={phase === 'show' ? '0' : '80'}
-              style={{ transition: 'stroke-dashoffset 0.6s ease-out 0.3s' }}
+              strokeDasharray="90"
+              strokeDashoffset={phase === 'show' ? '0' : '90'}
+              style={{ transition: 'stroke-dashoffset 0.6s ease-out 0.4s' }}
             />
           </svg>
-          {/* Sparkles */}
-          <div className="absolute -top-2 -right-2 text-2xl animate-bounce">✨</div>
-          <div className="absolute -bottom-1 -left-3 text-xl animate-pulse">⭐</div>
+          {/* Destellos */}
+          <div className={cn(
+            'absolute -top-3 -right-3 w-6 h-6 bg-accent-500 rounded-full transition-all duration-500',
+            phase === 'show' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
+          )} style={{ transitionDelay: '600ms' }} />
+          <div className={cn(
+            'absolute -bottom-2 -left-4 w-4 h-4 bg-primary-300 rounded-full transition-all duration-500',
+            phase === 'show' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
+          )} style={{ transitionDelay: '800ms' }} />
+          <div className={cn(
+            'absolute top-0 -left-6 w-3 h-3 bg-accent-400 rounded-full transition-all duration-500',
+            phase === 'show' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
+          )} style={{ transitionDelay: '700ms' }} />
         </div>
 
         <div className={cn(
-          'text-center space-y-2 transition-all duration-500 delay-500',
-          phase === 'enter' ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'
-        )}>
-          <h2 className="text-3xl font-bold text-white drop-shadow-lg">
+          'text-center space-y-3 transition-all duration-500',
+          phase === 'enter' ? 'translate-y-6 opacity-0' : 'translate-y-0 opacity-100'
+        )} style={{ transitionDelay: '400ms' }}>
+          <h2 className="text-4xl font-bold text-white drop-shadow-lg">
             ¡Pre-aprobado!
           </h2>
-          <p className="text-white/80 text-lg">
+          <p className="text-primary-100 text-lg">
             Tu solicitud ha sido aprobada
           </p>
         </div>
