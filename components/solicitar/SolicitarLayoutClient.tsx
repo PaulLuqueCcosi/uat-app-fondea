@@ -52,7 +52,7 @@ function FunnelLayoutContent({ user, onSignOut, children }: FunnelLayoutClientPr
             opacity: isOpen ? 1 : 0,
           }}
         >
-          <SolicitarCalcPanel />
+          {isOpen && <SolicitarCalcPanel />}
         </div>
       </div>
     </>
