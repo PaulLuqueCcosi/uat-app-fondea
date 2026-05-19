@@ -84,6 +84,17 @@ const economicFormSchema = z.object({
     type: z.string().min(1, 'Selecciona el tipo'),
     amount: z.string().min(1, 'Ingresa el monto'),
     monthly_payment: z.string().min(1, 'Ingresa la cuota mensual'),
+  }).superRefine((debt, ctx) => {
+    // Validar que la cuota mensual no sea mayor que el monto total
+    const amount = Number(debt.amount);
+    const monthlyPayment = Number(debt.monthly_payment);
+    if (monthlyPayment > amount) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La cuota mensual no puede ser mayor que el monto total',
+        path: ['monthly_payment'],
+      });
+    }
   })).optional(),
   has_property: z.boolean(),
   has_vehicle: z.boolean(),
@@ -430,7 +441,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
               name="loan_purpose"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>¿Cómo vas a usar el dinero?</FormLabel>
+                  <FormLabel>¿Cómo vas a usar el dinero? *</FormLabel>
                   <NativeSelect {...field} className="w-full">
                     <NativeSelectOption value="">Selecciona una opción</NativeSelectOption>
                     {LOAN_PURPOSE_OPTIONS.map((opt) => (
@@ -462,7 +473,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
               name="monthly_expenses"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Gastos mensuales totales</FormLabel>
+                  <FormLabel>Gastos mensuales totales *</FormLabel>
                   <div className="relative w-full">
                     <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                       <span className="text-sm font-medium">S/</span>
@@ -541,7 +552,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                       name={`debts.${index}.entity`}
                       render={({ field }) => (
                         <FormItem className="flex flex-col gap-1">
-                          <FormLabel>Entidad</FormLabel>
+                          <FormLabel>Entidad *</FormLabel>
                           <Input placeholder="Banco BCP" {...field} className="w-full" />
                           <FormMessage />
                         </FormItem>
@@ -553,7 +564,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                       name={`debts.${index}.type`}
                       render={({ field }) => (
                         <FormItem className="flex flex-col gap-1">
-                          <FormLabel>Tipo de deuda</FormLabel>
+                          <FormLabel>Tipo de deuda *</FormLabel>
                           <NativeSelect {...field} className="w-full">
                             <NativeSelectOption value="">Selecciona</NativeSelectOption>
                             {DEBT_TYPES.map((opt) => (
@@ -572,7 +583,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                       name={`debts.${index}.amount`}
                       render={({ field }) => (
                         <FormItem className="flex flex-col gap-1">
-                          <FormLabel>Monto total</FormLabel>
+                          <FormLabel>Monto total *</FormLabel>
                           <div className="relative w-full">
                             <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                               <span className="text-sm font-medium">S/</span>
@@ -596,7 +607,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                       name={`debts.${index}.monthly_payment`}
                       render={({ field }) => (
                         <FormItem className="flex flex-col gap-1">
-                          <FormLabel>Cuota mensual</FormLabel>
+                          <FormLabel>Cuota mensual *</FormLabel>
                           <div className="relative w-full">
                             <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                               <span className="text-sm font-medium">S/</span>
@@ -714,7 +725,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
               name="education_level"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>¿Cuál es tu grado de instrucción?</FormLabel>
+                  <FormLabel>¿Cuál es tu grado de instrucción? *</FormLabel>
                   <NativeSelect {...field} className="w-full">
                     <NativeSelectOption value="">Selecciona una opción</NativeSelectOption>
                     {EDUCATION_LEVEL_OPTIONS.map((opt) => (
