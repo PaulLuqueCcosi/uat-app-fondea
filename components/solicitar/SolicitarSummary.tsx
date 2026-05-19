@@ -116,7 +116,7 @@ function getStatusBadge(status?: string): { label: string; variant: 'success' | 
       return { label: 'Reemplazado', variant: 'secondary' };
     case 'PENDING':
     default:
-      return { label: 'Pendiente', variant: 'secondary' };
+      return { label: 'Pendiente', variant: 'warning' };
   }
 }
 
@@ -284,7 +284,7 @@ export function FunnelSummary({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={kycData?.verified ? "success" : "secondary"}>
+                <Badge variant={kycData?.verified ? "success" : "warning"}>
                   {kycData?.verified ? "Verificado" : "Pendiente"}
                 </Badge>
                 <Button
