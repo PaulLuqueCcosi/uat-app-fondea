@@ -26,7 +26,7 @@ export function FunnelSidebar({ isLoading = false }: FunnelSidebarProps) {
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-80 bg-white border-r border-border fixed left-0 top-16 bottom-0">
+    <aside className="hidden md:flex flex-col w-72 lg:w-80 bg-white border-r border-border fixed left-0 top-16 bottom-0">
       {/* Card de resumen — fija arriba */}
       <div className="p-6 pb-4 shrink-0">
         <FunnelLoanSummaryCard />
