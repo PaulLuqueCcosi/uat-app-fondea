@@ -12,6 +12,8 @@
 import type { IntencionConfig } from '../types';
 import { mapIntencionFromBackend } from '../mappers/intencion.mapper';
 
+export type { IntencionConfig };
+
 // ── GET /api/intenciones/active ──────────────────────────────────────────────
 
 export async function getActiveIntencion(): Promise<IntencionConfig | null> {

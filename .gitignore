@@ -45,3 +45,5 @@ next-env.d.ts
 /mock-db/*.json
 .kiro/
 .vscode/
+
+todo.md

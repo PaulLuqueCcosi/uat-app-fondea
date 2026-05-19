@@ -19,6 +19,7 @@ import { LoanCalculatorProvider } from './core';
 import { LoanCalculator } from './ui';
 import { fondeaPortalApi, updateIntention } from './adapters/fondeaPortalApi';
 import type { LoanCalculatorApi, LoanCalculatorProps, IntentionRequest, IntentionResponse, LoanCalculatorTheme } from './core';
+import type { IntencionConfig } from '@/lib/types/intencion';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -35,10 +36,10 @@ interface LoanCalculatorPortalProps extends Omit<LoanCalculatorProps, 'submitLab
   initialValues?: PortalInitialValues;
   /**
    * Callback después de un submit exitoso.
+   * Recibe el config actualizado de la intención.
    * Si se proporciona, se llama en lugar de navegar a /solicitar/start.
-   * Útil para el modal inline donde no queremos salir de la página.
    */
-  onSubmitSuccess?: () => void;
+  onSubmitSuccess?: (updatedConfig: IntencionConfig) => void;
 }
 
 // ── Theme por defecto (basado en la paleta del proyecto) ──────────────────────
@@ -87,7 +88,20 @@ export default function LoanCalculatorPortal({
 
       // Navegación post-submit
       if (onSubmitSuccess) {
-        onSubmitSuccess();
+        // Construir IntencionConfig con los datos del request + id del response
+        const updatedConfig: IntencionConfig = {
+          intencionId: result.id,
+          productId: initialValues?.intencionId ? '' : '', // se mantiene del original
+          amount: data.amount,
+          termDays: data.termDays,
+          installmentCount: data.installmentCount,
+          isFirstLoan: true,
+          status: 'ACTIVE',
+          calculatorIntentionId: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        onSubmitSuccess(updatedConfig);
       } else {
         router.push('/solicitar/start');
       }

@@ -6,7 +6,9 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function SolicitarCalcPanel() {
-  const { setIsOpen, initialValues, onRefetch } = useSolicitarCalc();
+  const { isOpen, close, initialValues, handleSuccess } = useSolicitarCalc();
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed top-16 right-0 h-[calc(100vh-4rem)] flex flex-col bg-white border-l border-border z-40">
@@ -16,7 +18,7 @@ export function SolicitarCalcPanel() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setIsOpen(false)}
+          onClick={close}
           className="h-8 w-8 p-0"
         >
           <X className="w-4 h-4" />
@@ -30,10 +32,7 @@ export function SolicitarCalcPanel() {
             dedicated
             detailMode="modal"
             initialValues={initialValues}
-            onSubmitSuccess={() => {
-              setIsOpen(false);
-              onRefetch?.();
-            }}
+            onSubmitSuccess={handleSuccess}
           />
         </div>
       </div>

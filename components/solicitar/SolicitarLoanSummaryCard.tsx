@@ -7,18 +7,19 @@ import { useIntencionConfig } from '@/hooks/useIntencionConfig';
 import { useSolicitarCalc } from './SolicitarCalcContext';
 import type { PortalInitialValues } from '@/components/LoanCalculator';
 import { cn } from '@/lib/utils';
-import { useEffect } from 'react';
 
-
+/**
+ * Card del sidebar que muestra el resumen del préstamo activo del usuario.
+ *
+ * Responsabilidades:
+ * - Obtener la intención activa del backend (una sola vez al montar)
+ * - Mostrar monto, cuotas y plazo
+ * - Abrir/cerrar el panel de edición (calculadora)
+ * - Recibir la data actualizada del panel sin hacer refetch
+ */
 export function FunnelLoanSummaryCard() {
-  // Cargar la intención activa del usuario automáticamente
-  const { config, loading, refetch } = useIntencionConfig(false);
-  const { isOpen, setIsOpen, setInitialValues, setOnRefetch } = useSolicitarCalc();
-
-  // ✅ IMPORTANTE: Siempre configurar onRefetch, no solo cuando haces clic en "Editar"
-  useEffect(() => {
-    setOnRefetch(() => refetch);
-  }, [refetch, setOnRefetch]);
+  const { config, loading, setConfig } = useIntencionConfig(false);
+  const { isOpen, open, close } = useSolicitarCalc();
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-PE', {
@@ -28,17 +29,27 @@ export function FunnelLoanSummaryCard() {
       maximumFractionDigits: 0,
     }).format(amount);
 
+  /** Abre el panel de edición con los datos actuales, o lo cierra si ya está abierto */
   const handleEditClick = () => {
-    if (config) {
-      const values: PortalInitialValues = {
-        intencionId: config.intencionId,
-        amount: config.amount,
-        termDays: config.termDays,
-        installmentCount: config.installmentCount,
-      };
-      setInitialValues(values);
-      setIsOpen(true);
+    if (isOpen) {
+      close();
+      return;
     }
+
+    if (!config) return;
+
+    const values: PortalInitialValues = {
+      intencionId: config.intencionId,
+      amount: config.amount,
+      termDays: config.termDays,
+      installmentCount: config.installmentCount,
+    };
+
+    open(values, (updatedConfig) => {
+      if (updatedConfig) {
+        setConfig(updatedConfig);
+      }
+    });
   };
 
   if (loading) {
@@ -88,7 +99,7 @@ export function FunnelLoanSummaryCard() {
     <Card className="mb-6 bg-linear-to-br from-primary/15 via-primary/10 to-primary/5 shadow-sm border-primary/20">
       <CardContent className="p-4 space-y-4">
 
-        {/* Header: monto + botón editar */}
+        {/* Header: monto + botón editar/cerrar */}
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-xs font-medium text-primary/70 uppercase tracking-wide">
@@ -108,7 +119,7 @@ export function FunnelLoanSummaryCard() {
             onClick={handleEditClick}
           >
             <Pencil className="w-3 h-3 mr-1" />
-            Editar
+            {isOpen ? 'Cerrar' : 'Editar'}
             <ChevronDown className={cn(
               "w-3 h-3 ml-1 transition-transform",
               isOpen && "rotate-180"

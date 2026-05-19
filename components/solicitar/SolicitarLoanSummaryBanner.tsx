@@ -12,7 +12,7 @@ interface FunnelLoanSummaryBannerProps {
 }
 
 export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanSummaryBannerProps) {
-  const { config, loading, refetch } = useIntencionConfig(isOrchestrating);
+  const { config, loading, setConfig } = useIntencionConfig(isOrchestrating);
   const [expanded, setExpanded] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -134,7 +134,7 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
         open={calcOpen}
         onOpenChange={setCalcOpen}
         initialValues={initialValues}
-        onSuccess={refetch}
+        onSuccess={() => {/* TODO: actualizar con data del modal */}}
       />
     </>
   );
