@@ -275,91 +275,96 @@ function PreApprovedView({
     }
   };
 
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('es-PE', {
+      style: 'currency',
+      currency: 'PEN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+
   return (
     <>
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader className="pb-4">
-          <FormHeader
-            icon={CheckCircle2}
-            title="¡Tu solicitud está pre-aprobada!"
-            description="Completa los siguientes pasos para recibir tu préstamo"
-          />
-        </CardHeader>
+      <div className="w-full max-w-4xl mx-auto space-y-6">
+        {/* Hero — Pre-aprobado */}
+        <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-primary-500 to-primary-700 p-8 md:p-10">
+          {/* Decoración */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
+          <div className="absolute top-1/2 right-1/4 w-20 h-20 bg-white/3 rounded-full" />
 
-        <CardContent className="pt-0 space-y-6">
-          {/* Resumen del préstamo con datos reales */}
-          {fullDetail && (
-            <Card className="border-2 border-primary/20 bg-primary/5">
-              <div className="p-5">
-                <h3 className="text-sm font-semibold text-primary mb-4">Resumen de tu préstamo</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Monto solicitado</p>
-                    <p className="text-xl font-bold text-foreground">S/ {fullDetail.principal.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Cuotas</p>
-                    <p className="text-xl font-bold text-foreground">{fullDetail.installment_count}x</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Pago mensual</p>
-                    <p className="text-xl font-bold text-foreground">S/ {fullDetail.monthly_payment.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total a pagar</p>
-                    <p className="text-xl font-bold text-foreground">S/ {fullDetail.total_to_pay.toLocaleString()}</p>
-                  </div>
-                </div>
+          <div className="relative flex flex-col md:flex-row items-center gap-6">
+            {/* Icono check */}
+            <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-10 h-10 text-white" />
+            </div>
 
-                {fullDetail.schedule && fullDetail.schedule.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-primary/10">
-                    <p className="text-xs text-muted-foreground mb-2">Cronograma de pagos</p>
-                    <div className="space-y-1">
-                      {fullDetail.schedule.map((inst) => (
-                        <div key={inst.installment_no} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Cuota {inst.installment_no} — {formatDate(inst.due_date)}</span>
-                          <span className="font-medium text-foreground">S/ {inst.amount.toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            <div className="text-center md:text-left flex-1">
+              <p className="text-sm font-medium text-white/70 uppercase tracking-wider mb-1">
+                ¡Felicidades!
+              </p>
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                Tu solicitud está pre-aprobada
+              </h1>
+              <p className="text-white/80 text-base">
+                Completa los siguientes pasos para recibir tu préstamo
+              </p>
+            </div>
 
-                <div className="mt-4 pt-4 border-t border-primary/10 grid grid-cols-3 gap-4 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Intereses + fees:</span>{' '}
-                    <span className="font-medium text-foreground">S/ {fullDetail.total_fees_original.toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Descuentos:</span>{' '}
-                    <span className="font-medium text-success-600">-S/ {fullDetail.total_discounts.toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">IGV:</span>{' '}
-                    <span className="font-medium text-foreground">S/ {fullDetail.total_igv.toLocaleString()}</span>
-                  </div>
-                </div>
+            {/* Monto destacado */}
+            {fullDetail && (
+              <div className="bg-white/15 backdrop-blur-sm rounded-xl p-5 text-center shrink-0">
+                <p className="text-xs text-white/70 uppercase tracking-wide mb-1">Monto aprobado</p>
+                <p className="text-3xl font-bold text-white">{formatCurrency(fullDetail.principal)}</p>
               </div>
-            </Card>
-          )}
+            )}
+          </div>
+        </div>
 
-          {/* Score crediticio si está disponible */}
-          {application.creditScore && (
-            <Card className="border-2 border-success-100 bg-success-50">
-              <div className="p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-success-500/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-success-700" />
+        {/* Resumen del préstamo */}
+        {fullDetail && (
+          <Card className="border-0 shadow-md">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-4">Detalle de tu préstamo</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Monto</p>
+                  <p className="text-lg font-bold text-foreground">{formatCurrency(fullDetail.principal)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-success-700 font-medium">Score crediticio</p>
-                  <p className="text-2xl font-bold text-success-900">{application.creditScore} pts</p>
+                  <p className="text-xs text-muted-foreground">Cuotas</p>
+                  <p className="text-lg font-bold text-foreground">{fullDetail.installment_count}x</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pago mensual</p>
+                  <p className="text-lg font-bold text-foreground">{formatCurrency(fullDetail.monthly_payment)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total a pagar</p>
+                  <p className="text-lg font-bold text-foreground">{formatCurrency(fullDetail.total_to_pay)}</p>
                 </div>
               </div>
-            </Card>
-          )}
 
-          {/* Próximos pasos */}
-          <div className="space-y-3">
+              {fullDetail.schedule && fullDetail.schedule.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <p className="text-xs text-muted-foreground mb-2">Cronograma de pagos</p>
+                  <div className="space-y-1">
+                    {fullDetail.schedule.map((inst) => (
+                      <div key={inst.installment_no} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Cuota {inst.installment_no} — {formatDate(inst.due_date)}</span>
+                        <span className="font-medium text-foreground">{formatCurrency(inst.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Próximos pasos */}
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-5 space-y-4">
             <h3 className="font-semibold text-foreground">Próximos pasos para completar:</h3>
 
             <div className="space-y-2">
@@ -392,65 +397,65 @@ function PreApprovedView({
                   className="w-full flex items-center gap-3 p-4 border border-border rounded-lg bg-background hover:border-primary/50 transition-colors text-left"
                 >
                   <div className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
-                    step.done ? 'bg-success-100' : 'bg-primary/10'
+                    'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
+                    step.done ? 'bg-success-100' : 'bg-primary-50'
                   )}>
                     {step.done ? (
                       <CheckCircle2 className="w-4 h-4 text-success-600" />
                     ) : (
-                      <step.icon className="w-4 h-4 text-primary" />
+                      <step.icon className="w-4 h-4 text-primary-600" />
                     )}
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-foreground">{step.title}</p>
                     <p className="text-sm text-muted-foreground">{step.desc}</p>
                   </div>
-                  <Badge variant={step.done ? 'success' : 'pending'}>
+                  <Badge variant={step.done ? 'success' : 'warning'}>
                     {step.done ? 'Completado' : 'Pendiente'}
                   </Badge>
                 </button>
               ))}
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Info importante */}
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-            <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <div className="text-sm text-foreground">
-                <p className="font-semibold mb-1">Importante:</p>
-                <ul className="space-y-1 text-muted-foreground">
-                  <li>• Completa estos pasos en los próximos 7 días</li>
-                  <li>• Ten a la mano tu DNI físico</li>
-                  <li>• Asegúrate de estar en un lugar bien iluminado</li>
-                  <li>• Una vez firmado, el dinero se desembolsará en 24-48 horas</li>
-                </ul>
-              </div>
+        {/* Info importante */}
+        <div className="bg-primary-50 border border-primary-200 rounded-xl p-5">
+          <div className="flex gap-3">
+            <AlertCircle className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-foreground">
+              <p className="font-semibold mb-1">Importante:</p>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>• Completa estos pasos en los próximos 7 días</li>
+                <li>• Ten a la mano tu DNI físico</li>
+                <li>• Asegúrate de estar en un lugar bien iluminado</li>
+                <li>• Una vez firmado, el dinero se desembolsará en 24-48 horas</li>
+              </ul>
             </div>
           </div>
+        </div>
 
-          {/* Botones */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowCancelModal(true)}
-              className="flex-1"
-              size="lg"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Cancelar solicitud
-            </Button>
-            <Button
-              onClick={() => router.push(`/solicitudes/${application.id}/kyc-documentos`)}
-              className="flex-1"
-              size="lg"
-            >
-              Continuar con la verificación
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Botones */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowCancelModal(true)}
+            className="flex-1"
+            size="lg"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Cancelar solicitud
+          </Button>
+          <Button
+            onClick={() => router.push(`/solicitudes/${application.id}/kyc-documentos`)}
+            className="flex-1"
+            size="lg"
+          >
+            Continuar con la verificación
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      </div>
 
       {/* Modal cancelación */}
       <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
