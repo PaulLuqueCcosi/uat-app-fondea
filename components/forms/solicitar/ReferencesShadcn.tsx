@@ -84,7 +84,12 @@ function getRelationLabel(
 
 const referencesFormSchema = z.object({
   // Referencia Familiar
-  family_name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
+  family_name: z
+    .string()
+    .min(3, 'El nombre debe tener al menos 3 caracteres')
+    .refine((val) => val.trim().split(/\s+/).length >= 2, {
+      message: 'Ingresa al menos nombre y apellido',
+    }),
   family_relation: z.string().min(1, 'Selecciona la relación'),
   family_relation_other: z.string().optional(),
   family_phone: z
@@ -94,7 +99,12 @@ const referencesFormSchema = z.object({
     .regex(/^9\d{8}$/, 'Debe comenzar con 9 y tener 9 dígitos'),
 
   // Referencia No Familiar
-  non_family_name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
+  non_family_name: z
+    .string()
+    .min(3, 'El nombre debe tener al menos 3 caracteres')
+    .refine((val) => val.trim().split(/\s+/).length >= 2, {
+      message: 'Ingresa al menos nombre y apellido',
+    }),
   non_family_relation: z.string().min(1, 'Selecciona la relación'),
   non_family_relation_other: z.string().optional(),
   non_family_phone: z
