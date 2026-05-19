@@ -191,24 +191,28 @@ export function FunnelSummary({
   };
 
   const handleSubmit = async () => {
+    // Bloquear el botón inmediatamente
+    setLoading(true);
+    setSaveError(null);
+    setSaveErrorCategory(undefined);
+
     // Validar que existe una intención activa en el backend
     const activeIntencion = await getActiveIntencion();
     if (!activeIntencion) {
       setSaveError('No tienes un préstamo seleccionado. Ve a la calculadora para elegir monto y plazo.');
       setSaveErrorCategory('validation');
       declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setLoading(false);
       return;
     }
 
     if (!pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms) {
       setShowPepErrors(true);
       declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
     try {
       const result = await submitApplicationAction(pepDeclarations, activeIntencion.intencionId);
 
