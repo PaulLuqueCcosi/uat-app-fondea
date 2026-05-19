@@ -59,8 +59,8 @@ const laborFormSchema = z.object({
   monthly_income: z
     .string()
     .min(1, 'Ingresa tu ingreso mensual')
-    .refine((val) => Number(val) >= LABOR_CONFIG.MIN_MONTHLY_INCOME, {
-      message: `El ingreso mínimo es S/ ${LABOR_CONFIG.MIN_MONTHLY_INCOME}`,
+    .refine((val) => Number(val) >= 100, {
+      message: 'El ingreso mínimo es S/ 100',
     }),
   income_receipt_method: z.string().min(1, 'Selecciona cómo recibes tus ingresos'),
   has_additional_income: z.boolean(),
@@ -495,7 +495,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
               name="employment_status"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>¿Cuál es tu situación laboral?</FormLabel>
+                  <FormLabel>¿Cuál es tu situación laboral? *</FormLabel>
                   <NativeSelect
                     {...field}
                     className="w-full"
@@ -527,7 +527,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                   name="industry"
                   render={({ field }) => (
                     <FormItem className="flex flex-col gap-1">
-                      <FormLabel>Sector o industria</FormLabel>
+                      <FormLabel>Sector o industria *</FormLabel>
                       <NativeSelect {...field} className="w-full">
                         <NativeSelectOption value="">Selecciona</NativeSelectOption>
                         {INDUSTRY_OPTIONS.map((opt) => (
@@ -547,7 +547,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                     name="years_of_activity"
                     render={({ field }) => (
                       <FormItem className="flex flex-col items-start gap-1">
-                        <FormLabel>Tiempo en la empresa</FormLabel>
+                        <FormLabel>Tiempo en la empresa *</FormLabel>
                         <Input type="number" placeholder="2" {...field} className="w-full" min="0" step="1" />
                         <FormDescription>¿Cuántos años llevas en tu empresa actual?</FormDescription>
                         <FormMessage />
@@ -565,7 +565,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                     name="years_of_activity"
                     render={({ field }) => (
                       <FormItem className="flex flex-col items-start gap-1">
-                        <FormLabel>Años con tu actividad</FormLabel>
+                        <FormLabel>Años con tu actividad *</FormLabel>
                         <Input type="number" placeholder="3" {...field} className="w-full" min="0" step="1" />
                         <FormDescription>¿Cuántos años llevas en esta actividad?</FormDescription>
                         <FormMessage />
@@ -582,7 +582,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                       name="years_of_activity"
                       render={({ field }) => (
                         <FormItem className="flex flex-col items-start gap-1">
-                          <FormLabel>Años con tu negocio</FormLabel>
+                          <FormLabel>Años con tu negocio *</FormLabel>
                           <Input type="number" placeholder="5" {...field} className="w-full" min="0" step="1" />
                           <FormDescription>¿Cuántos años tiene tu negocio?</FormDescription>
                           <FormMessage />
@@ -594,7 +594,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                       name="business_ruc"
                       render={({ field }) => (
                         <FormItem className="flex flex-col items-start gap-1">
-                          <FormLabel>RUC del negocio</FormLabel>
+                          <FormLabel>RUC del negocio *</FormLabel>
                           <Input
                             placeholder="20123456789"
                             {...field}
@@ -625,7 +625,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
               name="monthly_income"
               render={({ field }) => (
                 <FormItem className="flex flex-col items-start gap-2">
-                  <FormLabel>Ingreso mensual neto</FormLabel>
+                  <FormLabel>Ingreso mensual neto *</FormLabel>
                   <div className="relative w-full">
                     <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                       <span className="text-sm font-medium">S/</span>
@@ -643,7 +643,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
               name="income_receipt_method"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>¿Cómo recibes tus ingresos?</FormLabel>
+                  <FormLabel>¿Cómo recibes tus ingresos? *</FormLabel>
                   <NativeSelect {...field} className="w-full">
                     <NativeSelectOption value="">Selecciona</NativeSelectOption>
                     {INCOME_RECEIPT_OPTIONS.map((opt) => (
@@ -709,7 +709,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                         name={`additional_incomes.${index}.type`}
                         render={({ field }) => (
                           <FormItem className="flex flex-col gap-1">
-                            <FormLabel>Tipo de ingreso</FormLabel>
+                            <FormLabel>Tipo de ingreso *</FormLabel>
                             <NativeSelect {...field} className="w-full">
                               <NativeSelectOption value="">Selecciona</NativeSelectOption>
                               {ADDITIONAL_INCOME_TYPE_OPTIONS.map((opt) => (
@@ -728,7 +728,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                           name={`additional_incomes.${index}.custom_type`}
                           render={({ field }) => (
                             <FormItem className="flex flex-col gap-1">
-                              <FormLabel>Especifica el tipo</FormLabel>
+                              <FormLabel>Especifica el tipo *</FormLabel>
                               <Input placeholder="Ej: Comisiones, regalías..." {...field} className="w-full" />
                               <FormMessage />
                             </FormItem>
@@ -742,7 +742,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
                         name={`additional_incomes.${index}.amount`}
                         render={({ field }) => (
                           <FormItem className="flex flex-col gap-1">
-                            <FormLabel>Monto mensual</FormLabel>
+                            <FormLabel>Monto mensual *</FormLabel>
                             <div className="relative w-full">
                               <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                 <span className="text-sm font-medium">S/</span>
