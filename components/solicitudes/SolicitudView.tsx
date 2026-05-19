@@ -23,6 +23,7 @@ import {
   type DocumentListResult,
 } from '@/app/actions/document.actions';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
+import { useSolicitudData } from './SolicitudContext';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ function formatDate(isoDate: string): string {
 
 export function SolicitudView({ initialApplication, initialFullDetail }: SolicitudViewProps) {
   const router = useRouter();
+  const { setData } = useSolicitudData();
   const [application, setApplication] = useState(initialApplication);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [fullDetail, setFullDetail] = useState<ApplicationFullDetail | null>(initialFullDetail ?? null);
@@ -58,6 +60,13 @@ export function SolicitudView({ initialApplication, initialFullDetail }: Solicit
   const status = application.status;
   const isPolling = status === 'SUBMITTED' || status === 'PROCESSING';
   const justApproved = showCelebration && (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS');
+
+  // Publicar datos al contexto cuando ya están disponibles (para el sidebar)
+  useEffect(() => {
+    if (!isPolling && application) {
+      setData(application, fullDetail);
+    }
+  }, [isPolling, application, fullDetail, setData]);
 
   // Cargar detalle completo si llegamos a la página con status terminal
   // y no tenemos el detalle (ej: navegación directa sin pasar por page.tsx)

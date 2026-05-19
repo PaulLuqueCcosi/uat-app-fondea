@@ -2,6 +2,7 @@
 
 import { AppNavbar } from '@/components/ui/app-navbar';
 import { SolicitudesSidebar } from './SolicitudesSidebar';
+import { SolicitudProvider } from './SolicitudContext';
 import type { User } from '@/lib/types';
 
 interface SolicitudesLayoutClientProps {
@@ -12,7 +13,7 @@ interface SolicitudesLayoutClientProps {
 
 export function SolicitudesLayoutClient({ user, onSignOut, children }: SolicitudesLayoutClientProps) {
   return (
-    <>
+    <SolicitudProvider>
       <AppNavbar
         user={user}
         onSignOut={onSignOut}
@@ -26,6 +27,6 @@ export function SolicitudesLayoutClient({ user, onSignOut, children }: Solicitud
       <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-80">
         {children}
       </main>
-    </>
+    </SolicitudProvider>
   );
 }
