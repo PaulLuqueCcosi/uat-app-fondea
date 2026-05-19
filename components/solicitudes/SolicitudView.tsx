@@ -65,7 +65,16 @@ export function SolicitudView({ initialApplication, initialFullDetail }: Solicit
   const [fullDetail, setFullDetail] = useState<ApplicationFullDetail | null>(initialFullDetail ?? null);
   const [showCelebration, setShowCelebration] = useState(false);
 
-  const status = application.status;
+  // DEV: override status via query param ?status=PRE_APPROVED
+  const [devStatus, setDevStatus] = useState<ApplicationStatus | null>(null);
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    const params = new URLSearchParams(window.location.search);
+    const override = params.get('status');
+    if (override) setDevStatus(override as ApplicationStatus);
+  }, []);
+
+  const status = devStatus ?? application.status;
   const isPolling = status === 'SUBMITTED' || status === 'PROCESSING';
   const justApproved = showCelebration && (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS');
 
@@ -172,8 +181,12 @@ export function SolicitudView({ initialApplication, initialFullDetail }: Solicit
     return <ApprovedView application={application} fullDetail={fullDetail} />;
   }
 
-  if (status === 'REJECTED' || status === 'REJECTED_BY_USER') {
+  if (status === 'REJECTED') {
     return <RejectedView application={application} />;
+  }
+
+  if (status === 'REJECTED_BY_USER') {
+    return <CancelledByUserView application={application} />;
   }
 
   if (status === 'EXPIRED') {
@@ -274,7 +287,6 @@ function PreApprovedView({
       setCancelling(false);
     }
   };
-
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-PE', {
       style: 'currency',
@@ -494,19 +506,34 @@ function RejectedView({ application }: { application: ApplicationRecord }) {
   const canRetry = application.canRetryAt ? new Date(application.canRetryAt) <= new Date() : false;
 
   return (
-    <Card className="w-full max-w-3xl mx-auto">
-      <CardHeader className="pb-4">
-        <FormHeader
-          icon={XCircle}
-          title="Solicitud no aprobada"
-          description={application.rejectionReason ?? 'Lamentablemente tu solicitud no fue aprobada en esta ocasión'}
-        />
-      </CardHeader>
+    <div className="w-full max-w-3xl mx-auto space-y-6">
+      {/* Hero — Rechazada */}
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-error-500 to-error-700 p-8 md:p-10">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
 
-      <CardContent className="pt-0 space-y-6">
-        {/* Fecha de reintento */}
-        {application.canRetryAt && (
-          <div className="bg-muted/50 border border-border rounded-lg p-4">
+        <div className="relative flex flex-col md:flex-row items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <XCircle className="w-10 h-10 text-white" />
+          </div>
+          <div className="text-center md:text-left flex-1">
+            <p className="text-sm font-medium text-white/70 uppercase tracking-wider mb-1">
+              Resultado
+            </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              Solicitud no aprobada
+            </h1>
+            <p className="text-white/80 text-base">
+              {application.rejectionReason ?? 'Lamentablemente tu solicitud no fue aprobada en esta ocasión'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Fecha de reintento */}
+      {application.canRetryAt && (
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-5">
             <div className="flex gap-3">
               <Clock className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
               <div className="text-sm">
@@ -518,53 +545,110 @@ function RejectedView({ application }: { application: ApplicationRecord }) {
                 </p>
               </div>
             </div>
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Recomendaciones */}
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <div className="flex gap-3">
-            <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <div className="text-sm text-foreground">
-              <p className="font-semibold mb-2">¿Qué puedes hacer?</p>
-              <ul className="space-y-1 text-muted-foreground">
-                <li>• Mejora tu score crediticio pagando tus deudas a tiempo</li>
-                <li>• Reduce tus deudas actuales para mejorar tu capacidad de pago</li>
-                <li>• Intenta con un monto menor o un plazo más largo</li>
-                <li>• Solicita nuevamente cuando se cumpla el plazo de espera</li>
-              </ul>
-            </div>
+      {/* Recomendaciones */}
+      <div className="bg-primary-50 border border-primary-200 rounded-xl p-5">
+        <div className="flex gap-3">
+          <AlertCircle className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground">
+            <p className="font-semibold mb-2">¿Qué puedes hacer?</p>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>• Mejora tu score crediticio pagando tus deudas a tiempo</li>
+              <li>• Reduce tus deudas actuales para mejorar tu capacidad de pago</li>
+              <li>• Intenta con un monto menor o un plazo más largo</li>
+              <li>• Solicita nuevamente cuando se cumpla el plazo de espera</li>
+            </ul>
           </div>
         </div>
+      </div>
 
-        {/* Contacto */}
-        <div className="bg-muted/50 border border-border rounded-lg p-4">
+      {/* Contacto */}
+      <Card className="border-0 shadow-md">
+        <CardContent className="p-5">
           <p className="text-sm text-muted-foreground">
             Si tienes dudas sobre esta decisión, contáctanos a{' '}
             <a href="mailto:soporte@fondea.pe" className="text-primary font-medium hover:underline">
               soporte@fondea.pe
             </a>
           </p>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Botones */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-4">
-          <Button variant="outline" onClick={() => router.push('/dashboard')} className="flex-1" size="lg">
-            <Home className="w-4 h-4 mr-2" />
-            Volver al dashboard
-          </Button>
-          <Button
-            onClick={() => router.push('/solicitar')}
-            className="flex-1"
-            size="lg"
-            disabled={!canRetry}
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            {canRetry ? 'Nueva solicitud' : 'No disponible aún'}
-          </Button>
+      {/* Botones */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => router.push('/dashboard')} className="flex-1" size="lg">
+          <Home className="w-4 h-4 mr-2" />
+          Volver al dashboard
+        </Button>
+        <Button
+          onClick={() => router.push('/solicitar')}
+          className="flex-1"
+          size="lg"
+          disabled={!canRetry}
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          {canRetry ? 'Nueva solicitud' : 'No disponible aún'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Vista: Cancelada por el usuario ───────────────────────────────────────────
+
+function CancelledByUserView({ application }: { application: ApplicationRecord }) {
+  const router = useRouter();
+
+  return (
+    <div className="w-full max-w-2xl mx-auto space-y-6">
+      {/* Hero — Cancelada */}
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-neutral-400 to-neutral-600 p-8 md:p-10">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
+
+        <div className="relative flex flex-col md:flex-row items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+            <X className="w-10 h-10 text-white" />
+          </div>
+          <div className="text-center md:text-left flex-1">
+            <p className="text-sm font-medium text-white/60 uppercase tracking-wider mb-1">
+              Cancelada
+            </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              Solicitud cancelada
+            </h1>
+            <p className="text-white/70 text-base">
+              Cancelaste esta solicitud. Puedes iniciar una nueva cuando lo desees.
+            </p>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Info */}
+      <div className="bg-primary-50 border border-primary-200 rounded-xl p-5">
+        <div className="flex gap-3">
+          <AlertCircle className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-muted-foreground">
+            Tus datos de perfil se mantienen guardados. Puedes solicitar un nuevo préstamo en cualquier momento.
+          </p>
+        </div>
+      </div>
+
+      {/* Botones */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => router.push('/dashboard')} className="flex-1" size="lg">
+          <Home className="w-4 h-4 mr-2" />
+          Ir al dashboard
+        </Button>
+        <Button onClick={() => router.push('/solicitar')} className="flex-1" size="lg">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Nueva solicitud
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -652,40 +736,50 @@ function FailedView({ application }: { application: ApplicationRecord }) {
     : 'Ocurrió un error técnico durante la evaluación.';
 
   return (
-    <Card className="w-full max-w-2xl mx-auto p-8">
-      <div className="flex flex-col items-center text-center space-y-6">
-        <div className="w-24 h-24 rounded-full bg-warning-50 flex items-center justify-center">
-          <AlertTriangle className="w-12 h-12 text-warning-700" />
-        </div>
+    <div className="w-full max-w-2xl mx-auto space-y-6">
+      {/* Hero — Error */}
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-warning-500 to-warning-700 p-8 md:p-10">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
 
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            Error en la evaluación
-          </h1>
-          <p className="text-muted-foreground">{message}</p>
-        </div>
-
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 w-full text-left">
-          <div className="flex gap-3">
-            <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <p className="text-sm text-muted-foreground">
-              Este error no afecta tu perfil ni tu historial. Puedes reintentar el envío de la solicitud sin perder tus datos.
+        <div className="relative flex flex-col md:flex-row items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-10 h-10 text-white" />
+          </div>
+          <div className="text-center md:text-left flex-1">
+            <p className="text-sm font-medium text-white/70 uppercase tracking-wider mb-1">
+              Error técnico
             </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              Error en la evaluación
+            </h1>
+            <p className="text-white/80 text-base">{message}</p>
           </div>
         </div>
+      </div>
 
-        <div className="w-full flex flex-col sm:flex-row gap-3">
-          <Button variant="outline" onClick={() => router.push('/dashboard')} className="flex-1" size="lg">
-            <Home className="w-4 h-4 mr-2" />
-            Ir al dashboard
-          </Button>
-          <Button onClick={() => router.push('/solicitar/summary')} className="flex-1" size="lg">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Reintentar solicitud
-          </Button>
+      {/* Info */}
+      <div className="bg-primary-50 border border-primary-200 rounded-xl p-5">
+        <div className="flex gap-3">
+          <AlertCircle className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-muted-foreground">
+            Este error no afecta tu perfil ni tu historial. Puedes reintentar el envío de la solicitud sin perder tus datos.
+          </p>
         </div>
       </div>
-    </Card>
+
+      {/* Botones */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => router.push('/dashboard')} className="flex-1" size="lg">
+          <Home className="w-4 h-4 mr-2" />
+          Ir al dashboard
+        </Button>
+        <Button onClick={() => router.push('/solicitar/summary')} className="flex-1" size="lg">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Reintentar solicitud
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -701,62 +795,89 @@ function ApprovedView({
 }) {
   const router = useRouter();
 
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('es-PE', {
+      style: 'currency',
+      currency: 'PEN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+
   return (
-    <Card className="w-full max-w-2xl mx-auto p-8">
-      <div className="flex flex-col items-center text-center space-y-6">
-        <div className="w-24 h-24 rounded-full bg-success-500/10 flex items-center justify-center">
-          <CheckCircle2 className="w-12 h-12 text-success-500" />
-        </div>
+    <div className="w-full max-w-3xl mx-auto space-y-6">
+      {/* Hero — Aprobada */}
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-success-500 to-success-700 p-8 md:p-10">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
+        <div className="absolute top-1/2 right-1/4 w-20 h-20 bg-white/3 rounded-full" />
 
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            ¡Solicitud aprobada!
-          </h1>
-          <p className="text-muted-foreground">
-            Tu contrato fue firmado exitosamente. El desembolso se realizará en las próximas 24-48 horas.
-          </p>
-        </div>
+        <div className="relative flex flex-col md:flex-row items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-10 h-10 text-white" />
+          </div>
+          <div className="text-center md:text-left flex-1">
+            <p className="text-sm font-medium text-white/70 uppercase tracking-wider mb-1">
+              ¡Felicidades!
+            </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              Solicitud aprobada
+            </h1>
+            <p className="text-white/80 text-base">
+              Tu contrato fue firmado exitosamente. El desembolso se realizará en las próximas 24-48 horas.
+            </p>
+          </div>
 
-        {/* Resumen del préstamo aprobado */}
-        {fullDetail && (
-          <div className="w-full bg-muted/50 rounded-lg p-5 text-left space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Resumen de tu préstamo aprobado</h3>
-            <div className="grid grid-cols-2 gap-4">
+          {fullDetail && (
+            <div className="bg-white/15 backdrop-blur-sm rounded-xl p-5 text-center shrink-0">
+              <p className="text-xs text-white/70 uppercase tracking-wide mb-1">Monto aprobado</p>
+              <p className="text-3xl font-bold text-white">{formatCurrency(fullDetail.principal)}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Resumen */}
+      {fullDetail && (
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Resumen de tu préstamo</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-xs text-muted-foreground">Monto</p>
-                <p className="text-lg font-bold text-foreground">S/ {fullDetail.principal.toLocaleString()}</p>
+                <p className="text-lg font-bold text-foreground">{formatCurrency(fullDetail.principal)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Total a pagar</p>
-                <p className="text-lg font-bold text-foreground">S/ {fullDetail.total_to_pay.toLocaleString()}</p>
+                <p className="text-lg font-bold text-foreground">{formatCurrency(fullDetail.total_to_pay)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Cuotas</p>
-                <p className="text-lg font-bold text-foreground">{fullDetail.installment_count}x de S/ {fullDetail.monthly_payment.toLocaleString()}</p>
+                <p className="text-lg font-bold text-foreground">{fullDetail.installment_count}x de {formatCurrency(fullDetail.monthly_payment)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Primera cuota</p>
                 <p className="text-lg font-bold text-foreground">{formatDate(fullDetail.first_due_date)}</p>
               </div>
             </div>
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      )}
 
-        <div className="bg-success-50 border border-success-100 rounded-lg p-4 w-full">
-          <div className="flex gap-3">
-            <CheckCircle2 className="w-5 h-5 text-success-700 shrink-0 mt-0.5" />
-            <p className="text-sm text-success-700">
-              Recibirás una notificación cuando el dinero esté disponible en tu cuenta.
-            </p>
-          </div>
+      {/* Notificación
+      <div className="bg-success-50 border border-success-100 rounded-xl p-5">
+        <div className="flex gap-3">
+          <CheckCircle2 className="w-5 h-5 text-success-700 shrink-0 mt-0.5" />
+          <p className="text-sm text-success-700">
+            Recibirás una notificación cuando el dinero esté disponible en tu cuenta.
+          </p>
         </div>
+      </div> */}
 
-        <Button onClick={() => router.push('/dashboard')} size="lg" className="w-full">
-          <Home className="w-4 h-4 mr-2" />
-          Ir al dashboard
-        </Button>
-      </div>
-    </Card>
+      <Button onClick={() => router.push('/dashboard')} size="lg" className="w-full">
+        <Home className="w-4 h-4 mr-2" />
+        Ir al dashboard
+      </Button>
+    </div>
   );
 }
 
@@ -766,41 +887,51 @@ function ExpiredView({ application }: { application: ApplicationRecord }) {
   const router = useRouter();
 
   return (
-    <Card className="w-full max-w-2xl mx-auto p-8">
-      <div className="flex flex-col items-center text-center space-y-6">
-        <div className="w-24 h-24 rounded-full bg-warning-50 flex items-center justify-center">
-          <Clock className="w-12 h-12 text-warning-700" />
-        </div>
+    <div className="w-full max-w-2xl mx-auto space-y-6">
+      {/* Hero — Expirada */}
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-warning-400 to-warning-600 p-8 md:p-10">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
 
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            Solicitud expirada
-          </h1>
-          <p className="text-muted-foreground">
-            Tu solicitud expiró porque no se completaron los pasos requeridos dentro del plazo de 7 días.
-          </p>
-        </div>
-
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 w-full text-left">
-          <div className="flex gap-3">
-            <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <p className="text-sm text-muted-foreground">
-              No te preocupes — puedes iniciar una nueva solicitud. Tus datos de perfil se mantienen guardados.
+        <div className="relative flex flex-col md:flex-row items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <Clock className="w-10 h-10 text-white" />
+          </div>
+          <div className="text-center md:text-left flex-1">
+            <p className="text-sm font-medium text-neutral-900/60 uppercase tracking-wider mb-1">
+              Tiempo agotado
+            </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
+              Solicitud expirada
+            </h1>
+            <p className="text-neutral-800/80 text-base">
+              Tu solicitud expiró porque no se completaron los pasos requeridos dentro del plazo de 7 días.
             </p>
           </div>
         </div>
+      </div>
 
-        <div className="w-full flex flex-col sm:flex-row gap-3">
-          <Button variant="outline" onClick={() => router.push('/dashboard')} className="flex-1" size="lg">
-            <Home className="w-4 h-4 mr-2" />
-            Ir al dashboard
-          </Button>
-          <Button onClick={() => router.push('/solicitar')} className="flex-1" size="lg">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Nueva solicitud
-          </Button>
+      {/* Info */}
+      <div className="bg-primary-50 border border-primary-200 rounded-xl p-5">
+        <div className="flex gap-3">
+          <AlertCircle className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-muted-foreground">
+            No te preocupes — puedes iniciar una nueva solicitud. Tus datos de perfil se mantienen guardados.
+          </p>
         </div>
       </div>
-    </Card>
+
+      {/* Botones */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => router.push('/dashboard')} className="flex-1" size="lg">
+          <Home className="w-4 h-4 mr-2" />
+          Ir al dashboard
+        </Button>
+        <Button onClick={() => router.push('/solicitar')} className="flex-1" size="lg">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Nueva solicitud
+        </Button>
+      </div>
+    </div>
   );
 }
