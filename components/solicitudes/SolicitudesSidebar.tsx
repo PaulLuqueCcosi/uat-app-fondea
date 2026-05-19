@@ -1,12 +1,19 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { usePathname, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, FileText, Camera, PenLine, Lock } from 'lucide-react';
+import { CheckCircle2, FileText, Camera, PenLine, Lock, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSolicitudData } from './SolicitudContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, CreditCard } from 'lucide-react';
+import {
+  getApplicationStatusAction,
+  getApplicationDetailAction,
+  getApplicationFullDetailAction,
+} from '@/app/actions/application.actions';
+import type { ApplicationStatus } from '@/lib/types';
 
 const SOLICITUD_STEPS = [
   {
@@ -32,16 +39,60 @@ const SOLICITUD_STEPS = [
   }
 ];
 
+/** Estados que permiten ver el resumen y navegar subpáginas */
+const DETAIL_STATUSES: ApplicationStatus[] = [
+  'PRE_APPROVED',
+  'PENDING_DOCUMENTS',
+  'PENDING_SIGNATURE',
+  'APPROVED',
+];
+
 /**
  * Sidebar de solicitudes.
  * Consume datos del SolicitudContext (publicados por SolicitudView).
- * No hace polling ni llamadas propias al backend.
+ * Si el contexto está vacío (entrada directa a subpágina), carga los datos.
  */
 export function SolicitudesSidebar() {
   const pathname = usePathname();
   const params = useParams();
   const solicitudId = params.id as string | undefined;
-  const { fullDetail, isReady } = useSolicitudData();
+  const { fullDetail, isReady, setData } = useSolicitudData();
+  const [loadingSidebar, setLoadingSidebar] = useState(false);
+
+  // Auto-cargar datos si el contexto está vacío y estamos en una subpágina
+  useEffect(() => {
+    if (isReady || !solicitudId) return;
+
+    let cancelled = false;
+    setLoadingSidebar(true);
+
+    async function loadData() {
+      try {
+        const status = await getApplicationStatusAction(solicitudId!);
+        if (cancelled || !status) return;
+
+        // Solo cargar detalle si el status lo permite
+        if (!DETAIL_STATUSES.includes(status)) return;
+
+        const [appData, detailData] = await Promise.all([
+          getApplicationDetailAction(solicitudId!),
+          getApplicationFullDetailAction(solicitudId!),
+        ]);
+
+        if (cancelled) return;
+        if (appData) {
+          setData(appData, detailData);
+        }
+      } catch (err) {
+        console.error('[Sidebar] Error cargando datos:', err);
+      } finally {
+        if (!cancelled) setLoadingSidebar(false);
+      }
+    }
+
+    loadData();
+    return () => { cancelled = true; };
+  }, [isReady, solicitudId, setData]);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-PE', {
@@ -71,6 +122,11 @@ export function SolicitudesSidebar() {
     <aside className="hidden md:flex flex-col w-80 bg-white border-r border-border fixed left-0 top-16 bottom-0 overflow-y-auto scrollbar-primary">
       <div className="p-6">
         {/* Card de resumen — solo se muestra cuando hay datos */}
+        {loadingSidebar && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          </div>
+        )}
         {isReady && fullDetail && (
           <Card className="mb-6 overflow-hidden border-0 shadow-lg py-0">
             <div className="bg-linear-to-br from-primary-500 to-primary-700 p-5 relative overflow-hidden">
