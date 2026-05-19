@@ -32,6 +32,7 @@ const MAX_POLL_ATTEMPTS = 60;
 
 interface SolicitudViewProps {
   initialApplication: ApplicationRecord;
+  initialFullDetail?: ApplicationFullDetail | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -44,24 +45,24 @@ function formatDate(isoDate: string): string {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export function SolicitudView({ initialApplication }: SolicitudViewProps) {
+export function SolicitudView({ initialApplication, initialFullDetail }: SolicitudViewProps) {
   const router = useRouter();
   const [application, setApplication] = useState(initialApplication);
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const [fullDetail, setFullDetail] = useState<ApplicationFullDetail | null>(null);
+  const [fullDetail, setFullDetail] = useState<ApplicationFullDetail | null>(initialFullDetail ?? null);
   const [showCelebration, setShowCelebration] = useState(false);
 
   const status = application.status;
   const isPolling = status === 'SUBMITTED' || status === 'PROCESSING';
   const justApproved = showCelebration && (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS');
 
-  // Cargar detalle completo (datos financieros reales)
-  // Se recarga cuando status cambia de polling a terminal (ej: PRE_APPROVED)
+  // Cargar detalle completo cuando el status cambia de polling a terminal
+  // Solo si no lo tenemos ya (ej: después de polling exitoso)
   useEffect(() => {
-    if (!isPolling) {
+    if (!isPolling && !fullDetail) {
       getApplicationFullDetailAction(application.id).then(setFullDetail);
     }
-  }, [application.id, isPolling]);
+  }, [application.id, isPolling, fullDetail]);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);

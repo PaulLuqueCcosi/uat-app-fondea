@@ -405,6 +405,8 @@ export async function getApplicationDetailAction(applicationId: string): Promise
     if (!isSuccess(res.status)) return null;
 
     const data = await res.json();
+    console.log("data");
+    console.log(data);
     return mapApplicationFromBackend(data);
   } catch (error) {
     console.error('[APPLICATION] Error al obtener detalle:', error);

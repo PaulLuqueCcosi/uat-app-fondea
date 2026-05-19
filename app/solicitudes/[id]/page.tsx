@@ -1,28 +1,19 @@
 import { redirect } from 'next/navigation';
-import { getApplicationDetailAction, getApplicationsAction } from '@/app/actions/application.actions';
+import { getApplicationDetailAction, getApplicationFullDetailAction } from '@/app/actions/application.actions';
 import { SolicitudView } from '@/components/solicitudes/SolicitudView';
 
 export default async function SolicitudPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // Obtener datos iniciales de la solicitud
-  let application = await getApplicationDetailAction(id);
-
-  // Fallback: buscar en la lista
-  if (!application) {
-    const applicationsData = await getApplicationsAction();
-    const foundApp = applicationsData?.applications.find(app => app.id === id);
-
-    if (!foundApp) {
-      redirect('/dashboard');
-    }
-
-    application = foundApp;
-  }
+  const application = await getApplicationDetailAction(id);
 
   if (!application) {
     redirect('/dashboard');
   }
 
-  return <SolicitudView initialApplication={application} />;
+  // Solo cargar el detalle completo si la solicitud ya no está en evaluación
+  const isPolling = application.status === 'SUBMITTED' || application.status === 'PROCESSING';
+  const fullDetail = isPolling ? null : await getApplicationFullDetailAction(id);
+
+  return <SolicitudView initialApplication={application} initialFullDetail={fullDetail} />;
 }
