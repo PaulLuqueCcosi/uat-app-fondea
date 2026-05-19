@@ -137,14 +137,9 @@ export async function submitApplicationAction(
  * }
  *
  * Usado por SolicitudView para polling cada N segundos.
+ * Solo devuelve el status — nada más.
  */
-export async function getApplicationStatusAction(applicationId: string): Promise<{
-  status: ApplicationStatus;
-  creditScore?: number;
-  rejectionReason?: string;
-  canRetryAt?: string;
-  failureCode?: string;
-} | null> {
+export async function getApplicationStatusAction(applicationId: string): Promise<ApplicationStatus | null> {
   await requireValidSession();
 
   try {
@@ -154,13 +149,7 @@ export async function getApplicationStatusAction(applicationId: string): Promise
     if (!isSuccess(res.status)) return null;
 
     const data = await res.json();
-    return {
-      status: data.status as ApplicationStatus,
-      creditScore: data.credit_score ?? undefined,
-      rejectionReason: data.rejection_reason ?? undefined,
-      canRetryAt: data.can_retry_at ?? undefined,
-      failureCode: data.failure_code ?? undefined,
-    };
+    return data.status as ApplicationStatus;
   } catch (error) {
     console.error('[APPLICATION] Error al consultar estado:', error);
     return null;

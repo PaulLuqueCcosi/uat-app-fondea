@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import {
   getApplicationStatusAction,
+  getApplicationDetailAction,
   getApplicationFullDetailAction,
   cancelApplicationAction,
   type ApplicationFullDetail,
@@ -25,8 +26,10 @@ import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const POLL_INTERVAL = 3000;
-const MAX_POLL_ATTEMPTS = 60;
+/** Intervalo entre polls en ms */
+const POLL_INTERVAL = 10_000;
+/** Máximo de intentos antes de marcar como FAILED (10s × 30 = 5 min) */
+const MAX_POLL_ATTEMPTS = 30;
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -56,13 +59,14 @@ export function SolicitudView({ initialApplication, initialFullDetail }: Solicit
   const isPolling = status === 'SUBMITTED' || status === 'PROCESSING';
   const justApproved = showCelebration && (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS');
 
-  // Cargar detalle completo cuando el status cambia de polling a terminal
-  // Solo si no lo tenemos ya (ej: después de polling exitoso)
+  // Cargar detalle completo si llegamos a la página con status terminal
+  // y no tenemos el detalle (ej: navegación directa sin pasar por page.tsx)
   useEffect(() => {
     if (!isPolling && !fullDetail) {
       getApplicationFullDetailAction(application.id).then(setFullDetail);
     }
-  }, [application.id, isPolling, fullDetail]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -89,22 +93,24 @@ export function SolicitudView({ initialApplication, initialFullDetail }: Solicit
       }
 
       try {
-        const data = await getApplicationStatusAction(application.id);
-        if (!data) return;
-
-        const newStatus = data.status;
+        const newStatus = await getApplicationStatusAction(application.id);
+        if (!newStatus) return;
 
         // Cualquier status que no sea SUBMITTED/PROCESSING es terminal para el polling
         if (newStatus !== 'SUBMITTED' && newStatus !== 'PROCESSING') {
           stopPolling();
-          setApplication(prev => ({
-            ...prev,
-            status: newStatus,
-            creditScore: data.creditScore,
-            rejectionReason: data.rejectionReason,
-            canRetryAt: data.canRetryAt,
-            failureCode: data.failureCode as any,
-          }));
+
+          // Cargar datos completos ahora que hay resultado
+          const [appData, detailData] = await Promise.all([
+            getApplicationDetailAction(application.id),
+            getApplicationFullDetailAction(application.id),
+          ]);
+
+          if (appData) {
+            setApplication(appData);
+          }
+          setFullDetail(detailData);
+
           // Celebrar si es pre-aprobado
           if (newStatus === 'PRE_APPROVED' || newStatus === 'PENDING_DOCUMENTS') {
             setShowCelebration(true);
@@ -169,18 +175,10 @@ export function SolicitudView({ initialApplication, initialFullDetail }: Solicit
 // ── Vista: Evaluando (polling activo) ─────────────────────────────────────────
 
 function EvaluatingView({ timeElapsed }: { timeElapsed: number }) {
-  const progress = Math.min(95, 30 + (timeElapsed / 10) * 65);
-
-  const steps = [
-    { label: 'Verificando datos del perfil', done: timeElapsed >= 2 },
-    { label: 'Validación de reglas de negocio', done: timeElapsed >= 5, active: timeElapsed >= 2 && timeElapsed < 5 },
-    { label: 'Cálculo de score crediticio', done: timeElapsed >= 8, active: timeElapsed >= 5 && timeElapsed < 8 },
-    { label: 'Generando resultado', done: false, active: timeElapsed >= 8 },
-  ];
-
   return (
     <Card className="w-full max-w-2xl mx-auto p-8">
-      <div className="flex flex-col items-center text-center space-y-6">
+      <div className="flex flex-col items-center text-center space-y-8">
+        {/* Loader con reloj */}
         <div className="relative">
           <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
             <Loader2 className="w-12 h-12 text-primary animate-spin" />
@@ -192,53 +190,23 @@ function EvaluatingView({ timeElapsed }: { timeElapsed: number }) {
 
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            Evaluando tu solicitud…
+            Estamos procesando tu solicitud
           </h1>
-          <p className="text-muted-foreground">
-            Estamos analizando tu información. Solo tomará unos segundos.
+          <p className="text-muted-foreground max-w-md">
+            Analizando tus datos para darte una respuesta. Esto puede tomar unos segundos.
           </p>
         </div>
 
-        <div className="w-full space-y-2">
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all duration-1000 ease-linear"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground text-right">Analizando…</p>
+        {/* Dots pulsantes */}
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0ms' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '300ms' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '600ms' }} />
         </div>
 
-        <div className="w-full space-y-2">
-          {steps.map((step, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-3 p-3 rounded-lg ${
-                step.active ? 'bg-primary/5 border border-primary/20' :
-                step.done   ? 'bg-muted/50' : 'bg-muted/30 opacity-50'
-              }`}
-            >
-              {step.done
-                ? <CheckCircle2 className="w-5 h-5 text-success-500 shrink-0" />
-                : step.active
-                  ? <Loader2 className="w-5 h-5 text-primary shrink-0 animate-spin" />
-                  : <Clock className="w-5 h-5 text-muted-foreground shrink-0" />
-              }
-              <span className={`text-sm ${step.active ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
-                {step.label}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 w-full text-left">
-          <div className="flex gap-3">
-            <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <p className="text-sm text-muted-foreground">
-              No cierres esta ventana. Recibirás el resultado en breve.
-            </p>
-          </div>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          No cierres esta ventana
+        </p>
       </div>
     </Card>
   );
