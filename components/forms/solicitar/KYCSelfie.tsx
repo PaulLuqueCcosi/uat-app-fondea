@@ -367,7 +367,8 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
                     Capturar selfie
                   </Button>
 
-                  <input
+                  {/* TODO: Descomentar si el cliente decide permitir subir fotos desde galería */}
+                  {/* <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
@@ -387,7 +388,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
                       <Upload className="w-4 h-4 mr-2" />
                     )}
                     {analyzing ? 'Analizando…' : 'Subir imagen'}
-                  </Button>
+                  </Button> */}
                 </div>
 
                 {/* Preview — visible siempre que haya una imagen (válida o no) */}
