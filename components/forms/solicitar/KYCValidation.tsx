@@ -115,11 +115,27 @@ const kycValidationSchema = z.object({
         date.getMonth() !== month - 1 ||
         date.getFullYear() !== year
       ) return false;
+      return true;
+    }, { message: 'Formato inválido. Usa DD/MM/AAAA' })
+    .superRefine((val, ctx) => {
+      const [day, month, year] = val.split('/').map(Number);
+      const date = new Date(year, month - 1, day);
       const today = new Date();
       const age = today.getFullYear() - date.getFullYear()
         - (today < new Date(today.getFullYear(), date.getMonth(), date.getDate()) ? 1 : 0);
-      return age >= 18 && age <= 80;
-    }, { message: 'Debes de ser mayor de edad.' }),
+      
+      if (age < 18) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Debes ser mayor de edad (mínimo 18 años)',
+        });
+      } else if (age > 120) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'La edad máxima permitida es 120 años',
+        });
+      }
+    }),
 });
 
 type KYCValidationFormValues = z.infer<typeof kycValidationSchema>;
@@ -410,6 +426,8 @@ export function FunnelKYCValidation({
                     {...field}
                     className="w-full font-mono text-lg"
                     maxLength={8}
+                    autoComplete="off"
+                    inputMode='numeric'
                     onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
                     onFocus={() => setActiveField('dni')}
                     onBlur={() => setActiveField(null)}
@@ -543,7 +561,7 @@ export function FunnelKYCValidation({
               name="verificationCode"
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Código de verificación</FormLabel>
+                  <FormLabel>Código de verificación *</FormLabel>
                   <Input
                     placeholder="1"
                     {...field}
