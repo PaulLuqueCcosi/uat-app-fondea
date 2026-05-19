@@ -1,1 +1,0 @@
-export { fondeaApi } from "./fondeaApi";

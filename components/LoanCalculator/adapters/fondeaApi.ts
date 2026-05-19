@@ -25,10 +25,9 @@ import type {
 
 // ── Config desde env ──────────────────────────────────────────────────────────
 
-const PRODUCT_ID     = process.env.NEXT_PUBLIC_PRODUCT_ID       ?? "03d17890-251f-4946-bb91-49d35ff62800";
-const BASE_URL       = process.env.NEXT_PUBLIC_BACKEND_API_URL  ?? "http://localhost:9599/api";
-const INTENTIONS_URL = process.env.NEXT_PUBLIC_INTENTIONS_API_URL ?? BASE_URL;
-const PORTAL_URL     = process.env.NEXT_PUBLIC_LOAN_REQUEST_URL ?? "https://solicitar.fondea.pe";
+const PRODUCT_ID     = process.env.NEXT_PUBLIC_PRODUCT_ID         ?? "03d17890-251f-4946-bb91-49d35ff62800";
+const CALCULATOR_URL = process.env.NEXT_PUBLIC_CALCULATOR_API_URL ?? "http://localhost:9599/api";
+const PORTAL_URL     = process.env.NEXT_PUBLIC_LOAN_REQUEST_URL   ?? "https://solicitar.fondea.pe";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -58,7 +57,7 @@ const FIXED_COLORS: Record<number, { color: string; lightBg: string }> = {
 // ── Implementación ────────────────────────────────────────────────────────────
 
 async function fetchConfig(): Promise<LoanConfig> {
-  const res = await fetch(`${BASE_URL}/products/${PRODUCT_ID}/options`);
+  const res = await fetch(`${CALCULATOR_URL}/products/${PRODUCT_ID}/options`);
   if (!res.ok) throw new Error(`fetchConfig: ${res.status}`);
   const data = await res.json();
 
@@ -101,7 +100,7 @@ async function fetchCalculation(
   config: LoanConfig,
   signal?: AbortSignal
 ): Promise<LoanCalculation> {
-  const res = await fetch(`${BASE_URL}/simulate/landing`, {
+  const res = await fetch(`${CALCULATOR_URL}/simulate/landing`, {
     method: "POST",
     headers: { "Content-Type": "application/json", accept: "application/json" },
     body: JSON.stringify({
@@ -193,7 +192,7 @@ async function fetchCalculation(
 }
 
 async function createIntention(data: IntentionRequest): Promise<IntentionResponse> {
-  const res = await fetch(`${INTENTIONS_URL}/intentions`, {
+  const res = await fetch(`${CALCULATOR_URL}/intentions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", accept: "application/json" },
     body: JSON.stringify(data),
