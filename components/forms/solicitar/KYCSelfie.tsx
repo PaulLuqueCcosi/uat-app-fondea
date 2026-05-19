@@ -56,12 +56,14 @@ const STATUS_STYLE: Record<FaceStatus, string> = {
   green:  'bg-success-500/10 border-success-500/30 text-success-700',
 };
 
-// ── Carga dinámica de MediaPipe (singleton) ───────────────────────────────────
-let detectorPromise: Promise<FaceDetectorInstance> | null = null;
+// ── Carga dinámica de MediaPipe (instancia separada para análisis estático) ──
+// Usamos una instancia independiente del CameraModal para evitar conflictos
+// de runningMode (VIDEO vs IMAGE) que causan crashes de WebGL.
+let staticDetectorPromise: Promise<FaceDetectorInstance> | null = null;
 
-async function loadFaceDetector(): Promise<FaceDetectorInstance> {
-  if (!detectorPromise) {
-    detectorPromise = (async () => {
+async function loadStaticFaceDetector(): Promise<FaceDetectorInstance> {
+  if (!staticDetectorPromise) {
+    staticDetectorPromise = (async () => {
       const { FaceDetector, FilesetResolver } = await import(
         /* webpackIgnore: true */
         'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0' as string
@@ -80,7 +82,7 @@ async function loadFaceDetector(): Promise<FaceDetectorInstance> {
       }) as FaceDetectorInstance;
     })();
   }
-  return detectorPromise;
+  return staticDetectorPromise;
 }
 
 // ── Analizar imagen con MediaPipe ─────────────────────────────────────────────
@@ -98,10 +100,8 @@ async function analyzeImageForFace(
         if (!ctx) { resolve({ status: 'none', score: null }); return; }
         ctx.drawImage(img, 0, 0);
 
-        const detector = await loadFaceDetector();
-        // Asegurar modo IMAGE
-        await detector.setOptions({ runningMode: 'IMAGE' });
-
+        const detector = await loadStaticFaceDetector();
+        // Este detector siempre está en modo IMAGE (no se comparte con CameraModal)
         const results    = detector.detect(canvas);
         const detections = results.detections;
 
@@ -215,7 +215,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
     reader.readAsDataURL(file);
   };
 
-  // ── Captura desde cámara (ya validada en CameraModal) ────────────────────
+  // ── Captura desde cámara — también analizar con MediaPipe ────────────────
   const handleCameraCapture = (file: File) => {
     setError('');
     setUploadStatus(null);
@@ -223,10 +223,17 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
     setVerified(false);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const preview = e.target?.result as string;
       setSelfieFile(file);
       setSelfiePreview(preview);
+
+      // Analizar con MediaPipe (igual que handleFileSelect)
+      setAnalyzing(true);
+      const { status, score } = await analyzeImageForFace(preview);
+      setAnalyzing(false);
+      setUploadStatus(status);
+      setUploadScore(score);
     };
     reader.readAsDataURL(file);
   };
@@ -410,11 +417,11 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
                         </div>
                       )}
 
-                      {/* Overlay de verificado */}
+                      {/* Badge de verificado — sin blur, la foto se ve limpia */}
                       {verified && !analyzing && (
-                        <div className="absolute inset-0 bg-primary/10 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                          <div className="bg-white rounded-full p-4 shadow-lg">
-                            <CheckCircle className="w-12 h-12 text-primary" />
+                        <div className="absolute top-3 right-3">
+                          <div className="bg-white/95 rounded-full p-2 shadow-md border border-success-500/30">
+                            <CheckCircle className="w-5 h-5 text-success-600" />
                           </div>
                         </div>
                       )}
