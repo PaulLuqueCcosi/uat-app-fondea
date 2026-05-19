@@ -1,6 +1,6 @@
 'use client';
 
-import { CreditCard, AlertTriangle, Pencil, Calendar, ChevronDown } from 'lucide-react';
+import { CreditCard, AlertTriangle, Pencil, Calendar, ChevronRight, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIntencionConfig } from '@/hooks/useIntencionConfig';
@@ -123,9 +123,9 @@ export function FunnelLoanSummaryCard() {
             )}
             onClick={handleEditClick}
           >
-            <Pencil className="w-3 h-3 mr-1.5" />
+            {isOpen ? <X className="w-3 h-3 mr-1.5" /> : <Pencil className="w-3 h-3 mr-1.5" />}
             {isOpen ? 'Cerrar' : 'Editar'}
-            <ChevronDown className={cn(
+            <ChevronRight className={cn(
               "w-3 h-3 ml-1 transition-transform duration-200",
               isOpen && "rotate-180"
             )} />
