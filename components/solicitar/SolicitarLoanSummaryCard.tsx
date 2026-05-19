@@ -7,6 +7,7 @@ import { useIntencionConfig } from '@/hooks/useIntencionConfig';
 import { useSolicitarCalc } from './SolicitarCalcContext';
 import type { PortalInitialValues } from '@/components/LoanCalculator';
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
 
 interface FunnelLoanSummaryCardProps {
   isOrchestrating?: boolean;
@@ -16,6 +17,11 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
   // NO pasar isOrchestrating como skip — siempre obtener la intención activa
   const { config, loading, refetch } = useIntencionConfig(false);
   const { isOpen, setIsOpen, setInitialValues, setOnRefetch } = useSolicitarCalc();
+
+  // ✅ IMPORTANTE: Siempre configurar onRefetch, no solo cuando haces clic en "Editar"
+  useEffect(() => {
+    setOnRefetch(() => refetch);
+  }, [refetch, setOnRefetch]);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-PE', {
@@ -34,7 +40,6 @@ export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSum
         installmentCount: config.installmentCount,
       };
       setInitialValues(values);
-      setOnRefetch(() => refetch);
       setIsOpen(true);
     }
   };

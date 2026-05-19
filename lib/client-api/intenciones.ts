@@ -15,7 +15,7 @@ import { mapIntencionFromBackend } from '../mappers/intencion.mapper';
 // ── GET /api/intenciones/active ──────────────────────────────────────────────
 
 export async function getActiveIntencion(): Promise<IntencionConfig | null> {
-  const res = await fetch('/api/intenciones/active');
+  const res = await fetch('/api/intenciones/active', { cache: 'no-store' });
   if (res.status === 404) return null;
   if (!res.ok) {
     console.error('[intencion-api] getActive →', res.status, await res.text());
@@ -28,7 +28,7 @@ export async function getActiveIntencion(): Promise<IntencionConfig | null> {
 
 export async function getIntencionById(id: string): Promise<IntencionConfig | null> {
   if (!id?.trim()) return null;
-  const res = await fetch(`/api/intenciones/${id}`);
+  const res = await fetch(`/api/intenciones/${id}`, { cache: 'no-store' });
   if (res.status === 404) return null;
   if (!res.ok) {
     console.error('[intencion-api] getById →', res.status, await res.text());
@@ -49,7 +49,10 @@ export async function getIntencionConfig(idOrActive: string): Promise<IntencionC
 
 export async function registerIntencion(calcId: string): Promise<IntencionConfig | null> {
   if (!calcId?.trim()) return null;
-  const res = await fetch(`/api/intenciones/${calcId}/register`, { method: 'POST' });
+  const res = await fetch(`/api/intenciones/${calcId}/register`, { 
+    method: 'POST',
+    cache: 'no-store'
+  });
   if (res.status === 404) return null;
   if (!res.ok) {
     console.error('[intencion-api] register →', res.status, await res.text());
@@ -69,6 +72,7 @@ export async function createIntencion(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ amount, termDays, installmentCount }),
+    cache: 'no-store'
   });
   if (!res.ok) {
     console.error('[intencion-api] create →', res.status, await res.text());
@@ -89,6 +93,7 @@ export async function updateIntencion(
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ amount, termDays, installmentCount }),
+    cache: 'no-store'
   });
   if (res.status === 409) return null; // locked
   if (!res.ok) {
@@ -101,7 +106,10 @@ export async function updateIntencion(
 // ── DELETE /api/intenciones/{id} ─────────────────────────────────────────────
 
 export async function deleteIntencion(id: string): Promise<boolean> {
-  const res = await fetch(`/api/intenciones/${id}`, { method: 'DELETE' });
+  const res = await fetch(`/api/intenciones/${id}`, { 
+    method: 'DELETE',
+    cache: 'no-store'
+  });
   if (res.status === 409 || res.status === 404) return false;
   return res.status === 204 || res.ok;
 }
