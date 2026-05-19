@@ -8,6 +8,7 @@ import { FunnelLoanSummaryBanner } from './SolicitarLoanSummaryBanner';
 import { FunnelSidebar } from './SolicitarSidebar';
 import { SolicitarCalcProvider, useSolicitarCalc } from './SolicitarCalcContext';
 import { SolicitarCalcPanel } from './SolicitarCalcPanel';
+import { cn } from '@/lib/utils';
 
 interface FunnelLayoutClientProps {
   user: User;
@@ -19,9 +20,9 @@ interface FunnelLayoutClientProps {
  * Layout del funnel de solicitud.
  *
  * Breakpoints:
- *   - Mobile (< md):   Panel como overlay fullscreen
- *   - Tablet (md-lg):  Panel arriba del main (apilado verticalmente)
- *   - Desktop (lg+):   Panel inline al costado izquierdo del main
+ *   - Mobile (< md):   Panel overlay fullscreen con botón cerrar
+ *   - Tablet (md-lg):  Panel inline al inicio (scrollea con el contenido)
+ *   - Desktop (lg+):   Panel fixed al costado (siempre visible)
  */
 function FunnelLayoutContent({ user, onSignOut, children }: FunnelLayoutClientProps) {
   const pathname = usePathname();
@@ -42,42 +43,40 @@ function FunnelLayoutContent({ user, onSignOut, children }: FunnelLayoutClientPr
         <FunnelLoanSummaryBanner isOrchestrating={isOrchestrating} />
       </div>
 
-      {/* Desktop/Tablet: Sidebar */}
+      {/* Desktop/Tablet: Sidebar (fixed left) */}
       <FunnelSidebar isLoading={isOrchestrating} />
 
-      {/* Área de contenido principal */}
-      <div className="flex flex-col lg:flex-row flex-1 md:ml-72 lg:ml-80">
+      {/* ─── Desktop (lg+): Panel fixed al costado del sidebar ─── */}
+      {isOpen && (
+        <div className="hidden lg:block fixed top-16 bottom-0 z-30 left-80 w-[440px] overflow-y-auto">
+          <SolicitarCalcPanel />
+        </div>
+      )}
 
-        {/* Tablet (md-lg): Panel arriba del main */}
+      {/* ─── Mobile (< md): Panel overlay fullscreen ─── */}
+      {isOpen && (
+        <div className="md:hidden fixed inset-0 top-16 z-40 bg-white overflow-y-auto">
+          <SolicitarCalcPanel showClose />
+        </div>
+      )}
+
+      {/* ─── Main Content ─── */}
+      <main
+        className={cn(
+          'flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 ease-in-out',
+          'md:ml-72 lg:ml-80',
+          isOpen && 'lg:ml-[calc(20rem+440px)]'
+        )}
+      >
+        {/* Tablet (md-lg): Panel inline al inicio, antes del formulario */}
         {isOpen && (
-          <div className="hidden md:block lg:hidden border-b border-border">
-            <SolicitarCalcPanel variant="horizontal" />
+          <div className="hidden md:block lg:hidden mb-6 -mx-6 -mt-6">
+            <SolicitarCalcPanel />
           </div>
         )}
 
-        {/* Desktop (lg+): Panel inline al costado izquierdo */}
-        <div
-          className="hidden lg:block shrink-0 transition-all duration-300 ease-in-out overflow-hidden border-r border-border"
-          style={{
-            width: isOpen ? '440px' : '0px',
-            opacity: isOpen ? 1 : 0,
-          }}
-        >
-          {isOpen && <SolicitarCalcPanel variant="vertical" />}
-        </div>
-
-        {/* Main Content — formularios del paso actual */}
-        <main className="flex-1 min-w-0 p-4 md:p-6 lg:p-8 overflow-y-auto">
-          {children}
-        </main>
-      </div>
-
-      {/* Mobile (< md): Panel como overlay fullscreen */}
-      {isOpen && (
-        <div className="md:hidden fixed inset-0 top-16 z-40 flex flex-col bg-white">
-          <SolicitarCalcPanel variant="vertical" />
-        </div>
-      )}
+        {children}
+      </main>
     </>
   );
 }

@@ -4,66 +4,40 @@ import { LoanCalculatorPortal } from '@/components/LoanCalculator';
 import { useSolicitarCalc } from './SolicitarCalcContext';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-
-interface SolicitarCalcPanelProps {
-  /**
-   * - "vertical": Panel alto y estrecho (mobile fullscreen, desktop sidebar)
-   * - "horizontal": Panel ancho y corto (tablet, se muestra arriba del main)
-   */
-  variant?: 'vertical' | 'horizontal';
-}
 
 /**
- * Panel de edición de la calculadora.
+ * Panel con la calculadora para editar la intención.
  *
- * Variantes:
- * - vertical: ocupa toda la altura disponible, scrollea internamente
- * - horizontal: altura limitada, contenido centrado horizontalmente
+ * - showClose=true (mobile): muestra header con título y botón cerrar
+ * - showClose=false (tablet/desktop): solo la calculadora, sin fondo ni header
  */
-export function SolicitarCalcPanel({ variant = 'vertical' }: SolicitarCalcPanelProps) {
+export function SolicitarCalcPanel({ showClose = false }: { showClose?: boolean }) {
   const { close, initialValues, handleSuccess } = useSolicitarCalc();
 
-  const isHorizontal = variant === 'horizontal';
-
   return (
-    <div
-      className={cn(
-        'flex flex-col bg-white',
-        isHorizontal
-          ? 'max-h-[60vh]'
-          : 'h-full lg:h-[calc(100vh-4rem)] lg:sticky lg:top-16'
-      )}
-    >
-      {/* Header */}
-      <div className="border-b border-border p-4 flex items-center justify-between shrink-0">
-        <h2 className="text-base font-semibold text-foreground">Editar Solicitud</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={close}
-          className="h-8 w-8 p-0"
-        >
-          <X className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {/* Cuerpo scrolleable con la calculadora */}
-      <div className={cn(
-        'flex-1 overflow-y-auto p-4',
-        isHorizontal ? 'md:p-4' : 'md:p-5'
-      )}>
-        <div className={cn(
-          'flex justify-center',
-          isHorizontal && 'max-w-2xl mx-auto'
-        )}>
-          <LoanCalculatorPortal
-            dedicated
-            detailMode="modal"
-            initialValues={initialValues}
-            onSubmitSuccess={handleSuccess}
-          />
+    <div className="py-4">
+      {/* Header con título y botón cerrar — solo mobile */}
+      {showClose && (
+        <div className="flex items-center justify-between px-4 pb-3 border-b border-border mb-4">
+          <h2 className="text-lg font-semibold text-foreground">Editar Solicitud</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={close}
+            className="h-8 w-8 p-0"
+          >
+            <X className="w-5 h-5" />
+          </Button>
         </div>
+      )}
+
+      <div className="flex justify-center">
+        <LoanCalculatorPortal
+          dedicated
+          detailMode="modal"
+          initialValues={initialValues}
+          onSubmitSuccess={handleSuccess}
+        />
       </div>
     </div>
   );
