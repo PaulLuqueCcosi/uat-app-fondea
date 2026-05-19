@@ -8,6 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FormHeader } from '@/components/ui/form-header';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
   Loader2, Clock, CheckCircle2, XCircle, AlertCircle, AlertTriangle,
   ArrowRight, RefreshCw, Home, DollarSign, FileText, Camera, PenLine, X,
 } from 'lucide-react';
@@ -445,36 +453,31 @@ function PreApprovedView({
       </Card>
 
       {/* Modal cancelación */}
-      {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <Card className="w-full max-w-md">
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-error-50 flex items-center justify-center">
-                  <X className="w-5 h-5 text-error-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground">¿Cancelar solicitud?</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Si cancelas esta solicitud, perderás la pre-aprobación y tendrás que volver a solicitar desde el inicio.
-              </p>
-              {cancelError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {cancelError}
-                </div>
-              )}
-              <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={() => setShowCancelModal(false)} disabled={cancelling} className="flex-1">
-                  Volver
-                </Button>
-                <Button variant="destructive" onClick={handleCancel} disabled={cancelling} className="flex-1">
-                  {cancelling ? 'Cancelando...' : 'Sí, cancelar'}
-                </Button>
-              </div>
+      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Cancelar solicitud?</DialogTitle>
+            <DialogDescription>
+              Si cancelas esta solicitud, perderás la pre-aprobación y tendrás que volver a solicitar desde el inicio.
+            </DialogDescription>
+          </DialogHeader>
+
+          {cancelError && (
+            <div className="rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-700">
+              {cancelError}
             </div>
-          </Card>
-        </div>
-      )}
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCancelModal(false)} disabled={cancelling}>
+              Volver
+            </Button>
+            <Button variant="destructive" onClick={handleCancel} disabled={cancelling}>
+              {cancelling ? 'Cancelando...' : 'Sí, cancelar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
