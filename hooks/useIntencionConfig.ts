@@ -1,16 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getIntencionConfig } from '@/lib/client-api/intenciones';
+import { getActiveIntencion } from '@/lib/client-api/intenciones';
 import type { IntencionConfig } from '@/lib/types/intencion';
 
 /**
  * Hook que obtiene la configuración del préstamo activo del usuario.
- *
- * Acepta `skip` para diferir la llamada al backend mientras el dispatcher
- * o el orquestador están corriendo (isOrchestrating). Esto evita la race
- * condition donde el sidebar obtiene la intención anterior antes de que
- * registerIntencion() haya terminado de asociar la nueva.
  *
  * Devuelve `refetch()` para forzar una recarga (ej: después de editar
  * la intención desde el modal de la calculadora).
@@ -35,7 +30,7 @@ export function useIntencionConfig(skip = false): {
     }
 
     setLoading(true);
-    getIntencionConfig('active')
+    getActiveIntencion()
       .then((data) => {
         setConfig(data ?? null);
       })

@@ -9,12 +9,9 @@ import type { PortalInitialValues } from '@/components/LoanCalculator';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 
-interface FunnelLoanSummaryCardProps {
-  isOrchestrating?: boolean;
-}
 
-export function FunnelLoanSummaryCard({ isOrchestrating = false }: FunnelLoanSummaryCardProps) {
-  // NO pasar isOrchestrating como skip — siempre obtener la intención activa
+export function FunnelLoanSummaryCard() {
+  // Cargar la intención activa del usuario automáticamente
   const { config, loading, refetch } = useIntencionConfig(false);
   const { isOpen, setIsOpen, setInitialValues, setOnRefetch } = useSolicitarCalc();
 

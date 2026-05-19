@@ -28,8 +28,8 @@ export function FunnelSidebar({ isLoading = false }: FunnelSidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-80 bg-white border-r border-border fixed left-0 top-16 bottom-0 overflow-y-auto scrollbar-primary">
       <div className="p-6">
-        {/* Card de resumen de solicitud */}
-        <FunnelLoanSummaryCard isOrchestrating={isLoading} />
+        {/* Card de resumen de solicitud — se carga automáticamente */}
+        <FunnelLoanSummaryCard />
 
         <div className="mb-2">
           <h2 className="text-lg font-bold text-dark">Proceso de Solicitud</h2>

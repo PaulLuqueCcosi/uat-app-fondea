@@ -37,14 +37,6 @@ export async function getIntencionById(id: string): Promise<IntencionConfig | nu
   return mapIntencionFromBackend(await res.json());
 }
 
-/**
- * Obtiene una intención por ID o la activa si se pasa 'active'.
- */
-export async function getIntencionConfig(idOrActive: string): Promise<IntencionConfig | null> {
-  if (idOrActive === 'active') return getActiveIntencion();
-  return getIntencionById(idOrActive);
-}
-
 // ── POST /api/intenciones/{id}/register ──────────────────────────────────────
 
 export async function registerIntencion(calcId: string): Promise<IntencionConfig | null> {

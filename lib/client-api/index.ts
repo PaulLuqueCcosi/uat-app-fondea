@@ -12,7 +12,6 @@
 export {
   getActiveIntencion,
   getIntencionById,
-  getIntencionConfig,
   registerIntencion,
   createIntencion,
   updateIntencion,
