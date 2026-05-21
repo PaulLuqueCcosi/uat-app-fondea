@@ -315,7 +315,7 @@ export async function signContractAction(
 
   try {
     const res = await backendFetch(
-      `/api/v1/applications/${applicationId}/signature`,
+      `/api/v1/applications/${applicationId}/contract/sign`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
