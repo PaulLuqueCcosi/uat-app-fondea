@@ -14,6 +14,7 @@ import {
   getContractPdfUrlAction,
   type ContractInfo,
 } from '@/app/actions/contract.actions';
+import { useSolicitudData } from '@/components/solicitudes/SolicitudContext';
 
 interface FunnelContractProps {
   applicationId?: string;
@@ -88,16 +89,25 @@ function ContractFullscreenModal({
 export function FunnelContract({ applicationId }: FunnelContractProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const {
+    contractInfo: cachedContractInfo,
+    contractHtml: cachedContractHtml,
+    pdfUrl: cachedPdfUrl,
+    setContractInfo: setCtxContractInfo,
+    setContractHtml: setCtxContractHtml,
+    setPdfUrl: setCtxPdfUrl,
+  } = useSolicitudData();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [fullName, setFullName] = useState('');
 
-  // Estado del contrato
-  const [contractInfo, setContractInfo] = useState<ContractInfo | null>(null);
-  const [contractHtml, setContractHtml] = useState<string | null>(null);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [loadingContract, setLoadingContract] = useState(true);
+  // Estado del contrato — inicializar desde contexto si hay cache
+  const [contractInfo, setContractInfo] = useState<ContractInfo | null>(cachedContractInfo);
+  const [contractHtml, setContractHtml] = useState<string | null>(cachedContractHtml);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(cachedPdfUrl);
+  const [loadingContract, setLoadingContract] = useState(!cachedContractInfo);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
 
@@ -107,9 +117,9 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
   const isSigned = contractInfo?.status === 'SIGNED';
   const isExpired = contractInfo?.status === 'EXPIRED';
 
-  // 1. Cargar info del contrato
+  // 1. Cargar info del contrato (solo si no hay cache)
   useEffect(() => {
-    if (!solicitudId) return;
+    if (!solicitudId || cachedContractInfo) return;
 
     async function loadContract() {
       setLoadingContract(true);
@@ -120,13 +130,16 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
           return;
         }
         setContractInfo(info);
+        setCtxContractInfo(info);
 
         const html = await getContractHtmlAction(info.contractId);
         setContractHtml(html);
+        setCtxContractHtml(html);
 
         if (info.status === 'SIGNED') {
           const url = await getContractPdfUrlAction(info.contractId);
           setPdfUrl(url);
+          setCtxPdfUrl(url);
         }
       } catch (err) {
         console.error('Error cargando contrato:', err);
@@ -136,7 +149,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     }
 
     loadContract();
-  }, [solicitudId]);
+  }, [solicitudId, cachedContractInfo, setCtxContractInfo, setCtxContractHtml, setCtxPdfUrl]);
 
   const handleDownloadPdf = async () => {
     if (!contractInfo) return;

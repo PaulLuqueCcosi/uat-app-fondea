@@ -27,7 +27,7 @@ interface FunnelLayoutClientProps {
 function FunnelLayoutContent({ user, onSignOut, children }: FunnelLayoutClientProps) {
   const pathname = usePathname();
   const isOrchestrating = pathname === '/solicitar' || pathname === '/solicitar/start';
-  const { isOpen } = useSolicitarCalc();
+  const { isOpen, openCount } = useSolicitarCalc();
 
   return (
     <>
@@ -47,18 +47,24 @@ function FunnelLayoutContent({ user, onSignOut, children }: FunnelLayoutClientPr
       <FunnelSidebar isLoading={isOrchestrating} />
 
       {/* ─── Desktop (lg+): Panel fixed al costado del sidebar ─── */}
-      {isOpen && (
-        <div className="hidden lg:block fixed top-16 bottom-0 z-30 left-80 w-[440px] overflow-y-auto">
-          <SolicitarCalcPanel />
-        </div>
-      )}
+      <div
+        className={cn(
+          'hidden lg:block fixed top-16 bottom-0 z-30 left-80 w-[440px] overflow-y-auto',
+          !isOpen && 'invisible'
+        )}
+      >
+        {isOpen && <SolicitarCalcPanel key={`panel-${openCount}`} />}
+      </div>
 
       {/* ─── Mobile (< md): Panel overlay fullscreen ─── */}
-      {isOpen && (
-        <div className="md:hidden fixed inset-0 top-16 z-40 bg-white overflow-y-auto">
-          <SolicitarCalcPanel showClose />
-        </div>
-      )}
+      <div
+        className={cn(
+          'md:hidden fixed inset-0 top-16 z-40 bg-white overflow-y-auto',
+          !isOpen && 'hidden'
+        )}
+      >
+        {isOpen && <SolicitarCalcPanel key={`panel-m-${openCount}`} showClose />}
+      </div>
 
       {/* ─── Main Content ─── */}
       <main
@@ -71,7 +77,7 @@ function FunnelLayoutContent({ user, onSignOut, children }: FunnelLayoutClientPr
         {/* Tablet (md-lg): Panel inline al inicio, antes del formulario */}
         {isOpen && (
           <div className="hidden md:block lg:hidden mb-6 -mx-6 -mt-6">
-            <SolicitarCalcPanel />
+            <SolicitarCalcPanel key={`panel-t-${openCount}`} />
           </div>
         )}
 

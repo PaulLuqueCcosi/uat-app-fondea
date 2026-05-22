@@ -20,6 +20,8 @@ import type { IntencionConfig } from '@/lib/types/intencion';
 interface SolicitarCalcContextType {
   /** Si el panel de edición está abierto */
   isOpen: boolean;
+  /** Contador de aperturas — se usa como key para forzar remount limpio */
+  openCount: number;
   /** Abre el panel con valores iniciales y un callback para recibir el resultado */
   open: (values: PortalInitialValues, onSuccess: (data: IntencionConfig) => void) => void;
   /** Cierra el panel sin ejecutar el callback */
@@ -34,12 +36,14 @@ const SolicitarCalcContext = createContext<SolicitarCalcContextType | undefined>
 
 export function SolicitarCalcProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openCount, setOpenCount] = useState(0);
   const [initialValues, setInitialValues] = useState<PortalInitialValues | undefined>();
   const onSuccessRef = useRef<((data: IntencionConfig) => void) | null>(null);
 
   const open = useCallback((values: PortalInitialValues, onSuccess: (data: IntencionConfig) => void) => {
     setInitialValues(values);
     onSuccessRef.current = onSuccess;
+    setOpenCount(c => c + 1);
     setIsOpen(true);
   }, []);
 
@@ -54,7 +58,7 @@ export function SolicitarCalcProvider({ children }: { children: ReactNode }) {
 
   return (
     <SolicitarCalcContext.Provider
-      value={{ isOpen, open, close, initialValues, handleSuccess }}
+      value={{ isOpen, openCount, open, close, initialValues, handleSuccess }}
     >
       {children}
     </SolicitarCalcContext.Provider>

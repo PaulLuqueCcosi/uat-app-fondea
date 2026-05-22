@@ -60,8 +60,11 @@ export function SolicitudesSidebar() {
   const [loadingSidebar, setLoadingSidebar] = useState(false);
 
   // Auto-cargar datos si el contexto está vacío y estamos en una subpágina
+  // En la página principal (/solicitudes/{id}), SolicitudView se encarga de publicar los datos
+  const isSubpage = solicitudId ? pathname !== `/solicitudes/${solicitudId}` : false;
+
   useEffect(() => {
-    if (isReady || !solicitudId) return;
+    if (isReady || !solicitudId || !isSubpage) return;
 
     let cancelled = false;
     setLoadingSidebar(true);
@@ -92,7 +95,7 @@ export function SolicitudesSidebar() {
 
     loadData();
     return () => { cancelled = true; };
-  }, [isReady, solicitudId, setData]);
+  }, [isReady, solicitudId, isSubpage, setData]);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-PE', {
@@ -122,7 +125,7 @@ export function SolicitudesSidebar() {
     <aside className="hidden md:flex flex-col w-80 bg-white border-r border-border fixed left-0 top-16 bottom-0 overflow-y-auto scrollbar-primary">
       <div className="p-6">
         {/* Card de resumen — solo se muestra cuando hay datos */}
-        {loadingSidebar && (
+        {loadingSidebar && isSubpage && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-5 h-5 animate-spin text-primary" />
           </div>

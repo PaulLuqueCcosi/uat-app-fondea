@@ -5,12 +5,13 @@ import { useRouter, usePathname, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2, RefreshCw, Loader2 } from 'lucide-react';
-import { uploadDocumentAction, deleteDocumentAction } from '@/app/actions/document.actions';
+import { uploadDocumentAction, deleteDocumentAction, listDocumentsAction } from '@/app/actions/document.actions';
 import type { DocumentType } from '@/app/actions/document.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
 import { getCurrentStep } from '@/lib/funnel-steps';
+import { useSolicitudData } from '@/components/solicitudes/SolicitudContext';
 
 interface SectionHeaderProps {
   title: string;
@@ -40,6 +41,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
   const pathname = usePathname();
   const params = useParams();
   const currentStep = getCurrentStep(pathname);
+  const { setDocuments, setDocumentUrl } = useSolicitudData();
 
   // Detectar si estamos en el flujo de solicitudes
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
@@ -124,9 +126,13 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
       if (result.success) {
         if (side === 'front') {
           setFrontUploaded(true);
+          setDocumentUrl('dniFront', frontPreview);
         } else {
           setBackUploaded(true);
+          setDocumentUrl('dniBack', backPreview);
         }
+        // Refrescar lista de documentos en el contexto
+        listDocumentsAction(solicitudId).then(setDocuments);
       } else {
         setError(result.error || 'Error al subir la imagen. Por favor, intenta nuevamente.');
       }
@@ -161,11 +167,15 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
       setFrontFile(null);
       setFrontPreview('');
       setFrontUploaded(false);
+      setDocumentUrl('dniFront', null);
     } else {
       setBackFile(null);
       setBackPreview('');
       setBackUploaded(false);
+      setDocumentUrl('dniBack', null);
     }
+    // Refrescar lista de documentos en el contexto
+    if (solicitudId) listDocumentsAction(solicitudId).then(setDocuments);
     setError('');
     setDeleting(null);
   };

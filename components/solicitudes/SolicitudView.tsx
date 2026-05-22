@@ -78,12 +78,13 @@ export function SolicitudView({ initialApplication, initialFullDetail }: Solicit
   const isPolling = status === 'SUBMITTED' || status === 'PROCESSING';
   const justApproved = showCelebration && (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS');
 
-  // Publicar datos al contexto cuando ya están disponibles (para el sidebar)
+  // Publicar datos al contexto cuando cambian (polling terminó, status cambió)
   useEffect(() => {
     if (!isPolling && application) {
       setData(application, fullDetail);
     }
-  }, [isPolling, application, fullDetail, setData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [application.status, fullDetail?.application_id]);
 
   // Cargar detalle completo si llegamos a la página con status terminal
   // y no tenemos el detalle (ej: navegación directa sin pasar por page.tsx)
@@ -252,15 +253,20 @@ function PreApprovedView({
   fullDetail: ApplicationFullDetail | null;
 }) {
   const router = useRouter();
+  const { setDocuments, documents: cachedDocs } = useSolicitudData();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [docList, setDocList] = useState<DocumentListResult | null>(null);
+  const [docList, setDocList] = useState<DocumentListResult | null>(cachedDocs);
 
   // Cargar documentos para saber qué pasos están completados
   useEffect(() => {
-    listDocumentsAction(application.id).then(setDocList);
-  }, [application.id]);
+    if (cachedDocs) return; // Ya los tenemos en el contexto
+    listDocumentsAction(application.id).then((docs) => {
+      setDocList(docs);
+      setDocuments(docs);
+    });
+  }, [application.id, cachedDocs, setDocuments]);
 
   const isDniUploaded = !!docList?.documents.find(
     (d) => d.type === 'DNI_FRONT' && d.status === 'UPLOADED'

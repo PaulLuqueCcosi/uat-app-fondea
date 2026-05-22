@@ -14,10 +14,11 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
-import { uploadDocumentAction, deleteDocumentAction } from '@/app/actions/document.actions';
+import { uploadDocumentAction, deleteDocumentAction, listDocumentsAction } from '@/app/actions/document.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
+import { useSolicitudData } from '@/components/solicitudes/SolicitudContext';
 import { getCurrentStep } from '@/lib/funnel-steps';
 
 // ── Tipos MediaPipe ───────────────────────────────────────────────────────────
@@ -154,6 +155,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
   const pathname  = usePathname();
   const params    = useParams();
   const currentStep = getCurrentStep(pathname);
+  const { setDocuments, setDocumentUrl } = useSolicitudData();
 
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
@@ -262,6 +264,9 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
       const result = await uploadDocumentAction(solicitudId, 'SELFIE', formData);
       if (result.success) {
         setVerified(true);
+        setDocumentUrl('selfie', selfiePreview);
+        // Refrescar lista de documentos en el contexto
+        listDocumentsAction(solicitudId).then(setDocuments);
         setTimeout(() => {
           if (isInSolicitudFlow && solicitudId) {
             router.push(`/solicitudes/${solicitudId}/contrato`);
@@ -300,6 +305,9 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
     setUploadStatus(null);
     setUploadScore(null);
     setError('');
+    setDocumentUrl('selfie', null);
+    // Refrescar lista de documentos en el contexto
+    if (solicitudId) listDocumentsAction(solicitudId).then(setDocuments);
     setDeleting(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };

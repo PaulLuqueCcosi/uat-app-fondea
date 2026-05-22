@@ -1,6 +1,10 @@
+'use client';
+
+import { useParams } from 'next/navigation';
 import { FunnelContract } from '@/components/solicitar/SolicitarContract';
 
-export default async function ContratoPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default function ContratoPage() {
+  const params = useParams();
+  const id = params.id as string;
   return <FunnelContract applicationId={id} />;
 }
