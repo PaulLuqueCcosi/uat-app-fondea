@@ -188,19 +188,20 @@ export function SolicitudesSidebar() {
                       )}
                     >
                       <div className="relative z-10 shrink-0">
-                        {step.completed ? (
-                          <div className="w-[36px] h-[36px] rounded-full bg-success-100 flex items-center justify-center">
+                        <div className={cn(
+                          'w-[36px] h-[36px] rounded-full flex items-center justify-center',
+                          step.completed
+                            ? 'bg-success-100'
+                            : isActive
+                              ? 'bg-primary-500'
+                              : 'bg-neutral-100 border-2 border-neutral-200'
+                        )}>
+                          {step.completed ? (
                             <CheckCircle2 className="w-5 h-5 text-success-600" />
-                          </div>
-                        ) : isActive ? (
-                          <div className="w-[36px] h-[36px] rounded-full bg-primary-500 flex items-center justify-center">
-                            <Icon className="w-4 h-4 text-white" />
-                          </div>
-                        ) : (
-                          <div className="w-[36px] h-[36px] rounded-full bg-neutral-100 border-2 border-neutral-200 flex items-center justify-center">
-                            <Icon className="w-4 h-4 text-neutral-500" />
-                          </div>
-                        )}
+                          ) : (
+                            <Icon className={cn('w-4 h-4', isActive ? 'text-white' : 'text-neutral-500')} />
+                          )}
+                        </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={cn(

@@ -93,7 +93,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     contractInfo: ctxContractInfo,
     contractHtml: ctxContractHtml,
     pdfUrl: ctxPdfUrl,
-    contractLoading,
+    contractReady,
     refreshContract,
   } = useSolicitudStore();
 
@@ -204,6 +204,9 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
         return;
       }
 
+      // Actualizar el estado del contrato en el store
+      setTimeout(() => refreshContract(), 0);
+
       if (isInSolicitudFlow) {
         router.push(`/solicitudes/${solicitudId}/aprobada`);
       } else {
@@ -222,7 +225,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
 
   // ── No contract found (y no está cargando) ────────────────────────────────
 
-  if (!contractInfo && !contractLoading && !loadingContract) {
+  if (!contractInfo && contractReady && !loadingContract) {
     return (
       <div className="max-w-4xl mx-auto">
         <Card className="p-8">
@@ -405,7 +408,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
           <div className="rounded-lg border border-border overflow-hidden bg-white">
             {contractHtml ? (
               <ContractViewer html={contractHtml} />
-            ) : (loadingContract || contractLoading) ? (
+            ) : (loadingContract || !contractReady) ? (
               <div className="p-6 space-y-4 animate-pulse">
                 <div className="h-6 bg-neutral-100 rounded w-2/3 mx-auto" />
                 <div className="h-px bg-neutral-100 w-full" />

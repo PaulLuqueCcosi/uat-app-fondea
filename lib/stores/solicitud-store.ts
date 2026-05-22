@@ -34,29 +34,29 @@ interface SolicitudState {
 
   // ── Application ──
   application: ApplicationRecord | null;
-  applicationLoading: boolean;
+  applicationReady: boolean;
   applicationNotFound: boolean;
 
   // ── Full Detail ──
   fullDetail: ApplicationFullDetail | null;
-  fullDetailLoading: boolean;
+  fullDetailReady: boolean;
 
   // ── Documents ──
   documents: DocumentListResult | null;
-  documentsLoading: boolean;
+  documentsReady: boolean;
   documentUrls: DocumentUrls;
 
   // ── Contract ──
   contractInfo: ContractInfo | null;
   contractHtml: string | null;
   pdfUrl: string | null;
+  contractReady: boolean;
 
   // ── UI ──
   showCelebration: boolean;
 
   // ── Intención de la solicitud (para mostrar durante polling) ──
   applicationIntention: ApplicationIntention | null;
-  contractLoading: boolean;
 
   // ── Polling ──
   isPolling: boolean;
@@ -97,17 +97,17 @@ type SolicitudStore = SolicitudState & SolicitudActions;
 const INITIAL_STATE: SolicitudState = {
   applicationId: null,
   application: null,
-  applicationLoading: false,
+  applicationReady: false,
   applicationNotFound: false,
   fullDetail: null,
-  fullDetailLoading: false,
+  fullDetailReady: false,
   documents: null,
-  documentsLoading: false,
+  documentsReady: false,
   documentUrls: { dniFront: null, dniBack: null, selfie: null },
   contractInfo: null,
   contractHtml: null,
   pdfUrl: null,
-  contractLoading: false,
+  contractReady: false,
   showCelebration: false,
   applicationIntention: null,
   isPolling: false,
@@ -148,23 +148,21 @@ export const useSolicitudStore = create<SolicitudStore>()(
     // ── Fetch Application ──
 
     fetchApplication: async () => {
-      const { application, applicationId, applicationLoading } = get();
+      const { application, applicationId, applicationReady } = get();
       if (application) return application;
-      if (!applicationId || applicationLoading) return null;
-
-      set({ applicationLoading: true });
+      if (!applicationId || applicationReady) return null;
 
       try {
         const app = await getApplicationDetailAction(applicationId);
         if (!app) {
-          set({ applicationLoading: false, applicationNotFound: true });
+          set({ applicationReady: true, applicationNotFound: true });
           return null;
         }
-        set({ application: app, applicationLoading: false });
+        set({ application: app, applicationReady: true });
         return app;
       } catch (err) {
         console.error('[SolicitudStore] Error fetching application:', err);
-        set({ applicationLoading: false });
+        set({ applicationReady: true });
         return null;
       }
     },
@@ -172,32 +170,28 @@ export const useSolicitudStore = create<SolicitudStore>()(
     // ── Fetch Full Detail ──
 
     fetchFullDetail: async () => {
-      const { fullDetail, applicationId, fullDetailLoading } = get();
-      if (fullDetail || !applicationId || fullDetailLoading) return;
-
-      set({ fullDetailLoading: true });
+      const { fullDetail, applicationId, fullDetailReady } = get();
+      if (fullDetail || !applicationId || fullDetailReady) return;
 
       try {
         const detail = await getApplicationFullDetailAction(applicationId);
-        set({ fullDetail: detail, fullDetailLoading: false });
+        set({ fullDetail: detail, fullDetailReady: true });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching full detail:', err);
-        set({ fullDetailLoading: false });
+        set({ fullDetailReady: true });
       }
     },
 
     // ── Fetch Documents ──
 
     fetchDocuments: async () => {
-      const { documents, applicationId, documentsLoading } = get();
-      if (documents || !applicationId || documentsLoading) return;
-
-      set({ documentsLoading: true });
+      const { documents, applicationId, documentsReady } = get();
+      if (documents || !applicationId || documentsReady) return;
 
       try {
         const docs = await listDocumentsAction(applicationId);
         if (!docs) {
-          set({ documents: null, documentsLoading: false });
+          set({ documents: null, documentsReady: true });
           return;
         }
 
@@ -214,25 +208,25 @@ export const useSolicitudStore = create<SolicitudStore>()(
           selfieDoc ? getDocumentUrlAction(applicationId, 'SELFIE') : null,
         ]);
 
-        set({ documentUrls: { dniFront, dniBack, selfie }, documentsLoading: false });
+        set({ documentUrls: { dniFront, dniBack, selfie }, documentsReady: true });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching documents:', err);
-        set({ documentsLoading: false });
+        set({ documentsReady: true });
       }
     },
 
     // ── Fetch Contract ──
 
     fetchContract: async () => {
-      const { contractInfo, applicationId, contractLoading } = get();
-      if (contractInfo || !applicationId || contractLoading) return;
+      const { contractInfo, applicationId, contractReady } = get();
+      if (contractInfo || !applicationId || contractReady) return;
 
-      set({ contractLoading: true });
+      set({  });
 
       try {
         const info = await getContractInfoAction(applicationId);
         if (!info) {
-          set({ contractLoading: false });
+          set({ contractReady: true });
           return;
         }
 
@@ -243,10 +237,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
           info.status === 'SIGNED' ? getContractPdfUrlAction(info.contractId) : null,
         ]);
 
-        set({ contractHtml: html, pdfUrl: pdf, contractLoading: false });
+        set({ contractHtml: html, pdfUrl: pdf, contractReady: true });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching contract:', err);
-        set({ contractLoading: false });
+        set({ contractReady: true });
       }
     },
 
@@ -256,7 +250,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
-      set({ documentsLoading: true });
+      set({ documentsReady: false });
 
       try {
         const docs = await listDocumentsAction(applicationId);
@@ -276,7 +270,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
           set({ documentUrls: { dniFront, dniBack, selfie } });
         }
       } finally {
-        set({ documentsLoading: false });
+        set({ documentsReady: true });
       }
     },
 
@@ -284,7 +278,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
-      set({ contractLoading: true });
+      set({  });
 
       try {
         const info = await getContractInfoAction(applicationId);
@@ -297,7 +291,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
           set({ contractHtml: html, pdfUrl: pdf });
         }
       } finally {
-        set({ contractLoading: false });
+        set({ contractReady: true });
       }
     },
 
@@ -360,8 +354,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
             const [detailRes, docsRes, contractRes] = await Promise.all([detail, docs, contract]);
 
-            set({ fullDetail: detailRes, fullDetailLoading: false });
-            set({ documents: docsRes, documentsLoading: false });
+            set({ fullDetail: detailRes, fullDetailReady: true });
+            set({ documents: docsRes, documentsReady: true });
 
             if (docsRes) {
               const frontDoc = docsRes.documents.find(d => d.type === 'DNI_FRONT' && d.status === 'UPLOADED');
@@ -382,7 +376,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
                 getContractHtmlAction(contractRes.contractId),
                 contractRes.status === 'SIGNED' ? getContractPdfUrlAction(contractRes.contractId) : null,
               ]);
-              set({ contractHtml: html, pdfUrl: pdf, contractLoading: false });
+              set({ contractHtml: html, pdfUrl: pdf, contractReady: true });
             }
           }
         } catch (err) {

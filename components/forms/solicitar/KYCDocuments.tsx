@@ -34,14 +34,16 @@ interface FunnelKYCDocumentsProps {
   initialFrontUrl?: string | null;
   /** URL de preview del DNI reverso ya subido */
   initialBackUrl?: string | null;
+  /** Si los datos aún están cargando del store */
+  loading?: boolean;
 }
 
-export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBackUrl }: FunnelKYCDocumentsProps) {
+export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBackUrl, loading: externalLoading }: FunnelKYCDocumentsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
   const currentStep = getCurrentStep(pathname);
-  const { setDocumentUrl, refreshDocuments } = useSolicitudStore();
+  const { setDocumentUrl } = useSolicitudStore();
 
   // Detectar si estamos en el flujo de solicitudes
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
@@ -146,7 +148,6 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
           setBackUploaded(true);
           setDocumentUrl('dniBack', backPreview);
         }
-        refreshDocuments();
       } else {
         setError(result.error || 'Error al subir la imagen. Por favor, intenta nuevamente.');
       }
@@ -188,7 +189,6 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
       setBackUploaded(false);
       setDocumentUrl('dniBack', null);
     }
-    refreshDocuments();
     setError('');
     setDeleting(null);
   };
@@ -316,7 +316,11 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
               />
 
               <div className="md:col-span-2 space-y-6">
-                {!frontPreview && (
+                {externalLoading && !frontPreview ? (
+                  <div className="h-48 rounded-lg bg-neutral-100 animate-pulse flex items-center justify-center">
+                    <p className="text-xs text-neutral-400">Obteniendo datos...</p>
+                  </div>
+                ) : !frontPreview && (
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       type="button"
@@ -426,7 +430,11 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
               />
 
               <div className="md:col-span-2 space-y-6">
-                {!backPreview && (
+                {externalLoading && !backPreview ? (
+                  <div className="h-48 rounded-lg bg-neutral-100 animate-pulse flex items-center justify-center">
+                    <p className="text-xs text-neutral-400">Obteniendo datos...</p>
+                  </div>
+                ) : !backPreview && (
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       type="button"

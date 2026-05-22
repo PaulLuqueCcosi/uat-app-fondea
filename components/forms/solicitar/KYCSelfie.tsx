@@ -148,14 +148,16 @@ interface FunnelKYCSelfieProps {
   applicationId?: string;
   /** URL de preview de la selfie ya subida */
   initialSelfieUrl?: string | null;
+  /** Si los datos aún están cargando del store */
+  loading?: boolean;
 }
 
-export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSelfieProps) {
+export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: externalLoading }: FunnelKYCSelfieProps) {
   const router    = useRouter();
   const pathname  = usePathname();
   const params    = useParams();
   const currentStep = getCurrentStep(pathname);
-  const { setDocumentUrl, refreshDocuments } = useSolicitudStore();
+  const { setDocumentUrl } = useSolicitudStore();
 
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
@@ -274,7 +276,6 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
       if (result.success) {
         setVerified(true);
         setDocumentUrl('selfie', selfiePreview);
-        refreshDocuments();
         setTimeout(() => {
           if (isInSolicitudFlow && solicitudId) {
             router.push(`/solicitudes/${solicitudId}/contrato`);
@@ -314,7 +315,6 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
     setUploadScore(null);
     setError('');
     setDocumentUrl('selfie', null);
-    refreshDocuments();
     setDeleting(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -385,6 +385,12 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
               <SectionHeader title="Tu selfie" description="Foto de tu rostro" />
 
               <div className="md:col-span-2 space-y-6">
+                {externalLoading && !selfiePreview ? (
+                  <div className="h-48 rounded-lg bg-neutral-100 animate-pulse flex items-center justify-center">
+                    <p className="text-xs text-neutral-400">Obteniendo datos...</p>
+                  </div>
+                ) : (
+                <>
                 {/* Botones de acción — siempre visibles */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
@@ -547,6 +553,8 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
                       </div>
                     )}
                   </div>
+                )}
+                </>
                 )}
               </div>
             </div>
