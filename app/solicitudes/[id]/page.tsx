@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 import { SolicitudResumenView } from '@/components/solicitudes/SolicitudResumenView';
 import { ApprovedCelebration } from '@/components/solicitudes/ApprovedCelebration';
@@ -8,7 +9,9 @@ import { Loader2, Clock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 export default function SolicitudPage() {
+  const router = useRouter();
   const application = useSolicitudStore(s => s.application);
+  const applicationNotFound = useSolicitudStore(s => s.applicationNotFound);
   const fullDetail = useSolicitudStore(s => s.fullDetail);
   const documents = useSolicitudStore(s => s.documents);
   const isPolling = useSolicitudStore(s => s.isPolling);
@@ -30,6 +33,13 @@ export default function SolicitudPage() {
       startPolling();
     }
   }, [application, startPolling]);
+
+  // Redirigir si la solicitud no existe
+  useEffect(() => {
+    if (applicationNotFound) {
+      router.replace('/dashboard');
+    }
+  }, [applicationNotFound, router]);
 
   // Celebración
   if (showCelebration) {

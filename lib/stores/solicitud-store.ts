@@ -35,6 +35,7 @@ interface SolicitudState {
   // ── Application ──
   application: ApplicationRecord | null;
   applicationLoading: boolean;
+  applicationNotFound: boolean;
 
   // ── Full Detail ──
   fullDetail: ApplicationFullDetail | null;
@@ -97,6 +98,7 @@ const INITIAL_STATE: SolicitudState = {
   applicationId: null,
   application: null,
   applicationLoading: false,
+  applicationNotFound: false,
   fullDetail: null,
   fullDetailLoading: false,
   documents: null,
@@ -154,6 +156,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       try {
         const app = await getApplicationDetailAction(applicationId);
+        if (!app) {
+          set({ applicationLoading: false, applicationNotFound: true });
+          return null;
+        }
         set({ application: app, applicationLoading: false });
         return app;
       } catch (err) {
