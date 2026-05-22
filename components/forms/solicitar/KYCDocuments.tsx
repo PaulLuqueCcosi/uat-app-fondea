@@ -1,17 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2, RefreshCw, Loader2 } from 'lucide-react';
-import { uploadDocumentAction, deleteDocumentAction, listDocumentsAction } from '@/app/actions/document.actions';
+import { uploadDocumentAction, deleteDocumentAction } from '@/app/actions/document.actions';
 import type { DocumentType } from '@/app/actions/document.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
 import { getCurrentStep } from '@/lib/funnel-steps';
-import { useSolicitudData } from '@/components/solicitudes/SolicitudContext';
+import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 
 interface SectionHeaderProps {
   title: string;
@@ -41,7 +41,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
   const pathname = usePathname();
   const params = useParams();
   const currentStep = getCurrentStep(pathname);
-  const { setDocuments, setDocumentUrl } = useSolicitudData();
+  const { setDocumentUrl, refreshDocuments } = useSolicitudStore();
 
   // Detectar si estamos en el flujo de solicitudes
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
@@ -58,6 +58,21 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
   const [backPreview, setBackPreview] = useState<string>(initialBackUrl ?? '');
   const [frontUploaded, setFrontUploaded] = useState(!!initialFrontUrl);
   const [backUploaded, setBackUploaded] = useState(!!initialBackUrl);
+
+  // Sincronizar cuando las props cambian (datos llegan del store)
+  useEffect(() => {
+    if (initialFrontUrl && !frontPreview) {
+      setFrontPreview(initialFrontUrl);
+      setFrontUploaded(true);
+    }
+  }, [initialFrontUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (initialBackUrl && !backPreview) {
+      setBackPreview(initialBackUrl);
+      setBackUploaded(true);
+    }
+  }, [initialBackUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Estado para el modal
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
@@ -131,8 +146,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
           setBackUploaded(true);
           setDocumentUrl('dniBack', backPreview);
         }
-        // Refrescar lista de documentos en el contexto
-        listDocumentsAction(solicitudId).then(setDocuments);
+        refreshDocuments();
       } else {
         setError(result.error || 'Error al subir la imagen. Por favor, intenta nuevamente.');
       }
@@ -174,8 +188,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
       setBackUploaded(false);
       setDocumentUrl('dniBack', null);
     }
-    // Refrescar lista de documentos en el contexto
-    if (solicitudId) listDocumentsAction(solicitudId).then(setDocuments);
+    refreshDocuments();
     setError('');
     setDeleting(null);
   };

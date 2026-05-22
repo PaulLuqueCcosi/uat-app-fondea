@@ -1,71 +1,57 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 import { FunnelKYCSelfie } from '@/components/forms/solicitar/KYCSelfie';
-import { listDocumentsAction, getDocumentUrlAction } from '@/app/actions/document.actions';
-import { useSolicitudData } from '@/components/solicitudes/SolicitudContext';
+
+const ALLOWED_STATUSES = ['PRE_APPROVED', 'PENDING_DOCUMENTS', 'PENDING_SIGNATURE', 'APPROVED'];
 
 export default function KYCSelfiePage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
-  const { documents, documentUrls, setDocuments, setDocumentUrl } = useSolicitudData();
+  const documentUrls = useSolicitudStore(s => s.documentUrls);
+  const documents = useSolicitudStore(s => s.documents);
+  const application = useSolicitudStore(s => s.application);
+  const fetchDocuments = useSolicitudStore(s => s.fetchDocuments);
 
-  const [selfieUrl, setSelfieUrl] = useState<string | null>(documentUrls.selfie);
-  const [loading, setLoading] = useState(!documents);
+  useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
 
+  // Redirigir si el status no permite acceder a esta página
   useEffect(() => {
-    // Si ya tenemos los datos en el contexto, usarlos
-    if (documents) {
-      // Aún así verificar si necesitamos la URL de selfie
-      if (!selfieUrl) {
-        const selfieDoc = documents.documents.find(d => d.type === 'SELFIE' && d.status === 'UPLOADED');
-        if (selfieDoc) {
-          getDocumentUrlAction(id, 'SELFIE').then((url) => {
-            setSelfieUrl(url);
-            setDocumentUrl('selfie', url);
-          });
-        }
-      }
-      setLoading(false);
-      return;
+    if (application && !ALLOWED_STATUSES.includes(application.status)) {
+      router.replace(`/solicitudes/${id}`);
     }
+  }, [application, id, router]);
 
-    // Si no, cargar y guardar en contexto
-    async function load() {
-      const docList = await listDocumentsAction(id);
-      setDocuments(docList);
-
-      if (docList) {
-        const selfieDoc = docList.documents.find(d => d.type === 'SELFIE' && d.status === 'UPLOADED');
-        if (selfieDoc) {
-          const url = await getDocumentUrlAction(id, 'SELFIE');
-          setSelfieUrl(url);
-          setDocumentUrl('selfie', url);
-        }
-      }
-      setLoading(false);
-    }
-
-    load();
-  }, [id, documents, selfieUrl, setDocuments, setDocumentUrl]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (!documents) return <SelfieSkeleton />;
 
   return (
     <div className="py-4">
       <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
         <FunnelKYCSelfie
           applicationId={id}
-          initialSelfieUrl={selfieUrl}
+          initialSelfieUrl={documentUrls.selfie}
         />
+      </div>
+    </div>
+  );
+}
+
+function SelfieSkeleton() {
+  return (
+    <div className="py-4">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 space-y-6 animate-pulse">
+        <div className="space-y-2">
+          <div className="h-7 bg-neutral-100 rounded w-1/4" />
+          <div className="h-4 bg-neutral-50 rounded w-1/2" />
+        </div>
+        <div className="rounded-xl border border-neutral-100 p-6 space-y-4">
+          <div className="h-5 bg-neutral-100 rounded w-1/3" />
+          <div className="h-64 bg-neutral-50 rounded-lg" />
+          <div className="h-10 bg-neutral-100 rounded" />
+        </div>
       </div>
     </div>
   );

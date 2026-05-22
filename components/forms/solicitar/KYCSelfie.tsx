@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,11 +14,11 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
-import { uploadDocumentAction, deleteDocumentAction, listDocumentsAction } from '@/app/actions/document.actions';
+import { uploadDocumentAction, deleteDocumentAction } from '@/app/actions/document.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
-import { useSolicitudData } from '@/components/solicitudes/SolicitudContext';
+import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 import { getCurrentStep } from '@/lib/funnel-steps';
 
 // ── Tipos MediaPipe ───────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
   const pathname  = usePathname();
   const params    = useParams();
   const currentStep = getCurrentStep(pathname);
-  const { setDocuments, setDocumentUrl } = useSolicitudData();
+  const { setDocumentUrl, refreshDocuments } = useSolicitudStore();
 
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
@@ -174,6 +174,15 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
   const [analyzing,    setAnalyzing]    = useState(false);
   const [uploadStatus, setUploadStatus] = useState<FaceStatus | null>(initialSelfieUrl ? 'green' : null);
   const [uploadScore,  setUploadScore]  = useState<number | null>(null);
+
+  // Sincronizar cuando la prop cambia (datos llegan del store)
+  useEffect(() => {
+    if (initialSelfieUrl && !selfiePreview) {
+      setSelfiePreview(initialSelfieUrl);
+      setVerified(true);
+      setUploadStatus('green');
+    }
+  }, [initialSelfieUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Modal
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
@@ -265,8 +274,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
       if (result.success) {
         setVerified(true);
         setDocumentUrl('selfie', selfiePreview);
-        // Refrescar lista de documentos en el contexto
-        listDocumentsAction(solicitudId).then(setDocuments);
+        refreshDocuments();
         setTimeout(() => {
           if (isInSolicitudFlow && solicitudId) {
             router.push(`/solicitudes/${solicitudId}/contrato`);
@@ -306,8 +314,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl }: FunnelKYCSe
     setUploadScore(null);
     setError('');
     setDocumentUrl('selfie', null);
-    // Refrescar lista de documentos en el contexto
-    if (solicitudId) listDocumentsAction(solicitudId).then(setDocuments);
+    refreshDocuments();
     setDeleting(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };

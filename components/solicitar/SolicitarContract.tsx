@@ -14,7 +14,7 @@ import {
   getContractPdfUrlAction,
   type ContractInfo,
 } from '@/app/actions/contract.actions';
-import { useSolicitudData } from '@/components/solicitudes/SolicitudContext';
+import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 
 interface FunnelContractProps {
   applicationId?: string;
@@ -90,24 +90,23 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
   const router = useRouter();
   const pathname = usePathname();
   const {
-    contractInfo: cachedContractInfo,
-    contractHtml: cachedContractHtml,
-    pdfUrl: cachedPdfUrl,
-    setContractInfo: setCtxContractInfo,
-    setContractHtml: setCtxContractHtml,
-    setPdfUrl: setCtxPdfUrl,
-  } = useSolicitudData();
+    contractInfo: ctxContractInfo,
+    contractHtml: ctxContractHtml,
+    pdfUrl: ctxPdfUrl,
+    contractLoading,
+    refreshContract,
+  } = useSolicitudStore();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [fullName, setFullName] = useState('');
 
-  // Estado del contrato — inicializar desde contexto si hay cache
-  const [contractInfo, setContractInfo] = useState<ContractInfo | null>(cachedContractInfo);
-  const [contractHtml, setContractHtml] = useState<string | null>(cachedContractHtml);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(cachedPdfUrl);
-  const [loadingContract, setLoadingContract] = useState(!cachedContractInfo);
+  // Estado del contrato — desde contexto si disponible
+  const [contractInfo, setContractInfo] = useState<ContractInfo | null>(ctxContractInfo);
+  const [contractHtml, setContractHtml] = useState<string | null>(ctxContractHtml);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(ctxPdfUrl);
+  const [loadingContract, setLoadingContract] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
 
@@ -117,29 +116,30 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
   const isSigned = contractInfo?.status === 'SIGNED';
   const isExpired = contractInfo?.status === 'EXPIRED';
 
-  // 1. Cargar info del contrato (solo si no hay cache)
+  // Sincronizar con contexto cuando los datos llegan
   useEffect(() => {
-    if (!solicitudId || cachedContractInfo) return;
+    if (ctxContractInfo) setContractInfo(ctxContractInfo);
+    if (ctxContractHtml) setContractHtml(ctxContractHtml);
+    if (ctxPdfUrl) setPdfUrl(ctxPdfUrl);
+  }, [ctxContractInfo, ctxContractHtml, ctxPdfUrl]);
+
+  // Cargar solo si estamos fuera del flujo de solicitudes (sin provider)
+  useEffect(() => {
+    if (isInSolicitudFlow || !solicitudId) return;
 
     async function loadContract() {
       setLoadingContract(true);
       try {
         const info = await getContractInfoAction(solicitudId!);
-        if (!info) {
-          setLoadingContract(false);
-          return;
-        }
+        if (!info) { setLoadingContract(false); return; }
         setContractInfo(info);
-        setCtxContractInfo(info);
 
         const html = await getContractHtmlAction(info.contractId);
         setContractHtml(html);
-        setCtxContractHtml(html);
 
         if (info.status === 'SIGNED') {
           const url = await getContractPdfUrlAction(info.contractId);
           setPdfUrl(url);
-          setCtxPdfUrl(url);
         }
       } catch (err) {
         console.error('Error cargando contrato:', err);
@@ -149,7 +149,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     }
 
     loadContract();
-  }, [solicitudId, cachedContractInfo, setCtxContractInfo, setCtxContractHtml, setCtxPdfUrl]);
+  }, [solicitudId, isInSolicitudFlow]);
 
   const handleDownloadPdf = async () => {
     if (!contractInfo) return;
@@ -217,22 +217,12 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     }
   };
 
-  // ── Loading state ─────────────────────────────────────────────────────────
+  // ── Loading state — ya no bloquea toda la página ──
+  // El skeleton se muestra inline en el área del contrato
 
-  if (loadingContract) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Cargando contrato...</p>
-        </div>
-      </div>
-    );
-  }
+  // ── No contract found (y no está cargando) ────────────────────────────────
 
-  // ── No contract found ─────────────────────────────────────────────────────
-
-  if (!contractInfo) {
+  if (!contractInfo && !contractLoading && !loadingContract) {
     return (
       <div className="max-w-4xl mx-auto">
         <Card className="p-8">
@@ -335,9 +325,19 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
               {contractHtml ? (
                 <ContractViewer html={contractHtml} />
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No se pudo cargar el contenido del contrato.</p>
+                <div className="p-6 space-y-4 animate-pulse">
+                  <div className="h-6 bg-neutral-100 rounded w-2/3 mx-auto" />
+                  <div className="h-px bg-neutral-100 w-full" />
+                  <div className="space-y-2">
+                    <div className="h-4 bg-neutral-50 rounded w-full" />
+                    <div className="h-4 bg-neutral-50 rounded w-5/6" />
+                    <div className="h-4 bg-neutral-50 rounded w-4/6" />
+                  </div>
+                  <div className="h-5 bg-neutral-100 rounded w-1/2 mt-6" />
+                  <div className="space-y-2">
+                    <div className="h-4 bg-neutral-50 rounded w-full" />
+                    <div className="h-4 bg-neutral-50 rounded w-3/4" />
+                  </div>
                 </div>
               )}
             </div>
@@ -405,6 +405,28 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
           <div className="rounded-lg border border-border overflow-hidden bg-white">
             {contractHtml ? (
               <ContractViewer html={contractHtml} />
+            ) : (loadingContract || contractLoading) ? (
+              <div className="p-6 space-y-4 animate-pulse">
+                <div className="h-6 bg-neutral-100 rounded w-2/3 mx-auto" />
+                <div className="h-px bg-neutral-100 w-full" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-neutral-50 rounded w-full" />
+                  <div className="h-4 bg-neutral-50 rounded w-5/6" />
+                  <div className="h-4 bg-neutral-50 rounded w-4/6" />
+                </div>
+                <div className="h-5 bg-neutral-100 rounded w-1/2 mt-6" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-neutral-50 rounded w-full" />
+                  <div className="h-4 bg-neutral-50 rounded w-3/4" />
+                  <div className="h-4 bg-neutral-50 rounded w-5/6" />
+                  <div className="h-4 bg-neutral-50 rounded w-2/3" />
+                </div>
+                <div className="h-5 bg-neutral-100 rounded w-1/3 mt-6" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-neutral-50 rounded w-full" />
+                  <div className="h-4 bg-neutral-50 rounded w-4/5" />
+                </div>
+              </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
