@@ -8,7 +8,8 @@
 
 import type { IntencionConfig, IntencionStatus } from '@/lib/types';
 
-export function mapIntencionFromBackend(data: Record<string, unknown>): IntencionConfig {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapIntencionFromBackend(data: any): IntencionConfig {
   return {
     intencionId:           data.id as string,
     productId:             (data.productId ?? '') as string,

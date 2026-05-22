@@ -191,8 +191,6 @@ async function fetchCalculation(
 // ── createIntention (autenticado, via API routes del portal) ──────────────────
 
 async function createIntention(_data: IntentionRequest): Promise<IntentionResponse> {
-  // En el portal, createIntention se llama desde el wrapper que decide
-  // si crear o editar. Este método solo crea.
   const res = await fetch("/api/intenciones", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -204,7 +202,8 @@ async function createIntention(_data: IntentionRequest): Promise<IntentionRespon
   });
   if (!res.ok) throw new Error(`createIntention: ${res.status}`);
   const result = await res.json();
-  return { id: result.id };
+  // Retorna la respuesta completa del backend (el core solo usa .id)
+  return result;
 }
 
 // ── updateIntention (autenticado, via API routes del portal) ──────────────────
@@ -223,7 +222,8 @@ export async function updateIntention(
   if (res.status === 409) throw new Error("locked");
   if (!res.ok) throw new Error(`updateIntention: ${res.status}`);
   const result = await res.json();
-  return { id: result.id };
+  // Retorna la respuesta completa del backend (el core solo usa .id)
+  return result;
 }
 
 // ── Export del adapter ─────────────────────────────────────────────────────────

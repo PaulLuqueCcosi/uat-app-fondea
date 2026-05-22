@@ -17,6 +17,7 @@ import { LoanCalculatorProvider } from './core';
 import { LoanCalculator } from './ui';
 import { fondeaPortalApi, updateIntention } from './adapters/fondeaPortalApi';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
+import { mapIntencionFromBackend } from '@/lib/mappers/intencion.mapper';
 import type { LoanCalculatorApi, LoanCalculatorProps, IntentionRequest, IntentionResponse, LoanCalculatorTheme } from './core';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ export default function LoanCalculatorPortal({
   ...calcProps
 }: LoanCalculatorPortalProps) {
   const router = useRouter();
-  const refetchIntencion = useIntencionStore(s => s.refetch);
+  const setIntencion = useIntencionStore(s => s.setIntencion);
   const isEditing = !!initialValues?.intencionId;
 
   const portalApi: LoanCalculatorApi = useMemo(() => ({
@@ -79,9 +80,8 @@ export default function LoanCalculatorPortal({
         result = await fondeaPortalApi.createIntention(data);
       }
 
-      // Después del éxito, obtener la intención actualizada del backend
-      // (datos completos con toda la lógica del backend aplicada)
-      await refetchIntencion();
+      // Actualizar el store con la respuesta del backend (ya viene completa)
+      setIntencion(mapIntencionFromBackend(result));
 
       // Post-submit: cerrar panel o navegar
       if (onDone) {
@@ -93,7 +93,7 @@ export default function LoanCalculatorPortal({
       return result;
     },
     portalUrl: "__handled_internally__",
-  }), [isEditing, initialValues, refetchIntencion, onDone, router]);
+  }), [isEditing, initialValues, setIntencion, onDone, router]);
 
   return (
     <LoanCalculatorProvider api={portalApi} theme={DEFAULT_PORTAL_THEME}>
