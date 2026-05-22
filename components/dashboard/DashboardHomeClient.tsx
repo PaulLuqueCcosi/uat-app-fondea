@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CreditCard, Briefcase, DollarSign, Users, MapPin,
@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useIntencionStore } from '@/lib/stores/intencion-store';
 import type { ApplicationRecord, IntencionConfig } from '@/lib/types';
 
 interface ExpedienteSection {
@@ -81,9 +82,27 @@ interface DashboardHomeClientProps {
   activeIntencion: IntencionConfig | null;
 }
 
-export function DashboardHomeClient({ userName, applications, activeIntencion }: DashboardHomeClientProps) {
+export function DashboardHomeClient({ userName, applications, activeIntencion: initialIntencion }: DashboardHomeClientProps) {
   const router = useRouter();
   const [showDrawer, setShowDrawer] = useState(false);
+
+  // Usar el store — inicializar con la prop del server si el store aún no tiene datos
+  const storeIntencion = useIntencionStore(s => s.intencion);
+  const isReady = useIntencionStore(s => s.isReady);
+  const setIntencion = useIntencionStore(s => s.setIntencion);
+  const fetchIntencion = useIntencionStore(s => s.fetchIntencion);
+
+  // Si el server ya trajo datos y el store está vacío, inicializar el store
+  useEffect(() => {
+    if (!isReady && initialIntencion) {
+      setIntencion(initialIntencion);
+    } else if (!isReady) {
+      fetchIntencion();
+    }
+  }, [isReady, initialIntencion, setIntencion, fetchIntencion]);
+
+  // Usar el store como fuente de verdad (se actualiza cuando la calculadora crea/edita)
+  const activeIntencion = isReady ? storeIntencion : initialIntencion;
 
   const completedCount = expedienteSections.filter(s => s.status === 'completed').length;
 

@@ -18,7 +18,6 @@ import { LoanCalculator } from './ui';
 import { fondeaPortalApi, updateIntention } from './adapters/fondeaPortalApi';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
 import type { LoanCalculatorApi, LoanCalculatorProps, IntentionRequest, IntentionResponse, LoanCalculatorTheme } from './core';
-import type { IntencionConfig, IntencionStatus } from '@/lib/types/intencion';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -59,7 +58,7 @@ export default function LoanCalculatorPortal({
   ...calcProps
 }: LoanCalculatorPortalProps) {
   const router = useRouter();
-  const setIntencion = useIntencionStore(s => s.setIntencion);
+  const refetchIntencion = useIntencionStore(s => s.refetch);
   const isEditing = !!initialValues?.intencionId;
 
   const portalApi: LoanCalculatorApi = useMemo(() => ({
@@ -80,20 +79,9 @@ export default function LoanCalculatorPortal({
         result = await fondeaPortalApi.createIntention(data);
       }
 
-      // Actualizar el store directamente con los datos nuevos
-      const updatedConfig: IntencionConfig = {
-        intencionId: result.id,
-        productId: '',
-        amount: data.amount,
-        termDays: data.termDays,
-        installmentCount: data.installmentCount,
-        isFirstLoan: true,
-        status: 'ACTIVE' as IntencionStatus,
-        calculatorIntentionId: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setIntencion(updatedConfig);
+      // Después del éxito, obtener la intención actualizada del backend
+      // (datos completos con toda la lógica del backend aplicada)
+      await refetchIntencion();
 
       // Post-submit: cerrar panel o navegar
       if (onDone) {
@@ -105,7 +93,7 @@ export default function LoanCalculatorPortal({
       return result;
     },
     portalUrl: "__handled_internally__",
-  }), [isEditing, initialValues, setIntencion, onDone, router]);
+  }), [isEditing, initialValues, refetchIntencion, onDone, router]);
 
   return (
     <LoanCalculatorProvider api={portalApi} theme={DEFAULT_PORTAL_THEME}>

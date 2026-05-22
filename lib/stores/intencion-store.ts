@@ -22,7 +22,10 @@ interface IntencionStore {
   /** Carga la intención activa del server (solo la primera vez) */
   fetchIntencion: () => Promise<void>;
 
-  /** Actualiza en memoria (después de crear/editar con éxito en la calculadora) */
+  /** Fuerza recarga del server (después de crear/editar) */
+  refetch: () => Promise<void>;
+
+  /** Actualiza en memoria sin llamar al server */
   setIntencion: (data: IntencionConfig) => void;
 
   /** Limpia la intención (envío de solicitud, logout, cancelación) */
@@ -45,6 +48,18 @@ export const useIntencionStore = create<IntencionStore>()((set, get) => ({
     } catch (err) {
       console.error('[IntencionStore] Error fetching:', err);
       set({ isReady: true });
+    } finally {
+      _fetching = false;
+    }
+  },
+
+  refetch: async () => {
+    _fetching = true;
+    try {
+      const data = await getActiveIntencion();
+      set({ intencion: data, isReady: true });
+    } catch (err) {
+      console.error('[IntencionStore] Error refetching:', err);
     } finally {
       _fetching = false;
     }
