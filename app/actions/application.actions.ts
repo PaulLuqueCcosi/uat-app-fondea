@@ -402,3 +402,40 @@ export async function getApplicationDetailAction(applicationId: string): Promise
     return null;
   }
 }
+
+// ── GET: Intención asociada a una solicitud ───────────────────────────────────
+
+export interface ApplicationIntention {
+  amount: number;
+  termDays: number;
+  installmentCount: number;
+}
+
+/**
+ * Obtiene la intención asociada a una solicitud.
+ * GET /api/v1/applications/{id}/intention
+ *
+ * Útil para mostrar datos del préstamo durante el polling (antes de tener fullDetail).
+ */
+export async function getApplicationIntentionAction(
+  applicationId: string,
+): Promise<ApplicationIntention | null> {
+  await requireValidSession();
+
+  try {
+    const res = await backendFetch(`/api/v1/applications/${applicationId}/intention`);
+
+    if (res.status === 404) return null;
+    if (!isSuccess(res.status)) return null;
+
+    const data = await res.json();
+    return {
+      amount: data.amount,
+      termDays: data.termDays,
+      installmentCount: data.installmentCount,
+    };
+  } catch (error) {
+    console.error('[APPLICATION] Error al obtener intención de la solicitud:', error);
+    return null;
+  }
+}

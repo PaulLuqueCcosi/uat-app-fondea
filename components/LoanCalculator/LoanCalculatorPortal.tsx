@@ -80,15 +80,16 @@ export default function LoanCalculatorPortal({
         result = await fondeaPortalApi.createIntention(data);
       }
 
-      // Actualizar el store con la respuesta del backend (ya viene completa)
-      setIntencion(mapIntencionFromBackend(result));
-
-      // Post-submit: cerrar panel o navegar
-      if (onDone) {
-        onDone();
-      } else {
-        router.push('/solicitar/start');
-      }
+      // Actualizar store y cerrar panel en el siguiente tick
+      // (evita conflicto de React DOM reconciliation durante el commit)
+      setTimeout(() => {
+        setIntencion(mapIntencionFromBackend(result));
+        if (onDone) {
+          onDone();
+        } else {
+          router.push('/solicitar/start');
+        }
+      }, 0);
 
       return result;
     },

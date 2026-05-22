@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
-import type { ApplicationFullDetail } from '@/app/actions/application.actions';
+import type { ApplicationFullDetail, ApplicationIntention } from '@/app/actions/application.actions';
 import type { DocumentListResult } from '@/app/actions/document.actions';
 import type { ContractInfo } from '@/app/actions/contract.actions';
 import {
   getApplicationDetailAction,
   getApplicationFullDetailAction,
   getApplicationStatusAction,
+  getApplicationIntentionAction,
 } from '@/app/actions/application.actions';
 import {
   listDocumentsAction,
@@ -48,6 +49,12 @@ interface SolicitudState {
   contractInfo: ContractInfo | null;
   contractHtml: string | null;
   pdfUrl: string | null;
+
+  // ── UI ──
+  showCelebration: boolean;
+
+  // ── Intención de la solicitud (para mostrar durante polling) ──
+  applicationIntention: ApplicationIntention | null;
   contractLoading: boolean;
 
   // ── Polling ──
@@ -60,6 +67,9 @@ interface SolicitudActions {
   // ── Inicializar con un applicationId ──
   init: (applicationId: string) => void;
   reset: () => void;
+
+  // ── UI ──
+  dismissCelebration: () => void;
 
   // ── Fetch bajo demanda (no recarga si ya tiene datos) ──
   fetchApplication: () => Promise<ApplicationRecord | null>;
@@ -96,6 +106,8 @@ const INITIAL_STATE: SolicitudState = {
   contractHtml: null,
   pdfUrl: null,
   contractLoading: false,
+  showCelebration: false,
+  applicationIntention: null,
   isPolling: false,
   _pollingInterval: null,
   _pollingAttempts: 0,
@@ -125,6 +137,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
     reset: () => {
       get().stopPolling();
       set(INITIAL_STATE);
+    },
+
+    dismissCelebration: () => {
+      set({ showCelebration: false });
     },
 
     // ── Fetch Application ──
@@ -293,6 +309,15 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ isPolling: true, _pollingAttempts: 0 });
 
+      // Cargar la intención de la solicitud para mostrar en el sidebar durante polling
+      getApplicationIntentionAction(applicationId)
+        .then((intention) => {
+          if (intention) {
+            set({ applicationIntention: intention });
+          }
+        })
+        .catch(() => {});
+
       const poll = async () => {
         const { applicationId: appId, _pollingAttempts } = get();
         if (!appId) return;
@@ -311,6 +336,12 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
           if (status !== 'SUBMITTED' && status !== 'PROCESSING') {
             get().stopPolling();
+
+            // Celebración si fue pre-aprobada
+            if (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS') {
+              set({ showCelebration: true });
+              setTimeout(() => set({ showCelebration: false }), 2500);
+            }
 
             // Cargar todos los datos ahora que hay resultado
             const app = await getApplicationDetailAction(appId);

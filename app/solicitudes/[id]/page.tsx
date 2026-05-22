@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 import { SolicitudResumenView } from '@/components/solicitudes/SolicitudResumenView';
+import { ApprovedCelebration } from '@/components/solicitudes/ApprovedCelebration';
 import { Loader2, Clock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
@@ -11,20 +12,29 @@ export default function SolicitudPage() {
   const fullDetail = useSolicitudStore(s => s.fullDetail);
   const documents = useSolicitudStore(s => s.documents);
   const isPolling = useSolicitudStore(s => s.isPolling);
+  const showCelebration = useSolicitudStore(s => s.showCelebration);
   const fetchApplication = useSolicitudStore(s => s.fetchApplication);
   const fetchFullDetail = useSolicitudStore(s => s.fetchFullDetail);
   const fetchDocuments = useSolicitudStore(s => s.fetchDocuments);
   const startPolling = useSolicitudStore(s => s.startPolling);
 
   useEffect(() => {
-    fetchApplication().then((app) => {
-      if (app && (app.status === 'SUBMITTED' || app.status === 'PROCESSING')) {
-        startPolling();
-      }
-    });
+    fetchApplication();
     fetchFullDetail();
     fetchDocuments();
-  }, [fetchApplication, fetchFullDetail, fetchDocuments, startPolling]);
+  }, [fetchApplication, fetchFullDetail, fetchDocuments]);
+
+  // Iniciar polling cuando la application llega con status de evaluación
+  useEffect(() => {
+    if (application && (application.status === 'SUBMITTED' || application.status === 'PROCESSING')) {
+      startPolling();
+    }
+  }, [application, startPolling]);
+
+  // Celebración
+  if (showCelebration) {
+    return <ApprovedCelebration />;
+  }
 
   // Skeleton
   if (!application) {

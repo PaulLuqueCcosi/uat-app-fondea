@@ -12,13 +12,14 @@ import { Calendar, CreditCard } from 'lucide-react';
 export function SolicitudesSidebar() {
   const pathname = usePathname();
 
-  // Selectores granulares — solo re-renderiza cuando SU dato cambia
+  // Selectores granulares
   const applicationId = useSolicitudStore(s => s.applicationId);
   const application = useSolicitudStore(s => s.application);
   const fullDetail = useSolicitudStore(s => s.fullDetail);
   const documents = useSolicitudStore(s => s.documents);
   const contractInfo = useSolicitudStore(s => s.contractInfo);
   const isPolling = useSolicitudStore(s => s.isPolling);
+  const applicationIntention = useSolicitudStore(s => s.applicationIntention);
   const fetchApplication = useSolicitudStore(s => s.fetchApplication);
   const fetchFullDetail = useSolicitudStore(s => s.fetchFullDetail);
   const fetchDocuments = useSolicitudStore(s => s.fetchDocuments);
@@ -69,7 +70,7 @@ export function SolicitudesSidebar() {
       <div className="p-6">
 
         {/* ── Card del préstamo — siempre visible ── */}
-        {!fullDetail ? <LoanCardSkeleton /> : (
+        {fullDetail ? (
           <Card className="mb-6 overflow-hidden border-0 shadow-lg py-0">
             <div className="bg-linear-to-br from-primary-500 to-primary-700 p-5 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-8 translate-x-8" />
@@ -108,6 +109,47 @@ export function SolicitudesSidebar() {
               </div>
             </CardContent>
           </Card>
+        ) : applicationIntention ? (
+          <Card className="mb-6 overflow-hidden border-0 shadow-lg py-0">
+            <div className="bg-linear-to-br from-primary-500 to-primary-700 p-5 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-8 translate-x-8" />
+              <div className="relative flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] font-medium text-white/70 uppercase tracking-wider mb-1">Tu Solicitud</p>
+                  <p className="text-3xl font-bold text-white tracking-tight">{formatCurrency(applicationIntention.amount)}</p>
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
+                  <Lock className="w-4 h-4 text-white/80" />
+                </div>
+              </div>
+            </div>
+            <CardContent className="p-0">
+              <div className="divide-y divide-neutral-100">
+                <div className="flex items-center gap-3 px-5 py-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center shrink-0">
+                    <CreditCard className="w-4 h-4 text-primary-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-neutral-500 font-medium uppercase tracking-wide">Cuotas</p>
+                    <p className="text-sm font-semibold text-neutral-800 mt-0.5">
+                      {applicationIntention.installmentCount} {applicationIntention.installmentCount === 1 ? 'cuota' : 'cuotas'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 px-5 py-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center shrink-0">
+                    <Calendar className="w-4 h-4 text-primary-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-neutral-500 font-medium uppercase tracking-wide">Plazo</p>
+                    <p className="text-sm font-semibold text-neutral-800 mt-0.5">{applicationIntention.termDays} días</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <LoanCardSkeleton />
         )}
 
         {/* ── Pasos — solo si el status lo permite ── */}
