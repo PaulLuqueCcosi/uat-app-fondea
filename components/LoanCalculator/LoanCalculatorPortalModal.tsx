@@ -2,14 +2,11 @@
 
 /**
  * Modal (Sheet/Drawer) que muestra la calculadora del portal.
- *
- * Se usa desde el sidebar y el banner del funnel para editar la intención
- * sin salir de la página actual. Después de guardar, cierra el modal
- * y llama a onSuccess() para que el sidebar refresque los datos.
+ * Después de guardar, la calculadora actualiza el store directamente.
+ * Este modal solo maneja abrir/cerrar.
  */
 
 import { useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Sheet,
   SheetContent,
@@ -21,29 +18,19 @@ import LoanCalculatorPortal from './LoanCalculatorPortal';
 import type { PortalInitialValues } from './LoanCalculatorPortal';
 
 interface LoanCalculatorPortalModalProps {
-  /** Controla si el modal está abierto */
   open: boolean;
-  /** Callback para cerrar el modal */
   onOpenChange: (open: boolean) => void;
-  /** Datos de la intención activa para pre-llenar la calculadora */
   initialValues?: PortalInitialValues;
-  /** Callback después de guardar exitosamente — para refrescar datos */
-  onSuccess?: () => void;
 }
 
 export function LoanCalculatorPortalModal({
   open,
   onOpenChange,
   initialValues,
-  onSuccess,
 }: LoanCalculatorPortalModalProps) {
-  const router = useRouter();
-
-  const handleSuccess = useCallback(() => {
+  const handleDone = useCallback(() => {
     onOpenChange(false);
-    onSuccess?.();
-    router.refresh();
-  }, [onOpenChange, onSuccess, router]);
+  }, [onOpenChange]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -66,7 +53,7 @@ export function LoanCalculatorPortalModal({
         <div className="px-5 py-4">
           <LoanCalculatorPortal
             initialValues={initialValues}
-            onSubmitSuccess={handleSuccess}
+            onDone={handleDone}
             detailMode="modal"
             dedicated
           />

@@ -1,25 +1,25 @@
 'use client';
 
+import { useEffect } from 'react';
 import { CreditCard, AlertTriangle, Pencil, Calendar, ChevronRight, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useIntencionConfig } from '@/hooks/useIntencionConfig';
+import { useIntencionStore } from '@/lib/stores/intencion-store';
 import { useSolicitarCalc } from './SolicitarCalcContext';
-import type { PortalInitialValues } from '@/components/LoanCalculator';
 import { cn } from '@/lib/utils';
 
 /**
  * Card del sidebar que muestra el resumen del préstamo activo del usuario.
- *
- * Responsabilidades:
- * - Obtener la intención activa del backend (una sola vez al montar)
- * - Mostrar monto, cuotas y plazo
- * - Abrir/cerrar el panel de edición (calculadora)
- * - Recibir la data actualizada del panel sin hacer refetch
  */
 export function FunnelLoanSummaryCard() {
-  const { config, loading, setConfig } = useIntencionConfig(false);
+  const config = useIntencionStore(s => s.intencion);
+  const isReady = useIntencionStore(s => s.isReady);
+  const fetchIntencion = useIntencionStore(s => s.fetchIntencion);
   const { isOpen, open, close } = useSolicitarCalc();
+
+  const loading = !isReady;
+
+  useEffect(() => { fetchIntencion(); }, [fetchIntencion]);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-PE', {
@@ -38,17 +38,11 @@ export function FunnelLoanSummaryCard() {
 
     if (!config) return;
 
-    const values: PortalInitialValues = {
+    open({
       intencionId: config.intencionId,
       amount: config.amount,
       termDays: config.termDays,
       installmentCount: config.installmentCount,
-    };
-
-    open(values, (updatedConfig) => {
-      if (updatedConfig) {
-        setConfig(updatedConfig);
-      }
     });
   };
 

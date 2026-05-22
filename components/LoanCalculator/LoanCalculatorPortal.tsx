@@ -4,13 +4,11 @@
  * Wrapper del LoanCalculator para el portal autenticado.
  *
  * Soporta dos modos:
- * - Crear: sin initialValues → llama a createIntencion y navega a /solicitar/start
- * - Editar: con initialValues → llama a updateIntencion y ejecuta onSubmitSuccess
+ * - Crear: sin initialValues → crea intención y navega a /solicitar/start
+ * - Editar: con initialValues → actualiza intención en el store
  *
- * A diferencia del LoanCalculatorWithProvider (landing), este:
- * - Usa las API routes autenticadas (/api/intenciones)
- * - Pre-llena la calculadora con los valores de la intención activa
- * - No redirige a una URL externa
+ * Después de un submit exitoso, actualiza el intencion-store directamente.
+ * No necesita callbacks — cualquier componente suscrito al store se actualiza.
  */
 
 import { useMemo } from 'react';
@@ -18,8 +16,9 @@ import { useRouter } from 'next/navigation';
 import { LoanCalculatorProvider } from './core';
 import { LoanCalculator } from './ui';
 import { fondeaPortalApi, updateIntention } from './adapters/fondeaPortalApi';
+import { useIntencionStore } from '@/lib/stores/intencion-store';
 import type { LoanCalculatorApi, LoanCalculatorProps, IntentionRequest, IntentionResponse, LoanCalculatorTheme } from './core';
-import type { IntencionConfig } from '@/lib/types/intencion';
+import type { IntencionConfig, IntencionStatus } from '@/lib/types/intencion';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -34,40 +33,35 @@ export interface PortalInitialValues {
 interface LoanCalculatorPortalProps extends Omit<LoanCalculatorProps, 'submitLabel'> {
   /** Datos de la intención activa del usuario, si existe */
   initialValues?: PortalInitialValues;
-  /**
-   * Callback después de un submit exitoso.
-   * Recibe el config actualizado de la intención.
-   * Si se proporciona, se llama en lugar de navegar a /solicitar/start.
-   */
-  onSubmitSuccess?: (updatedConfig: IntencionConfig) => void;
+  /** Callback opcional para cerrar el panel después del submit */
+  onDone?: () => void;
 }
 
 // ── Theme por defecto (basado en la paleta del proyecto) ──────────────────────
 
 const DEFAULT_PORTAL_THEME: LoanCalculatorTheme = {
-  primary: 'var(--color-primary-500)',      // #00A1CD
-  primaryDark: 'var(--color-primary-600)',  // #0087AD
-  primaryLight: 'var(--color-primary-50)',  // #E0F7FD
-  text: 'var(--color-neutral-800)',         // #2D373D
-  muted: 'var(--color-neutral-500)',        // #7A8E9A
-  border: 'var(--color-neutral-200)',       // #DDE4EA
-  background: '#FFFFFF',                    // Blanco
-  headerBg: 'var(--color-primary-500)',     // #00A1CD
-  headerText: '#FFFFFF',                    // Blanco
+  primary: 'var(--color-primary-500)',
+  primaryDark: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-50)',
+  text: 'var(--color-neutral-800)',
+  muted: 'var(--color-neutral-500)',
+  border: 'var(--color-neutral-200)',
+  background: '#FFFFFF',
+  headerBg: 'var(--color-primary-500)',
+  headerText: '#FFFFFF',
 };
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export default function LoanCalculatorPortal({
   initialValues,
-  onSubmitSuccess,
+  onDone,
   ...calcProps
 }: LoanCalculatorPortalProps) {
   const router = useRouter();
+  const setIntencion = useIntencionStore(s => s.setIntencion);
   const isEditing = !!initialValues?.intencionId;
 
-  // Construir un adapter que intercepta createIntention para manejar
-  // la lógica de crear vs editar + navegación post-submit
   const portalApi: LoanCalculatorApi = useMemo(() => ({
     ...fondeaPortalApi,
     createIntention: async (data: IntentionRequest): Promise<IntentionResponse> => {
@@ -86,32 +80,32 @@ export default function LoanCalculatorPortal({
         result = await fondeaPortalApi.createIntention(data);
       }
 
-      // Navegación post-submit
-      if (onSubmitSuccess) {
-        // Construir IntencionConfig con los datos del request + id del response
-        const updatedConfig: IntencionConfig = {
-          intencionId: result.id,
-          productId: initialValues?.intencionId ? '' : '', // se mantiene del original
-          amount: data.amount,
-          termDays: data.termDays,
-          installmentCount: data.installmentCount,
-          isFirstLoan: true,
-          status: 'ACTIVE',
-          calculatorIntentionId: '',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        onSubmitSuccess(updatedConfig);
+      // Actualizar el store directamente con los datos nuevos
+      const updatedConfig: IntencionConfig = {
+        intencionId: result.id,
+        productId: '',
+        amount: data.amount,
+        termDays: data.termDays,
+        installmentCount: data.installmentCount,
+        isFirstLoan: true,
+        status: 'ACTIVE' as IntencionStatus,
+        calculatorIntentionId: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setIntencion(updatedConfig);
+
+      // Post-submit: cerrar panel o navegar
+      if (onDone) {
+        onDone();
       } else {
         router.push('/solicitar/start');
       }
 
       return result;
     },
-    // Sobreescribir portalUrl para que el componente no haga redirect externo
-    // El redirect lo manejamos arriba en createIntention
     portalUrl: "__handled_internally__",
-  }), [isEditing, initialValues, onSubmitSuccess, router]);
+  }), [isEditing, initialValues, setIntencion, onDone, router]);
 
   return (
     <LoanCalculatorProvider api={portalApi} theme={DEFAULT_PORTAL_THEME}>

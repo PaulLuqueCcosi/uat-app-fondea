@@ -3,9 +3,8 @@
 import { useRef, useState, useEffect } from 'react';
 import { Pencil, CreditCard, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useIntencionConfig } from '@/hooks/useIntencionConfig';
+import { useIntencionStore } from '@/lib/stores/intencion-store';
 import { useSolicitarCalc } from './SolicitarCalcContext';
-import type { PortalInitialValues } from '@/components/LoanCalculator';
 
 interface FunnelLoanSummaryBannerProps {
   isOrchestrating?: boolean;
@@ -13,13 +12,20 @@ interface FunnelLoanSummaryBannerProps {
 
 /**
  * Banner compacto para mobile que muestra el resumen del préstamo.
- * Al hacer clic en "Editar", abre el panel fullscreen via el contexto compartido.
  */
 export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanSummaryBannerProps) {
-  const { config, loading, setConfig } = useIntencionConfig(isOrchestrating);
+  const config = useIntencionStore(s => s.intencion);
+  const isReady = useIntencionStore(s => s.isReady);
+  const fetchIntencion = useIntencionStore(s => s.fetchIntencion);
   const { open } = useSolicitarCalc();
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+
+  const loading = !isReady;
+
+  useEffect(() => {
+    if (!isOrchestrating) fetchIntencion();
+  }, [isOrchestrating, fetchIntencion]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -43,17 +49,11 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
   const handleEditClick = () => {
     if (!config) return;
 
-    const values: PortalInitialValues = {
+    open({
       intencionId: config.intencionId,
       amount: config.amount,
       termDays: config.termDays,
       installmentCount: config.installmentCount,
-    };
-
-    open(values, (updatedConfig) => {
-      if (updatedConfig) {
-        setConfig(updatedConfig);
-      }
     });
   };
 
