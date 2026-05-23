@@ -4,6 +4,13 @@ import { requireValidSession } from './auth.actions';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { parseBackendResponse, networkError } from '@/lib/action-utils';
 import type { ActionResult } from '@/lib/types';
+import type {
+  DocumentType,
+  DocumentInfo,
+  DocumentListResult,
+  DocumentsVerificationStatus,
+  DocumentItemStatus,
+} from '@/lib/types/document';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -14,26 +21,7 @@ function isSuccess(status: number): boolean {
   return status >= 200 && status < 300;
 }
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-
-export type DocumentType = 'DNI_FRONT' | 'DNI_BACK' | 'SELFIE';
-
-export type DocumentStatus = 'PENDING' | 'UPLOADED' | 'FAILED' | 'REJECTED';
-
-export interface DocumentInfo {
-  id: string;
-  type: DocumentType;
-  fileName: string;
-  fileSizeBytes: number;
-  status: DocumentStatus;
-  uploadedAt: string;
-}
-
-export interface DocumentListResult {
-  applicationId: string;
-  documents: DocumentInfo[];
-  allDocumentsUploaded: boolean;
-}
+// ── Tipos de resultado ────────────────────────────────────────────────────────
 
 export type UploadDocumentResult = ActionResult & (
   | {
@@ -61,13 +49,35 @@ function mapDocumentInfo(raw: any): DocumentInfo {
   };
 }
 
-// ── Actions ───────────────────────────────────────────────────────────────────
+function mapDocumentItemStatus(raw: any): DocumentItemStatus {
+  return {
+    status: raw.status,
+    uploaded: raw.uploaded,
+    rejectionReason: raw.rejectionReason ?? null,
+    failedAttempts: raw.failedAttempts ?? raw.attempts ?? 0,
+    maxAttempts: raw.maxAttempts,
+    remainingAttempts: raw.remainingAttempts,
+  };
+}
+
+function mapDocumentsVerificationStatus(raw: any): DocumentsVerificationStatus {
+  return {
+    id: raw.id,
+    applicationId: raw.applicationId,
+    overallStatus: raw.overallStatus,
+    dniFront: mapDocumentItemStatus(raw.dniFront),
+    dniBack: mapDocumentItemStatus(raw.dniBack),
+    selfie: mapDocumentItemStatus(raw.selfie),
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+  };
+}
+
+// ── Actions: Upload ───────────────────────────────────────────────────────────
 
 /**
  * Sube un documento (DNI_FRONT, DNI_BACK o SELFIE) al backend.
  * POST /api/v1/applications/{applicationId}/documents/upload?type=...
- *
- * El backend espera multipart/form-data con un campo "file".
  */
 export async function uploadDocumentAction(
   applicationId: string,
@@ -86,13 +96,11 @@ export async function uploadDocumentAction(
       };
     }
 
-    // El backend espera el archivo en el campo "file" como multipart
     const res = await backendFetch(
       `/api/v1/applications/${applicationId}/documents/upload?type=${type}`,
       {
         method: 'POST',
         body: formData,
-        // No setear Content-Type — fetch lo pone automáticamente con boundary para FormData
         headers: {},
       },
     );
@@ -118,6 +126,8 @@ export async function uploadDocumentAction(
     return networkError() as UploadDocumentResult;
   }
 }
+
+// ── Actions: List ─────────────────────────────────────────────────────────────
 
 /**
  * Lista los documentos subidos para una solicitud.
@@ -146,8 +156,10 @@ export async function listDocumentsAction(
   }
 }
 
+// ── Actions: URL ──────────────────────────────────────────────────────────────
+
 /**
- * Obtiene la URL de un documento para preview.
+ * Obtiene la URL prefirmada de un documento para preview.
  * GET /api/v1/applications/{applicationId}/documents/{type}/url
  */
 export async function getDocumentUrlAction(
@@ -164,7 +176,6 @@ export async function getDocumentUrlAction(
     if (!isSuccess(res.status)) return null;
 
     const data = await res.json();
-    // El backend devuelve un map { "url": "https://..." }
     return data.url ?? null;
   } catch (error) {
     console.error('[DOCUMENT] Error al obtener URL:', error);
@@ -172,9 +183,12 @@ export async function getDocumentUrlAction(
   }
 }
 
+// ── Actions: Delete ───────────────────────────────────────────────────────────
+
 /**
  * Elimina un documento subido.
  * DELETE /api/v1/applications/{applicationId}/documents/{type}
+ * Resetea la verificación a PENDING.
  */
 export async function deleteDocumentAction(
   applicationId: string,
@@ -196,5 +210,81 @@ export async function deleteDocumentAction(
   } catch (error) {
     console.error('[DOCUMENT] Error al eliminar documento:', error);
     return networkError();
+  }
+}
+
+// ── Actions: Verification Status ──────────────────────────────────────────────
+
+/**
+ * Obtiene el estado de verificación de todos los documentos.
+ * GET /api/v1/applications/{applicationId}/documents/status
+ */
+export async function getDocumentsVerificationStatusAction(
+  applicationId: string,
+): Promise<DocumentsVerificationStatus | null> {
+  await requireValidSession();
+
+  try {
+    const res = await backendFetch(
+      `/api/v1/applications/${applicationId}/documents/status`,
+    );
+
+    if (!isSuccess(res.status)) return null;
+
+    const data = await res.json();
+    return mapDocumentsVerificationStatus(data);
+  } catch (error) {
+    console.error('[DOCUMENT] Error al obtener estado de verificación:', error);
+    return null;
+  }
+}
+
+// ── Actions: Verify ───────────────────────────────────────────────────────────
+
+export interface VerifyDocumentResult {
+  success: boolean;
+  documentsStatus?: DocumentsVerificationStatus;
+  error?: string;
+}
+
+/**
+ * Verifica un documento específico.
+ * POST /api/v1/applications/{applicationId}/documents/verify/{type}
+ *
+ * Reglas del backend:
+ * - SELFIE solo se puede verificar si DNI_FRONT y DNI_BACK ya están VERIFIED
+ * - Máximo 5 intentos por documento
+ * - Si se agotan los intentos → solicitud pasa a BLOCKED
+ */
+export async function verifyDocumentAction(
+  applicationId: string,
+  type: DocumentType,
+): Promise<VerifyDocumentResult> {
+  await requireValidSession();
+
+  try {
+    const res = await backendFetch(
+      `/api/v1/applications/${applicationId}/documents/verify/${type}`,
+      { method: 'POST' },
+    );
+
+    if (!isSuccess(res.status)) {
+      let message = 'Error al verificar el documento.';
+      try {
+        const json = await res.json();
+        message = json.detail ?? json.message ?? message;
+      } catch {}
+
+      return { success: false, error: message };
+    }
+
+    const data = await res.json();
+    return {
+      success: true,
+      documentsStatus: mapDocumentsVerificationStatus(data),
+    };
+  } catch (error) {
+    console.error('[DOCUMENT] Error al verificar documento:', error);
+    return { success: false, error: 'Error de conexión al verificar.' };
   }
 }

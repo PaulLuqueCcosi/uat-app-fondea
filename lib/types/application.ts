@@ -31,6 +31,7 @@ export type ApplicationStatus =
   | 'REJECTED_BY_USER'
   | 'REJECTED'
   | 'FAILED'
+  | 'BLOCKED'
   | 'EXPIRED';
 
 /**

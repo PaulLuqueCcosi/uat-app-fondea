@@ -13,10 +13,15 @@ export default function KYCSelfiePage() {
   const id = params.id as string;
   const documentsReady = useSolicitudStore(s => s.documentsReady);
   const documentUrls = useSolicitudStore(s => s.documentUrls);
+  const documentsVerification = useSolicitudStore(s => s.documentsVerification);
   const application = useSolicitudStore(s => s.application);
   const fetchDocuments = useSolicitudStore(s => s.fetchDocuments);
+  const fetchDocumentsVerification = useSolicitudStore(s => s.fetchDocumentsVerification);
 
-  useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
+  useEffect(() => {
+    fetchDocuments();
+    fetchDocumentsVerification();
+  }, [fetchDocuments, fetchDocumentsVerification]);
 
   useEffect(() => {
     if (application && !ALLOWED_STATUSES.includes(application.status)) {
@@ -31,6 +36,7 @@ export default function KYCSelfiePage() {
           applicationId={id}
           initialSelfieUrl={documentUrls.selfie}
           loading={!documentsReady}
+          verification={documentsVerification}
         />
       </div>
     </div>

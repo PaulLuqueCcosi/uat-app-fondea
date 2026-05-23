@@ -5,8 +5,16 @@ import { useRouter, usePathname, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, CheckCircle, AlertCircle, Camera, Trash2, RefreshCw, Loader2 } from 'lucide-react';
-import { uploadDocumentAction, deleteDocumentAction } from '@/app/actions/document.actions';
-import type { DocumentType } from '@/app/actions/document.actions';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { uploadDocumentAction, deleteDocumentAction, verifyDocumentAction } from '@/app/actions/document.actions';
+import type { DocumentType, DocumentsVerificationStatus } from '@/lib/types/document';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
@@ -36,19 +44,24 @@ interface FunnelKYCDocumentsProps {
   initialBackUrl?: string | null;
   /** Si los datos aún están cargando del store */
   loading?: boolean;
+  /** Estado de verificación de documentos */
+  verification?: DocumentsVerificationStatus | null;
 }
 
-export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBackUrl, loading: externalLoading }: FunnelKYCDocumentsProps) {
+export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBackUrl, loading: externalLoading, verification }: FunnelKYCDocumentsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
   const currentStep = getCurrentStep(pathname);
-  const { setDocumentUrl } = useSolicitudStore();
+  const { setDocumentUrl, setDocumentsVerification } = useSolicitudStore();
 
   // Detectar si estamos en el flujo de solicitudes
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
   const solicitudId = applicationId || (params.id as string | undefined);
   const [loading, setLoading] = useState<'front' | 'back' | null>(null);
+  const [verifying, setVerifying] = useState<'front' | 'back' | null>(null);
+  const [verifyError, setVerifyError] = useState<{ side: 'front' | 'back'; message: string } | null>(null);
+  const [confirmDeleteSide, setConfirmDeleteSide] = useState<'front' | 'back' | null>(null);
   const [error, setError] = useState('');
   const [deleteError, setDeleteError] = useState<{ side: 'front' | 'back'; message: string } | null>(null);
   const [deleting, setDeleting] = useState<'front' | 'back' | null>(null);
@@ -182,15 +195,36 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
       setFrontFile(null);
       setFrontPreview('');
       setFrontUploaded(false);
-      setDocumentUrl('dniFront', null);
+      setTimeout(() => setDocumentUrl('dniFront', null), 50);
     } else {
       setBackFile(null);
       setBackPreview('');
       setBackUploaded(false);
-      setDocumentUrl('dniBack', null);
+      setTimeout(() => setDocumentUrl('dniBack', null), 50);
     }
     setError('');
     setDeleting(null);
+  };
+
+  const handleVerify = async (side: 'front' | 'back') => {
+    const docType: DocumentType = side === 'front' ? 'DNI_FRONT' : 'DNI_BACK';
+    if (!solicitudId) return;
+
+    setVerifying(side);
+    setVerifyError(null);
+
+    const result = await verifyDocumentAction(solicitudId, docType);
+
+    if (result.success && result.documentsStatus) {
+      setDocumentsVerification(result.documentsStatus);
+    } else {
+      setVerifyError({
+        side,
+        message: result.error ?? 'No se pudo verificar el documento.',
+      });
+    }
+
+    setVerifying(null);
   };
 
   const handleContinue = async () => {
@@ -367,31 +401,8 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete('front')}
-                        disabled={deleting === 'front' || loading === 'front'}
-                        className="w-full sm:w-auto"
-                      >
-                        {deleting === 'front' ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
-                        ) : (
-                          <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openCameraModal('front')}
-                        className="w-full sm:w-auto"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Volver a tomar
-                      </Button>
-                      {!frontUploaded ? (
+                      {/* PENDING: no subió aún — botón subir */}
+                      {!frontUploaded && (
                         <Button
                           type="button"
                           onClick={() => handleUpload('front')}
@@ -400,11 +411,53 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         >
                           {loading === 'front' ? 'Subiendo...' : 'Subir frente'}
                         </Button>
-                      ) : (
-                        <div className="w-full sm:flex-1 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
-                          <span className="text-center">Imagen subida correctamente</span>
-                        </div>
+                      )}
+
+                      {/* UPLOADED: subió pero no verificó — eliminar + verificar */}
+                      {frontUploaded && verification?.dniFront.status !== 'VERIFIED' && (
+                        <>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete('front')}
+                            disabled={deleting === 'front'}
+                            className="w-full sm:w-auto"
+                          >
+                            {deleting === 'front' ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
+                            ) : (
+                              <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => handleVerify('front')}
+                            disabled={verifying === 'front'}
+                            className="w-full sm:flex-1"
+                          >
+                            {verifying === 'front' ? 'Verificando...' : 'Verificar'}
+                          </Button>
+                        </>
+                      )}
+
+                      {/* VERIFIED: verificado — eliminar con confirmación */}
+                      {frontUploaded && verification?.dniFront.status === 'VERIFIED' && (
+                        <>
+                          <div className="w-full sm:flex-1 flex items-center gap-2 text-sm text-success-700">
+                            <CheckCircle className="w-4 h-4 shrink-0" />
+                            <span>Verificado</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setConfirmDeleteSide('front')}
+                            className="w-full sm:w-auto text-muted-foreground"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                          </Button>
+                        </>
                       )}
                     </div>
 
@@ -414,6 +467,21 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                         <p className="text-xs">{deleteError.message}</p>
                       </div>
+                    )}
+
+                    {/* Error de verificación */}
+                    {verifyError?.side === 'front' && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-error-50 border border-error-100 text-error-700">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <p className="text-xs">{verifyError.message}</p>
+                      </div>
+                    )}
+
+                    {/* Intentos restantes */}
+                    {verification?.dniFront && verification.dniFront.failedAttempts > 0 && verification.dniFront.status !== 'VERIFIED' && (
+                      <p className="text-xs text-muted-foreground">
+                        Intentos: {verification.dniFront.failedAttempts}/{verification.dniFront.maxAttempts} — Restantes: {verification.dniFront.remainingAttempts}
+                      </p>
                     )}
                   </div>
                 )}
@@ -481,31 +549,8 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete('back')}
-                        disabled={deleting === 'back' || loading === 'back'}
-                        className="w-full sm:w-auto"
-                      >
-                        {deleting === 'back' ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
-                        ) : (
-                          <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openCameraModal('back')}
-                        className="w-full sm:w-auto"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Volver a tomar
-                      </Button>
-                      {!backUploaded ? (
+                      {/* PENDING: no subió — botón subir */}
+                      {!backUploaded && (
                         <Button
                           type="button"
                           onClick={() => handleUpload('back')}
@@ -514,11 +559,53 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         >
                           {loading === 'back' ? 'Subiendo...' : 'Subir reverso'}
                         </Button>
-                      ) : (
-                        <div className="w-full sm:flex-1 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
-                          <span className="text-center">Imagen subida correctamente</span>
-                        </div>
+                      )}
+
+                      {/* UPLOADED: subió pero no verificó — eliminar + verificar */}
+                      {backUploaded && verification?.dniBack.status !== 'VERIFIED' && (
+                        <>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete('back')}
+                            disabled={deleting === 'back'}
+                            className="w-full sm:w-auto"
+                          >
+                            {deleting === 'back' ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
+                            ) : (
+                              <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => handleVerify('back')}
+                            disabled={verifying === 'back'}
+                            className="w-full sm:flex-1"
+                          >
+                            {verifying === 'back' ? 'Verificando...' : 'Verificar'}
+                          </Button>
+                        </>
+                      )}
+
+                      {/* VERIFIED: verificado — eliminar con confirmación */}
+                      {backUploaded && verification?.dniBack.status === 'VERIFIED' && (
+                        <>
+                          <div className="w-full sm:flex-1 flex items-center gap-2 text-sm text-success-700">
+                            <CheckCircle className="w-4 h-4 shrink-0" />
+                            <span>Verificado</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setConfirmDeleteSide('back')}
+                            className="w-full sm:w-auto text-muted-foreground"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                          </Button>
+                        </>
                       )}
                     </div>
 
@@ -528,6 +615,21 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                         <p className="text-xs">{deleteError.message}</p>
                       </div>
+                    )}
+
+                    {/* Error de verificación */}
+                    {verifyError?.side === 'back' && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-error-50 border border-error-100 text-error-700">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <p className="text-xs">{verifyError.message}</p>
+                      </div>
+                    )}
+
+                    {/* Intentos restantes */}
+                    {verification?.dniBack && verification.dniBack.failedAttempts > 0 && verification.dniBack.status !== 'VERIFIED' && (
+                      <p className="text-xs text-muted-foreground">
+                        Intentos: {verification.dniBack.failedAttempts}/{verification.dniBack.maxAttempts} — Restantes: {verification.dniBack.remainingAttempts}
+                      </p>
                     )}
                   </div>
                 )}
@@ -577,6 +679,34 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
         title={currentSide === 'front' ? 'Frente del DNI' : 'Reverso del DNI'}
         description="Alinea el documento dentro del recuadro"
       />
+
+      {/* Dialog de confirmación para eliminar documento verificado */}
+      <Dialog open={!!confirmDeleteSide} onOpenChange={(open) => !open && setConfirmDeleteSide(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Eliminar documento verificado?</DialogTitle>
+            <DialogDescription>
+              Si eliminas este documento perderás la verificación y tendrás que volver a subir y verificar.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteSide(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (confirmDeleteSide) {
+                  handleDelete(confirmDeleteSide);
+                  setConfirmDeleteSide(null);
+                }
+              }}
+            >
+              Sí, eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

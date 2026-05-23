@@ -14,4 +14,5 @@ export * from './references';
 export * from './address';
 export * from './application';
 export * from './intencion';
+export * from './document';
 export * from './ui';

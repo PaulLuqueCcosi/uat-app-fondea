@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { CreditCard, AlertTriangle, Pencil, Calendar, ChevronRight, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,10 +17,14 @@ export function FunnelLoanSummaryCard() {
   const isReady = useIntencionStore(s => s.isReady);
   const fetchIntencion = useIntencionStore(s => s.fetchIntencion);
   const { isOpen, open, close } = useSolicitarCalc();
+  const pathname = usePathname();
 
   const loading = !isReady;
 
-  useEffect(() => { fetchIntencion(); }, [fetchIntencion]);
+  // No fetch si estamos en el dispatcher (él se encarga de registrar primero)
+  useEffect(() => {
+    if (pathname !== '/solicitar') fetchIntencion();
+  }, [fetchIntencion, pathname]);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-PE', {

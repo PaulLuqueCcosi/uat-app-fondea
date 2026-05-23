@@ -17,12 +17,14 @@ export function SolicitudesSidebar() {
   const application = useSolicitudStore(s => s.application);
   const fullDetail = useSolicitudStore(s => s.fullDetail);
   const documents = useSolicitudStore(s => s.documents);
+  const documentsVerification = useSolicitudStore(s => s.documentsVerification);
   const contractInfo = useSolicitudStore(s => s.contractInfo);
   const isPolling = useSolicitudStore(s => s.isPolling);
   const applicationIntention = useSolicitudStore(s => s.applicationIntention);
   const fetchApplication = useSolicitudStore(s => s.fetchApplication);
   const fetchFullDetail = useSolicitudStore(s => s.fetchFullDetail);
   const fetchDocuments = useSolicitudStore(s => s.fetchDocuments);
+  const fetchDocumentsVerification = useSolicitudStore(s => s.fetchDocumentsVerification);
   const fetchContract = useSolicitudStore(s => s.fetchContract);
 
   // Pedir datos al store
@@ -31,24 +33,21 @@ export function SolicitudesSidebar() {
     fetchApplication();
     fetchFullDetail();
     fetchDocuments();
+    fetchDocumentsVerification();
     fetchContract();
-  }, [applicationId, fetchApplication, fetchFullDetail, fetchDocuments, fetchContract]);
+  }, [applicationId, fetchApplication, fetchFullDetail, fetchDocuments, fetchDocumentsVerification, fetchContract]);
 
   // ── ¿Mostrar pasos y card? Solo si el status lo permite ──
   const ACTIONABLE_STATUSES = ['PRE_APPROVED', 'PENDING_DOCUMENTS', 'PENDING_SIGNATURE', 'APPROVED'];
   const showSteps = application ? ACTIONABLE_STATUSES.includes(application.status) : false;
 
-  // ── Pasos completados ──
+  // ── Pasos completados (basado en verificación, no solo upload) ──
 
-  const isDniCompleted = !!documents?.documents.find(
-    d => d.type === 'DNI_FRONT' && d.status === 'UPLOADED'
-  ) && !!documents?.documents.find(
-    d => d.type === 'DNI_BACK' && d.status === 'UPLOADED'
-  );
+  const isDniCompleted =
+    documentsVerification?.dniFront.status === 'VERIFIED' &&
+    documentsVerification?.dniBack.status === 'VERIFIED';
 
-  const isSelfieCompleted = !!documents?.documents.find(
-    d => d.type === 'SELFIE' && d.status === 'UPLOADED'
-  );
+  const isSelfieCompleted = documentsVerification?.selfie.status === 'VERIFIED';
 
   const isContractCompleted = contractInfo?.status === 'SIGNED';
 

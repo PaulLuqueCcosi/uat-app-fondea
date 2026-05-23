@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
+import type { DocumentsVerificationStatus } from '@/lib/types/document';
 import type { ApplicationFullDetail, ApplicationIntention } from '@/app/actions/application.actions';
-import type { DocumentListResult } from '@/app/actions/document.actions';
+import type { DocumentListResult } from '@/lib/types/document';
 import type { ContractInfo } from '@/app/actions/contract.actions';
 import {
   getApplicationDetailAction,
@@ -13,6 +14,7 @@ import {
 import {
   listDocumentsAction,
   getDocumentUrlAction,
+  getDocumentsVerificationStatusAction,
 } from '@/app/actions/document.actions';
 import {
   getContractInfoAction,
@@ -46,6 +48,10 @@ interface SolicitudState {
   documentsReady: boolean;
   documentUrls: DocumentUrls;
 
+  // ── Documents Verification ──
+  documentsVerification: DocumentsVerificationStatus | null;
+  documentsVerificationReady: boolean;
+
   // ── Contract ──
   contractInfo: ContractInfo | null;
   contractHtml: string | null;
@@ -76,14 +82,17 @@ interface SolicitudActions {
   fetchApplication: () => Promise<ApplicationRecord | null>;
   fetchFullDetail: () => Promise<void>;
   fetchDocuments: () => Promise<void>;
+  fetchDocumentsVerification: () => Promise<void>;
   fetchContract: () => Promise<void>;
 
   // ── Refresh (fuerza recarga del server) ──
   refreshDocuments: () => Promise<void>;
+  refreshDocumentsVerification: () => Promise<void>;
   refreshContract: () => Promise<void>;
 
   // ── Actualizar en memoria ──
   setDocumentUrl: (type: keyof DocumentUrls, url: string | null) => void;
+  setDocumentsVerification: (status: DocumentsVerificationStatus) => void;
 
   // ── Polling ──
   startPolling: () => void;
@@ -104,6 +113,8 @@ const INITIAL_STATE: SolicitudState = {
   documents: null,
   documentsReady: false,
   documentUrls: { dniFront: null, dniBack: null, selfie: null },
+  documentsVerification: null,
+  documentsVerificationReady: false,
   contractInfo: null,
   contractHtml: null,
   pdfUrl: null,
@@ -215,6 +226,21 @@ export const useSolicitudStore = create<SolicitudStore>()(
       }
     },
 
+    // ── Fetch Documents Verification ──
+
+    fetchDocumentsVerification: async () => {
+      const { documentsVerification, applicationId, documentsVerificationReady } = get();
+      if (documentsVerification || !applicationId || documentsVerificationReady) return;
+
+      try {
+        const status = await getDocumentsVerificationStatusAction(applicationId);
+        set({ documentsVerification: status, documentsVerificationReady: true });
+      } catch (err) {
+        console.error('[SolicitudStore] Error fetching documents verification:', err);
+        set({ documentsVerificationReady: true });
+      }
+    },
+
     // ── Fetch Contract ──
 
     fetchContract: async () => {
@@ -274,6 +300,18 @@ export const useSolicitudStore = create<SolicitudStore>()(
       }
     },
 
+    refreshDocumentsVerification: async () => {
+      const { applicationId } = get();
+      if (!applicationId) return;
+
+      try {
+        const status = await getDocumentsVerificationStatusAction(applicationId);
+        set({ documentsVerification: status, documentsVerificationReady: true });
+      } catch (err) {
+        console.error('[SolicitudStore] Error refreshing documents verification:', err);
+      }
+    },
+
     refreshContract: async () => {
       const { applicationId } = get();
       if (!applicationId) return;
@@ -299,6 +337,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
     setDocumentUrl: (type, url) => {
       set({ documentUrls: { ...get().documentUrls, [type]: url } });
+    },
+
+    setDocumentsVerification: (status) => {
+      set({ documentsVerification: status, documentsVerificationReady: true });
     },
 
     // ── Polling ──

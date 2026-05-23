@@ -95,6 +95,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     pdfUrl: ctxPdfUrl,
     contractReady,
     refreshContract,
+    documentsVerification,
   } = useSolicitudStore();
 
   const [loading, setLoading] = useState(false);
@@ -208,7 +209,10 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
       setTimeout(() => refreshContract(), 0);
 
       if (isInSolicitudFlow) {
-        router.push(`/solicitudes/${solicitudId}/aprobada`);
+        // Resetear el store para que recargue con el nuevo status (APPROVED)
+        useSolicitudStore.getState().reset();
+        useSolicitudStore.getState().init(solicitudId);
+        router.push(`/solicitudes/${solicitudId}`);
       } else {
         router.push('/solicitar/contract-signed');
       }
@@ -518,9 +522,24 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
               </div>
             )}
 
+            {/* Mensaje si documentos no están verificados */}
+            {documentsVerification && documentsVerification.overallStatus !== 'VERIFIED' && (
+              <div className="p-3 bg-warning-50 border border-warning-100 rounded-lg">
+                <p className="text-sm text-warning-700">
+                  Completa la verificación de todos los documentos antes de firmar.
+                </p>
+              </div>
+            )}
+
             <Button
               onClick={handleSubmit}
-              disabled={!accepted || !fullName.trim() || fullName.trim().length < 5 || loading}
+              disabled={
+                !accepted ||
+                !fullName.trim() ||
+                fullName.trim().length < 5 ||
+                loading ||
+                (documentsVerification?.overallStatus !== 'VERIFIED')
+              }
               className="w-full"
               size="lg"
             >

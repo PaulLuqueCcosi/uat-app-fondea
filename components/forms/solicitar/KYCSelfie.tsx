@@ -5,6 +5,14 @@ import { useRouter, usePathname, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
   Camera,
   Upload,
   CheckCircle,
@@ -14,7 +22,7 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
-import { uploadDocumentAction, deleteDocumentAction } from '@/app/actions/document.actions';
+import { uploadDocumentAction, deleteDocumentAction, verifyDocumentAction } from '@/app/actions/document.actions';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
@@ -150,14 +158,16 @@ interface FunnelKYCSelfieProps {
   initialSelfieUrl?: string | null;
   /** Si los datos aún están cargando del store */
   loading?: boolean;
+  /** Estado de verificación de documentos */
+  verification?: import('@/lib/types/document').DocumentsVerificationStatus | null;
 }
 
-export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: externalLoading }: FunnelKYCSelfieProps) {
+export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: externalLoading, verification }: FunnelKYCSelfieProps) {
   const router    = useRouter();
   const pathname  = usePathname();
   const params    = useParams();
   const currentStep = getCurrentStep(pathname);
-  const { setDocumentUrl } = useSolicitudStore();
+  const { setDocumentUrl, setDocumentsVerification } = useSolicitudStore();
 
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
@@ -317,6 +327,28 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
     setDocumentUrl('selfie', null);
     setDeleting(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // ── Verificación del documento en el backend ──
+  const [verifyingSelfie, setVerifyingSelfie] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleVerifyDocument = async () => {
+    if (!solicitudId) return;
+
+    setVerifyingSelfie(true);
+    setVerifyError(null);
+
+    const result = await verifyDocumentAction(solicitudId, 'SELFIE');
+
+    if (result.success && result.documentsStatus) {
+      setDocumentsVerification(result.documentsStatus);
+    } else {
+      setVerifyError(result.error ?? 'No se pudo verificar la selfie.');
+    }
+
+    setVerifyingSelfie(false);
   };
 
   const handleContinue = async () => {
@@ -493,33 +525,9 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                       </div>
                     )}
 
-                    {/* Acciones sobre la foto */}
+                    {/* Acciones sobre la foto — según estado de verificación */}
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleDelete}
-                        disabled={loading || analyzing || deleting}
-                        className="w-full sm:w-auto"
-                      >
-                        {deleting ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
-                        ) : (
-                          <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCameraModalOpen(true)}
-                        disabled={loading || analyzing}
-                        className="w-full sm:w-auto"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Volver a tomar
-                      </Button>
+                      {/* PENDING/no subió: botón subir (handleVerify sube al backend) */}
                       {!verified && uploadStatus === 'green' && (
                         <Button
                           type="button"
@@ -528,22 +536,95 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                           className="w-full sm:flex-1"
                         >
                           {loading ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Verificando…
-                            </>
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Subiendo…</>
                           ) : (
-                            'Verificar identidad'
+                            'Subir selfie'
                           )}
                         </Button>
                       )}
-                      {verified && (
-                        <div className="w-full sm:flex-1 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle className="w-4 h-4 text-primary shrink-0" />
-                          <span className="text-center">Identidad verificada correctamente</span>
-                        </div>
+
+                      {/* UPLOADED: subió pero no verificó en backend — eliminar + verificar */}
+                      {verified && verification?.selfie.status !== 'VERIFIED' && (
+                        <>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleDelete}
+                            disabled={deleting}
+                            className="w-full sm:w-auto"
+                          >
+                            {deleting ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
+                            ) : (
+                              <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
+                            )}
+                          </Button>
+                          {verification?.dniFront.status === 'VERIFIED' && verification?.dniBack.status === 'VERIFIED' ? (
+                            <Button
+                              type="button"
+                              onClick={handleVerifyDocument}
+                              disabled={verifyingSelfie}
+                              className="w-full sm:flex-1"
+                            >
+                              {verifyingSelfie ? 'Verificando...' : 'Verificar selfie'}
+                            </Button>
+                          ) : (
+                            <p className="w-full sm:flex-1 text-xs text-warning-700 flex items-center justify-center">
+                              Primero verifica ambas fotos del DNI
+                            </p>
+                          )}
+                        </>
+                      )}
+
+                      {/* VERIFIED: verificado — eliminar con confirmación */}
+                      {verified && verification?.selfie.status === 'VERIFIED' && (
+                        <>
+                          <div className="w-full sm:flex-1 flex items-center gap-2 text-sm text-success-700">
+                            <CheckCircle className="w-4 h-4 shrink-0" />
+                            <span>Selfie verificada</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="w-full sm:w-auto text-muted-foreground"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                          </Button>
+                        </>
+                      )}
+
+                      {/* No pasó el análisis local — volver a tomar */}
+                      {!verified && uploadStatus && uploadStatus !== 'green' && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCameraModalOpen(true)}
+                          className="w-full sm:w-auto"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Volver a tomar
+                        </Button>
                       )}
                     </div>
+
+                    {/* Error de verificación */}
+                    {verifyError && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-error-50 border border-error-100 text-error-700">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <p className="text-xs">{verifyError}</p>
+                      </div>
+                    )}
+
+                    {/* Intentos restantes */}
+                    {verification?.selfie && verification.selfie.failedAttempts > 0 && verification.selfie.status !== 'VERIFIED' && (
+                      <p className="text-xs text-muted-foreground">
+                        Intentos fallidos: {verification.selfie.failedAttempts}/{verification.selfie.maxAttempts} — Restantes: {verification.selfie.remainingAttempts}
+                      </p>
+                    )}
 
                     {/* Error inline al intentar eliminar */}
                     {deleteError && (
@@ -619,6 +700,32 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
         title="Toma tu selfie"
         description="Centra tu rostro en el óvalo"
       />
+
+      {/* Dialog de confirmación para eliminar selfie verificada */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Eliminar selfie verificada?</DialogTitle>
+            <DialogDescription>
+              Si eliminas la selfie perderás la verificación y tendrás que volver a capturar y verificar.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                handleDelete();
+              }}
+            >
+              Sí, eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

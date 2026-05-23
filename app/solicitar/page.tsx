@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Calculator } from 'lucide-react';
 import { registerIntencion, getActiveIntencion } from '@/lib/client-api/intenciones';
+import { useIntencionStore } from '@/lib/stores/intencion-store';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -11,16 +12,16 @@ import { Button } from '@/components/ui/button';
  *
  * Resuelve la intención del usuario y redirige al paso correcto:
  *
- * 1. ¿Viene ?intencion=<uuid>? → registrar en backend → /solicitar/start
+ * 1. ¿Viene ?intencion=<uuid>? → registrar en backend → actualizar store → /solicitar/start
  * 2. ¿Ya tiene intención activa? → /solicitar/start
  * 3. ¿Nada? → /dashboard/calculadora (elegir préstamo primero)
  *
  * Después de este punto, el intencionId NO viaja en la URL.
- * Todo el funnel usa GET /api/v1/intentions/active.
  */
 export default function SolicitarDispatcherPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const setIntencion = useIntencionStore(s => s.setIntencion);
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -33,13 +34,19 @@ export default function SolicitarDispatcherPage() {
         // 1. Registrar intención de la landing
         if (intencionId) {
           const result = await registerIntencion(intencionId);
-          if (result) return goToFunnel();
+          if (result) {
+            setIntencion(result);
+            return goToFunnel();
+          }
           // ID inválido — fallback a intención activa
         }
 
         // 2. Buscar intención activa del usuario
         const active = await getActiveIntencion();
-        if (active) return goToFunnel();
+        if (active) {
+          setIntencion(active);
+          return goToFunnel();
+        }
 
         // 3. Sin intención — ir a configurar préstamo
         router.replace('/dashboard/calculadora');
@@ -52,7 +59,7 @@ export default function SolicitarDispatcherPage() {
     function goToFunnel() {
       router.replace('/solicitar/start');
     }
-  }, [router, searchParams]);
+  }, [router, searchParams, setIntencion]);
 
   // ── Error ───────────────────────────────────────────────────────────────────
   if (error) {
