@@ -41,7 +41,7 @@ export default function LoanCalculator({
   const [calc, setCalc] = useState<LoanCalculation | null>(null);
   const [calculating, setCalculating] = useState(false);
   const [requesting, setRequesting] = useState(false);
-  const [requestError, setRequestError] = useState(false);
+  const [requestError, setRequestError] = useState<false | 'generic' | 'limit'>(false);
 
   const ranges = config?.creditScoreRanges ?? [];
 
@@ -268,8 +268,14 @@ export default function LoanCalculator({
                 }
                 // Resetear estado después de éxito
                 setRequesting(false);
-              } catch {
-                setRequestError(true);
+              } catch (err) {
+                // No mostrar error genérico si es validación de límite (ya se mostró toast)
+                if (err instanceof Error && err.message === 'LIMIT_EXCEEDED') {
+                  setRequestError('limit');
+                  setRequesting(false);
+                  return;
+                }
+                setRequestError('generic');
                 setRequesting(false);
               }
             }}
@@ -277,7 +283,9 @@ export default function LoanCalculator({
 
           {requestError && (
             <p className="text-xs text-center mt-1" style={{ color: "var(--color-error-600)" }}>
-              Ocurrió un error. Intenta nuevamente.
+              {requestError === 'limit'
+                ? 'El monto supera tu límite de préstamo.'
+                : 'Ocurrió un error. Intenta nuevamente.'}
             </p>
           )}
 

@@ -11,12 +11,14 @@
  * No necesita callbacks — cualquier componente suscrito al store se actualiza.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { LoanCalculatorProvider } from './core';
 import { LoanCalculator } from './ui';
 import { fondeaPortalApi, updateIntention } from './adapters/fondeaPortalApi';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
+import { useScoreStore } from '@/lib/stores/score-store';
 import { mapIntencionFromBackend } from '@/lib/mappers/intencion.mapper';
 import type { LoanCalculatorApi, LoanCalculatorProps, IntentionRequest, IntentionResponse, LoanCalculatorTheme } from './core';
 
@@ -60,11 +62,26 @@ export default function LoanCalculatorPortal({
 }: LoanCalculatorPortalProps) {
   const router = useRouter();
   const setIntencion = useIntencionStore(s => s.setIntencion);
+  const score = useScoreStore(s => s.score);
+  const fetchScore = useScoreStore(s => s.fetchScore);
   const isEditing = !!initialValues?.intencionId;
+
+  // Cargar score al montar (si no se cargó antes)
+  useEffect(() => {
+    fetchScore();
+  }, [fetchScore]);
 
   const portalApi: LoanCalculatorApi = useMemo(() => ({
     ...fondeaPortalApi,
     createIntention: async (data: IntentionRequest): Promise<IntentionResponse> => {
+      // ── Validar límite de puntaje ──
+      if (score && data.amount > score.maxLoanAmount) {
+        toast.error(
+          `El monto S/ ${data.amount.toLocaleString('es-PE')} excede tu límite de S/ ${score.maxLoanAmount.toLocaleString('es-PE')}`
+        );
+        throw new Error('LIMIT_EXCEEDED');
+      }
+
       let result: IntentionResponse;
 
       if (isEditing) {
@@ -94,7 +111,7 @@ export default function LoanCalculatorPortal({
       return result;
     },
     portalUrl: "__handled_internally__",
-  }), [isEditing, initialValues, setIntencion, onDone, router]);
+  }), [isEditing, initialValues, setIntencion, onDone, router, score]);
 
   return (
     <LoanCalculatorProvider api={portalApi} theme={DEFAULT_PORTAL_THEME}>

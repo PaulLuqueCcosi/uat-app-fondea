@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { getLogtoContext } from '@logto/next/server-actions';
 import { redirect } from 'next/navigation';
 import { logtoConfig } from './logto';
+import { Toaster } from '@/components/ui/sonner';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -29,7 +30,10 @@ export default async function RootLayout({
 
   return (
     <html lang="es" className={cn("font-sans", geist.variable)}>
-      <body className="antialiased" suppressHydrationWarning>{children}</body>
+      <body className="antialiased" suppressHydrationWarning>
+        {children}
+        <Toaster position="top-right" richColors />
+      </body>
     </html>
   );
 }
