@@ -23,7 +23,6 @@ import {
   ShieldCheck,
   Calculator,
 } from 'lucide-react';
-import { submitApplicationAction } from '@/app/actions/application.actions';
 import {
   KYCData,
   LaborProfileStatus,
@@ -44,6 +43,8 @@ import {
 } from '@/lib/constants';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { getActiveIntencion } from '@/lib/client-api/intenciones';
+import { submitApplication, ApplicationError } from '@/lib/client-api/applications';
+import { toast } from 'sonner';
 
 // Helper functions para obtener labels
 const getEmploymentLabel = (value?: string) => {
@@ -214,27 +215,26 @@ export function FunnelSummary({
     }
 
     try {
-      const result = await submitApplicationAction(pepDeclarations, activeIntencion.intencionId);
+      const promise = submitApplication(pepDeclarations, activeIntencion.intencionId);
 
-      if (!result.success) {
-        setSaveError(result.error ?? 'Error al enviar la solicitud. Intenta nuevamente.');
-        setSaveErrorCategory(result.errorCategory);
-        return;
-      }
+      // Toast observa la promesa — no la modifica
+      toast.promise(promise, {
+        loading: 'Enviando solicitud...',
+        success: 'Solicitud enviada correctamente',
+        error: (err) => err.message,
+      });
 
-      if (!result.applicationId) {
-        setSaveError('Error al enviar la solicitud. Intenta nuevamente.');
-        setSaveErrorCategory('unknown');
-        return;
-      }
+      // Await para obtener el resultado real
+      const result = await promise;
 
       // Navega a la página principal de la solicitud
-      // Esta página redirigirá automáticamente a /evaluando si está en proceso
       router.push(`/solicitudes/${result.applicationId}`);
     } catch (err) {
-      console.error('Error submitting application:', err);
-      setSaveError('Error al enviar la solicitud. Intenta nuevamente.');
-      setSaveErrorCategory('network');
+      // El toast ya mostró el error, solo actualizar el banner local
+      const message = err instanceof Error ? err.message : 'Error al enviar la solicitud';
+      const category = err instanceof ApplicationError ? err.category : 'network';
+      setSaveError(message);
+      setSaveErrorCategory(category);
     } finally {
       setLoading(false);
     }
