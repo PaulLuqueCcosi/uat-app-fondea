@@ -15,4 +15,5 @@ export * from './address';
 export * from './application';
 export * from './intencion';
 export * from './document';
+export * from './puntaje';
 export * from './ui';
