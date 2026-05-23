@@ -82,23 +82,22 @@ export default function LoanCalculatorPortal({
         throw new Error('LIMIT_EXCEEDED');
       }
 
-      let result: IntentionResponse;
+      // Crear la promesa real
+      const promise = isEditing
+        ? updateIntention(initialValues!.intencionId, data.amount, data.termDays, data.installmentCount)
+        : fondeaPortalApi.createIntention(data);
 
-      if (isEditing) {
-        // Modo editar: PUT a la intención existente
-        result = await updateIntention(
-          initialValues!.intencionId,
-          data.amount,
-          data.termDays,
-          data.installmentCount,
-        );
-      } else {
-        // Modo crear: POST nueva intención
-        result = await fondeaPortalApi.createIntention(data);
-      }
+      // Toast observa la promesa (no modifica el resultado)
+      toast.promise(promise, {
+        loading: isEditing ? 'Actualizando solicitud...' : 'Creando solicitud...',
+        success: isEditing ? 'Solicitud actualizada' : 'Solicitud creada',
+        error: 'Error al procesar la solicitud',
+      });
 
-      // Actualizar store y cerrar panel en el siguiente tick
-      // (evita conflicto de React DOM reconciliation durante el commit)
+      // Awaitar el resultado real para Zustand
+      const result = await promise;
+
+      // Actualizar store y navegar en el siguiente tick
       setTimeout(() => {
         setIntencion(mapIntencionFromBackend(result));
         if (onDone) {
