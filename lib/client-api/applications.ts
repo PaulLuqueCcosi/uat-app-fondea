@@ -1,7 +1,8 @@
 'use client';
 
 import { submitApplicationAction } from '@/app/actions/application.actions';
-import type { ErrorCategory } from '@/lib/types';
+import { unwrap } from './unwrap';
+import { ApiError } from './api-error';
 
 interface PEPDeclarations {
   not_pep: boolean;
@@ -15,48 +16,37 @@ interface SubmitResult {
 }
 
 /**
- * Error con categoría para que el componente pueda mostrar el banner correcto.
- */
-export class ApplicationError extends Error {
-  category: ErrorCategory;
-
-  constructor(message: string, category: ErrorCategory = 'unknown') {
-    super(message);
-    this.name = 'ApplicationError';
-    this.category = category;
-  }
-}
-
-/**
  * Envía la solicitud de préstamo.
  *
  * - Retorna { applicationId, status } si todo OK.
- * - Hace throw ApplicationError con mensaje y categoría si falla.
+ * - Hace throw ApiError con mensaje y categoría si falla.
  *
- * Diseñado para usarse con toast.promise():
+ * Uso en componente:
  *   const promise = submitApplication(pep, id);
- *   toast.promise(promise, { loading, success, error: (err) => err.message });
+ *   toast.promise(promise, {
+ *     loading: 'Enviando solicitud...',
+ *     success: 'Solicitud enviada',
+ *     error: (err) => err.message,
+ *   });
  *   const result = await promise;
+ *   router.push(`/solicitudes/${result.applicationId}`);
  */
 export async function submitApplication(
   pepDeclarations: PEPDeclarations,
   intentionId: string,
 ): Promise<SubmitResult> {
   const result = await submitApplicationAction(pepDeclarations, intentionId);
+  const data = unwrap(result);
 
-  if (!result.success) {
-    throw new ApplicationError(
-      result.error ?? 'Error al enviar la solicitud',
-      result.errorCategory,
-    );
-  }
-
-  if (!result.applicationId) {
-    throw new ApplicationError('Error al procesar la solicitud', 'unknown');
+  if (!data.applicationId) {
+    throw new ApiError('Error al procesar la solicitud', 'unknown');
   }
 
   return {
-    applicationId: result.applicationId,
-    status: result.status,
+    applicationId: data.applicationId,
+    status: data.status,
   };
 }
+
+// Re-export para que los componentes importen todo de un lugar
+export { ApiError };

@@ -43,7 +43,8 @@ import {
 } from '@/lib/constants';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { getActiveIntencion } from '@/lib/client-api/intenciones';
-import { submitApplication, ApplicationError } from '@/lib/client-api/applications';
+import { submitApplication } from '@/lib/client-api/applications';
+import { ApiError } from '@/lib/client-api/api-error';
 import { toast } from 'sonner';
 
 // Helper functions para obtener labels
@@ -232,7 +233,7 @@ export function FunnelSummary({
     } catch (err) {
       // El toast ya mostró el error, solo actualizar el banner local
       const message = err instanceof Error ? err.message : 'Error al enviar la solicitud';
-      const category = err instanceof ApplicationError ? err.category : 'network';
+      const category = err instanceof ApiError ? err.category : 'network';
       setSaveError(message);
       setSaveErrorCategory(category);
     } finally {
