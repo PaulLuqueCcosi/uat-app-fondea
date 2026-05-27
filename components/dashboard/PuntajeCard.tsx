@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useScoreStore } from '@/lib/stores/score-store';
+import { usePuntajeStore } from '@/lib/stores/score-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, Award } from 'lucide-react';
@@ -11,13 +11,13 @@ import { TrendingUp, Award } from 'lucide-react';
  * Se carga desde el store de Zustand.
  */
 export function PuntajeCard() {
-  const score = useScoreStore(s => s.score);
-  const isReady = useScoreStore(s => s.isReady);
-  const fetchScore = useScoreStore(s => s.fetchScore);
+  const puntaje = usePuntajeStore(s => s.puntaje);
+  const isReady = usePuntajeStore(s => s.isReady);
+  const fetchPuntaje = usePuntajeStore(s => s.fetchPuntaje);
 
   useEffect(() => {
-    fetchScore();
-  }, [fetchScore]);
+    fetchPuntaje();
+  }, [fetchPuntaje]);
 
   if (!isReady) {
     return (
@@ -47,7 +47,7 @@ export function PuntajeCard() {
     );
   }
 
-  if (!score) {
+  if (!puntaje) {
     return (
       <Card className="border-neutral-200 bg-neutral-50">
         <CardHeader>
@@ -80,7 +80,7 @@ export function PuntajeCard() {
             </CardDescription>
           </div>
           <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-500 text-white shadow-lg">
-            <span className="text-2xl font-bold">{score.points}</span>
+            <span className="text-2xl font-bold">{puntaje.points}</span>
           </div>
         </div>
       </CardHeader>
@@ -94,7 +94,7 @@ export function PuntajeCard() {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold text-primary-900">
-              S/ {score.maxLoanAmount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              S/ {puntaje.maxLoanAmount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           {/* Barra de progreso visual */}

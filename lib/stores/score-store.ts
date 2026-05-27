@@ -3,52 +3,52 @@ import type { PuntajeConfig } from '@/lib/types';
 import { getScore } from '@/lib/client-api/score';
 
 // ── Store ─────────────────────────────────────────────────────────────────────
-// Score = puntaje del sistema que determina límite de préstamo
-// NO es Score Crediticio (eso es diferente)
+// Puntaje = puntaje del sistema que determina límite de préstamo
+// NO es Score Crediticio (eso es diferente — 0 a 1000)
 
 interface PuntajeStore {
   /**
    * Si ya se resolvió la consulta inicial al server.
-   * - false → aún no sabemos si tiene score (mostrar skeleton)
-   * - true → ya sabemos, `score` refleja la realidad
+   * - false → aún no sabemos si tiene puntaje (mostrar skeleton)
+   * - true → ya sabemos, `puntaje` refleja la realidad
    */
   isReady: boolean;
 
   /**
-   * El score del usuario — puntaje del sistema.
-   * - null → no tiene score disponible
-   * - ScoreConfig → tiene score con puntos y límite de préstamo
+   * El puntaje del usuario — puntaje del sistema.
+   * - null → no tiene puntaje disponible
+   * - PuntajeConfig → tiene puntaje con puntos y límite de préstamo
    */
-  score: PuntajeConfig | null;
+  puntaje: PuntajeConfig | null;
 
-  /** Carga el score del server (solo la primera vez) */
-  fetchScore: () => Promise<void>;
+  /** Carga el puntaje del server (solo la primera vez) */
+  fetchPuntaje: () => Promise<void>;
 
   /** Fuerza recarga del server (después de cambios) */
   refetch: () => Promise<void>;
 
   /** Actualiza en memoria sin llamar al server */
-  setScore: (data: PuntajeConfig) => void;
+  setPuntaje: (data: PuntajeConfig) => void;
 
-  /** Limpia el score */
+  /** Limpia el puntaje */
   clear: () => void;
 }
 
 let _fetching = false;
 
-export const useScoreStore = create<PuntajeStore>()((set, get) => ({
+export const usePuntajeStore = create<PuntajeStore>()((set, get) => ({
   isReady: false,
-  score: null,
+  puntaje: null,
 
-  fetchScore: async () => {
+  fetchPuntaje: async () => {
     if (get().isReady || _fetching) return;
     _fetching = true;
 
     try {
       const data = await getScore();
-      set({ score: data, isReady: true });
+      set({ puntaje: data, isReady: true });
     } catch (err) {
-      console.error('[ScoreStore] Error fetching:', err);
+      console.error('[PuntajeStore] Error fetching:', err);
       set({ isReady: true });
     } finally {
       _fetching = false;
@@ -59,19 +59,22 @@ export const useScoreStore = create<PuntajeStore>()((set, get) => ({
     _fetching = true;
     try {
       const data = await getScore();
-      set({ score: data, isReady: true });
+      set({ puntaje: data, isReady: true });
     } catch (err) {
-      console.error('[ScoreStore] Error refetching:', err);
+      console.error('[PuntajeStore] Error refetching:', err);
     } finally {
       _fetching = false;
     }
   },
 
-  setScore: (data) => {
-    set({ score: data, isReady: true });
+  setPuntaje: (data) => {
+    set({ puntaje: data, isReady: true });
   },
 
   clear: () => {
-    set({ score: null, isReady: true });
+    set({ puntaje: null, isReady: true });
   },
 }));
+
+// Re-export con nombre antiguo para compatibilidad temporal
+export const useScoreStore = usePuntajeStore;

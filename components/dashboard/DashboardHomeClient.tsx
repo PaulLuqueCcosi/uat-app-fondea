@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
 import { PuntajeCard } from './PuntajeCard';
+import { CreditScoreCard } from './CreditScoreCard';
 import type { ApplicationRecord, IntencionConfig } from '@/lib/types';
 
 interface ExpedienteSection {
@@ -380,6 +381,9 @@ export function DashboardHomeClient({ userName, applications, activeIntencion: i
 
             {/* Score Card */}
             <PuntajeCard />
+
+            {/* Credit Score Card */}
+            <CreditScoreCard />
 
             {/* Educación Financiera */}
             <Card>

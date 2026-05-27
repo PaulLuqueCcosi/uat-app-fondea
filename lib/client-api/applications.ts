@@ -4,6 +4,7 @@ import { submitApplicationAction } from '@/app/actions/application.actions';
 import { unwrap } from './unwrap';
 import { ApiError } from './api-error';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
+import { useCreditScoreStore } from '@/lib/stores/credit-score-store';
 
 interface PEPDeclarations {
   not_pep: boolean;
@@ -21,7 +22,7 @@ interface SubmitResult {
  *
  * - Retorna { applicationId, status } si todo OK.
  * - Hace throw ApiError con mensaje y categoría si falla.
- * - Recarga la intención fresca del backend después del submit.
+ * - Recarga la intención y el credit score frescos del backend después del submit.
  *
  * Uso en componente:
  *   const promise = submitApplication(pep, id);
@@ -44,10 +45,12 @@ export async function submitApplication(
     throw new ApiError('Error al procesar la solicitud', 'unknown');
   }
 
-  // Recargar la intención fresca del backend (fire-and-forget)
-  // No esperamos a que termine — el redirect es inmediato
+  // Recargar datos frescos del backend (fire-and-forget)
+  // No esperamos a que terminen — el redirect es inmediato
   // La intención anterior ahora está LOCKED, así que getActiveIntencion() devolverá null
   useIntencionStore.getState().refetch().catch(() => {});
+  // El credit score se recalcula después del submit
+  useCreditScoreStore.getState().refetch().catch(() => {});
 
   return {
     applicationId: data.applicationId,

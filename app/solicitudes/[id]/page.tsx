@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
+import { useCreditScoreStore } from '@/lib/stores/credit-score-store';
 import { SolicitudResumenView } from '@/components/solicitudes/SolicitudResumenView';
 import { ApprovedCelebration } from '@/components/solicitudes/ApprovedCelebration';
 import { Loader2, Clock } from 'lucide-react';
@@ -33,6 +34,14 @@ export default function SolicitudPage() {
       startPolling();
     }
   }, [application, startPolling]);
+
+  // Recargar credit score cada vez que el estado de la aplicación cambia
+  useEffect(() => {
+    if (application) {
+      // Recargar el credit score en cualquier cambio de estado
+      useCreditScoreStore.getState().refetch().catch(() => {});
+    }
+  }, [application?.status]);
 
   // Redirigir si la solicitud no existe
   useEffect(() => {
