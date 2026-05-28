@@ -25,10 +25,15 @@ import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
+import type { StoreStatus } from '@/lib/stores/credit-score-store';
+import { Skeleton } from '@/components/ui/skeleton';
+
 interface SolicitudResumenViewProps {
   application: ApplicationRecord;
   fullDetail: ApplicationFullDetail | null;
   documents: DocumentListResult | null;
+  detailStatus: StoreStatus;
+  documentsStatus: StoreStatus;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -50,7 +55,7 @@ function formatCurrency(amount: number): string {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export function SolicitudResumenView({ application, fullDetail, documents }: SolicitudResumenViewProps) {
+export function SolicitudResumenView({ application, fullDetail, documents, detailStatus, documentsStatus }: SolicitudResumenViewProps) {
   const contractInfo = useSolicitudStore(s => s.contractInfo);
 
   // DEV: override status via query param ?status=PRE_APPROVED
@@ -65,7 +70,7 @@ export function SolicitudResumenView({ application, fullDetail, documents }: Sol
   const status = devStatus ?? application.status;
 
   if (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS' || status === 'PENDING_SIGNATURE') {
-    return <PreApprovedView application={application} fullDetail={fullDetail} documents={documents} contractInfo={contractInfo} />;
+    return <PreApprovedView application={application} fullDetail={fullDetail} documents={documents} contractInfo={contractInfo} detailStatus={detailStatus} documentsStatus={documentsStatus} />;
   }
 
   if (status === 'APPROVED') {
@@ -98,11 +103,15 @@ function PreApprovedView({
   fullDetail,
   documents,
   contractInfo,
+  detailStatus,
+  documentsStatus,
 }: {
   application: ApplicationRecord;
   fullDetail: ApplicationFullDetail | null;
   documents: DocumentListResult | null;
   contractInfo: { status: string; contractId: string } | null;
+  detailStatus: StoreStatus;
+  documentsStatus: StoreStatus;
 }) {
   const router = useRouter();
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -175,7 +184,7 @@ function PreApprovedView({
         </div>
 
         {/* Detalle del préstamo */}
-        {fullDetail && (
+        {detailStatus === 'success' && fullDetail ? (
           <Card className="border-0 shadow-md">
             <CardContent className="p-5">
               <h3 className="text-sm font-semibold text-foreground mb-4">Detalle de tu préstamo</h3>
@@ -213,7 +222,21 @@ function PreApprovedView({
               )}
             </CardContent>
           </Card>
-        )}
+        ) : detailStatus !== 'error' ? (
+          <Card className="border-0 shadow-md animate-pulse">
+            <CardContent className="p-5 space-y-4">
+              <Skeleton className="h-4 w-40" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-6 w-24" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         {/* Próximos pasos */}
         <Card className="border-0 shadow-md">

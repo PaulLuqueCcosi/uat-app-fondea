@@ -14,7 +14,9 @@ export default function SolicitudPage() {
   const application = useSolicitudStore(s => s.application);
   const applicationStatus = useSolicitudStore(s => s.applicationStatus);
   const fullDetail = useSolicitudStore(s => s.fullDetail);
+  const detailStatus = useSolicitudStore(s => s.detailStatus);
   const documents = useSolicitudStore(s => s.documents);
+  const documentsStatus = useSolicitudStore(s => s.documentsStatus);
   const isPolling = useSolicitudStore(s => s.isPolling);
   const showCelebration = useSolicitudStore(s => s.showCelebration);
   const startPolling = useSolicitudStore(s => s.startPolling);
@@ -45,8 +47,13 @@ export default function SolicitudPage() {
     return <ApprovedCelebration />;
   }
 
-  // Skeleton mientras carga
-  if (applicationStatus === 'idle' || applicationStatus === 'pending' || !application) {
+  // Skeleton solo para la application principal (el hero depende de esto)
+  if (applicationStatus === 'idle' || applicationStatus === 'pending') {
+    return <ResumenSkeleton />;
+  }
+
+  // Si no existe la solicitud, no mostrar nada (el redirect se encarga)
+  if (!application) {
     return <ResumenSkeleton />;
   }
 
@@ -87,6 +94,8 @@ export default function SolicitudPage() {
       application={application}
       fullDetail={fullDetail}
       documents={documents}
+      detailStatus={detailStatus}
+      documentsStatus={documentsStatus}
     />
   );
 }
