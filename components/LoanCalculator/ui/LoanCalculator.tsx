@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useLoanCalculatorApi } from "../core/LoanCalculatorProvider";
 import { GAUGE_VALUES, CARD_MAX_WIDTH, DETAIL_MAX_WIDTH } from "../core/constants";
@@ -73,7 +73,12 @@ export default function LoanCalculator({
   }, [selectedTerm]);
 
   // ── Load config ────────────────────────────────────────────────────────────
+  // Se ejecuta solo al montar. api.fetchConfig no cambia entre recreaciones del memo.
+  const configLoaded = useRef(false);
   useEffect(() => {
+    if (configLoaded.current) return;
+    configLoaded.current = true;
+
     api.fetchConfig()
       .then((cfg) => {
         setConfig(cfg);
@@ -108,7 +113,7 @@ export default function LoanCalculator({
       })
       .catch(() => setConfigError(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api]);
+  }, []);
 
   // ── Calculate ──────────────────────────────────────────────────────────────
   useEffect(() => {
