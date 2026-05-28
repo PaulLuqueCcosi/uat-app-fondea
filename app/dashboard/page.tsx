@@ -9,9 +9,11 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function DashboardPage() {
-  const user = await getUser();
-  const applicationsData = await getApplicationsAction();
-  const activeIntencion = await getActiveIntencion();
+  const [user, applicationsData, activeIntencion] = await Promise.all([
+    getUser(),
+    getApplicationsAction(),
+    getActiveIntencion(),
+  ]);
 
   return (
     <>
