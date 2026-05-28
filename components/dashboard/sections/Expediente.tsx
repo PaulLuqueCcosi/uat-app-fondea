@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { CreditCard, Briefcase, DollarSign, Users, MapPin, ChevronRight, Landmark } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -79,13 +80,13 @@ async function ExpedienteContent() {
                 variant={section.status === 'completed' ? 'completed' : 'pending'}
                 className="shrink-0 hidden sm:flex"
               />
-              <a
+              <Link
                 href={section.path}
                 className="text-xs text-primary font-medium hover:underline flex items-center gap-0.5 shrink-0"
               >
                 <span className="hidden sm:inline">{section.status === 'completed' ? 'Editar' : 'Completar'}</span>
                 <ChevronRight className="w-3 h-3" />
-              </a>
+              </Link>
             </div>
           );
         })}

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { FileText, ChevronRight, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -53,17 +54,17 @@ async function ApplicationsContent() {
           <div className="px-5 py-8 text-center">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
             <p className="text-sm text-fondea-text mb-3">Aún no tienes solicitudes</p>
-            <a
+            <Link
               href="/solicitar"
               className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Crear primera solicitud
-            </a>
+            </Link>
           </div>
         ) : (
           applications.map((app) => (
-            <a
+            <Link
               key={app.id}
               href={`/solicitudes/${app.id}`}
               className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-background transition-colors text-left"
@@ -85,7 +86,7 @@ async function ApplicationsContent() {
                 </Badge>
                 <ChevronRight className="w-4 h-4 text-fondea-text" />
               </div>
-            </a>
+            </Link>
           ))
         )}
       </div>

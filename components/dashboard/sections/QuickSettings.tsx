@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Settings, User, Bell, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,7 +33,7 @@ async function QuickSettingsContent() {
         {settings.map((item) => {
           const Icon = item.icon;
           return (
-            <a
+            <Link
               key={item.label}
               href={item.path}
               className="w-full flex items-center justify-between px-5 py-3 hover:bg-background transition-colors"
@@ -42,7 +43,7 @@ async function QuickSettingsContent() {
                 {item.label}
               </span>
               <ChevronRight className="w-4 h-4 text-fondea-text" />
-            </a>
+            </Link>
           );
         })}
       </div>

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { X, ArrowRight } from 'lucide-react';
+import { DashboardStoreInit } from './DashboardStoreInit';
 
 interface DashboardHomeClientProps {
   children: React.ReactNode; // Todos los Server Components aquí
@@ -12,6 +14,9 @@ export function DashboardHomeClient({ children }: DashboardHomeClientProps) {
 
   return (
     <>
+      {/* Inicializa todos los stores del dashboard al montar */}
+      <DashboardStoreInit />
+
       <div className="flex flex-col gap-8">
         {/* Todos los componentes vienen como children (Server Components con Suspense) */}
         {children}
@@ -45,13 +50,13 @@ export function DashboardHomeClient({ children }: DashboardHomeClientProps) {
                     <span className="text-sm text-dark">{item.label}</span>
                   </div>
                   {!item.done && item.path && (
-                    <a
+                    <Link
                       href={item.path}
                       onClick={() => setShowDrawer(false)}
                       className="text-xs text-primary hover:underline flex items-center gap-1"
                     >
                       Completar <ArrowRight className="w-3 h-3" />
-                    </a>
+                    </Link>
                   )}
                 </div>
               ))}

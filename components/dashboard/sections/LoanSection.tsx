@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { ArrowRight, Plus, FileText } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -52,33 +53,33 @@ export function LoanSection() {
               <span className="font-semibold text-dark">{intencion.installmentCount}</span>
             </div>
             <div className="border-t border-border my-1" />
-            <a
+            <Link
               href="/solicitar/start"
               className="w-full bg-primary text-white font-semibold text-sm py-2.5 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
             >
               Continuar solicitud
               <ArrowRight className="w-4 h-4" />
-            </a>
-            <a
+            </Link>
+            <Link
               href="/dashboard/calculadora"
               className="w-full flex items-center justify-between text-sm text-primary font-medium border border-border rounded-lg px-4 py-2.5 hover:bg-primary-50 transition-colors"
             >
               <span>Nuevo préstamo</span>
               <Plus className="w-4 h-4" />
-            </a>
+            </Link>
           </>
         ) : (
           <>
             <p className="text-sm text-fondea-text">
               Configura el monto y plazo de tu préstamo para comenzar.
             </p>
-            <a
+            <Link
               href="/dashboard/calculadora"
               className="w-full bg-primary text-white font-semibold text-sm py-2.5 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Pedir préstamo
-            </a>
+            </Link>
           </>
         )}
       </div>
