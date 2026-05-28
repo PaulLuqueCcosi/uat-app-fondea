@@ -2,28 +2,49 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
 import type { DocumentsVerificationStatus } from '@/lib/types/document';
-import type { ApplicationFullDetail, ApplicationIntention } from '@/app/actions/application.actions';
 import type { DocumentListResult } from '@/lib/types/document';
-import type { ContractInfo } from '@/app/actions/contract.actions';
 import type { StoreStatus } from './credit-score-store';
-import {
-  getApplicationDetailAction,
-  getApplicationFullDetailAction,
-  getApplicationStatusAction,
-  getApplicationIntentionAction,
-} from '@/app/actions/application.actions';
-import {
-  listDocumentsAction,
-  getDocumentUrlAction,
-  getDocumentsVerificationStatusAction,
-} from '@/app/actions/document.actions';
-import {
-  getContractInfoAction,
-  getContractHtmlAction,
-  getContractPdfUrlAction,
-} from '@/app/actions/contract.actions';
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
+// ── Tipos locales (antes venían de actions, ahora son propios) ────────────────
+
+export interface ApplicationFullDetail {
+  application_id: string;
+  product_id: string;
+  product_name: string;
+  principal: number;
+  term_days: number;
+  installment_count: number;
+  is_first_loan: boolean;
+  credit_score_used: number;
+  total_fees_original: number;
+  total_discounts: number;
+  total_igv: number;
+  total_to_pay: number;
+  monthly_payment: number;
+  first_due_date: string;
+  schedule: Array<{
+    installment_no: number;
+    due_date: string;
+    amount: number;
+  }>;
+}
+
+export interface ApplicationIntention {
+  amount: number;
+  termDays: number;
+  installmentCount: number;
+}
+
+export type ContractStatus = 'GENERATED' | 'SIGNED' | 'EXPIRED';
+
+export interface ContractInfo {
+  contractId: string;
+  applicationId: string;
+  status: ContractStatus;
+  generatedAt: string;
+  signedAt: string | null;
+  expiredAt: string | null;
+}
 
 export interface DocumentUrls {
   dniFront: string | null;
@@ -31,40 +52,99 @@ export interface DocumentUrls {
   selfie: string | null;
 }
 
+// ── Mappers (snake_case del backend → camelCase del frontend) ─────────────────
+
+function mapApplication(data: any): ApplicationRecord {
+  return {
+    id: data.id,
+    status: data.status as ApplicationStatus,
+    submittedAt: data.submitted_at ?? undefined,
+    evaluatedAt: data.evaluated_at ?? undefined,
+    creditScore: data.credit_score ?? undefined,
+    rejectionReason: data.rejection_reason ?? undefined,
+    canRetryAt: data.can_retry_at ?? undefined,
+    failureCode: data.failure_code ?? undefined,
+  };
+}
+
+function mapDocumentList(data: any): DocumentListResult {
+  return {
+    applicationId: data.application_id,
+    documents: (data.documents ?? []).map((d: any) => ({
+      id: d.id,
+      type: d.type,
+      fileName: d.file_name,
+      fileSizeBytes: d.file_size_bytes,
+      status: d.status,
+      uploadedAt: d.uploaded_at,
+    })),
+    allDocumentsUploaded: data.all_documents_uploaded ?? false,
+  };
+}
+
+function mapDocumentsVerification(data: any): DocumentsVerificationStatus {
+  const mapItem = (raw: any) => ({
+    status: raw.status,
+    uploaded: raw.uploaded,
+    rejectionReason: raw.rejectionReason ?? null,
+    failedAttempts: raw.failedAttempts ?? raw.attempts ?? 0,
+    maxAttempts: raw.maxAttempts,
+    remainingAttempts: raw.remainingAttempts,
+  });
+  return {
+    id: data.id,
+    applicationId: data.applicationId,
+    overallStatus: data.overallStatus,
+    dniFront: mapItem(data.dniFront),
+    dniBack: mapItem(data.dniBack),
+    selfie: mapItem(data.selfie),
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  };
+}
+
+// ── Fetch helpers (llaman a las API routes proxy) ─────────────────────────────
+
+async function fetchJson<T>(url: string): Promise<T | null> {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (res.status === 404) return null;
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function fetchText(url: string): Promise<string | null> {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (res.status === 404) return null;
+  if (!res.ok) return null;
+  return res.text();
+}
+
+// ── State & Actions ───────────────────────────────────────────────────────────
+
 interface SolicitudState {
-  // ── ID ──
   applicationId: string | null;
 
-  // ── Application ──
   applicationStatus: StoreStatus;
   application: ApplicationRecord | null;
 
-  // ── Full Detail ──
   detailStatus: StoreStatus;
   fullDetail: ApplicationFullDetail | null;
 
-  // ── Documents ──
   documentsStatus: StoreStatus;
   documents: DocumentListResult | null;
   documentUrls: DocumentUrls;
 
-  // ── Documents Verification ──
   verificationStatus: StoreStatus;
   documentsVerification: DocumentsVerificationStatus | null;
 
-  // ── Contract ──
   contractStatus: StoreStatus;
   contractInfo: ContractInfo | null;
   contractHtml: string | null;
   pdfUrl: string | null;
 
-  // ── UI ──
   showCelebration: boolean;
-
-  // ── Intención (para sidebar durante polling) ──
   applicationIntention: ApplicationIntention | null;
 
-  // ── Polling ──
   isPolling: boolean;
   _pollingInterval: ReturnType<typeof setInterval> | null;
   _pollingAttempts: number;
@@ -132,6 +212,63 @@ const INITIAL_STATE: SolicitudState = {
 const POLL_INTERVAL = 10_000;
 const MAX_POLL_ATTEMPTS = 30;
 
+// ── Helper: cargar documentos + URLs ──────────────────────────────────────────
+
+async function loadDocumentsWithUrls(appId: string) {
+  const docsRaw = await fetchJson<any>(`/api/solicitudes/${appId}/documents`);
+  if (!docsRaw) return { documents: null, documentUrls: { dniFront: null, dniBack: null, selfie: null } as DocumentUrls };
+
+  const docs = mapDocumentList(docsRaw);
+
+  const frontDoc = docs.documents.find(d => d.type === 'DNI_FRONT' && d.status === 'UPLOADED');
+  const backDoc = docs.documents.find(d => d.type === 'DNI_BACK' && d.status === 'UPLOADED');
+  const selfieDoc = docs.documents.find(d => d.type === 'SELFIE' && d.status === 'UPLOADED');
+
+  const [dniFrontData, dniBackData, selfieData] = await Promise.all([
+    frontDoc ? fetchJson<any>(`/api/solicitudes/${appId}/documents/DNI_FRONT/url`) : null,
+    backDoc ? fetchJson<any>(`/api/solicitudes/${appId}/documents/DNI_BACK/url`) : null,
+    selfieDoc ? fetchJson<any>(`/api/solicitudes/${appId}/documents/SELFIE/url`) : null,
+  ]);
+
+  return {
+    documents: docs,
+    documentUrls: {
+      dniFront: dniFrontData?.url ?? null,
+      dniBack: dniBackData?.url ?? null,
+      selfie: selfieData?.url ?? null,
+    },
+  };
+}
+
+// ── Helper: cargar contrato + HTML + PDF ──────────────────────────────────────
+
+async function loadContract(appId: string) {
+  const infoRaw = await fetchJson<any>(`/api/solicitudes/${appId}/contract`);
+  if (!infoRaw) return { contractInfo: null, contractHtml: null, pdfUrl: null };
+
+  const contractInfo: ContractInfo = {
+    contractId: infoRaw.contractId,
+    applicationId: infoRaw.applicationId,
+    status: infoRaw.status,
+    generatedAt: infoRaw.generatedAt,
+    signedAt: infoRaw.signedAt,
+    expiredAt: infoRaw.expiredAt,
+  };
+
+  const [html, pdfData] = await Promise.all([
+    fetchText(`/api/solicitudes/${appId}/contract/html?contractId=${contractInfo.contractId}`),
+    contractInfo.status === 'SIGNED'
+      ? fetchJson<any>(`/api/solicitudes/${appId}/contract/pdf?contractId=${contractInfo.contractId}`)
+      : null,
+  ]);
+
+  return {
+    contractInfo,
+    contractHtml: html,
+    pdfUrl: pdfData?.pdfUrl ?? null,
+  };
+}
+
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 export const useSolicitudStore = create<SolicitudStore>()(
@@ -146,7 +283,6 @@ export const useSolicitudStore = create<SolicitudStore>()(
       get().stopPolling();
       set({ ...INITIAL_STATE, applicationId });
 
-      // Disparar fetches
       get().fetchApplication();
       get().fetchFullDetail();
       get().fetchDocuments();
@@ -170,7 +306,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ applicationStatus: 'pending' });
       try {
-        const app = await getApplicationDetailAction(applicationId);
+        const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}`);
+        const app = raw ? mapApplication(raw) : null;
         set({ application: app, applicationStatus: 'success' });
         return app;
       } catch (err) {
@@ -189,7 +326,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ detailStatus: 'pending' });
       try {
-        const detail = await getApplicationFullDetailAction(applicationId);
+        const detail = await fetchJson<ApplicationFullDetail>(`/api/solicitudes/${applicationId}/detail`);
         set({ fullDetail: detail, detailStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching full detail:', err);
@@ -206,25 +343,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ documentsStatus: 'pending' });
       try {
-        const docs = await listDocumentsAction(applicationId);
-        if (!docs) {
-          set({ documents: null, documentsStatus: 'success' });
-          return;
-        }
-
-        set({ documents: docs });
-
-        const frontDoc = docs.documents.find(d => d.type === 'DNI_FRONT' && d.status === 'UPLOADED');
-        const backDoc = docs.documents.find(d => d.type === 'DNI_BACK' && d.status === 'UPLOADED');
-        const selfieDoc = docs.documents.find(d => d.type === 'SELFIE' && d.status === 'UPLOADED');
-
-        const [dniFront, dniBack, selfie] = await Promise.all([
-          frontDoc ? getDocumentUrlAction(applicationId, 'DNI_FRONT') : null,
-          backDoc ? getDocumentUrlAction(applicationId, 'DNI_BACK') : null,
-          selfieDoc ? getDocumentUrlAction(applicationId, 'SELFIE') : null,
-        ]);
-
-        set({ documentUrls: { dniFront, dniBack, selfie }, documentsStatus: 'success' });
+        const { documents, documentUrls } = await loadDocumentsWithUrls(applicationId);
+        set({ documents, documentUrls, documentsStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching documents:', err);
         set({ documentsStatus: 'error' });
@@ -240,7 +360,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ verificationStatus: 'pending' });
       try {
-        const status = await getDocumentsVerificationStatusAction(applicationId);
+        const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}/documents/status`);
+        const status = raw ? mapDocumentsVerification(raw) : null;
         set({ documentsVerification: status, verificationStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching verification:', err);
@@ -257,20 +378,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ contractStatus: 'pending' });
       try {
-        const info = await getContractInfoAction(applicationId);
-        if (!info) {
-          set({ contractStatus: 'success' });
-          return;
-        }
-
-        set({ contractInfo: info });
-
-        const [html, pdf] = await Promise.all([
-          getContractHtmlAction(info.contractId),
-          info.status === 'SIGNED' ? getContractPdfUrlAction(info.contractId) : null,
-        ]);
-
-        set({ contractHtml: html, pdfUrl: pdf, contractStatus: 'success' });
+        const result = await loadContract(applicationId);
+        set({ ...result, contractStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching contract:', err);
         set({ contractStatus: 'error' });
@@ -285,7 +394,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ applicationStatus: 'pending', application: null });
       try {
-        const app = await getApplicationDetailAction(applicationId);
+        const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}`);
+        const app = raw ? mapApplication(raw) : null;
         set({ application: app, applicationStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing application:', err);
@@ -299,7 +409,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ detailStatus: 'pending', fullDetail: null });
       try {
-        const detail = await getApplicationFullDetailAction(applicationId);
+        const detail = await fetchJson<ApplicationFullDetail>(`/api/solicitudes/${applicationId}/detail`);
         set({ fullDetail: detail, detailStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing full detail:', err);
@@ -313,22 +423,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ documentsStatus: 'pending' });
       try {
-        const docs = await listDocumentsAction(applicationId);
-        set({ documents: docs });
-
-        if (docs) {
-          const frontDoc = docs.documents.find(d => d.type === 'DNI_FRONT' && d.status === 'UPLOADED');
-          const backDoc = docs.documents.find(d => d.type === 'DNI_BACK' && d.status === 'UPLOADED');
-          const selfieDoc = docs.documents.find(d => d.type === 'SELFIE' && d.status === 'UPLOADED');
-
-          const [dniFront, dniBack, selfie] = await Promise.all([
-            frontDoc ? getDocumentUrlAction(applicationId, 'DNI_FRONT') : null,
-            backDoc ? getDocumentUrlAction(applicationId, 'DNI_BACK') : null,
-            selfieDoc ? getDocumentUrlAction(applicationId, 'SELFIE') : null,
-          ]);
-          set({ documentUrls: { dniFront, dniBack, selfie } });
-        }
-        set({ documentsStatus: 'success' });
+        const { documents, documentUrls } = await loadDocumentsWithUrls(applicationId);
+        set({ documents, documentUrls, documentsStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing documents:', err);
         set({ documentsStatus: 'error' });
@@ -341,7 +437,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ verificationStatus: 'pending' });
       try {
-        const status = await getDocumentsVerificationStatusAction(applicationId);
+        const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}/documents/status`);
+        const status = raw ? mapDocumentsVerification(raw) : null;
         set({ documentsVerification: status, verificationStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing verification:', err);
@@ -355,18 +452,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ contractStatus: 'pending', contractInfo: null, contractHtml: null, pdfUrl: null });
       try {
-        const info = await getContractInfoAction(applicationId);
-        if (!info) {
-          set({ contractStatus: 'success' });
-          return;
-        }
-
-        set({ contractInfo: info });
-        const [html, pdf] = await Promise.all([
-          getContractHtmlAction(info.contractId),
-          info.status === 'SIGNED' ? getContractPdfUrlAction(info.contractId) : null,
-        ]);
-        set({ contractHtml: html, pdfUrl: pdf, contractStatus: 'success' });
+        const result = await loadContract(applicationId);
+        set({ ...result, contractStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing contract:', err);
         set({ contractStatus: 'error' });
@@ -391,7 +478,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ isPolling: true, _pollingAttempts: 0 });
 
-      getApplicationIntentionAction(applicationId)
+      // Cargar intención para el sidebar
+      fetchJson<ApplicationIntention>(`/api/solicitudes/${applicationId}/intention`)
         .then((intention) => {
           if (intention) set({ applicationIntention: intention });
         })
@@ -411,8 +499,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
         set({ _pollingAttempts: _pollingAttempts + 1 });
 
         try {
-          const status = await getApplicationStatusAction(appId);
-          if (!status) return;
+          const statusRaw = await fetchJson<any>(`/api/solicitudes/${appId}/status`);
+          if (!statusRaw) return;
+
+          const status = statusRaw.status as ApplicationStatus;
 
           if (status !== 'SUBMITTED' && status !== 'PROCESSING') {
             get().stopPolling();
@@ -422,40 +512,19 @@ export const useSolicitudStore = create<SolicitudStore>()(
               setTimeout(() => set({ showCelebration: false }), 2500);
             }
 
-            // Recargar todo
-            const app = await getApplicationDetailAction(appId);
-            if (app) set({ application: app, applicationStatus: 'success' });
+            // Recargar todo en paralelo
+            const appRaw = await fetchJson<any>(`/api/solicitudes/${appId}`);
+            if (appRaw) set({ application: mapApplication(appRaw), applicationStatus: 'success' });
 
-            const [detailRes, docsRes, contractRes] = await Promise.all([
-              getApplicationFullDetailAction(appId),
-              listDocumentsAction(appId),
-              getContractInfoAction(appId),
+            const [detail, docsResult, contractResult] = await Promise.all([
+              fetchJson<ApplicationFullDetail>(`/api/solicitudes/${appId}/detail`),
+              loadDocumentsWithUrls(appId),
+              loadContract(appId),
             ]);
 
-            set({ fullDetail: detailRes, detailStatus: 'success' });
-            set({ documents: docsRes, documentsStatus: 'success' });
-
-            if (docsRes) {
-              const frontDoc = docsRes.documents.find(d => d.type === 'DNI_FRONT' && d.status === 'UPLOADED');
-              const backDoc = docsRes.documents.find(d => d.type === 'DNI_BACK' && d.status === 'UPLOADED');
-              const selfieDoc = docsRes.documents.find(d => d.type === 'SELFIE' && d.status === 'UPLOADED');
-
-              const [dniFront, dniBack, selfie] = await Promise.all([
-                frontDoc ? getDocumentUrlAction(appId, 'DNI_FRONT') : null,
-                backDoc ? getDocumentUrlAction(appId, 'DNI_BACK') : null,
-                selfieDoc ? getDocumentUrlAction(appId, 'SELFIE') : null,
-              ]);
-              set({ documentUrls: { dniFront, dniBack, selfie } });
-            }
-
-            if (contractRes) {
-              set({ contractInfo: contractRes });
-              const [html, pdf] = await Promise.all([
-                getContractHtmlAction(contractRes.contractId),
-                contractRes.status === 'SIGNED' ? getContractPdfUrlAction(contractRes.contractId) : null,
-              ]);
-              set({ contractHtml: html, pdfUrl: pdf, contractStatus: 'success' });
-            }
+            set({ fullDetail: detail, detailStatus: 'success' });
+            set({ documents: docsResult.documents, documentUrls: docsResult.documentUrls, documentsStatus: 'success' });
+            set({ ...contractResult, contractStatus: 'success' });
           }
         } catch (err) {
           console.error('[SolicitudStore] Polling error:', err);

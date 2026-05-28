@@ -18,7 +18,8 @@ import {
   CheckCircle2, XCircle, AlertCircle, AlertTriangle,
   ArrowRight, RefreshCw, Home, FileText, Camera, PenLine, X, Clock,
 } from 'lucide-react';
-import { cancelApplicationAction, type ApplicationFullDetail } from '@/app/actions/application.actions';
+import { cancelApplicationAction } from '@/app/actions/application.actions';
+import type { ApplicationFullDetail } from '@/lib/stores/solicitud-store';
 import type { DocumentListResult } from '@/lib/types/document';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';

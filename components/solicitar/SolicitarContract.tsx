@@ -8,13 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FileText, Download, Check, AlertCircle, PenLine, Loader2, Maximize2, X } from 'lucide-react';
 import { signContractAction } from '@/app/actions/application.actions';
-import {
-  getContractInfoAction,
-  getContractHtmlAction,
-  getContractPdfUrlAction,
-  type ContractInfo,
-} from '@/app/actions/contract.actions';
-import { useSolicitudStore } from '@/lib/stores/solicitud-store';
+import { useSolicitudStore, type ContractInfo } from '@/lib/stores/solicitud-store';
 
 interface FunnelContractProps {
   applicationId?: string;
@@ -131,16 +125,21 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     async function loadContract() {
       setLoadingContract(true);
       try {
-        const info = await getContractInfoAction(solicitudId!);
-        if (!info) { setLoadingContract(false); return; }
+        const infoRes = await fetch(`/api/solicitudes/${solicitudId}/contract`, { cache: 'no-store' });
+        if (!infoRes.ok) { setLoadingContract(false); return; }
+        const info: ContractInfo = await infoRes.json();
         setContractInfo(info);
 
-        const html = await getContractHtmlAction(info.contractId);
+        const htmlRes = await fetch(`/api/solicitudes/${solicitudId}/contract/html?contractId=${info.contractId}`, { cache: 'no-store' });
+        const html = htmlRes.ok ? await htmlRes.text() : null;
         setContractHtml(html);
 
         if (info.status === 'SIGNED') {
-          const url = await getContractPdfUrlAction(info.contractId);
-          setPdfUrl(url);
+          const pdfRes = await fetch(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${info.contractId}`, { cache: 'no-store' });
+          if (pdfRes.ok) {
+            const pdfData = await pdfRes.json();
+            setPdfUrl(pdfData.pdfUrl ?? null);
+          }
         }
       } catch (err) {
         console.error('Error cargando contrato:', err);
@@ -153,7 +152,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
   }, [solicitudId, isInSolicitudFlow]);
 
   const handleDownloadPdf = async () => {
-    if (!contractInfo) return;
+    if (!contractInfo || !solicitudId) return;
 
     setDownloadingPdf(true);
     try {
@@ -162,10 +161,14 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
         return;
       }
 
-      const url = await getContractPdfUrlAction(contractInfo.contractId);
-      if (url) {
-        setPdfUrl(url);
-        window.open(url, '_blank');
+      const res = await fetch(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${contractInfo.contractId}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        const url = data.pdfUrl ?? null;
+        if (url) {
+          setPdfUrl(url);
+          window.open(url, '_blank');
+        }
       }
     } finally {
       setDownloadingPdf(false);
