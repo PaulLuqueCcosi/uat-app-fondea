@@ -14,12 +14,12 @@ import { cn } from '@/lib/utils';
  */
 export function FunnelLoanSummaryCard() {
   const config = useIntencionStore(s => s.intencion);
-  const isReady = useIntencionStore(s => s.isReady);
-  const fetchIntencion = useIntencionStore(s => s.fetchIntencion);
+  const status = useIntencionStore(s => s.status);
+  const fetchIntencion = useIntencionStore(s => s.fetch);
   const { isOpen, open, close } = useSolicitarCalc();
   const pathname = usePathname();
 
-  const loading = !isReady;
+  const loading = status === 'idle' || status === 'pending';
 
   // No fetch si estamos en el dispatcher (él se encarga de registrar primero)
   useEffect(() => {

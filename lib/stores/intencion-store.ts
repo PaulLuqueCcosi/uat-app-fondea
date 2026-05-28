@@ -1,75 +1,56 @@
 import { create } from 'zustand';
 import type { IntencionConfig } from '@/lib/types';
 import { getActiveIntencion } from '@/lib/client-api/intenciones';
+import type { StoreStatus } from './credit-score-store';
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 interface IntencionStore {
-  /**
-   * Si ya se resolvió la consulta inicial al server.
-   * - false → aún no sabemos si tiene intención (mostrar skeleton)
-   * - true → ya sabemos, `intencion` refleja la realidad
-   */
-  isReady: boolean;
-
-  /**
-   * La intención activa del usuario.
-   * - null → no tiene intención activa
-   * - IntencionConfig → tiene una activa con estos datos
-   */
+  status: StoreStatus;
   intencion: IntencionConfig | null;
+  error: string | null;
 
-  /** Carga la intención activa del server (solo la primera vez) */
-  fetchIntencion: () => Promise<void>;
-
-  /** Fuerza recarga del server (después de crear/editar) */
+  fetch: () => Promise<void>;
   refetch: () => Promise<void>;
-
-  /** Actualiza en memoria sin llamar al server */
   setIntencion: (data: IntencionConfig) => void;
-
-  /** Limpia la intención (envío de solicitud, logout, cancelación) */
   clear: () => void;
 }
 
-let _fetching = false;
-
 export const useIntencionStore = create<IntencionStore>()((set, get) => ({
-  isReady: false,
+  status: 'idle',
   intencion: null,
+  error: null,
 
-  fetchIntencion: async () => {
-    if (get().isReady || _fetching) return;
-    _fetching = true;
+  fetch: async () => {
+    const { status } = get();
+    if (status === 'pending' || status === 'success') return;
 
+    set({ status: 'pending', error: null });
     try {
       const data = await getActiveIntencion();
-      set({ intencion: data, isReady: true });
+      set({ status: 'success', intencion: data ?? null });
     } catch (err) {
       console.error('[IntencionStore] Error fetching:', err);
-      set({ isReady: true });
-    } finally {
-      _fetching = false;
+      set({ status: 'error', error: 'Error al cargar intención' });
     }
   },
 
   refetch: async () => {
-    _fetching = true;
+    set({ status: 'pending', error: null });
     try {
       const data = await getActiveIntencion();
-      set({ intencion: data, isReady: true });
+      set({ status: 'success', intencion: data ?? null });
     } catch (err) {
       console.error('[IntencionStore] Error refetching:', err);
-    } finally {
-      _fetching = false;
+      set({ status: 'error', error: 'Error al cargar intención' });
     }
   },
 
   setIntencion: (data) => {
-    set({ intencion: data, isReady: true });
+    set({ status: 'success', intencion: data, error: null });
   },
 
   clear: () => {
-    set({ intencion: null, isReady: true });
+    set({ status: 'idle', intencion: null, error: null });
   },
 }));

@@ -12,14 +12,15 @@ import { TrendingUp, Zap } from 'lucide-react';
  */
 export function CreditScoreCard() {
   const creditScore = useCreditScoreStore(s => s.creditScore);
-  const isReady = useCreditScoreStore(s => s.isReady);
-  const fetchCreditScore = useCreditScoreStore(s => s.fetchCreditScore);
+  const status = useCreditScoreStore(s => s.status);
+  const fetchCreditScore = useCreditScoreStore(s => s.fetch);
 
   useEffect(() => {
     fetchCreditScore();
   }, [fetchCreditScore]);
 
-  if (!isReady) {
+  // Skeleton: idle o pending
+  if (status === 'idle' || status === 'pending') {
     return (
       <Card className="border-accent-200 bg-gradient-to-br from-accent-50 to-accent-100/50">
         <CardHeader>

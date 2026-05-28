@@ -15,13 +15,13 @@ interface FunnelLoanSummaryBannerProps {
  */
 export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanSummaryBannerProps) {
   const config = useIntencionStore(s => s.intencion);
-  const isReady = useIntencionStore(s => s.isReady);
-  const fetchIntencion = useIntencionStore(s => s.fetchIntencion);
+  const status = useIntencionStore(s => s.status);
+  const fetchIntencion = useIntencionStore(s => s.fetch);
   const { open } = useSolicitarCalc();
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const loading = !isReady;
+  const loading = status === 'idle' || status === 'pending';
 
   useEffect(() => {
     if (!isOrchestrating) fetchIntencion();

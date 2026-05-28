@@ -2,110 +2,85 @@ import { create } from 'zustand';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
+export type StoreStatus = 'idle' | 'pending' | 'success' | 'error';
+
 export interface CreditScoreData {
   score: number; // 0 a 1000
   updatedAt: string; // ISO datetime
 }
 
 // ── Store ──────────────────────────────────────────────────────────────────────
-// Credit Score = score crediticio del usuario (0-1000)
-// Se recarga después de submit y cuando llega el resultado de la solicitud
 
 interface CreditScoreStore {
-  /**
-   * Si ya se resolvió la consulta inicial al server.
-   * - false → aún no sabemos si tiene score crediticio (mostrar skeleton)
-   * - true → ya sabemos, `creditScore` refleja la realidad
-   */
-  isReady: boolean;
-
-  /**
-   * El score crediticio del usuario (0-1000).
-   * - null → no tiene score crediticio disponible (404 del backend)
-   * - CreditScoreData → tiene score con valor y fecha de actualización
-   */
+  status: StoreStatus;
   creditScore: CreditScoreData | null;
+  error: string | null;
 
-  /** Carga el score crediticio del server (solo la primera vez) */
-  fetchCreditScore: () => Promise<void>;
-
-  /** Fuerza recarga del server (después de submit o resultado) */
+  fetch: () => Promise<void>;
   refetch: () => Promise<void>;
-
-  /** Actualiza en memoria sin llamar al server */
-  setCreditScore: (data: CreditScoreData) => void;
-
-  /** Limpia el score crediticio */
+  set: (data: CreditScoreData) => void;
   clear: () => void;
 }
 
-let _fetching = false;
-
 export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
-  isReady: false,
+  status: 'idle',
   creditScore: null,
+  error: null,
 
-  fetchCreditScore: async () => {
-    if (get().isReady || _fetching) return;
-    _fetching = true;
+  fetch: async () => {
+    const { status } = get();
+    if (status === 'pending' || status === 'success') return;
 
+    set({ status: 'pending', error: null });
     try {
-      const res = await fetch('/api/credit-score', { cache: 'no-store' });
-      
+      const res = await window.fetch('/api/credit-score', { cache: 'no-store' });
+
       if (res.status === 404) {
-        console.log('[CreditScoreStore] 404: sin score crediticio');
-        set({ creditScore: null, isReady: true });
+        set({ status: 'success', creditScore: null });
         return;
       }
 
       if (!res.ok) {
-        console.error('[CreditScoreStore] Error:', res.status);
-        set({ isReady: true });
+        set({ status: 'error', error: `HTTP ${res.status}` });
         return;
       }
 
       const data = await res.json();
-      console.log('[CreditScoreStore] ✅ score cargado:', data.score);
-      set({ creditScore: data, isReady: true });
+      set({ status: 'success', creditScore: data });
     } catch (err) {
-      console.error('[CreditScoreStore] Network error:', err);
-      set({ isReady: true });
-    } finally {
-      _fetching = false;
+      console.error('[CreditScore] Network error:', err);
+      set({ status: 'error', error: 'Network error' });
     }
   },
 
   refetch: async () => {
-    _fetching = true;
+    set({ status: 'pending', error: null });
     try {
-      const res = await fetch('/api/credit-score', { cache: 'no-store' });
-      
+      const res = await window.fetch('/api/credit-score', { cache: 'no-store' });
+
       if (res.status === 404) {
-        console.log('[CreditScoreStore] 404: sin score crediticio');
-        set({ creditScore: null, isReady: true });
+        set({ status: 'success', creditScore: null });
         return;
       }
 
       if (!res.ok) {
-        console.error('[CreditScoreStore] Error:', res.status);
+        set({ status: 'error', error: `HTTP ${res.status}` });
         return;
       }
 
       const data = await res.json();
-      console.log('[CreditScoreStore] ✅ score recargado:', data.score);
-      set({ creditScore: data, isReady: true });
+      set({ status: 'success', creditScore: data });
     } catch (err) {
-      console.error('[CreditScoreStore] Network error:', err);
-    } finally {
-      _fetching = false;
+      console.error('[CreditScore] Network error:', err);
+      set({ status: 'error', error: 'Network error' });
     }
   },
 
-  setCreditScore: (data) => {
-    set({ creditScore: data, isReady: true });
+  set: (data) => {
+    set({ status: 'success', creditScore: data, error: null });
   },
 
   clear: () => {
-    set({ creditScore: null, isReady: true });
+    set({ status: 'idle', creditScore: null, error: null });
   },
 }));

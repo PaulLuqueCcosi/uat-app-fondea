@@ -90,21 +90,21 @@ export function DashboardHomeClient({ userName, applications, activeIntencion: i
 
   // Usar el store — inicializar con la prop del server si el store aún no tiene datos
   const storeIntencion = useIntencionStore(s => s.intencion);
-  const isReady = useIntencionStore(s => s.isReady);
+  const intencionStatus = useIntencionStore(s => s.status);
   const setIntencion = useIntencionStore(s => s.setIntencion);
-  const fetchIntencion = useIntencionStore(s => s.fetchIntencion);
+  const fetchIntencion = useIntencionStore(s => s.fetch);
 
   // Si el server ya trajo datos y el store está vacío, inicializar el store
   useEffect(() => {
-    if (!isReady && initialIntencion) {
+    if (initialIntencion && !storeIntencion) {
       setIntencion(initialIntencion);
-    } else if (!isReady) {
+    } else if (intencionStatus === 'idle') {
       fetchIntencion();
     }
-  }, [isReady, initialIntencion, setIntencion, fetchIntencion]);
+  }, [initialIntencion, storeIntencion, intencionStatus, setIntencion, fetchIntencion]);
 
   // Usar el store como fuente de verdad (se actualiza cuando la calculadora crea/edita)
-  const activeIntencion = isReady ? storeIntencion : initialIntencion;
+  const activeIntencion = storeIntencion ?? initialIntencion;
 
   const completedCount = expedienteSections.filter(s => s.status === 'completed').length;
 

@@ -12,14 +12,15 @@ import { TrendingUp, Award } from 'lucide-react';
  */
 export function PuntajeCard() {
   const puntaje = usePuntajeStore(s => s.puntaje);
-  const isReady = usePuntajeStore(s => s.isReady);
+  const status = usePuntajeStore(s => s.status);
   const fetchPuntaje = usePuntajeStore(s => s.fetchPuntaje);
 
   useEffect(() => {
     fetchPuntaje();
   }, [fetchPuntaje]);
 
-  if (!isReady) {
+  // Skeleton: idle o pending
+  if (status === 'idle' || status === 'pending') {
     return (
       <Card className="border-primary-200 bg-gradient-to-br from-primary-50 to-primary-100/50">
         <CardHeader>
