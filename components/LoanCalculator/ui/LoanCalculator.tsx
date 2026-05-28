@@ -298,10 +298,26 @@ export default function LoanCalculator({
         </div>
 
         {/* ── PANEL DE DETALLE ── */}
-        {detailKey && (
-          <>
-            {detailMode === "sidebar" ? (
-              <div className="shrink-0">
+        {detailKey && detailMode === "sidebar" && (
+          <div className="shrink-0">
+            <LoanDetail
+              monto={monto}
+              scoreData={calc?.scores[activeCode] ?? null}
+              cuotas={cuotas ?? 1}
+              calculating={calculating}
+              onClose={() => setDetailKey(null)}
+              maxWidth={detailMaxWidth}
+            />
+          </div>
+        )}
+        {detailKey && detailMode !== "sidebar" && (
+          <div className="contents">
+            <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setDetailKey(null)} />
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={() => setDetailKey(null)}
+            >
+              <div onClick={(e) => e.stopPropagation()}>
                 <LoanDetail
                   monto={monto}
                   scoreData={calc?.scores[activeCode] ?? null}
@@ -311,27 +327,8 @@ export default function LoanCalculator({
                   maxWidth={detailMaxWidth}
                 />
               </div>
-            ) : (
-              <>
-                <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setDetailKey(null)} />
-                <div
-                  className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                  onClick={() => setDetailKey(null)}
-                >
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <LoanDetail
-                      monto={monto}
-                      scoreData={calc?.scores[activeCode] ?? null}
-                      cuotas={cuotas ?? 1}
-                      calculating={calculating}
-                      onClose={() => setDetailKey(null)}
-                      maxWidth={detailMaxWidth}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-          </>
+            </div>
+          </div>
         )}
       </div>
     </div>

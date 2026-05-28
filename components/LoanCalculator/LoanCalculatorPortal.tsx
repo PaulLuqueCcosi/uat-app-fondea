@@ -97,15 +97,20 @@ export default function LoanCalculatorPortal({
       // Awaitar el resultado real para Zustand
       const result = await promise;
 
-      // Actualizar store y navegar en el siguiente tick
-      setTimeout(() => {
-        setIntencion(mapIntencionFromBackend(result));
-        if (onDone) {
-          onDone();
-        } else {
-          router.push('/solicitar/start');
-        }
-      }, 0);
+      // ── Separar actualizaciones para evitar race condition DOM ──
+      // Paso 1: Actualizar el store (causa re-render del sidebar)
+      setIntencion(mapIntencionFromBackend(result));
+
+      // Paso 2: Cerrar panel / navegar en el SIGUIENTE frame
+      // Esto permite que React reconcilie el sidebar primero,
+      // antes de desmontar el panel (evita insertBefore error).
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      if (onDone) {
+        onDone();
+      } else {
+        router.push('/solicitar/start');
+      }
 
       return result;
     },
