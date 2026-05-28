@@ -2,14 +2,37 @@ import { ChevronRight, ClipboardList, CheckCircle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getKYCData } from '@/app/actions/kyc.actions';
+import { getLaborProfileStatus } from '@/app/actions/labor.actions';
+import { getEconomicProfileStatus } from '@/app/actions/economic.actions';
+import { getAddressProfileStatus } from '@/app/actions/additional-address.actions';
+import { getReferencesProfileStatus } from '@/app/actions/references.actions';
+import { getBankAccountProfileStatus } from '@/app/actions/bank-account.actions';
 
 async function getExpedienteProgress() {
-  // TODO: Reemplazar con llamada real a BD
-  return {
-    progress: 20,
-    completedCount: 1,
-    totalCount: 5,
-  };
+  const [kyc, labor, economic, address, references, bankAccount] = await Promise.all([
+    getKYCData(),
+    getLaborProfileStatus(),
+    getEconomicProfileStatus(),
+    getAddressProfileStatus(),
+    getReferencesProfileStatus(),
+    getBankAccountProfileStatus(),
+  ]);
+
+  const sections = [
+    kyc.data?.status === 'VERIFIED',
+    labor.overall_verified,
+    economic.overall_verified,
+    address.overall_verified,
+    references.overall_verified,
+    bankAccount.overall_verified,
+  ];
+
+  const totalCount = sections.length;
+  const completedCount = sections.filter(Boolean).length;
+  const progress = Math.round((completedCount / totalCount) * 100);
+
+  return { progress, completedCount, totalCount };
 }
 
 async function ProgressBarContent() {
@@ -70,28 +93,21 @@ function ProgressBarSkeleton() {
     <Card className="relative overflow-hidden">
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-3">
-          {/* Icono */}
           <Skeleton className="w-10 h-10 rounded-full shrink-0" />
           <div className="space-y-1">
-            {/* Título */}
             <Skeleton className="h-5 w-40" />
-            {/* Descripción */}
             <Skeleton className="h-3 w-56" />
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          {/* Porcentaje */}
           <Skeleton className="h-7 w-16" />
-          {/* Label */}
           <Skeleton className="h-3 w-24" />
         </div>
       </CardHeader>
 
       <CardContent className="space-y-3 pb-4">
-        {/* Progress bar */}
         <Skeleton className="h-3 w-full rounded-full" />
         <div className="flex items-center justify-between">
-          {/* Contador */}
           <Skeleton className="h-4 w-40" />
         </div>
       </CardContent>

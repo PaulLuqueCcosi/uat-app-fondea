@@ -1,8 +1,14 @@
-import { CreditCard, Briefcase, DollarSign, Users, MapPin, ChevronRight } from 'lucide-react';
+import { CreditCard, Briefcase, DollarSign, Users, MapPin, ChevronRight, Landmark } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getKYCData } from '@/app/actions/kyc.actions';
+import { getLaborProfileStatus } from '@/app/actions/labor.actions';
+import { getEconomicProfileStatus } from '@/app/actions/economic.actions';
+import { getAddressProfileStatus } from '@/app/actions/additional-address.actions';
+import { getReferencesProfileStatus } from '@/app/actions/references.actions';
+import { getBankAccountProfileStatus } from '@/app/actions/bank-account.actions';
 
 interface ExpedienteSection {
   id: string;
@@ -13,17 +19,31 @@ interface ExpedienteSection {
   path: string;
 }
 
-const expedienteSections: ExpedienteSection[] = [
-  { id: 'kyc', num: 1, icon: CreditCard, title: 'Verificación KYC', status: 'pending', path: '/dashboard/section/kyc' },
-  { id: 'labor', num: 2, icon: Briefcase, title: 'Perfil Laboral', status: 'pending', path: '/dashboard/section/labor' },
-  { id: 'economic', num: 3, icon: DollarSign, title: 'Perfil Económico', status: 'pending', path: '/dashboard/section/economic' },
-  { id: 'references', num: 4, icon: Users, title: 'Referencias', status: 'completed', path: '/dashboard/section/references' },
-  { id: 'additional', num: 5, icon: MapPin, title: 'Info Adicional', status: 'pending', path: '/dashboard/section/additional' },
-];
+async function getExpedienteSections(): Promise<ExpedienteSection[]> {
+  const [kyc, labor, economic, address, references, bankAccount] = await Promise.all([
+    getKYCData(),
+    getLaborProfileStatus(),
+    getEconomicProfileStatus(),
+    getAddressProfileStatus(),
+    getReferencesProfileStatus(),
+    getBankAccountProfileStatus(),
+  ]);
+
+  const kycVerified = kyc.data?.status === 'VERIFIED';
+
+  return [
+    { id: 'kyc', num: 1, icon: CreditCard, title: 'Verificación KYC', status: kycVerified ? 'completed' : 'pending', path: '/dashboard/section/kyc' },
+    { id: 'labor', num: 2, icon: Briefcase, title: 'Perfil Laboral', status: labor.overall_verified ? 'completed' : 'pending', path: '/dashboard/section/labor' },
+    { id: 'economic', num: 3, icon: DollarSign, title: 'Perfil Económico', status: economic.overall_verified ? 'completed' : 'pending', path: '/dashboard/section/economic' },
+    { id: 'additional', num: 4, icon: MapPin, title: 'Info Adicional', status: address.overall_verified ? 'completed' : 'pending', path: '/dashboard/section/additional' },
+    { id: 'references', num: 5, icon: Users, title: 'Referencias', status: references.overall_verified ? 'completed' : 'pending', path: '/dashboard/section/references' },
+    { id: 'bank-account', num: 6, icon: Landmark, title: 'Cuenta Bancaria', status: bankAccount.overall_verified ? 'completed' : 'pending', path: '/dashboard/section/bank-account' },
+  ];
+}
 
 async function ExpedienteContent() {
-  // TODO: Obtener datos reales de BD
-  const completedCount = expedienteSections.filter(s => s.status === 'completed').length;
+  const sections = await getExpedienteSections();
+  const completedCount = sections.filter(s => s.status === 'completed').length;
 
   return (
     <Card>
@@ -32,10 +52,10 @@ async function ExpedienteContent() {
           <CreditCard className="w-4 h-4 text-white" />
         </div>
         <h2 className="font-semibold text-dark">Mi Expediente</h2>
-        <span className="ml-auto text-xs text-fondea-text">{completedCount}/{expedienteSections.length} completados</span>
+        <span className="ml-auto text-xs text-fondea-text">{completedCount}/{sections.length} completados</span>
       </div>
       <div className="divide-y divide-border">
-        {expedienteSections.map((section) => {
+        {sections.map((section) => {
           const Icon = section.icon;
           return (
             <div key={section.id} className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-3">
@@ -78,23 +98,16 @@ function ExpedienteSkeleton() {
   return (
     <Card>
       <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
-        {/* Icono */}
         <Skeleton className="w-7 h-7 rounded-full shrink-0" />
-        {/* Título */}
         <Skeleton className="h-5 w-32" />
-        {/* Contador */}
         <Skeleton className="h-4 w-20 ml-auto" />
       </div>
       <div className="divide-y divide-border">
-        {Array.from({ length: 5 }).map((_, i) => (
+        {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-3">
-            {/* Número */}
             <Skeleton className="w-7 h-7 rounded-full shrink-0" />
-            {/* Título sección */}
             <Skeleton className="h-4 w-32 flex-1" />
-            {/* Badge (hidden en mobile) */}
             <Skeleton className="h-5 w-16 hidden sm:block shrink-0" />
-            {/* Link/Chevron */}
             <Skeleton className="h-4 w-12 shrink-0" />
           </div>
         ))}
