@@ -113,7 +113,7 @@ export function AppNavbar({ user, onSignOut, backLink }: AppNavbarProps) {
         <div className="flex items-center gap-1">
 
           {/* Notificaciones */}
-          <Button
+          {/* <Button
             variant="ghost"
             size="icon"
             className="relative text-muted-foreground hover:text-foreground"
@@ -124,7 +124,7 @@ export function AppNavbar({ user, onSignOut, backLink }: AppNavbarProps) {
               className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-error-500 ring-2 ring-white"
               aria-hidden
             />
-          </Button>
+          </Button> */}
 
           <div className="mx-2 h-6 w-px bg-border" />
 

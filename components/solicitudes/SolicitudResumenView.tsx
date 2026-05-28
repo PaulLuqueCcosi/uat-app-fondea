@@ -463,7 +463,7 @@ function RejectedView({ application }: { application: ApplicationRecord }) {
       </div>
 
       {/* Fecha de reintento */}
-      {application.canRetryAt && (
+      {/* {application.canRetryAt && (
         <Card className="border-0 shadow-md">
           <CardContent className="p-5">
             <div className="flex gap-3">
@@ -479,7 +479,7 @@ function RejectedView({ application }: { application: ApplicationRecord }) {
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       {/* Recomendaciones */}
       <div className="bg-primary-50 border border-primary-200 rounded-xl p-5">

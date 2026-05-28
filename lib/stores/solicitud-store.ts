@@ -160,6 +160,7 @@ interface SolicitudActions {
   fetchDocuments: () => Promise<void>;
   fetchDocumentsVerification: () => Promise<void>;
   fetchContract: () => Promise<void>;
+  fetchIntention: () => Promise<void>;
 
   refreshApplication: () => Promise<void>;
   refreshFullDetail: () => Promise<void>;
@@ -288,6 +289,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
       get().fetchDocuments();
       get().fetchDocumentsVerification();
       get().fetchContract();
+      get().fetchIntention();
     },
 
     reset: () => {
@@ -383,6 +385,20 @@ export const useSolicitudStore = create<SolicitudStore>()(
       } catch (err) {
         console.error('[SolicitudStore] Error fetching contract:', err);
         set({ contractStatus: 'error' });
+      }
+    },
+
+    // ── Fetch Intention ───────────────────────────────────────────────────────
+
+    fetchIntention: async () => {
+      const { applicationId } = get();
+      if (!applicationId) return;
+
+      try {
+        const intention = await fetchJson<ApplicationIntention>(`/api/solicitudes/${applicationId}/intention`);
+        if (intention) set({ applicationIntention: intention });
+      } catch (err) {
+        console.error('[SolicitudStore] Error fetching intention:', err);
       }
     },
 
