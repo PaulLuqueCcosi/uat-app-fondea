@@ -3,71 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  CreditCard, Briefcase, DollarSign, Users, MapPin,
   X, ArrowRight, BookOpen, Settings, User, Bell,
   ChevronRight, ClipboardList, FileText, Plus, CheckCircle
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
 import { PuntajeCard } from './PuntajeCard';
 import { CreditScoreCard } from './CreditScoreCard';
-import type { ApplicationRecord, IntencionConfig } from '@/lib/types';
-
-interface ExpedienteSection {
-  id: string;
-  num: number;
-  icon: React.ElementType;
-  title: string;
-  status: 'pending' | 'completed';
-  path: string;
-}
+import type { IntencionConfig } from '@/lib/types';
 
 interface Article {
   title: string;
   description: string;
 }
-
-// Helper para formatear fecha
-function formatDate(isoDate: string): string {
-  return new Date(isoDate).toLocaleDateString('es-PE', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-// Helper para obtener el label del estado
-function getStatusLabel(status: string): string {
-  const statusMap: Record<string, string> = {
-    DRAFT: 'Borrador',
-    SUBMITTED: 'Enviada',
-    EVALUATING: 'En evaluación',
-    APPROVED: 'Aprobada',
-    MORE_INFO: 'Requiere información',
-    REJECTED: 'Rechazada',
-  };
-  return statusMap[status.toUpperCase()] ?? status;
-}
-
-// Helper para obtener el variant del badge
-function getStatusVariant(status: string): 'completed' | 'pending' | 'error' | 'warning' {
-  const statusUpper = status.toUpperCase();
-  if (statusUpper === 'APPROVED') return 'completed';
-  if (statusUpper === 'REJECTED') return 'error';
-  if (statusUpper === 'MORE_INFO') return 'warning';
-  return 'pending';
-}
-
-const expedienteSections: ExpedienteSection[] = [
-  { id: 'kyc', num: 1, icon: CreditCard, title: 'Verificación KYC', status: 'pending', path: '/dashboard/section/kyc' },
-  { id: 'labor', num: 2, icon: Briefcase, title: 'Perfil Laboral', status: 'pending', path: '/dashboard/section/labor' },
-  { id: 'economic', num: 3, icon: DollarSign, title: 'Perfil Económico', status: 'pending', path: '/dashboard/section/economic' },
-  { id: 'references', num: 4, icon: Users, title: 'Referencias', status: 'completed', path: '/dashboard/section/references' },
-  { id: 'additional', num: 5, icon: MapPin, title: 'Info Adicional', status: 'pending', path: '/dashboard/section/additional' },
-];
 
 const articles: Article[] = [
   { title: '¿Qué es el score crediticio?', description: 'Aprende cómo se calcula y cómo mejorarlo para acceder a mejores tasas.' },
@@ -75,24 +25,23 @@ const articles: Article[] = [
   { title: 'Diferencia entre TEA y TCEA', description: 'Entiende las tasas que aplican a tu préstamo antes de firmar.' },
 ];
 
-const profileIsComplete = false;
 const progress = 20;
 
 interface DashboardHomeClientProps {
   userName: string;
-  applications: ApplicationRecord[];
   activeIntencion: IntencionConfig | null;
+  children: React.ReactNode; // Para Expediente y Solicitudes (Server Components)
 }
 
-export function DashboardHomeClient({ userName, applications, activeIntencion: initialIntencion }: DashboardHomeClientProps) {
+export function DashboardHomeClient({ userName, activeIntencion: initialIntencion, children }: DashboardHomeClientProps) {
   const router = useRouter();
   const [showDrawer, setShowDrawer] = useState(false);
 
   // Usar el store — inicializar con la prop del server si el store aún no tiene datos
-  const storeIntencion = useIntencionStore(s => s.intencion);
-  const intencionStatus = useIntencionStore(s => s.status);
-  const setIntencion = useIntencionStore(s => s.setIntencion);
-  const fetchIntencion = useIntencionStore(s => s.fetch);
+  const storeIntencion = useIntencionStore((s) => s.intencion);
+  const intencionStatus = useIntencionStore((s) => s.status);
+  const setIntencion = useIntencionStore((s) => s.setIntencion);
+  const fetchIntencion = useIntencionStore((s) => s.fetch);
 
   // Si el server ya trajo datos y el store está vacío, inicializar el store
   useEffect(() => {
@@ -105,8 +54,6 @@ export function DashboardHomeClient({ userName, applications, activeIntencion: i
 
   // Usar el store como fuente de verdad (se actualiza cuando la calculadora crea/edita)
   const activeIntencion = storeIntencion ?? initialIntencion;
-
-  const completedCount = expedienteSections.filter(s => s.status === 'completed').length;
 
   return (
     <>
@@ -170,7 +117,7 @@ export function DashboardHomeClient({ userName, applications, activeIntencion: i
             <div className="relative">
               <div className="h-3 overflow-hidden rounded-full bg-border/50 shadow-inner">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-secondary shadow-sm transition-all duration-700 ease-out"
+                  className="h-full rounded-full bg-linear-to-r from-primary to-secondary shadow-sm transition-all duration-700 ease-out"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -179,16 +126,11 @@ export function DashboardHomeClient({ userName, applications, activeIntencion: i
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs">
                 <div className="flex items-center gap-1">
-                  <CheckCircle className={cn(
-                    "h-4 w-4",
-                    completedCount > 0 ? "text-secondary" : "text-border"
-                  )} />
-                  <span className="font-medium text-foreground">{completedCount} completadas</span>
+                  <CheckCircle className="h-4 w-4 text-border" />
+                  <span className="font-medium text-foreground">0 completadas</span>
                 </div>
                 <span className="text-muted-foreground">•</span>
-                <span className="text-muted-foreground">
-                  {expedienteSections.length - completedCount} pendientes
-                </span>
+                <span className="text-muted-foreground">5 pendientes</span>
               </div>
 
               {progress < 100 && (
@@ -210,107 +152,8 @@ export function DashboardHomeClient({ userName, applications, activeIntencion: i
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
           {/* Left column */}
           <div className="lg:col-span-3 flex flex-col gap-4 md:gap-6">
-            {/* Mi Expediente */}
-            <Card>
-              <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
-                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <ClipboardList className="w-4 h-4 text-white" />
-                </div>
-                <h2 className="font-semibold text-dark">Mi Expediente</h2>
-                <span className="ml-auto text-xs text-fondea-text">{completedCount}/{expedienteSections.length} completados</span>
-              </div>
-              <div className="divide-y divide-border">
-                {expedienteSections.map((section) => {
-                  const Icon = section.icon;
-                  return (
-                    <div key={section.id} className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-3">
-                      <div className={cn(
-                        'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
-                        section.status === 'completed'
-                          ? 'bg-secondary/20 text-success-600'
-                          : 'bg-primary-50 text-primary'
-                      )}>
-                        {section.num}
-                      </div>
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className={cn(
-                          'text-xs sm:text-sm truncate',
-                          section.status === 'completed' ? 'text-fondea-text line-through' : 'text-dark font-medium'
-                        )}>
-                          {section.title}
-                        </span>
-                      </div>
-                      <Badge
-                        variant={section.status === 'completed' ? 'completed' : 'pending'}
-                        className="flex-shrink-0 hidden sm:flex"
-                      />
-                      <button
-                        onClick={() => router.push(section.path)}
-                        className="text-xs text-primary font-medium hover:underline flex items-center gap-0.5 flex-shrink-0"
-                      >
-                        <span className="hidden sm:inline">{section.status === 'completed' ? 'Editar' : 'Completar'}</span>
-                        <ChevronRight className="w-3 h-3" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-
-            {/* Mis Solicitudes */}
-            <Card>
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
-                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4 text-white" />
-                </div>
-                <h2 className="font-semibold text-dark">Mis Solicitudes</h2>
-                <span className="ml-auto text-xs text-fondea-text">
-                  {applications.length} {applications.length === 1 ? 'solicitud' : 'solicitudes'}
-                </span>
-              </div>
-              <div className="divide-y divide-border">
-                {applications.length === 0 ? (
-                  <div className="px-5 py-8 text-center">
-                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-                    <p className="text-sm text-fondea-text mb-3">Aún no tienes solicitudes</p>
-                    <Button
-                      size="sm"
-                      onClick={() => router.push('/solicitar')}
-                      className="mx-auto"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Crear primera solicitud
-                    </Button>
-                  </div>
-                ) : (
-                  applications.map((app) => (
-                    <button
-                      key={app.id}
-                      onClick={() => router.push(`/solicitudes/${app.id}`)}
-                      className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-background transition-colors text-left"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-dark">
-                          Solicitud #{app.id.slice(0, 8)}
-                        </p>
-                        <p className="text-xs text-fondea-text">
-                          {app.submittedAt ? formatDate(app.submittedAt) : '—'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Badge variant={getStatusVariant(app.status)}>
-                          {getStatusLabel(app.status)}
-                        </Badge>
-                        <ChevronRight className="w-4 h-4 text-fondea-text" />
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </Card>
+            {/* Expediente y Solicitudes (Server Components con Suspense) */}
+            {children}
           </div>
 
           {/* Right column */}
@@ -319,7 +162,7 @@ export function DashboardHomeClient({ userName, applications, activeIntencion: i
             <Card>
               <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
                 <div className={cn(
-                  'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
+                  'w-7 h-7 rounded-full flex items-center justify-center shrink-0',
                   activeIntencion ? 'bg-primary' : 'bg-border'
                 )}>
                   <FileText className="w-4 h-4 text-white" />
@@ -388,7 +231,7 @@ export function DashboardHomeClient({ userName, applications, activeIntencion: i
             {/* Educación Financiera */}
             <Card>
               <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
-                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0">
                   <BookOpen className="w-4 h-4 text-white" />
                 </div>
                 <h2 className="font-semibold text-dark">Aprende sobre finanzas</h2>
@@ -409,7 +252,7 @@ export function DashboardHomeClient({ userName, applications, activeIntencion: i
             {/* Configuración rápida */}
             <Card>
               <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
-                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0">
                   <Settings className="w-4 h-4 text-white" />
                 </div>
                 <h2 className="font-semibold text-dark">Configuración rápida</h2>
