@@ -5,6 +5,7 @@ import type { DocumentsVerificationStatus } from '@/lib/types/document';
 import type { ApplicationFullDetail, ApplicationIntention } from '@/app/actions/application.actions';
 import type { DocumentListResult } from '@/lib/types/document';
 import type { ContractInfo } from '@/app/actions/contract.actions';
+import type { StoreStatus } from './credit-score-store';
 import {
   getApplicationDetailAction,
   getApplicationFullDetailAction,
@@ -35,26 +36,24 @@ interface SolicitudState {
   applicationId: string | null;
 
   // ── Application ──
-  applicationLoading: boolean;
+  applicationStatus: StoreStatus;
   application: ApplicationRecord | null;
-  applicationNotFound: boolean;
 
   // ── Full Detail ──
-  detailLoading: boolean;
+  detailStatus: StoreStatus;
   fullDetail: ApplicationFullDetail | null;
-  detailNotFound: boolean;
 
   // ── Documents ──
-  documentsLoading: boolean;
+  documentsStatus: StoreStatus;
   documents: DocumentListResult | null;
   documentUrls: DocumentUrls;
 
   // ── Documents Verification ──
-  verificationLoading: boolean;
+  verificationStatus: StoreStatus;
   documentsVerification: DocumentsVerificationStatus | null;
 
   // ── Contract ──
-  contractLoading: boolean;
+  contractStatus: StoreStatus;
   contractInfo: ContractInfo | null;
   contractHtml: string | null;
   pdfUrl: string | null;
@@ -72,32 +71,25 @@ interface SolicitudState {
 }
 
 interface SolicitudActions {
-  // ── Lifecycle ──
   init: (applicationId: string) => void;
   reset: () => void;
-
-  // ── UI ──
   dismissCelebration: () => void;
 
-  // ── Fetch (no recarga si ya tiene datos) ──
   fetchApplication: () => Promise<ApplicationRecord | null>;
   fetchFullDetail: () => Promise<void>;
   fetchDocuments: () => Promise<void>;
   fetchDocumentsVerification: () => Promise<void>;
   fetchContract: () => Promise<void>;
 
-  // ── Refresh (fuerza recarga) ──
   refreshApplication: () => Promise<void>;
   refreshFullDetail: () => Promise<void>;
   refreshDocuments: () => Promise<void>;
   refreshDocumentsVerification: () => Promise<void>;
   refreshContract: () => Promise<void>;
 
-  // ── Actualizar en memoria ──
   setDocumentUrl: (type: keyof DocumentUrls, url: string | null) => void;
   setDocumentsVerification: (status: DocumentsVerificationStatus) => void;
 
-  // ── Polling ──
   startPolling: () => void;
   stopPolling: () => void;
 }
@@ -109,22 +101,20 @@ type SolicitudStore = SolicitudState & SolicitudActions;
 const INITIAL_STATE: SolicitudState = {
   applicationId: null,
 
-  applicationLoading: false,
+  applicationStatus: 'idle',
   application: null,
-  applicationNotFound: false,
 
-  detailLoading: false,
+  detailStatus: 'idle',
   fullDetail: null,
-  detailNotFound: false,
 
-  documentsLoading: false,
+  documentsStatus: 'idle',
   documents: null,
   documentUrls: { dniFront: null, dniBack: null, selfie: null },
 
-  verificationLoading: false,
+  verificationStatus: 'idle',
   documentsVerification: null,
 
-  contractLoading: false,
+  contractStatus: 'idle',
   contractInfo: null,
   contractHtml: null,
   pdfUrl: null,
@@ -174,21 +164,18 @@ export const useSolicitudStore = create<SolicitudStore>()(
     // ── Fetch Application ─────────────────────────────────────────────────────
 
     fetchApplication: async () => {
-      const { application, applicationId, applicationLoading } = get();
-      if (application || !applicationId || applicationLoading) return application;
+      const { applicationStatus, applicationId } = get();
+      if (applicationStatus === 'pending' || applicationStatus === 'success') return get().application;
+      if (!applicationId) return null;
 
-      set({ applicationLoading: true });
+      set({ applicationStatus: 'pending' });
       try {
         const app = await getApplicationDetailAction(applicationId);
-        if (!app) {
-          set({ applicationLoading: false, applicationNotFound: true });
-          return null;
-        }
-        set({ application: app, applicationLoading: false });
+        set({ application: app, applicationStatus: 'success' });
         return app;
       } catch (err) {
         console.error('[SolicitudStore] Error fetching application:', err);
-        set({ applicationLoading: false });
+        set({ applicationStatus: 'error' });
         return null;
       }
     },
@@ -196,34 +183,32 @@ export const useSolicitudStore = create<SolicitudStore>()(
     // ── Fetch Full Detail ─────────────────────────────────────────────────────
 
     fetchFullDetail: async () => {
-      const { fullDetail, applicationId, detailLoading } = get();
-      if (fullDetail || !applicationId || detailLoading) return;
+      const { detailStatus, applicationId } = get();
+      if (detailStatus === 'pending' || detailStatus === 'success') return;
+      if (!applicationId) return;
 
-      set({ detailLoading: true });
+      set({ detailStatus: 'pending' });
       try {
         const detail = await getApplicationFullDetailAction(applicationId);
-        set({
-          fullDetail: detail,
-          detailLoading: false,
-          detailNotFound: !detail,
-        });
+        set({ fullDetail: detail, detailStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching full detail:', err);
-        set({ detailLoading: false });
+        set({ detailStatus: 'error' });
       }
     },
 
     // ── Fetch Documents ───────────────────────────────────────────────────────
 
     fetchDocuments: async () => {
-      const { documents, applicationId, documentsLoading } = get();
-      if (documents || !applicationId || documentsLoading) return;
+      const { documentsStatus, applicationId } = get();
+      if (documentsStatus === 'pending' || documentsStatus === 'success') return;
+      if (!applicationId) return;
 
-      set({ documentsLoading: true });
+      set({ documentsStatus: 'pending' });
       try {
         const docs = await listDocumentsAction(applicationId);
         if (!docs) {
-          set({ documents: null, documentsLoading: false });
+          set({ documents: null, documentsStatus: 'success' });
           return;
         }
 
@@ -239,40 +224,42 @@ export const useSolicitudStore = create<SolicitudStore>()(
           selfieDoc ? getDocumentUrlAction(applicationId, 'SELFIE') : null,
         ]);
 
-        set({ documentUrls: { dniFront, dniBack, selfie }, documentsLoading: false });
+        set({ documentUrls: { dniFront, dniBack, selfie }, documentsStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching documents:', err);
-        set({ documentsLoading: false });
+        set({ documentsStatus: 'error' });
       }
     },
 
     // ── Fetch Documents Verification ──────────────────────────────────────────
 
     fetchDocumentsVerification: async () => {
-      const { documentsVerification, applicationId, verificationLoading } = get();
-      if (documentsVerification || !applicationId || verificationLoading) return;
+      const { verificationStatus, applicationId } = get();
+      if (verificationStatus === 'pending' || verificationStatus === 'success') return;
+      if (!applicationId) return;
 
-      set({ verificationLoading: true });
+      set({ verificationStatus: 'pending' });
       try {
         const status = await getDocumentsVerificationStatusAction(applicationId);
-        set({ documentsVerification: status, verificationLoading: false });
+        set({ documentsVerification: status, verificationStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching verification:', err);
-        set({ verificationLoading: false });
+        set({ verificationStatus: 'error' });
       }
     },
 
     // ── Fetch Contract ────────────────────────────────────────────────────────
 
     fetchContract: async () => {
-      const { contractInfo, applicationId, contractLoading } = get();
-      if (contractInfo || !applicationId || contractLoading) return;
+      const { contractStatus, applicationId } = get();
+      if (contractStatus === 'pending' || contractStatus === 'success') return;
+      if (!applicationId) return;
 
-      set({ contractLoading: true });
+      set({ contractStatus: 'pending' });
       try {
         const info = await getContractInfoAction(applicationId);
         if (!info) {
-          set({ contractLoading: false });
+          set({ contractStatus: 'success' });
           return;
         }
 
@@ -283,10 +270,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
           info.status === 'SIGNED' ? getContractPdfUrlAction(info.contractId) : null,
         ]);
 
-        set({ contractHtml: html, pdfUrl: pdf, contractLoading: false });
+        set({ contractHtml: html, pdfUrl: pdf, contractStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching contract:', err);
-        set({ contractLoading: false });
+        set({ contractStatus: 'error' });
       }
     },
 
@@ -296,17 +283,13 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
-      set({ applicationLoading: true, application: null, applicationNotFound: false });
+      set({ applicationStatus: 'pending', application: null });
       try {
         const app = await getApplicationDetailAction(applicationId);
-        set({
-          application: app,
-          applicationLoading: false,
-          applicationNotFound: !app,
-        });
+        set({ application: app, applicationStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing application:', err);
-        set({ applicationLoading: false });
+        set({ applicationStatus: 'error' });
       }
     },
 
@@ -314,17 +297,13 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
-      set({ detailLoading: true, fullDetail: null, detailNotFound: false });
+      set({ detailStatus: 'pending', fullDetail: null });
       try {
         const detail = await getApplicationFullDetailAction(applicationId);
-        set({
-          fullDetail: detail,
-          detailLoading: false,
-          detailNotFound: !detail,
-        });
+        set({ fullDetail: detail, detailStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing full detail:', err);
-        set({ detailLoading: false });
+        set({ detailStatus: 'error' });
       }
     },
 
@@ -332,7 +311,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
-      set({ documentsLoading: true });
+      set({ documentsStatus: 'pending' });
       try {
         const docs = await listDocumentsAction(applicationId);
         set({ documents: docs });
@@ -349,8 +328,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
           ]);
           set({ documentUrls: { dniFront, dniBack, selfie } });
         }
-      } finally {
-        set({ documentsLoading: false });
+        set({ documentsStatus: 'success' });
+      } catch (err) {
+        console.error('[SolicitudStore] Error refreshing documents:', err);
+        set({ documentsStatus: 'error' });
       }
     },
 
@@ -358,13 +339,13 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
-      set({ verificationLoading: true });
+      set({ verificationStatus: 'pending' });
       try {
         const status = await getDocumentsVerificationStatusAction(applicationId);
-        set({ documentsVerification: status, verificationLoading: false });
+        set({ documentsVerification: status, verificationStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing verification:', err);
-        set({ verificationLoading: false });
+        set({ verificationStatus: 'error' });
       }
     },
 
@@ -372,11 +353,11 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
-      set({ contractLoading: true, contractInfo: null, contractHtml: null, pdfUrl: null });
+      set({ contractStatus: 'pending', contractInfo: null, contractHtml: null, pdfUrl: null });
       try {
         const info = await getContractInfoAction(applicationId);
         if (!info) {
-          set({ contractLoading: false });
+          set({ contractStatus: 'success' });
           return;
         }
 
@@ -385,10 +366,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
           getContractHtmlAction(info.contractId),
           info.status === 'SIGNED' ? getContractPdfUrlAction(info.contractId) : null,
         ]);
-        set({ contractHtml: html, pdfUrl: pdf, contractLoading: false });
+        set({ contractHtml: html, pdfUrl: pdf, contractStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing contract:', err);
-        set({ contractLoading: false });
+        set({ contractStatus: 'error' });
       }
     },
 
@@ -399,7 +380,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
     },
 
     setDocumentsVerification: (status) => {
-      set({ documentsVerification: status, verificationLoading: false });
+      set({ documentsVerification: status, verificationStatus: 'success' });
     },
 
     // ── Polling ───────────────────────────────────────────────────────────────
@@ -410,7 +391,6 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ isPolling: true, _pollingAttempts: 0 });
 
-      // Cargar intención para sidebar
       getApplicationIntentionAction(applicationId)
         .then((intention) => {
           if (intention) set({ applicationIntention: intention });
@@ -437,15 +417,14 @@ export const useSolicitudStore = create<SolicitudStore>()(
           if (status !== 'SUBMITTED' && status !== 'PROCESSING') {
             get().stopPolling();
 
-            // Celebración
             if (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS') {
               set({ showCelebration: true });
               setTimeout(() => set({ showCelebration: false }), 2500);
             }
 
-            // Recargar todo con datos frescos
+            // Recargar todo
             const app = await getApplicationDetailAction(appId);
-            if (app) set({ application: app, applicationLoading: false });
+            if (app) set({ application: app, applicationStatus: 'success' });
 
             const [detailRes, docsRes, contractRes] = await Promise.all([
               getApplicationFullDetailAction(appId),
@@ -453,8 +432,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
               getContractInfoAction(appId),
             ]);
 
-            set({ fullDetail: detailRes, detailLoading: false, detailNotFound: !detailRes });
-            set({ documents: docsRes, documentsLoading: false });
+            set({ fullDetail: detailRes, detailStatus: 'success' });
+            set({ documents: docsRes, documentsStatus: 'success' });
 
             if (docsRes) {
               const frontDoc = docsRes.documents.find(d => d.type === 'DNI_FRONT' && d.status === 'UPLOADED');
@@ -475,7 +454,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
                 getContractHtmlAction(contractRes.contractId),
                 contractRes.status === 'SIGNED' ? getContractPdfUrlAction(contractRes.contractId) : null,
               ]);
-              set({ contractHtml: html, pdfUrl: pdf, contractLoading: false });
+              set({ contractHtml: html, pdfUrl: pdf, contractStatus: 'success' });
             }
           }
         } catch (err) {

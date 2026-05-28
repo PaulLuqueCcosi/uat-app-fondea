@@ -11,7 +11,7 @@ export default function KYCDocumentosPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const documentsLoading = useSolicitudStore(s => s.documentsLoading);
+  const documentsStatus = useSolicitudStore(s => s.documentsStatus);
   const documentUrls = useSolicitudStore(s => s.documentUrls);
   const documentsVerification = useSolicitudStore(s => s.documentsVerification);
   const application = useSolicitudStore(s => s.application);
@@ -29,7 +29,7 @@ export default function KYCDocumentosPage() {
           applicationId={id}
           initialFrontUrl={documentUrls.dniFront}
           initialBackUrl={documentUrls.dniBack}
-          loading={documentsLoading}
+          loading={documentsStatus !== 'success'}
           verification={documentsVerification}
         />
       </div>

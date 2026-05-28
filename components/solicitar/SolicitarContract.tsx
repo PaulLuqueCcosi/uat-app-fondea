@@ -93,7 +93,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     contractInfo: ctxContractInfo,
     contractHtml: ctxContractHtml,
     pdfUrl: ctxPdfUrl,
-    contractLoading,
+    contractStatus,
     refreshContract,
     documentsVerification,
   } = useSolicitudStore();
@@ -229,7 +229,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
 
   // ── No contract found (y no está cargando) ────────────────────────────────
 
-  if (!contractInfo && !contractLoading && !loadingContract) {
+  if (!contractInfo && contractStatus === 'success' && !loadingContract) {
     return (
       <div className="max-w-4xl mx-auto">
         <Card className="p-8">
@@ -412,7 +412,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
           <div className="rounded-lg border border-border overflow-hidden bg-white">
             {contractHtml ? (
               <ContractViewer html={contractHtml} />
-            ) : (loadingContract || contractLoading) ? (
+            ) : (loadingContract || contractStatus !== 'success') ? (
               <div className="p-6 space-y-4 animate-pulse">
                 <div className="h-6 bg-neutral-100 rounded w-2/3 mx-auto" />
                 <div className="h-px bg-neutral-100 w-full" />

@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/card';
 export default function SolicitudPage() {
   const router = useRouter();
   const application = useSolicitudStore(s => s.application);
-  const applicationNotFound = useSolicitudStore(s => s.applicationNotFound);
+  const applicationStatus = useSolicitudStore(s => s.applicationStatus);
   const fullDetail = useSolicitudStore(s => s.fullDetail);
   const documents = useSolicitudStore(s => s.documents);
   const isPolling = useSolicitudStore(s => s.isPolling);
@@ -33,20 +33,20 @@ export default function SolicitudPage() {
     }
   }, [application?.status]);
 
-  // Redirigir si la solicitud no existe
+  // Redirigir si la solicitud no existe (success pero null)
   useEffect(() => {
-    if (applicationNotFound) {
+    if (applicationStatus === 'success' && !application) {
       router.replace('/dashboard');
     }
-  }, [applicationNotFound, router]);
+  }, [applicationStatus, application, router]);
 
   // Celebración
   if (showCelebration) {
     return <ApprovedCelebration />;
   }
 
-  // Skeleton
-  if (!application) {
+  // Skeleton mientras carga
+  if (applicationStatus === 'idle' || applicationStatus === 'pending' || !application) {
     return <ResumenSkeleton />;
   }
 
@@ -93,41 +93,60 @@ export default function SolicitudPage() {
 
 function ResumenSkeleton() {
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6 animate-pulse">
-      <div className="rounded-2xl bg-neutral-100 p-8 md:p-10">
+    <div className="w-full max-w-4xl mx-auto space-y-6">
+      {/* Hero skeleton */}
+      <div className="relative overflow-hidden rounded-2xl bg-neutral-200/60 p-8 md:p-10 animate-pulse">
         <div className="flex flex-col md:flex-row items-center gap-6">
-          <div className="w-20 h-20 rounded-full bg-neutral-200" />
-          <div className="flex-1 space-y-3">
-            <div className="h-4 bg-neutral-200 rounded w-1/4" />
-            <div className="h-8 bg-neutral-200 rounded w-3/4" />
-            <div className="h-4 bg-neutral-200 rounded w-1/2" />
+          <div className="w-20 h-20 rounded-full bg-neutral-300/50 shrink-0" />
+          <div className="flex-1 space-y-3 text-center md:text-left">
+            <div className="h-3 bg-neutral-300/50 rounded w-24 mx-auto md:mx-0" />
+            <div className="h-8 bg-neutral-300/50 rounded w-3/4 mx-auto md:mx-0" />
+            <div className="h-4 bg-neutral-300/50 rounded w-1/2 mx-auto md:mx-0" />
           </div>
-          <div className="w-32 h-20 rounded-xl bg-neutral-200" />
+          <div className="w-36 h-24 rounded-xl bg-neutral-300/50 shrink-0" />
         </div>
       </div>
-      <div className="rounded-xl border border-neutral-100 p-5 space-y-4">
-        <div className="h-4 bg-neutral-100 rounded w-1/4" />
+
+      {/* Detalle del préstamo skeleton */}
+      <div className="rounded-xl border border-neutral-100 p-5 space-y-4 animate-pulse">
+        <div className="h-5 bg-neutral-100 rounded w-40" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="space-y-2">
-              <div className="h-3 bg-neutral-100 rounded w-1/2" />
-              <div className="h-6 bg-neutral-100 rounded w-3/4" />
+              <div className="h-3 bg-neutral-100 rounded w-16" />
+              <div className="h-6 bg-neutral-200 rounded w-24" />
             </div>
           ))}
         </div>
       </div>
-      <div className="rounded-xl border border-neutral-100 p-5 space-y-3">
-        <div className="h-4 bg-neutral-100 rounded w-1/3" />
+
+      {/* Pasos / Acciones skeleton */}
+      <div className="rounded-xl border border-neutral-100 p-5 space-y-4 animate-pulse">
+        <div className="h-5 bg-neutral-100 rounded w-48" />
         {[1, 2, 3].map(i => (
-          <div key={i} className="flex items-center gap-3 p-4 border border-neutral-50 rounded-lg">
-            <div className="w-9 h-9 rounded-xl bg-neutral-100" />
+          <div key={i} className="flex items-center gap-4 p-4 rounded-lg border border-neutral-50">
+            <div className="w-10 h-10 rounded-full bg-neutral-100 shrink-0" />
             <div className="flex-1 space-y-2">
-              <div className="h-4 bg-neutral-100 rounded w-1/2" />
-              <div className="h-3 bg-neutral-50 rounded w-2/3" />
+              <div className="h-4 bg-neutral-100 rounded w-40" />
+              <div className="h-3 bg-neutral-50 rounded w-56" />
             </div>
-            <div className="h-5 w-16 bg-neutral-100 rounded-full" />
+            <div className="h-6 w-20 bg-neutral-100 rounded-full" />
           </div>
         ))}
+      </div>
+
+      {/* Cronograma skeleton */}
+      <div className="rounded-xl border border-neutral-100 p-5 space-y-3 animate-pulse">
+        <div className="h-5 bg-neutral-100 rounded w-36" />
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex justify-between items-center py-2">
+              <div className="h-4 bg-neutral-50 rounded w-24" />
+              <div className="h-4 bg-neutral-50 rounded w-20" />
+              <div className="h-4 bg-neutral-100 rounded w-16" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -11,7 +11,8 @@ export default function KYCSelfiePage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const documentsLoading = useSolicitudStore(s => s.documentsLoading);
+  const applicationStatus = useSolicitudStore(s => s.applicationStatus);
+  const documentsStatus = useSolicitudStore(s => s.documentsStatus);
   const documentUrls = useSolicitudStore(s => s.documentUrls);
   const documentsVerification = useSolicitudStore(s => s.documentsVerification);
   const application = useSolicitudStore(s => s.application);
@@ -28,7 +29,7 @@ export default function KYCSelfiePage() {
         <FunnelKYCSelfie
           applicationId={id}
           initialSelfieUrl={documentUrls.selfie}
-          loading={documentsLoading}
+          loading={documentsStatus !== 'success'}
           verification={documentsVerification}
         />
       </div>
