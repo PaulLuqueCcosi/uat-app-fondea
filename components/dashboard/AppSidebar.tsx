@@ -9,6 +9,7 @@ import {
   FileText,
   Settings,
   Terminal,
+  Zap,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -28,6 +29,7 @@ const mainNav = [
   { path: '/dashboard/profile', label: 'Mi Perfil', icon: User },
   { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
   { path: '/dashboard/dev-tools', label: 'Dev Tools', icon: Terminal },
+  { path: '/dashboard/dev-tools/lambda-tester', label: 'Lambda Tester', icon: Zap },
   { path: '/dashboard/settings', label: 'Configuración', icon: Settings },
 ];
 

@@ -1,14 +1,15 @@
 'use client';
 
+/**
+ * ⚠️ TEMPORAL — BORRAR DESPUÉS DE PROBAR ⚠️
+ *
+ * Componente de debug que captura errores DOM (insertBefore, removeChild)
+ * y loguea información útil para diagnosticar race conditions de React.
+ */
+
 import { useEffect } from 'react';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
 
-/**
- * Componente de debug que captura errores DOM (insertBefore, removeChild)
- * y loguea información útil para diagnosticar race conditions de React.
- *
- * TODO: Eliminar este componente una vez resuelto el bug.
- */
 export function DOMErrorLogger() {
   useEffect(() => {
     const handler = (event: ErrorEvent) => {
