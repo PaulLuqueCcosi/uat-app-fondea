@@ -6,19 +6,10 @@ import { usePathname } from 'next/navigation';
 import {
   Home,
   User,
-  CreditCard,
-  Briefcase,
-  DollarSign,
-  Users,
-  MapPin,
   FileText,
   Settings,
-  ClipboardList,
   Terminal,
-  ChevronRight,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import {
   Sidebar,
   SidebarContent,
@@ -27,27 +18,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarGroup,
   SidebarGroupLabel,
-  SidebarGroupContent,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-
-const profileSections = [
-  { path: '/dashboard/section/kyc-validation', label: 'Verificación KYC', icon: CreditCard, status: 'pending' as const },
-  { path: '/dashboard/section/labor', label: 'Perfil Laboral', icon: Briefcase, status: 'pending' as const },
-  { path: '/dashboard/section/economic', label: 'Perfil Económico', icon: DollarSign, status: 'pending' as const },
-  { path: '/dashboard/section/references', label: 'Referencias', icon: Users, status: 'completed' as const },
-  { path: '/dashboard/section/additional', label: 'Info Adicional', icon: MapPin, status: 'pending' as const },
-];
 
 const mainNav = [
   { path: '/dashboard', label: 'Inicio', icon: Home },
@@ -59,7 +33,6 @@ const mainNav = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const isProfileSection = profileSections.some(s => pathname?.startsWith(s.path));
 
   return (
     // collapsible="icon" → colapsa a íconos en desktop
@@ -71,7 +44,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="cursor-default hover:bg-transparent active:bg-transparent">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold shrink-0 text-sm">
+              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold shrink-0">
                 U
               </div>
               <div className="min-w-0 flex-1 grid leading-tight">
@@ -93,8 +66,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               const isActive =
                 pathname === item.path ||
                 (item.path !== '/dashboard' &&
-                  pathname?.startsWith(item.path) &&
-                  !isProfileSection);
+                  pathname?.startsWith(item.path));
 
               return (
                 <SidebarMenuItem key={item.path}>
@@ -112,54 +84,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Expediente — grupo colapsable */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Expediente</SidebarGroupLabel>
-          <SidebarMenu>
-            <Collapsible
-              defaultOpen={isProfileSection}
-              className="group/collapsible"
-              render={<SidebarMenuItem />}
-            >
-              <CollapsibleTrigger
-                render={
-                  <SidebarMenuButton
-                    tooltip="Expediente"
-                    isActive={isProfileSection}
-                  />
-                }
-              >
-                <ClipboardList />
-                <span>Expediente</span>
-                <ChevronRight className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90" />
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarMenuSub>
-                  {profileSections.map((section) => {
-                    const Icon = section.icon;
-                    const isActive = pathname?.startsWith(section.path);
-
-                    return (
-                      <SidebarMenuSubItem key={section.path}>
-                        <SidebarMenuSubButton
-                          isActive={isActive}
-                          render={<Link href={section.path} />}
-                        >
-                          <Icon className="w-3.5 h-3.5 shrink-0" />
-                          <span className="flex-1 truncate">{section.label}</span>
-                          <Badge
-                            variant={section.status}
-                            className="scale-75 origin-right shrink-0"
-                          />
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    );
-                  })}
-                </SidebarMenuSub>
-              </CollapsibleContent>
-            </Collapsible>
-          </SidebarMenu>
-        </SidebarGroup>
+        {/* Expediente — grupo colapsable (deshabilitado temporalmente) */}
       </SidebarContent>
 
       <SidebarFooter />
