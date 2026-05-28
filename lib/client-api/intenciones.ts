@@ -41,18 +41,28 @@ export async function getIntencionById(id: string): Promise<IntencionConfig | nu
 
 // ── POST /api/intenciones/{id}/register ──────────────────────────────────────
 
-export async function registerIntencion(calcId: string): Promise<IntencionConfig | null> {
-  if (!calcId?.trim()) return null;
+export type RegisterResult =
+  | { ok: true; data: IntencionConfig }
+  | { ok: false; code: 'NOT_FOUND' | 'USER_NOT_SYNCED' | 'ERROR' };
+
+export async function registerIntencion(calcId: string): Promise<RegisterResult> {
+  if (!calcId?.trim()) return { ok: false, code: 'ERROR' };
   const res = await fetch(`/api/intenciones/${calcId}/register`, { 
     method: 'POST',
     cache: 'no-store'
   });
-  if (res.status === 404) return null;
+  if (res.status === 404) return { ok: false, code: 'NOT_FOUND' };
+
+  // 425 Too Early — el usuario aún no fue sincronizado en el backend
+  if (res.status === 425) {
+    return { ok: false, code: 'USER_NOT_SYNCED' };
+  }
+
   if (!res.ok) {
     console.error('[intencion-api] register →', res.status, await res.text());
-    return null;
+    return { ok: false, code: 'ERROR' };
   }
-  return mapIntencionFromBackend(await res.json());
+  return { ok: true, data: mapIntencionFromBackend(await res.json()) };
 }
 
 // ── POST /api/intenciones ────────────────────────────────────────────────────

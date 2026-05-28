@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, Calculator } from 'lucide-react';
+import { Loader2, Calculator, LogIn } from 'lucide-react';
 import { registerIntencion, getActiveIntencion } from '@/lib/client-api/intenciones';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
+import { syncUser } from '@/app/actions/auth.actions';
 import { Button } from '@/components/ui/button';
+
+type ErrorType = 'generic' | 'user_not_synced';
 
 /**
  * Dispatcher del funnel — punto de entrada a /solicitar.
@@ -22,7 +25,7 @@ export default function SolicitarDispatcherPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setIntencion = useIntencionStore(s => s.setIntencion);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<ErrorType | null>(null);
 
   useEffect(() => {
     resolve();
@@ -33,12 +36,25 @@ export default function SolicitarDispatcherPage() {
 
         // 1. Registrar intención de la landing
         if (intencionId) {
+          // Asegurar que el usuario existe en el backend antes de registrar.
+          // En usuarios nuevos, el sync del callback es fire-and-forget y puede
+          // no haber terminado cuando llegamos aquí.
+          await syncUser();
+
           const result = await registerIntencion(intencionId);
-          if (result) {
-            setIntencion(result);
+
+          if (result.ok) {
+            setIntencion(result.data);
             return goToFunnel();
           }
-          // ID inválido — fallback a intención activa
+
+          // 425 — el backend aún no tiene al usuario sincronizado
+          if (result.code === 'USER_NOT_SYNCED') {
+            setError('user_not_synced');
+            return;
+          }
+
+          // ID inválido (404) o error genérico — fallback a intención activa
         }
 
         // 2. Buscar intención activa del usuario
@@ -52,7 +68,7 @@ export default function SolicitarDispatcherPage() {
         router.replace('/dashboard/calculadora');
       } catch (err) {
         console.error('[DISPATCHER] Error:', err);
-        setError(true);
+        setError('generic');
       }
     }
 
@@ -61,8 +77,36 @@ export default function SolicitarDispatcherPage() {
     }
   }, [router, searchParams, setIntencion]);
 
-  // ── Error ───────────────────────────────────────────────────────────────────
-  if (error) {
+  // ── Error: usuario no sincronizado ──────────────────────────────────────────
+  if (error === 'user_not_synced') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-5 bg-white/80 backdrop-blur-sm border border-border rounded-2xl px-10 py-10 shadow-sm max-w-sm text-center">
+          <div className="w-12 h-12 rounded-full bg-warning-50 flex items-center justify-center">
+            <LogIn className="w-6 h-6 text-warning-700" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-base font-semibold text-foreground">
+              Sesión no sincronizada
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Tu cuenta aún no está lista. Por favor, cierra sesión e inicia sesión nuevamente para continuar.
+            </p>
+          </div>
+          <Button
+            onClick={() => router.push('/api/logto/sign-in')}
+            className="w-full"
+          >
+            <LogIn className="w-4 h-4 mr-2" />
+            Volver a iniciar sesión
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Error genérico ──────────────────────────────────────────────────────────
+  if (error === 'generic') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-5 bg-white/80 backdrop-blur-sm border border-border rounded-2xl px-10 py-10 shadow-sm max-w-sm text-center">
