@@ -17,16 +17,7 @@ export default function SolicitudPage() {
   const documents = useSolicitudStore(s => s.documents);
   const isPolling = useSolicitudStore(s => s.isPolling);
   const showCelebration = useSolicitudStore(s => s.showCelebration);
-  const fetchApplication = useSolicitudStore(s => s.fetchApplication);
-  const fetchFullDetail = useSolicitudStore(s => s.fetchFullDetail);
-  const fetchDocuments = useSolicitudStore(s => s.fetchDocuments);
   const startPolling = useSolicitudStore(s => s.startPolling);
-
-  useEffect(() => {
-    fetchApplication();
-    fetchFullDetail();
-    fetchDocuments();
-  }, [fetchApplication, fetchFullDetail, fetchDocuments]);
 
   // Iniciar polling cuando la application llega con status de evaluación
   useEffect(() => {
@@ -38,7 +29,6 @@ export default function SolicitudPage() {
   // Recargar credit score cada vez que el estado de la aplicación cambia
   useEffect(() => {
     if (application) {
-      // Recargar el credit score en cualquier cambio de estado
       useCreditScoreStore.getState().refetch().catch(() => {});
     }
   }, [application?.status]);

@@ -62,8 +62,8 @@ export default function LoanCalculatorPortal({
 }: LoanCalculatorPortalProps) {
   const router = useRouter();
   const setIntencion = useIntencionStore(s => s.setIntencion);
-  const score = useScoreStore(s => s.score);
-  const fetchScore = useScoreStore(s => s.fetchScore);
+  const score = useScoreStore(s => s.puntaje);
+  const fetchScore = useScoreStore(s => s.fetchPuntaje);
   const isEditing = !!initialValues?.intencionId;
 
   // Cargar score al montar (si no se cargó antes)

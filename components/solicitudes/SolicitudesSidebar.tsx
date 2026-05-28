@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle2, FileText, Camera, PenLine, Lock, Loader2, ClipboardList } from 'lucide-react';
@@ -12,7 +11,7 @@ import { Calendar, CreditCard } from 'lucide-react';
 export function SolicitudesSidebar() {
   const pathname = usePathname();
 
-  // Selectores granulares
+  // Selectores granulares — solo observa, no dispara fetches
   const applicationId = useSolicitudStore(s => s.applicationId);
   const application = useSolicitudStore(s => s.application);
   const fullDetail = useSolicitudStore(s => s.fullDetail);
@@ -21,21 +20,6 @@ export function SolicitudesSidebar() {
   const contractInfo = useSolicitudStore(s => s.contractInfo);
   const isPolling = useSolicitudStore(s => s.isPolling);
   const applicationIntention = useSolicitudStore(s => s.applicationIntention);
-  const fetchApplication = useSolicitudStore(s => s.fetchApplication);
-  const fetchFullDetail = useSolicitudStore(s => s.fetchFullDetail);
-  const fetchDocuments = useSolicitudStore(s => s.fetchDocuments);
-  const fetchDocumentsVerification = useSolicitudStore(s => s.fetchDocumentsVerification);
-  const fetchContract = useSolicitudStore(s => s.fetchContract);
-
-  // Pedir datos al store
-  useEffect(() => {
-    if (!applicationId) return;
-    fetchApplication();
-    fetchFullDetail();
-    fetchDocuments();
-    fetchDocumentsVerification();
-    fetchContract();
-  }, [applicationId, fetchApplication, fetchFullDetail, fetchDocuments, fetchDocumentsVerification, fetchContract]);
 
   // ── ¿Mostrar pasos y card? Solo si el status lo permite ──
   const ACTIONABLE_STATUSES = ['PRE_APPROVED', 'PENDING_DOCUMENTS', 'PENDING_SIGNATURE', 'APPROVED'];

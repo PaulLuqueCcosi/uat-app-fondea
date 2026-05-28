@@ -31,37 +31,38 @@ export interface DocumentUrls {
 }
 
 interface SolicitudState {
-  // ── ID de la solicitud activa ──
+  // ── ID ──
   applicationId: string | null;
 
   // ── Application ──
+  applicationLoading: boolean;
   application: ApplicationRecord | null;
-  applicationReady: boolean;
   applicationNotFound: boolean;
 
   // ── Full Detail ──
+  detailLoading: boolean;
   fullDetail: ApplicationFullDetail | null;
-  fullDetailReady: boolean;
+  detailNotFound: boolean;
 
   // ── Documents ──
+  documentsLoading: boolean;
   documents: DocumentListResult | null;
-  documentsReady: boolean;
   documentUrls: DocumentUrls;
 
   // ── Documents Verification ──
+  verificationLoading: boolean;
   documentsVerification: DocumentsVerificationStatus | null;
-  documentsVerificationReady: boolean;
 
   // ── Contract ──
+  contractLoading: boolean;
   contractInfo: ContractInfo | null;
   contractHtml: string | null;
   pdfUrl: string | null;
-  contractReady: boolean;
 
   // ── UI ──
   showCelebration: boolean;
 
-  // ── Intención de la solicitud (para mostrar durante polling) ──
+  // ── Intención (para sidebar durante polling) ──
   applicationIntention: ApplicationIntention | null;
 
   // ── Polling ──
@@ -71,21 +72,23 @@ interface SolicitudState {
 }
 
 interface SolicitudActions {
-  // ── Inicializar con un applicationId ──
+  // ── Lifecycle ──
   init: (applicationId: string) => void;
   reset: () => void;
 
   // ── UI ──
   dismissCelebration: () => void;
 
-  // ── Fetch bajo demanda (no recarga si ya tiene datos) ──
+  // ── Fetch (no recarga si ya tiene datos) ──
   fetchApplication: () => Promise<ApplicationRecord | null>;
   fetchFullDetail: () => Promise<void>;
   fetchDocuments: () => Promise<void>;
   fetchDocumentsVerification: () => Promise<void>;
   fetchContract: () => Promise<void>;
 
-  // ── Refresh (fuerza recarga del server) ──
+  // ── Refresh (fuerza recarga) ──
+  refreshApplication: () => Promise<void>;
+  refreshFullDetail: () => Promise<void>;
   refreshDocuments: () => Promise<void>;
   refreshDocumentsVerification: () => Promise<void>;
   refreshContract: () => Promise<void>;
@@ -105,22 +108,30 @@ type SolicitudStore = SolicitudState & SolicitudActions;
 
 const INITIAL_STATE: SolicitudState = {
   applicationId: null,
+
+  applicationLoading: false,
   application: null,
-  applicationReady: false,
   applicationNotFound: false,
+
+  detailLoading: false,
   fullDetail: null,
-  fullDetailReady: false,
+  detailNotFound: false,
+
+  documentsLoading: false,
   documents: null,
-  documentsReady: false,
   documentUrls: { dniFront: null, dniBack: null, selfie: null },
+
+  verificationLoading: false,
   documentsVerification: null,
-  documentsVerificationReady: false,
+
+  contractLoading: false,
   contractInfo: null,
   contractHtml: null,
   pdfUrl: null,
-  contractReady: false,
+
   showCelebration: false,
   applicationIntention: null,
+
   isPolling: false,
   _pollingInterval: null,
   _pollingAttempts: 0,
@@ -137,14 +148,20 @@ export const useSolicitudStore = create<SolicitudStore>()(
   subscribeWithSelector((set, get) => ({
     ...INITIAL_STATE,
 
-    // ── Init / Reset ──
+    // ── Init / Reset ──────────────────────────────────────────────────────────
 
     init: (applicationId: string) => {
       const current = get().applicationId;
-      if (current === applicationId) return; // ya inicializado con este ID
-      // Reset si cambió el ID
+      if (current === applicationId) return;
       get().stopPolling();
       set({ ...INITIAL_STATE, applicationId });
+
+      // Disparar fetches
+      get().fetchApplication();
+      get().fetchFullDetail();
+      get().fetchDocuments();
+      get().fetchDocumentsVerification();
+      get().fetchContract();
     },
 
     reset: () => {
@@ -152,63 +169,66 @@ export const useSolicitudStore = create<SolicitudStore>()(
       set(INITIAL_STATE);
     },
 
-    dismissCelebration: () => {
-      set({ showCelebration: false });
-    },
+    dismissCelebration: () => set({ showCelebration: false }),
 
-    // ── Fetch Application ──
+    // ── Fetch Application ─────────────────────────────────────────────────────
 
     fetchApplication: async () => {
-      const { application, applicationId, applicationReady } = get();
-      if (application) return application;
-      if (!applicationId || applicationReady) return null;
+      const { application, applicationId, applicationLoading } = get();
+      if (application || !applicationId || applicationLoading) return application;
 
+      set({ applicationLoading: true });
       try {
         const app = await getApplicationDetailAction(applicationId);
         if (!app) {
-          set({ applicationReady: true, applicationNotFound: true });
+          set({ applicationLoading: false, applicationNotFound: true });
           return null;
         }
-        set({ application: app, applicationReady: true });
+        set({ application: app, applicationLoading: false });
         return app;
       } catch (err) {
         console.error('[SolicitudStore] Error fetching application:', err);
-        set({ applicationReady: true });
+        set({ applicationLoading: false });
         return null;
       }
     },
 
-    // ── Fetch Full Detail ──
+    // ── Fetch Full Detail ─────────────────────────────────────────────────────
 
     fetchFullDetail: async () => {
-      const { fullDetail, applicationId, fullDetailReady } = get();
-      if (fullDetail || !applicationId || fullDetailReady) return;
+      const { fullDetail, applicationId, detailLoading } = get();
+      if (fullDetail || !applicationId || detailLoading) return;
 
+      set({ detailLoading: true });
       try {
         const detail = await getApplicationFullDetailAction(applicationId);
-        set({ fullDetail: detail, fullDetailReady: true });
+        set({
+          fullDetail: detail,
+          detailLoading: false,
+          detailNotFound: !detail,
+        });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching full detail:', err);
-        set({ fullDetailReady: true });
+        set({ detailLoading: false });
       }
     },
 
-    // ── Fetch Documents ──
+    // ── Fetch Documents ───────────────────────────────────────────────────────
 
     fetchDocuments: async () => {
-      const { documents, applicationId, documentsReady } = get();
-      if (documents || !applicationId || documentsReady) return;
+      const { documents, applicationId, documentsLoading } = get();
+      if (documents || !applicationId || documentsLoading) return;
 
+      set({ documentsLoading: true });
       try {
         const docs = await listDocumentsAction(applicationId);
         if (!docs) {
-          set({ documents: null, documentsReady: true });
+          set({ documents: null, documentsLoading: false });
           return;
         }
 
         set({ documents: docs });
 
-        // Cargar URLs en paralelo
         const frontDoc = docs.documents.find(d => d.type === 'DNI_FRONT' && d.status === 'UPLOADED');
         const backDoc = docs.documents.find(d => d.type === 'DNI_BACK' && d.status === 'UPLOADED');
         const selfieDoc = docs.documents.find(d => d.type === 'SELFIE' && d.status === 'UPLOADED');
@@ -219,40 +239,40 @@ export const useSolicitudStore = create<SolicitudStore>()(
           selfieDoc ? getDocumentUrlAction(applicationId, 'SELFIE') : null,
         ]);
 
-        set({ documentUrls: { dniFront, dniBack, selfie }, documentsReady: true });
+        set({ documentUrls: { dniFront, dniBack, selfie }, documentsLoading: false });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching documents:', err);
-        set({ documentsReady: true });
+        set({ documentsLoading: false });
       }
     },
 
-    // ── Fetch Documents Verification ──
+    // ── Fetch Documents Verification ──────────────────────────────────────────
 
     fetchDocumentsVerification: async () => {
-      const { documentsVerification, applicationId, documentsVerificationReady } = get();
-      if (documentsVerification || !applicationId || documentsVerificationReady) return;
+      const { documentsVerification, applicationId, verificationLoading } = get();
+      if (documentsVerification || !applicationId || verificationLoading) return;
 
+      set({ verificationLoading: true });
       try {
         const status = await getDocumentsVerificationStatusAction(applicationId);
-        set({ documentsVerification: status, documentsVerificationReady: true });
+        set({ documentsVerification: status, verificationLoading: false });
       } catch (err) {
-        console.error('[SolicitudStore] Error fetching documents verification:', err);
-        set({ documentsVerificationReady: true });
+        console.error('[SolicitudStore] Error fetching verification:', err);
+        set({ verificationLoading: false });
       }
     },
 
-    // ── Fetch Contract ──
+    // ── Fetch Contract ────────────────────────────────────────────────────────
 
     fetchContract: async () => {
-      const { contractInfo, applicationId, contractReady } = get();
-      if (contractInfo || !applicationId || contractReady) return;
+      const { contractInfo, applicationId, contractLoading } = get();
+      if (contractInfo || !applicationId || contractLoading) return;
 
-      set({  });
-
+      set({ contractLoading: true });
       try {
         const info = await getContractInfoAction(applicationId);
         if (!info) {
-          set({ contractReady: true });
+          set({ contractLoading: false });
           return;
         }
 
@@ -263,21 +283,56 @@ export const useSolicitudStore = create<SolicitudStore>()(
           info.status === 'SIGNED' ? getContractPdfUrlAction(info.contractId) : null,
         ]);
 
-        set({ contractHtml: html, pdfUrl: pdf, contractReady: true });
+        set({ contractHtml: html, pdfUrl: pdf, contractLoading: false });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching contract:', err);
-        set({ contractReady: true });
+        set({ contractLoading: false });
       }
     },
 
-    // ── Refresh (fuerza recarga) ──
+    // ── Refresh (fuerza recarga) ──────────────────────────────────────────────
+
+    refreshApplication: async () => {
+      const { applicationId } = get();
+      if (!applicationId) return;
+
+      set({ applicationLoading: true, application: null, applicationNotFound: false });
+      try {
+        const app = await getApplicationDetailAction(applicationId);
+        set({
+          application: app,
+          applicationLoading: false,
+          applicationNotFound: !app,
+        });
+      } catch (err) {
+        console.error('[SolicitudStore] Error refreshing application:', err);
+        set({ applicationLoading: false });
+      }
+    },
+
+    refreshFullDetail: async () => {
+      const { applicationId } = get();
+      if (!applicationId) return;
+
+      set({ detailLoading: true, fullDetail: null, detailNotFound: false });
+      try {
+        const detail = await getApplicationFullDetailAction(applicationId);
+        set({
+          fullDetail: detail,
+          detailLoading: false,
+          detailNotFound: !detail,
+        });
+      } catch (err) {
+        console.error('[SolicitudStore] Error refreshing full detail:', err);
+        set({ detailLoading: false });
+      }
+    },
 
     refreshDocuments: async () => {
       const { applicationId } = get();
       if (!applicationId) return;
 
-      set({ documentsReady: false });
-
+      set({ documentsLoading: true });
       try {
         const docs = await listDocumentsAction(applicationId);
         set({ documents: docs });
@@ -292,11 +347,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
             backDoc ? getDocumentUrlAction(applicationId, 'DNI_BACK') : null,
             selfieDoc ? getDocumentUrlAction(applicationId, 'SELFIE') : null,
           ]);
-
           set({ documentUrls: { dniFront, dniBack, selfie } });
         }
       } finally {
-        set({ documentsReady: true });
+        set({ documentsLoading: false });
       }
     },
 
@@ -304,11 +358,13 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
+      set({ verificationLoading: true });
       try {
         const status = await getDocumentsVerificationStatusAction(applicationId);
-        set({ documentsVerification: status, documentsVerificationReady: true });
+        set({ documentsVerification: status, verificationLoading: false });
       } catch (err) {
-        console.error('[SolicitudStore] Error refreshing documents verification:', err);
+        console.error('[SolicitudStore] Error refreshing verification:', err);
+        set({ verificationLoading: false });
       }
     },
 
@@ -316,34 +372,37 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
-      set({  });
-
+      set({ contractLoading: true, contractInfo: null, contractHtml: null, pdfUrl: null });
       try {
         const info = await getContractInfoAction(applicationId);
-        if (info) {
-          set({ contractInfo: info });
-          const [html, pdf] = await Promise.all([
-            getContractHtmlAction(info.contractId),
-            info.status === 'SIGNED' ? getContractPdfUrlAction(info.contractId) : null,
-          ]);
-          set({ contractHtml: html, pdfUrl: pdf });
+        if (!info) {
+          set({ contractLoading: false });
+          return;
         }
-      } finally {
-        set({ contractReady: true });
+
+        set({ contractInfo: info });
+        const [html, pdf] = await Promise.all([
+          getContractHtmlAction(info.contractId),
+          info.status === 'SIGNED' ? getContractPdfUrlAction(info.contractId) : null,
+        ]);
+        set({ contractHtml: html, pdfUrl: pdf, contractLoading: false });
+      } catch (err) {
+        console.error('[SolicitudStore] Error refreshing contract:', err);
+        set({ contractLoading: false });
       }
     },
 
-    // ── Actualizar en memoria ──
+    // ── Actualizar en memoria ─────────────────────────────────────────────────
 
     setDocumentUrl: (type, url) => {
       set({ documentUrls: { ...get().documentUrls, [type]: url } });
     },
 
     setDocumentsVerification: (status) => {
-      set({ documentsVerification: status, documentsVerificationReady: true });
+      set({ documentsVerification: status, verificationLoading: false });
     },
 
-    // ── Polling ──
+    // ── Polling ───────────────────────────────────────────────────────────────
 
     startPolling: () => {
       const { _pollingInterval, applicationId } = get();
@@ -351,12 +410,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
       set({ isPolling: true, _pollingAttempts: 0 });
 
-      // Cargar la intención de la solicitud para mostrar en el sidebar durante polling
+      // Cargar intención para sidebar
       getApplicationIntentionAction(applicationId)
         .then((intention) => {
-          if (intention) {
-            set({ applicationIntention: intention });
-          }
+          if (intention) set({ applicationIntention: intention });
         })
         .catch(() => {});
 
@@ -366,7 +423,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
 
         if (_pollingAttempts >= MAX_POLL_ATTEMPTS) {
           get().stopPolling();
-          set({ application: get().application ? { ...get().application!, status: 'FAILED' as ApplicationStatus } : null });
+          const current = get().application;
+          if (current) set({ application: { ...current, status: 'FAILED' as ApplicationStatus } });
           return;
         }
 
@@ -379,25 +437,24 @@ export const useSolicitudStore = create<SolicitudStore>()(
           if (status !== 'SUBMITTED' && status !== 'PROCESSING') {
             get().stopPolling();
 
-            // Celebración si fue pre-aprobada
+            // Celebración
             if (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS') {
               set({ showCelebration: true });
               setTimeout(() => set({ showCelebration: false }), 2500);
             }
 
-            // Cargar todos los datos ahora que hay resultado
+            // Recargar todo con datos frescos
             const app = await getApplicationDetailAction(appId);
-            if (app) set({ application: app });
+            if (app) set({ application: app, applicationLoading: false });
 
-            // Disparar carga de todo en paralelo
-            const detail = getApplicationFullDetailAction(appId);
-            const docs = listDocumentsAction(appId);
-            const contract = getContractInfoAction(appId);
+            const [detailRes, docsRes, contractRes] = await Promise.all([
+              getApplicationFullDetailAction(appId),
+              listDocumentsAction(appId),
+              getContractInfoAction(appId),
+            ]);
 
-            const [detailRes, docsRes, contractRes] = await Promise.all([detail, docs, contract]);
-
-            set({ fullDetail: detailRes, fullDetailReady: true });
-            set({ documents: docsRes, documentsReady: true });
+            set({ fullDetail: detailRes, detailLoading: false, detailNotFound: !detailRes });
+            set({ documents: docsRes, documentsLoading: false });
 
             if (docsRes) {
               const frontDoc = docsRes.documents.find(d => d.type === 'DNI_FRONT' && d.status === 'UPLOADED');
@@ -418,7 +475,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
                 getContractHtmlAction(contractRes.contractId),
                 contractRes.status === 'SIGNED' ? getContractPdfUrlAction(contractRes.contractId) : null,
               ]);
-              set({ contractHtml: html, pdfUrl: pdf, contractReady: true });
+              set({ contractHtml: html, pdfUrl: pdf, contractLoading: false });
             }
           }
         } catch (err) {
@@ -426,7 +483,6 @@ export const useSolicitudStore = create<SolicitudStore>()(
         }
       };
 
-      // Primera llamada inmediata
       poll();
       const interval = setInterval(poll, POLL_INTERVAL);
       set({ _pollingInterval: interval });

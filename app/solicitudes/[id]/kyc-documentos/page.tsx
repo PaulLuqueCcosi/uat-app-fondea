@@ -11,17 +11,10 @@ export default function KYCDocumentosPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const documentsReady = useSolicitudStore(s => s.documentsReady);
+  const documentsLoading = useSolicitudStore(s => s.documentsLoading);
   const documentUrls = useSolicitudStore(s => s.documentUrls);
   const documentsVerification = useSolicitudStore(s => s.documentsVerification);
   const application = useSolicitudStore(s => s.application);
-  const fetchDocuments = useSolicitudStore(s => s.fetchDocuments);
-  const fetchDocumentsVerification = useSolicitudStore(s => s.fetchDocumentsVerification);
-
-  useEffect(() => {
-    fetchDocuments();
-    fetchDocumentsVerification();
-  }, [fetchDocuments, fetchDocumentsVerification]);
 
   useEffect(() => {
     if (application && !ALLOWED_STATUSES.includes(application.status)) {
@@ -36,7 +29,7 @@ export default function KYCDocumentosPage() {
           applicationId={id}
           initialFrontUrl={documentUrls.dniFront}
           initialBackUrl={documentUrls.dniBack}
-          loading={!documentsReady}
+          loading={documentsLoading}
           verification={documentsVerification}
         />
       </div>

@@ -12,9 +12,6 @@ export default function ContratoPage() {
   const router = useRouter();
   const id = params.id as string;
   const application = useSolicitudStore(s => s.application);
-  const fetchContract = useSolicitudStore(s => s.fetchContract);
-
-  useEffect(() => { fetchContract(); }, [fetchContract]);
 
   // Redirigir si el status no permite acceder a esta página
   useEffect(() => {
