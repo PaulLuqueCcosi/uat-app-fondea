@@ -438,10 +438,12 @@ export function FunnelSummary({
                   </div>
                 )}
 
-                {laborData.situation?.employment_status === 'EMPRESARIO' && laborData.details?.business_ruc && (
+                {laborData.details?.business_ruc && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">RUC del negocio</p>
-                    <p className="font-mono font-medium text-foreground">{laborData.details.business_ruc}</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {laborData.situation?.employment_status === 'EMPRESARIO' ? 'RUC del negocio' : 'RUC'}
+                    </p>
+                    <p className="font-medium text-foreground">{laborData.details.business_ruc}</p>
                   </div>
                 )}
 
