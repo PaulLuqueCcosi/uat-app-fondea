@@ -4,6 +4,7 @@ import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
 import type { DocumentsVerificationStatus } from '@/lib/types/document';
 import type { DocumentListResult } from '@/lib/types/document';
 import type { StoreStatus } from './credit-score-store';
+import type { SimulationSnapshot } from '@/lib/types/simulation';
 
 // ── Tipos locales (antes venían de actions, ahora son propios) ────────────────
 
@@ -27,6 +28,13 @@ export interface ApplicationFullDetail {
     due_date: string;
     amount: number;
   }>;
+  // Campos nuevos del endpoint detail v2
+  requested_amount?: number;
+  approved_amount?: number;
+  was_limit_adjusted?: boolean;
+  score_limit_amount?: number | null;
+  limit_note?: string | null;
+  simulation_snapshot?: SimulationSnapshot; // parseado desde string JSON
 }
 
 export interface ApplicationIntention {
@@ -117,6 +125,46 @@ async function fetchText(url: string): Promise<string | null> {
   if (res.status === 404) return null;
   if (!res.ok) return null;
   return res.text();
+}
+
+// ── Helper: parsear detail con simulation_snapshot ────────────────────────────
+
+function parseDetail(raw: any): ApplicationFullDetail {
+  const detail: ApplicationFullDetail = {
+    application_id: raw.application_id,
+    product_id: raw.product_id,
+    product_name: raw.product_name,
+    principal: raw.principal,
+    term_days: raw.term_days,
+    installment_count: raw.installment_count,
+    is_first_loan: raw.is_first_loan,
+    credit_score_used: raw.credit_score_used,
+    total_fees_original: raw.total_fees_original,
+    total_discounts: raw.total_discounts,
+    total_igv: raw.total_igv,
+    total_to_pay: raw.total_to_pay,
+    monthly_payment: raw.monthly_payment,
+    first_due_date: raw.first_due_date,
+    schedule: raw.schedule ?? [],
+    requested_amount: raw.requested_amount,
+    approved_amount: raw.approved_amount,
+    was_limit_adjusted: raw.was_limit_adjusted,
+    score_limit_amount: raw.score_limit_amount,
+    limit_note: raw.limit_note,
+  };
+
+  if (raw.simulation_snapshot) {
+    try {
+      detail.simulation_snapshot =
+        typeof raw.simulation_snapshot === 'string'
+          ? JSON.parse(raw.simulation_snapshot)
+          : raw.simulation_snapshot;
+    } catch {
+      console.warn('[SolicitudStore] Error parseando simulation_snapshot');
+    }
+  }
+
+  return detail;
 }
 
 // ── State & Actions ───────────────────────────────────────────────────────────
@@ -329,7 +377,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
       set({ detailStatus: 'pending' });
       try {
         const detail = await fetchJson<ApplicationFullDetail>(`/api/solicitudes/${applicationId}/detail`);
-        set({ fullDetail: detail, detailStatus: 'success' });
+        const parsed = detail ? parseDetail(detail) : null;
+        set({ fullDetail: parsed, detailStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching full detail:', err);
         set({ detailStatus: 'error' });
@@ -426,7 +475,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
       set({ detailStatus: 'pending', fullDetail: null });
       try {
         const detail = await fetchJson<ApplicationFullDetail>(`/api/solicitudes/${applicationId}/detail`);
-        set({ fullDetail: detail, detailStatus: 'success' });
+        const parsed = detail ? parseDetail(detail) : null;
+        set({ fullDetail: parsed, detailStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing full detail:', err);
         set({ detailStatus: 'error' });

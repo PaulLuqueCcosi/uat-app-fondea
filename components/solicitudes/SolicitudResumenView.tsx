@@ -23,6 +23,7 @@ import type { ApplicationFullDetail } from '@/lib/stores/solicitud-store';
 import type { DocumentListResult } from '@/lib/types/document';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
+import { LoanBreakdownCard } from './LoanBreakdownCard';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -75,7 +76,7 @@ export function SolicitudResumenView({ application, fullDetail, documents, detai
   }
 
   if (status === 'APPROVED') {
-    return <ApprovedView application={application} fullDetail={fullDetail} />;
+    return <ApprovedView application={application} fullDetail={fullDetail} detailStatus={detailStatus} />;
   }
 
   if (status === 'REJECTED') {
@@ -184,60 +185,8 @@ function PreApprovedView({
           </div>
         </div>
 
-        {/* Detalle del préstamo */}
-        {detailStatus === 'success' && fullDetail ? (
-          <Card className="border-0 shadow-md">
-            <CardContent className="p-5">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Detalle de tu préstamo</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Monto</p>
-                  <p className="text-lg font-bold text-foreground">{formatCurrency(fullDetail.principal)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Cuotas</p>
-                  <p className="text-lg font-bold text-foreground">{fullDetail.installment_count}x</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Pago mensual</p>
-                  <p className="text-lg font-bold text-foreground">{formatCurrency(fullDetail.monthly_payment)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total a pagar</p>
-                  <p className="text-lg font-bold text-foreground">{formatCurrency(fullDetail.total_to_pay)}</p>
-                </div>
-              </div>
-
-              {fullDetail.schedule && fullDetail.schedule.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-xs text-muted-foreground mb-2">Cronograma de pagos</p>
-                  <div className="space-y-1">
-                    {fullDetail.schedule.map((inst) => (
-                      <div key={inst.installment_no} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Cuota {inst.installment_no} — {formatDate(inst.due_date)}</span>
-                        <span className="font-medium text-foreground">{formatCurrency(inst.amount)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ) : detailStatus !== 'error' ? (
-          <Card className="border-0 shadow-md animate-pulse">
-            <CardContent className="p-5 space-y-4">
-              <Skeleton className="h-4 w-40" />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="space-y-2">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-6 w-24" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
+        {/* Detalle del préstamo con breakdown */}
+        <LoanBreakdownCard fullDetail={fullDetail} detailStatus={detailStatus} />
 
         {/* Próximos pasos */}
         <Card className="border-0 shadow-md">
@@ -357,9 +306,11 @@ function PreApprovedView({
 function ApprovedView({
   application,
   fullDetail,
+  detailStatus,
 }: {
   application: ApplicationRecord;
   fullDetail: ApplicationFullDetail | null;
+  detailStatus: StoreStatus;
 }) {
   const router = useRouter();
 
@@ -396,32 +347,8 @@ function ApprovedView({
         </div>
       </div>
 
-      {/* Resumen */}
-      {fullDetail && (
-        <Card className="border-0 shadow-md">
-          <CardContent className="p-5">
-            <h3 className="text-sm font-semibold text-foreground mb-4">Resumen de tu préstamo</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Monto</p>
-                <p className="text-lg font-bold text-foreground">{formatCurrency(fullDetail.principal)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total a pagar</p>
-                <p className="text-lg font-bold text-foreground">{formatCurrency(fullDetail.total_to_pay)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Cuotas</p>
-                <p className="text-lg font-bold text-foreground">{fullDetail.installment_count}x de {formatCurrency(fullDetail.monthly_payment)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Primera cuota</p>
-                <p className="text-lg font-bold text-foreground">{formatDate(fullDetail.first_due_date)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Detalle del préstamo con breakdown */}
+      <LoanBreakdownCard fullDetail={fullDetail} detailStatus={detailStatus} />
 
       <Button onClick={() => router.push('/dashboard')} size="lg" className="w-full">
         <Home className="w-4 h-4 mr-2" />

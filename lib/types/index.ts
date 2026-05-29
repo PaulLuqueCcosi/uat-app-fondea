@@ -17,4 +17,5 @@ export * from './intencion';
 export * from './document';
 export * from './puntaje';
 export * from './score-range';
+export * from './simulation';
 export * from './ui';
