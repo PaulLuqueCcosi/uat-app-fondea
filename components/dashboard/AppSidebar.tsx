@@ -33,7 +33,11 @@ const mainNav = [
   { path: '/dashboard/settings', label: 'Configuración', icon: Settings },
 ];
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  profileComplete: boolean;
+}
+
+export function AppSidebar({ profileComplete, ...props }: AppSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -51,7 +55,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </div>
               <div className="min-w-0 flex-1 grid leading-tight">
                 <span className="font-semibold text-sm truncate">Usuario</span>
-                <span className="text-xs text-warning-700 truncate">Perfil incompleto</span>
+                <span className={`text-xs truncate ${profileComplete ? 'text-emerald-600' : 'text-warning-700'}`}>
+                  {profileComplete ? 'Perfil completo' : 'Perfil incompleto'}
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

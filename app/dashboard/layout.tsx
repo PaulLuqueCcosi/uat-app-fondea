@@ -1,4 +1,5 @@
 import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
+import { isExpedienteComplete } from '@/app/actions/expediente-summary.actions';
 import { AppSidebar } from '@/components/dashboard/AppSidebar';
 import { AppNavbar } from '@/components/ui/app-navbar';
 import { AppBackground } from '@/components/ui/app-background';
@@ -14,6 +15,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const user = await requireValidSession();
+  const profileComplete = await isExpedienteComplete();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -28,7 +30,7 @@ export default async function DashboardLayout({
       {/* ── Debajo del navbar: sidebar + contenido ── */}
       <div className="flex flex-1 overflow-hidden">
         <SidebarProvider className="min-h-0">
-          <AppSidebar />
+          <AppSidebar profileComplete={profileComplete} />
           <SidebarInset>
             {children}
           </SidebarInset>
