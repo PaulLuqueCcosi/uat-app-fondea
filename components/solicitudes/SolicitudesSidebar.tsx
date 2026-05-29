@@ -53,7 +53,7 @@ export function SolicitudesSidebar() {
       <div className="p-6">
 
         {/* ── Card del préstamo — siempre visible ── */}
-        {fullDetail ? (
+        {fullDetail?.monthly_payment ? (
           <Card className="mb-6 overflow-hidden border-0 shadow-lg py-0">
             <div className="bg-linear-to-br from-primary-500 to-primary-700 p-5 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-8 translate-x-8" />

@@ -75,6 +75,14 @@ function mapApplication(data: any): ApplicationRecord {
   };
 }
 
+function mapIntention(data: any): ApplicationIntention {
+  return {
+    amount: data.amount,
+    termDays: data.term_days,
+    installmentCount: data.installment_count,
+  };
+}
+
 function mapDocumentList(data: any): DocumentListResult {
   return {
     applicationId: data.application_id,
@@ -444,8 +452,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
       if (!applicationId) return;
 
       try {
-        const intention = await fetchJson<ApplicationIntention>(`/api/solicitudes/${applicationId}/intention`);
-        if (intention) set({ applicationIntention: intention });
+        const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}/intention`);
+        if (raw) set({ applicationIntention: mapIntention(raw) });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching intention:', err);
       }
@@ -545,9 +553,9 @@ export const useSolicitudStore = create<SolicitudStore>()(
       set({ isPolling: true, _pollingAttempts: 0 });
 
       // Cargar intención para el sidebar
-      fetchJson<ApplicationIntention>(`/api/solicitudes/${applicationId}/intention`)
-        .then((intention) => {
-          if (intention) set({ applicationIntention: intention });
+      fetchJson<any>(`/api/solicitudes/${applicationId}/intention`)
+        .then((raw) => {
+          if (raw) set({ applicationIntention: mapIntention(raw) });
         })
         .catch(() => {});
 
