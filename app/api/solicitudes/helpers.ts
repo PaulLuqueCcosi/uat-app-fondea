@@ -4,7 +4,7 @@
  */
 
 import { backendFetch as centralBackendFetch, proxyResponse, type BackendFetchOptions } from '@/lib/backend-fetch';
-import { getAccessToken } from '@logto/next/server-actions';
+import { getAccessTokenRSC } from '@logto/next/server-actions';
 import { logtoConfig } from '@/app/logto';
 
 export { proxyResponse };
@@ -29,12 +29,11 @@ export async function contractsFetch(
   path: string,
   options: RequestInit = {},
 ): Promise<Response> {
-  const method = options.method ?? 'GET';
   const fullUrl = `${CONTRATOS_URL}${path}`;
 
   let token: string | undefined;
   try {
-    token = await getAccessToken(logtoConfig, RESOURCE);
+    token = await getAccessTokenRSC(logtoConfig, RESOURCE);
   } catch {
     return new Response(JSON.stringify({ error: 'token_error' }), { status: 401 });
   }
