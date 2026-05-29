@@ -17,13 +17,15 @@ export function DashboardStoreInit() {
   const fetchIntencion = useIntencionStore(s => s.fetch);
   const fetchPuntaje = usePuntajeStore(s => s.fetchPuntaje);
   const fetchCreditScore = useCreditScoreStore(s => s.fetch);
+  const fetchScoreRanges = useCreditScoreStore(s => s.fetchScoreRanges);
 
   useEffect(() => {
     // Disparar todos los fetches en paralelo al montar
     fetchIntencion();
     fetchPuntaje();
     fetchCreditScore();
-  }, [fetchIntencion, fetchPuntaje, fetchCreditScore]);
+    fetchScoreRanges();
+  }, [fetchIntencion, fetchPuntaje, fetchCreditScore, fetchScoreRanges]);
 
   return null; // No renderiza nada
 }

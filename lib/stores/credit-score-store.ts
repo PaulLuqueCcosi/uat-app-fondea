@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ScoreRange } from '@/lib/types';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -16,16 +17,27 @@ interface CreditScoreStore {
   creditScore: CreditScoreData | null;
   error: string | null;
 
+  // Rangos del producto (configuración estática, cachea 1 vez)
+  rangesStatus: StoreStatus;
+  scoreRanges: ScoreRange[] | null;
+  rangesError: string | null;
+
   fetch: () => Promise<void>;
   refetch: () => Promise<void>;
   set: (data: CreditScoreData) => void;
   clear: () => void;
+
+  fetchScoreRanges: () => Promise<void>;
 }
 
 export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
   status: 'idle',
   creditScore: null,
   error: null,
+
+  rangesStatus: 'idle',
+  scoreRanges: null,
+  rangesError: null,
 
   fetch: async () => {
     const { status } = get();
@@ -82,5 +94,33 @@ export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
 
   clear: () => {
     set({ status: 'idle', creditScore: null, error: null });
+  },
+
+  fetchScoreRanges: async () => {
+    const { rangesStatus } = get();
+    // Cachear 1 vez por sesión (configuración del producto no cambia)
+    if (rangesStatus === 'pending' || rangesStatus === 'success') return;
+
+    set({ rangesStatus: 'pending', rangesError: null });
+    try {
+      const res = await window.fetch('/api/calculadora/score-ranges', { cache: 'no-store' });
+
+      if (!res.ok) {
+        set({ rangesStatus: 'error', rangesError: `HTTP ${res.status}` });
+        return;
+      }
+
+      const data = await res.json();
+      const ranges: ScoreRange[] | undefined = data.scoreRanges;
+
+      if (ranges && ranges.length > 0) {
+        set({ rangesStatus: 'success', scoreRanges: ranges });
+      } else {
+        set({ rangesStatus: 'success', scoreRanges: null });
+      }
+    } catch (err) {
+      console.error('[CreditScore] Error fetching ranges:', err);
+      set({ rangesStatus: 'error', rangesError: 'Network error' });
+    }
   },
 }));
