@@ -91,11 +91,11 @@ const laborFormSchema = z.object({
     }
   }
 
-  // RUC requerido solo para EMPRESARIO
-  if (data.employment_status === 'EMPRESARIO') {
-    if (!data.business_ruc) {
+  // RUC requerido para EMPRESARIO, opcional para INDEPENDIENTE y FREELANCE
+  if (['EMPRESARIO', 'INDEPENDIENTE', 'FREELANCE'].includes(data.employment_status)) {
+    if (data.employment_status === 'EMPRESARIO' && !data.business_ruc) {
       ctx.addIssue({ code: 'custom', message: 'Ingresa el RUC del negocio', path: ['business_ruc'] });
-    } else if (data.business_ruc.length !== LABOR_CONFIG.RUC_LENGTH) {
+    } else if (data.business_ruc && data.business_ruc.length !== LABOR_CONFIG.RUC_LENGTH) {
       ctx.addIssue({ code: 'custom', message: `El RUC debe tener ${LABOR_CONFIG.RUC_LENGTH} dígitos`, path: ['business_ruc'] });
     }
   }
@@ -377,7 +377,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
               />
             )}
             {savedDetails?.business_ruc && (
-              <DataRow label="RUC del negocio" value={savedDetails.business_ruc} />
+              <DataRow label="RUC" value={savedDetails.business_ruc} />
             )}
           </div>
         </div>
@@ -560,18 +560,38 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
 
                 {/* Años de actividad — independiente y freelance */}
                 {(employmentStatus === 'INDEPENDIENTE' || employmentStatus === 'FREELANCE') && (
-                  <FormField
-                    control={form.control}
-                    name="years_of_activity"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col items-start gap-1">
-                        <FormLabel>Años con tu actividad *</FormLabel>
-                        <Input type="number" placeholder="3" {...field} className="w-full" min="0" step="1" />
-                        <FormDescription>¿Cuántos años llevas en esta actividad?</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="years_of_activity"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col items-start gap-1">
+                          <FormLabel>Años con tu actividad *</FormLabel>
+                          <Input type="number" placeholder="3" {...field} className="w-full" min="0" step="1" />
+                          <FormDescription>¿Cuántos años llevas en esta actividad?</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="business_ruc"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col items-start gap-1">
+                          <FormLabel>RUC (opcional)</FormLabel>
+                          <Input
+                            placeholder="10123456789"
+                            {...field}
+                            className="w-full font-mono"
+                            maxLength={11}
+                            onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
+                          />
+                          <FormDescription>Si tienes RUC, ingrésalo (11 dígitos)</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
                 )}
 
                 {/* Años + RUC — empresario */}
