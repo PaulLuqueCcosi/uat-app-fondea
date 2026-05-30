@@ -246,11 +246,11 @@ function PreApprovedView({
         </Card>
 
         {/* Botones */}
-        <div className="flex flex-col sm:flex-row justify-end gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button
             variant="outline"
             onClick={() => setShowCancelModal(true)}
-            className="w-full sm:w-auto"
+            className="w-full sm:flex-1"
           >
             <X className="w-4 h-4 mr-2" />
             Cancelar solicitud
@@ -261,7 +261,7 @@ function PreApprovedView({
               else if (!isSelfieUploaded) router.push(`/solicitudes/${application.id}/kyc-selfie`);
               else router.push(`/solicitudes/${application.id}/contrato`);
             }}
-            className="w-full sm:w-auto"
+            className="w-full sm:flex-1"
           >
             Continuar
             <ArrowRight className="w-4 h-4 ml-2" />
@@ -348,7 +348,7 @@ function ApprovedView({
       {/* Detalle del préstamo con breakdown */}
       <LoanBreakdownCard fullDetail={fullDetail} detailStatus={detailStatus} />
 
-      <Button onClick={() => router.push('/dashboard')} className="w-full md:w-auto">
+      <Button onClick={() => router.push('/dashboard')} className="w-full md:w-auto md:min-w-[200px]">
         <Home className="w-4 h-4 mr-2" />
         Ir al dashboard
       </Button>
@@ -435,14 +435,14 @@ function RejectedView({ application }: { application: ApplicationRecord }) {
       </Card>
 
       {/* Botones */}
-      <div className="flex flex-col sm:flex-row justify-end gap-3">
-        <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:flex-1">
           <Home className="w-4 h-4 mr-2" />
           Volver al dashboard
         </Button>
         <Button
           onClick={() => router.push('/solicitar')}
-          className="w-full sm:w-auto"
+          className="w-full sm:flex-1"
           disabled={!canRetry}
         >
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -494,12 +494,12 @@ function CancelledByUserView() {
       </div>
 
       {/* Botones */}
-      <div className="flex flex-col sm:flex-row justify-end gap-3">
-        <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:flex-1">
           <Home className="w-4 h-4 mr-2" />
           Ir al dashboard
         </Button>
-        <Button onClick={() => router.push('/solicitar')} className="w-full sm:w-auto">
+        <Button onClick={() => router.push('/solicitar')} className="w-full sm:flex-1">
           <RefreshCw className="w-4 h-4 mr-2" />
           Nueva solicitud
         </Button>
@@ -557,12 +557,12 @@ function FailedView({ application }: { application: ApplicationRecord }) {
       </div>
 
       {/* Botones */}
-      <div className="flex flex-col sm:flex-row justify-end gap-3">
-        <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:flex-1">
           <Home className="w-4 h-4 mr-2" />
           Ir al dashboard
         </Button>
-        <Button onClick={() => router.push('/solicitar')} className="w-full sm:w-auto">
+        <Button onClick={() => router.push('/solicitar')} className="w-full sm:flex-1">
           <RefreshCw className="w-4 h-4 mr-2" />
           Nueva solicitud
         </Button>
@@ -612,12 +612,12 @@ function ExpiredView() {
       </div>
 
       {/* Botones */}
-      <div className="flex flex-col sm:flex-row justify-end gap-3">
-        <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:flex-1">
           <Home className="w-4 h-4 mr-2" />
           Ir al dashboard
         </Button>
-        <Button onClick={() => router.push('/solicitar')} className="w-full sm:w-auto">
+        <Button onClick={() => router.push('/solicitar')} className="w-full sm:flex-1">
           <RefreshCw className="w-4 h-4 mr-2" />
           Nueva solicitud
         </Button>
