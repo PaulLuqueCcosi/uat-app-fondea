@@ -107,28 +107,39 @@ export function LoanBreakdownCard({ fullDetail, detailStatus }: LoanBreakdownCar
       {/* Header colapsable */}
       <button
         onClick={() => setIsOpen(v => !v)}
-        className="w-full text-left"
+        className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-t-xl"
       >
-        <CardHeader className="py-4 px-5 flex flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <Calculator className="w-5 h-5 text-primary shrink-0" />
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-foreground">Desglose del préstamo</h3>
-              <p className="text-xs text-muted-foreground truncate">
-                {snap.product.name}
-              </p>
+        <CardHeader className="py-3 px-4 sm:py-4 sm:px-5">
+          <div className="flex items-center justify-between gap-3">
+
+            {/* Izquierda: título + score */}
+            <div className="flex items-start gap-2 min-w-0">
+              <Calculator className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-2">
+                <div>
+                  <h3 className="text-md sm:text-sm font-semibold text-foreground leading-tight">
+                    Desglose del préstamo
+                  </h3>
+              
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-md text-muted-foreground">Puntaje crediticio calculado</p>
+                  <ScoreBadge score={fullDetail.credit_score_used} />
+                </div>
+              </div>
             </div>
-            <ScoreBadge score={fullDetail.credit_score_used} />
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <span className="text-lg font-bold text-primary tabular-nums">
-              {fmt(snap.summary.totalToPay)}
-            </span>
-            {isOpen ? (
-              <ChevronUp className="w-5 h-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-muted-foreground" />
-            )}
+
+            {/* Derecha: monto + chevron */}
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-base sm:text-lg font-bold text-primary tabular-nums">
+                {fmt(snap.summary.totalToPay)}
+              </span>
+              {isOpen
+                ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              }
+            </div>
+
           </div>
         </CardHeader>
       </button>
