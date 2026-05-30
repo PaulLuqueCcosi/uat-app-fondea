@@ -1056,12 +1056,11 @@ export function FunnelSummary({
         )}
 
         {/* BOTONES DE ACCIÓN */}
-        <div className="flex flex-col sm:flex-row gap-4 pt-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
           <Button
             variant="outline"
             onClick={() => router.push('/dashboard')}
-            className="flex-1"
-            size="lg"
+            className="w-full sm:w-auto"
           >
             <Home className="w-4 h-4 mr-2" />
             Volver al dashboard
@@ -1069,8 +1068,7 @@ export function FunnelSummary({
           <Button
             onClick={handleSubmit}
             disabled={loading}
-            className="flex-1"
-            size="lg"
+            className="w-full sm:w-auto"
           >
             {loading ? 'Enviando...' : 'Enviar solicitud y continuar →'}
           </Button>
