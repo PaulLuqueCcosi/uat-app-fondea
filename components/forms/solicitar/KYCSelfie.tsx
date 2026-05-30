@@ -584,7 +584,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                               size="sm"
                               onClick={() => setCameraModalOpen(true)}
                               className="w-full sm:w-auto"
-                              disabled={processing}
+                              disabled={processing || deleting}
                             >
                               <RefreshCw className="w-4 h-4 mr-2" />
                               Volver a tomar
@@ -663,14 +663,14 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                 variant="outline"
                 className="w-full sm:w-auto"
                 onClick={() => router.back()}
-                disabled={processing}
+                disabled={processing || deleting}
               >
                 Atrás
               </Button>
               <Button
                 type="button"
                 onClick={handleContinue}
-                disabled={(!selfieFile && !verified) || processing || analyzing}
+                disabled={(!selfieFile && !verified) || processing || analyzing || deleting}
                 className="w-full sm:w-auto"
               >
                 {processing ? 'Procesando…' : 'Continuar'}

@@ -610,14 +610,14 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                 variant="outline"
                 className="w-full sm:w-auto"
                 onClick={() => router.back()}
-                disabled={processing !== null}
+                disabled={processing !== null || deleting !== null}
               >
                 Atrás
               </Button>
               <Button
                 type="button"
                 onClick={handleContinue}
-                disabled={(!frontFile && !frontUploaded) || (!backFile && !backUploaded) || processing !== null}
+                disabled={(!frontFile && !frontUploaded) || (!backFile && !backUploaded) || processing !== null || deleting !== null}
                 className="w-full sm:w-auto"
               >
                 {processing ? 'Procesando...' : 'Continuar'}
