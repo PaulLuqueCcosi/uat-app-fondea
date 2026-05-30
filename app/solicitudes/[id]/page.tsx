@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 import { useCreditScoreStore } from '@/lib/stores/credit-score-store';
 import { SolicitudResumenView } from '@/components/solicitudes/SolicitudResumenView';
-import { ApprovedCelebration } from '@/components/solicitudes/ApprovedCelebration';
 import { Loader2, Clock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
@@ -17,16 +16,13 @@ export default function SolicitudPage() {
   const detailStatus = useSolicitudStore(s => s.detailStatus);
   const documents = useSolicitudStore(s => s.documents);
   const documentsStatus = useSolicitudStore(s => s.documentsStatus);
-  const isPolling = useSolicitudStore(s => s.isPolling);
-  const showCelebration = useSolicitudStore(s => s.showCelebration);
-  const startPolling = useSolicitudStore(s => s.startPolling);
 
-  // Iniciar polling cuando la application llega con status de evaluación
+  // Redirigir a /processing si la solicitud está en evaluación
   useEffect(() => {
     if (application && (application.status === 'SUBMITTED' || application.status === 'PROCESSING')) {
-      startPolling();
+      router.replace(`/solicitudes/${application.id}/processing`);
     }
-  }, [application, startPolling]);
+  }, [application, router]);
 
   // Recargar credit score cada vez que el estado de la aplicación cambia
   useEffect(() => {
@@ -42,12 +38,7 @@ export default function SolicitudPage() {
     }
   }, [applicationStatus, application, router]);
 
-  // Celebración
-  if (showCelebration) {
-    return <ApprovedCelebration />;
-  }
-
-  // Skeleton solo para la application principal (el hero depende de esto)
+  // Skeleton mientras carga la aplicación
   if (applicationStatus === 'idle' || applicationStatus === 'pending') {
     return <ResumenSkeleton />;
   }
@@ -57,8 +48,8 @@ export default function SolicitudPage() {
     return <ResumenSkeleton />;
   }
 
-  // Polling
-  if (isPolling || application.status === 'SUBMITTED' || application.status === 'PROCESSING') {
+  // Si está SUBMITTED/PROCESSING, mostrar spinner mientras se redirige
+  if (application.status === 'SUBMITTED' || application.status === 'PROCESSING') {
     return (
       <Card className="w-full max-w-2xl mx-auto p-8">
         <div className="flex flex-col items-center text-center space-y-8">

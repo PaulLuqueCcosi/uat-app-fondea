@@ -198,18 +198,12 @@ interface SolicitudState {
   contractHtml: string | null;
   pdfUrl: string | null;
 
-  showCelebration: boolean;
   applicationIntention: ApplicationIntention | null;
-
-  isPolling: boolean;
-  _pollingInterval: ReturnType<typeof setInterval> | null;
-  _pollingAttempts: number;
 }
 
 interface SolicitudActions {
   init: (applicationId: string) => void;
   reset: () => void;
-  dismissCelebration: () => void;
 
   fetchApplication: () => Promise<ApplicationRecord | null>;
   fetchFullDetail: () => Promise<void>;
@@ -226,9 +220,6 @@ interface SolicitudActions {
 
   setDocumentUrl: (type: keyof DocumentUrls, url: string | null) => void;
   setDocumentsVerification: (status: DocumentsVerificationStatus) => void;
-
-  startPolling: () => void;
-  stopPolling: () => void;
 }
 
 type SolicitudStore = SolicitudState & SolicitudActions;
@@ -256,18 +247,8 @@ const INITIAL_STATE: SolicitudState = {
   contractHtml: null,
   pdfUrl: null,
 
-  showCelebration: false,
   applicationIntention: null,
-
-  isPolling: false,
-  _pollingInterval: null,
-  _pollingAttempts: 0,
 };
-
-// ── Config ────────────────────────────────────────────────────────────────────
-
-const POLL_INTERVAL = 10_000;
-const MAX_POLL_ATTEMPTS = 30;
 
 // ── Helper: cargar documentos + URLs ──────────────────────────────────────────
 
@@ -337,7 +318,6 @@ export const useSolicitudStore = create<SolicitudStore>()(
     init: (applicationId: string) => {
       const current = get().applicationId;
       if (current === applicationId) return;
-      get().stopPolling();
       set({ ...INITIAL_STATE, applicationId });
 
       get().fetchApplication();
@@ -349,11 +329,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
     },
 
     reset: () => {
-      get().stopPolling();
       set(INITIAL_STATE);
     },
-
-    dismissCelebration: () => set({ showCelebration: false }),
 
     // ── Fetch Application ─────────────────────────────────────────────────────
 
@@ -544,78 +521,5 @@ export const useSolicitudStore = create<SolicitudStore>()(
       set({ documentsVerification: status, verificationStatus: 'success' });
     },
 
-    // ── Polling ───────────────────────────────────────────────────────────────
-
-    startPolling: () => {
-      const { _pollingInterval, applicationId } = get();
-      if (_pollingInterval || !applicationId) return;
-
-      set({ isPolling: true, _pollingAttempts: 0 });
-
-      // Cargar intención para el sidebar
-      fetchJson<any>(`/api/solicitudes/${applicationId}/intention`)
-        .then((raw) => {
-          if (raw) set({ applicationIntention: mapIntention(raw) });
-        })
-        .catch(() => {});
-
-      const poll = async () => {
-        const { applicationId: appId, _pollingAttempts } = get();
-        if (!appId) return;
-
-        if (_pollingAttempts >= MAX_POLL_ATTEMPTS) {
-          get().stopPolling();
-          const current = get().application;
-          if (current) set({ application: { ...current, status: 'FAILED' as ApplicationStatus } });
-          return;
-        }
-
-        set({ _pollingAttempts: _pollingAttempts + 1 });
-
-        try {
-          const statusRaw = await fetchJson<any>(`/api/solicitudes/${appId}/status`);
-          if (!statusRaw) return;
-
-          const status = statusRaw.status as ApplicationStatus;
-
-          if (status !== 'SUBMITTED' && status !== 'PROCESSING') {
-            get().stopPolling();
-
-            if (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS') {
-              if (!get().showCelebration) {
-                set({ showCelebration: true });
-                setTimeout(() => set({ showCelebration: false }), 2500);
-              }
-            }
-
-            // Recargar todo en paralelo
-            const appRaw = await fetchJson<any>(`/api/solicitudes/${appId}`);
-            if (appRaw) set({ application: mapApplication(appRaw), applicationStatus: 'success' });
-
-            const [detail, docsResult, contractResult] = await Promise.all([
-              fetchJson<ApplicationFullDetail>(`/api/solicitudes/${appId}/detail`),
-              loadDocumentsWithUrls(appId),
-              loadContract(appId),
-            ]);
-
-            set({ fullDetail: detail ? parseDetail(detail) : null, detailStatus: 'success' });
-            set({ documents: docsResult.documents, documentUrls: docsResult.documentUrls, documentsStatus: 'success' });
-            set({ ...contractResult, contractStatus: 'success' });
-          }
-        } catch (err) {
-          console.error('[SolicitudStore] Polling error:', err);
-        }
-      };
-
-      poll();
-      const interval = setInterval(poll, POLL_INTERVAL);
-      set({ _pollingInterval: interval });
-    },
-
-    stopPolling: () => {
-      const interval = get()._pollingInterval;
-      if (interval) clearInterval(interval);
-      set({ isPolling: false, _pollingInterval: null, _pollingAttempts: 0 });
-    },
   })),
 );

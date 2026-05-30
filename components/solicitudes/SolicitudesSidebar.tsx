@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, FileText, Camera, PenLine, Lock, Loader2, ClipboardList } from 'lucide-react';
+import { CheckCircle2, FileText, Camera, PenLine, Lock, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,12 +18,12 @@ export function SolicitudesSidebar() {
   const documents = useSolicitudStore(s => s.documents);
   const documentsVerification = useSolicitudStore(s => s.documentsVerification);
   const contractInfo = useSolicitudStore(s => s.contractInfo);
-  const isPolling = useSolicitudStore(s => s.isPolling);
   const applicationIntention = useSolicitudStore(s => s.applicationIntention);
 
-  // ── ¿Mostrar pasos y card? Solo si el status lo permite ──
+  // ── ¿Mostrar pasos y card? Solo si el status lo permite y no estamos en /processing ──
+  const isProcessing = pathname.endsWith('/processing');
   const ACTIONABLE_STATUSES = ['PRE_APPROVED', 'PENDING_DOCUMENTS', 'PENDING_SIGNATURE', 'APPROVED'];
-  const showSteps = application ? ACTIONABLE_STATUSES.includes(application.status) : false;
+  const showSteps = !isProcessing && application ? ACTIONABLE_STATUSES.includes(application.status) : false;
 
   // ── Pasos completados (basado en verificación, no solo upload) ──
 
@@ -136,12 +136,7 @@ export function SolicitudesSidebar() {
         )}
 
         {/* ── Pasos — solo si el status lo permite ── */}
-        {showSteps && (!application ? <StepsSkeleton /> : isPolling ? (
-          <div className="text-center py-6">
-            <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
-            <p className="text-sm text-muted-foreground">Analizando tu solicitud...</p>
-          </div>
-        ) : (
+        {showSteps && (!application ? <StepsSkeleton /> : (
           <>
             <div className="mb-3">
               <h2 className="text-sm font-semibold text-neutral-800 uppercase tracking-wide">Pasos</h2>

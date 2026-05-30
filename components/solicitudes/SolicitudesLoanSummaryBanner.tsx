@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   CheckCircle2, Circle, ClipboardList, FileText, Camera, PenLine,
-  CreditCard, Calendar, Loader2,
+  CreditCard, Calendar,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
@@ -29,10 +29,10 @@ export function SolicitudesLoanSummaryBanner() {
   const documentsVerification = useSolicitudStore(s => s.documentsVerification);
   const contractInfo = useSolicitudStore(s => s.contractInfo);
   const applicationIntention = useSolicitudStore(s => s.applicationIntention);
-  const isPolling = useSolicitudStore(s => s.isPolling);
 
   const hasData = !!fullDetail || !!applicationIntention;
-  const showSteps = application && ACTIONABLE_STATUSES.includes(application.status);
+  const isProcessing = pathname.endsWith('/processing');
+  const showSteps = !isProcessing && application && ACTIONABLE_STATUSES.includes(application.status);
 
   const isDniCompleted =
     documentsVerification?.dniFront.status === 'VERIFIED' &&
@@ -64,7 +64,7 @@ export function SolicitudesLoanSummaryBanner() {
     <div className="border-b border-border md:hidden">
       <Card className="overflow-hidden border-0 shadow-none py-0 rounded-none gap-0">
         {/* Loading: Skeleton */}
-        {!hasData && !isPolling && (
+        {!hasData && (
           <div className="bg-linear-to-br from-primary-500 to-primary-700 px-4 py-2.5">
             <div className="animate-pulse space-y-2">
               <div className="flex items-center justify-between">
@@ -87,7 +87,6 @@ export function SolicitudesLoanSummaryBanner() {
             <div className="relative">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-[10px] font-medium text-white/70 uppercase tracking-wider">Tu Solicitud</p>
-                {isPolling && <Loader2 className="w-3.5 h-3.5 animate-spin text-white/70" />}
               </div>
               {fullDetail ? (
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -133,22 +132,7 @@ export function SolicitudesLoanSummaryBanner() {
                     </div>
                   </div>
                 </div>
-              ) : isPolling && (
-                <div className="flex items-center gap-2 mt-1">
-                  <Loader2 className="w-4 h-4 animate-spin text-white/70" />
-                  <p className="text-xs text-white/70">Analizando tu solicitud...</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* No data (shouldn't happen since layout loads on mount, but safe guard) */}
-        {!hasData && isPolling && (
-          <div className="bg-linear-to-br from-primary-500 to-primary-700 px-4 py-2.5">
-            <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-white/70" />
-              <p className="text-xs text-white/70">Analizando tu solicitud...</p>
+              ) : null}
             </div>
           </div>
         )}

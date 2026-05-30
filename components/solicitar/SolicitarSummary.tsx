@@ -353,7 +353,7 @@ export function FunnelSummary({
     try {
       const result = await submitApplication(pepDeclarations, activeIntencion.intencionId, deviceFingerprintPayload);
       toast.success('Solicitud enviada correctamente', { id: submitToastRef.current! });
-      router.push(`/solicitudes/${result.applicationId}`);
+      router.push(`/solicitudes/${result.applicationId}/processing`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al enviar la solicitud';
       const category = err instanceof ApiError ? err.category : 'network';
