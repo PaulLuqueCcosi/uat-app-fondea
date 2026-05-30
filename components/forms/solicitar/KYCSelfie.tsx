@@ -55,7 +55,7 @@ const STATUS_LABEL: Record<FaceStatus, string> = {
   none:   'No se detectó ningún rostro en la imagen',
   red:    'Rostro no detectado o muy poco visible',
   orange: 'Rostro detectado pero con baja confianza — intenta con mejor iluminación',
-  green:  'Rostro verificado correctamente',
+  green:  'Rostro identificado — listo para subir',
 };
 
 const STATUS_STYLE: Record<FaceStatus, string> = {
@@ -263,16 +263,16 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
     reader.readAsDataURL(file);
   };
 
-  // ── Subida de selfie al backend ────────────────────────────────────────────
-  const handleVerify = async () => {
+  // ── Subida de selfie al backend (solo upload, sin redirect) ────────────
+  const handleUpload = async () => {
     if (!selfieFile) {
       setError('Debes capturar o subir una selfie primero');
-      return;
+      return false;
     }
 
     if (!solicitudId) {
       setError('No se encontró la solicitud activa.');
-      return;
+      return false;
     }
 
     setLoading(true);
@@ -286,19 +286,15 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
       if (result.success) {
         setVerified(true);
         setDocumentUrl('selfie', selfiePreview);
-        setTimeout(() => {
-          if (isInSolicitudFlow && solicitudId) {
-            router.push(`/solicitudes/${solicitudId}/contrato`);
-          } else {
-            router.push(currentStep?.nextPath || '/solicitar/contract');
-          }
-        }, 1500);
+        return true;
       } else {
         setError(result.error || 'No pudimos subir tu selfie. Intenta nuevamente.');
+        return false;
       }
     } catch (err) {
       console.error('Error uploading selfie:', err);
       setError('Error en la verificación. Intenta nuevamente.');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -352,35 +348,25 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
   };
 
   const handleContinue = async () => {
-    // Si ya está verificada (del backend), solo navegar
-    if (verified && !selfieFile) {
-      if (isInSolicitudFlow && solicitudId) {
-        router.push(`/solicitudes/${solicitudId}/contrato`);
-      } else {
-        router.push(currentStep?.nextPath || '/solicitar/contract');
-      }
-      return;
-    }
-
-    if (!selfieFile) {
+    if (!selfieFile && !verified) {
       setError('Debes capturar o subir una selfie');
       return;
     }
 
-    // Bloquear si la imagen subida no pasó la validación facial
     if (uploadStatus !== null && uploadStatus !== 'green') {
       setError('La imagen no es válida. Por favor sube una foto donde tu rostro sea claramente visible.');
       return;
     }
 
     if (!verified) {
-      await handleVerify();
+      const ok = await handleUpload();
+      if (!ok) return;
+    }
+
+    if (isInSolicitudFlow && solicitudId) {
+      router.push(`/solicitudes/${solicitudId}/contrato`);
     } else {
-      if (isInSolicitudFlow && solicitudId) {
-        router.push(`/solicitudes/${solicitudId}/contrato`);
-      } else {
-        router.push(currentStep?.nextPath || '/solicitar/contract');
-      }
+      router.push(currentStep?.nextPath || '/solicitar/contract');
     }
   };
 
@@ -497,26 +483,18 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                       )}
                     </div>
 
-                    {/* Badge de resultado del análisis */}
-                    {!analyzing && uploadStatus && (
+                    {/* Badge de resultado del análisis — solo si no es verde (verde solo muestra botón subir) */}
+                    {!analyzing && uploadStatus && uploadStatus !== 'green' && (
                       <div
                         className={`p-3 rounded-lg border flex items-start gap-2.5 ${STATUS_STYLE[uploadStatus]}`}
                       >
-                        {uploadStatus === 'green' ? (
-                          <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                        ) : (
-                          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                        )}
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                         <div className="text-sm">
                           <p className="font-semibold">
-                            {uploadStatus === 'green'
-                              ? 'Imagen válida'
-                              : uploadStatus === 'orange'
-                              ? 'Confianza insuficiente'
-                              : 'No se detectó un rostro'}
+                            {uploadStatus === 'orange' ? 'Confianza insuficiente' : 'No se detectó un rostro'}
                           </p>
                           <p className="opacity-90">{STATUS_LABEL[uploadStatus]}</p>
-                          {uploadScore !== null && uploadStatus !== 'green' && (
+                          {uploadScore !== null && (
                             <p className="mt-1 opacity-70 text-xs">
                               Confianza detectada: {Math.round(uploadScore * 100)}% — mínimo requerido: {Math.round(THRESHOLD_GREEN * 100)}%
                             </p>
@@ -531,7 +509,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                       {!verified && uploadStatus === 'green' && (
                         <Button
                           type="button"
-                          onClick={handleVerify}
+                          onClick={handleUpload}
                           disabled={loading}
                           className="w-full sm:flex-1"
                         >
