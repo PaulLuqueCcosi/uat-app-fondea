@@ -475,6 +475,47 @@ export async function getApplicationDetailAction(applicationId: string): Promise
   }
 }
 
+// ── DELETE: Eliminar solicitud (admin) ───────────────────────────────────────
+// TODO: Esta acción es temporal para pruebas, debe eliminarse en producción
+
+export interface DeleteApplicationResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Elimina una solicitud específica (endpoint admin).
+ * DELETE /api/v1/admin/applications/{applicationId}
+ *
+ * @param applicationId - ID de la solicitud a eliminar
+ */
+export async function deleteApplicationAction(
+  applicationId: string
+): Promise<DeleteApplicationResult> {
+  await requireValidSession();
+
+  try {
+    const res = await backendFetch(`/api/v1/admin/applications/${applicationId}`, {
+      method: 'DELETE',
+    });
+
+    if (res.status === 204 || res.status === 200) {
+      return { success: true };
+    }
+
+    let json: any = {};
+    try { json = await res.json(); } catch { /* body vacío */ }
+
+    return {
+      success: false,
+      error: json.message ?? json.detail ?? 'No se pudo eliminar la solicitud',
+    };
+  } catch {
+    console.error('[APPLICATION] Error al eliminar solicitud');
+    return { success: false, error: 'Error de conexión al eliminar la solicitud' };
+  }
+}
+
 // ── GET: Intención asociada a una solicitud ───────────────────────────────────
 
 export interface ApplicationIntention {
