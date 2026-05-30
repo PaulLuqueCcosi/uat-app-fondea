@@ -2,6 +2,7 @@
 
 import { AppNavbar } from '@/components/ui/app-navbar';
 import { SolicitudesSidebar } from './SolicitudesSidebar';
+import { SolicitudesLoanSummaryBanner } from './SolicitudesLoanSummaryBanner';
 import { SolicitudStoreInit } from './SolicitudContext';
 import type { User } from '@/lib/types';
 
@@ -24,6 +25,8 @@ export function SolicitudesLayoutClient({ user, onSignOut, children }: Solicitud
       />
 
       <SolicitudesSidebar />
+
+      <SolicitudesLoanSummaryBanner />
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-80">
         {children}
