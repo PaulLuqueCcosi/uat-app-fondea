@@ -99,6 +99,9 @@ export interface FingerprintResult {
   vpnDetected: boolean;
   vpnReasons: string[];
 
+  // Verificación de territorio peruano
+  territoryCheck: TerritoryCheckResult;
+
   // Metadata
   timestamp: string;
 }
@@ -108,24 +111,47 @@ export interface FingerprintResult {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function getPublicIP(): Promise<IPInfo | null> {
+  // Intento 1: ipapi.co (1000 req/día gratis)
   try {
     const res = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return {
-      ip: data.ip,
-      city: data.city,
-      region: data.region,
-      country: data.country_name,
-      countryCode: data.country_code,
-      org: data.org,
-      asn: data.asn,
-      latitude: data.latitude,
-      longitude: data.longitude,
-    };
-  } catch {
-    return null;
-  }
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        ip: data.ip,
+        city: data.city,
+        region: data.region,
+        country: data.country_name,
+        countryCode: data.country_code,
+        org: data.org,
+        asn: data.asn,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      };
+    }
+  } catch { /* fallback */ }
+
+  // Intento 2: ip-api.com (45 req/min gratis, sin HTTPS en plan free)
+  try {
+    const res = await fetch('http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,lat,lon,isp,as,query', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === 'success') {
+        return {
+          ip: data.query,
+          city: data.city,
+          region: data.regionName,
+          country: data.country,
+          countryCode: data.countryCode,
+          org: data.isp,
+          asn: data.as,
+          latitude: data.lat,
+          longitude: data.lon,
+        };
+      }
+    }
+  } catch { /* sin IP disponible */ }
+
+  return null;
 }
 
 export function getGPS(): Promise<GPSResult> {
@@ -184,9 +210,9 @@ export function getDeviceInfo(): DeviceInfo {
 export function detectLocalVPN(ip: IPInfo | null, gps: GPSInfo | null): { detected: boolean; reasons: string[] } {
   const reasons: string[] = [];
 
+  // Si no hay IP (APIs fallaron) → no podemos evaluar, no bloquear
   if (!ip) {
-    reasons.push('LOCAL: No se pudo obtener IP pública');
-    return { detected: true, reasons };
+    return { detected: false, reasons };
   }
 
   const org = (ip.org || '').toLowerCase();
@@ -197,7 +223,7 @@ export function detectLocalVPN(ip: IPInfo | null, gps: GPSInfo | null): { detect
 
   if (gps && ip.latitude != null && ip.longitude != null) {
     const distance = haversineDistance(gps.latitude, gps.longitude, ip.latitude, ip.longitude);
-    if (distance > 1000) {
+    if (distance > 1500) {
       reasons.push(
         `LOCAL: GPS (${gps.latitude.toFixed(2)}, ${gps.longitude.toFixed(2)}) a ${Math.round(distance)}km de la IP (${ip.city}, ${ip.country})`
       );
@@ -252,6 +278,74 @@ interface Verdict {
   };
 }
 
+// ── Validación de territorio peruano ──────────────────────────────────────────
+
+/**
+ * Bounding box de Perú (con margen de ~50km en fronteras).
+ * Lat: -18.35 (sur, Tacna) a -0.04 (norte, Loreto)
+ * Lon: -81.35 (oeste, Piura/costa) a -68.65 (este, Madre de Dios)
+ */
+const PERU_BOUNDS = {
+  latMin: -18.45,
+  latMax: 0.05,
+  lonMin: -81.40,
+  lonMax: -68.60,
+};
+
+export interface TerritoryCheckResult {
+  inPeru: boolean;
+  reasons: string[];
+  ipCountry: string | null;
+  gpsInBounds: boolean | null; // null si no hay GPS
+}
+
+/**
+ * Verifica que el usuario esté en territorio peruano.
+ * Usa dos fuentes: IP (country_code) y GPS (bounding box).
+ *
+ * Reglas:
+ * - Si la IP no es de Perú → bloquear (fuerte indicador de fraude)
+ * - Si el GPS está fuera del bounding box de Perú → bloquear
+ * - Si no hay GPS pero la IP es peruana → permitir (GPS es opcional)
+ */
+export function checkPeruTerritory(ip: IPInfo | null, gps: GPSInfo | null): TerritoryCheckResult {
+  const reasons: string[] = [];
+  let ipCountry: string | null = null;
+  let gpsInBounds: boolean | null = null;
+
+  // ── Verificación por IP ─────────────────────────────────────────────────────
+  if (ip) {
+    ipCountry = ip.countryCode ?? null;
+    if (ipCountry && ipCountry.toUpperCase() !== 'PE') {
+      reasons.push(`TERRITORIO: IP ubicada en ${ip.country ?? ipCountry} (se requiere Perú)`);
+    }
+  }
+  // Si no hay IP (APIs fallaron) → NO bloquear, el backend validará después
+
+  // ── Verificación por GPS ────────────────────────────────────────────────────
+  if (gps) {
+    const { latitude, longitude } = gps;
+    const inBounds =
+      latitude >= PERU_BOUNDS.latMin &&
+      latitude <= PERU_BOUNDS.latMax &&
+      longitude >= PERU_BOUNDS.lonMin &&
+      longitude <= PERU_BOUNDS.lonMax;
+
+    gpsInBounds = inBounds;
+
+    if (!inBounds) {
+      reasons.push(
+        `TERRITORIO: GPS (${latitude.toFixed(4)}, ${longitude.toFixed(4)}) fuera de Perú`
+      );
+    }
+  }
+  // Si no hay GPS, no penalizamos — la IP es suficiente
+
+  const inPeru = reasons.length === 0;
+
+  return { inPeru, reasons, ipCountry, gpsInBounds };
+}
+
 export function combineVerdict(
   local: { detected: boolean; reasons: string[] },
   proxycheck: ProxyCheckResult | null
@@ -301,6 +395,7 @@ export async function collectFingerprint(): Promise<FingerprintResult> {
   }
 
   const verdict = combineVerdict(localVPN, proxycheck);
+  const territoryCheck = checkPeruTerritory(ip, gpsResult.data);
 
   return {
     ip,
@@ -310,6 +405,7 @@ export async function collectFingerprint(): Promise<FingerprintResult> {
     device,
     vpnDetected: verdict.detected,
     vpnReasons: verdict.reasons,
+    territoryCheck,
     timestamp: new Date().toISOString(),
   };
 }
@@ -416,6 +512,17 @@ export function logFingerprint(fp: FingerprintResult) {
   if (fp.vpnReasons.length > 0) {
     console.log('Razones:');
     fp.vpnReasons.forEach((r) => console.log('  •', r));
+  }
+  console.groupEnd();
+
+  // ── Verificación territorial ────────────────────────────────────────────────
+  console.group('🇵🇪 VERIFICACIÓN TERRITORIAL');
+  console.log('En Perú:', fp.territoryCheck.inPeru ? '✅ SÍ' : '❌ NO — BLOQUEAR');
+  console.log('País IP:', fp.territoryCheck.ipCountry ?? 'N/A');
+  console.log('GPS en bounds:', fp.territoryCheck.gpsInBounds === null ? 'Sin GPS' : fp.territoryCheck.gpsInBounds ? '✅ Sí' : '❌ No');
+  if (fp.territoryCheck.reasons.length > 0) {
+    console.log('Razones:');
+    fp.territoryCheck.reasons.forEach((r) => console.log('  •', r));
   }
   console.groupEnd();
 

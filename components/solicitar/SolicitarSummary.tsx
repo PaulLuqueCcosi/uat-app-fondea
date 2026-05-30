@@ -47,6 +47,7 @@ import { submitApplication } from '@/lib/client-api/applications';
 import { ApiError } from '@/lib/client-api/api-error';
 import { useDeviceFingerprint } from '@/hooks/useDeviceFingerprint';
 import { VPNBlockModal } from './VPNBlockModal';
+import { TerritoryBlockModal } from './TerritoryBlockModal';
 import { LocationDeclinedModal } from './LocationDeclinedModal';
 import { type GPSPermissionError } from '@/lib/client-api/device-fingerprint';
 import { toast } from 'sonner';
@@ -185,6 +186,8 @@ export function FunnelSummary({
   const { collect: collectFingerprint } = useDeviceFingerprint();
   const [vpnModalOpen, setVpnModalOpen] = useState(false);
   const [vpnReasons, setVpnReasons] = useState<string[]>([]);
+  const [territoryModalOpen, setTerritoryModalOpen] = useState(false);
+  const [territoryReasons, setTerritoryReasons] = useState<string[]>([]);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [pendingFingerprint, setPendingFingerprint] = useState<any>(null);
   const [gpsError, setGpsError] = useState<GPSPermissionError | undefined>(undefined);
@@ -261,6 +264,14 @@ export function FunnelSummary({
     if (fp.vpnDetected) {
       setVpnReasons(fp.vpnReasons);
       setVpnModalOpen(true);
+      setLoading(false);
+      return;
+    }
+
+    // Si no está en territorio peruano: bloquear y mostrar modal
+    if (fp.territoryCheck && !fp.territoryCheck.inPeru) {
+      setTerritoryReasons(fp.territoryCheck.reasons);
+      setTerritoryModalOpen(true);
       setLoading(false);
       return;
     }
@@ -1089,6 +1100,13 @@ export function FunnelSummary({
       open={vpnModalOpen}
       onClose={() => setVpnModalOpen(false)}
       reasons={vpnReasons}
+    />
+
+    {/* Modal de bloqueo por territorio (fuera de Perú) */}
+    <TerritoryBlockModal
+      open={territoryModalOpen}
+      onClose={() => setTerritoryModalOpen(false)}
+      reasons={territoryReasons}
     />
 
     {/* Modal de ubicación no compartida */}
