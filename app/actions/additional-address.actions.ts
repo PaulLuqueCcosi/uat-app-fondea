@@ -164,6 +164,7 @@ function mapProfileFromBackend(raw: any): AddressProfile & { verified: boolean }
     district:        raw.district,
     referral_source: raw.referralSource ?? raw.referral_source,
     referral_other:  raw.referralOther ?? raw.referral_other ?? undefined,
+    location:        raw.lat && raw.lng ? { lat: raw.lat, lng: raw.lng } : undefined,
     verified:        true,
   };
 }
@@ -229,6 +230,10 @@ export async function saveAddressProfile(
     };
     if (data.address_type === 'google') body.google_address = data.google_address;
     else if (data.address_type === 'manual') body.street_address = data.street_address;
+    if (data.location?.lat && data.location?.lng) {
+      body.lat = data.location.lat;
+      body.lng = data.location.lng;
+    }
 
     const res = await backendFetch('/api/v1/address/validate', {
       method: 'PUT',

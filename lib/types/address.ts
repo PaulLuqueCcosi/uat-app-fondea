@@ -28,6 +28,7 @@ export interface AddressProfile {
   referral_source: string;
   referral_other?: string;
   verified?: boolean;
+  location?: { lat: number; lng: number };
 }
 
 export interface AddressProfileStatus {

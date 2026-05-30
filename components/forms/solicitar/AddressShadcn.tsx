@@ -7,6 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { MapPin, Map, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
+import dynamic from 'next/dynamic';
+const LocationMapPicker = dynamic(
+  () => import('@/components/forms/solicitar/LocationMapPicker').then((m) => m.LocationMapPicker),
+  { ssr: false }
+);
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -32,6 +37,7 @@ import { Separator } from '@/components/ui/separator';
 import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { REFERRAL_SOURCE_OPTIONS } from '@/lib/constants';
+import { DEPARTAMENTO_CENTERS, REGION_ZOOM } from '@/lib/ubigeo-centers';
 import {
   getDepartamentosAction,
   getProvinciasAction,
@@ -116,6 +122,8 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
+  console.log('[ADDRESS DEBUG] initialData:', JSON.parse(JSON.stringify(initialData)));
+
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified ?? false);
   const [isEditing,  setIsEditing]  = useState(!initialData?.overall_verified);
   const [saveError,  setSaveError]  = useState<string | null>(null);
@@ -126,6 +134,8 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
   const [maxAttempts, setMaxAttempts] = useState<number | undefined>(undefined);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [wasVerified, setWasVerified] = useState(initialData?.overall_verified ?? false);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(initialData?.profile?.location ?? null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
@@ -239,12 +249,17 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
         referral_source: profile.referral_source ?? '',
         referral_other:  profile.referral_other  ?? '',
       });
+      setLocation(profile.location ?? null);
+      setLocationError(null);
     }
   }, [isEditing, initialData, form]);
 
   const addressType    = form.watch('address_type');
   const watchedRegion  = form.watch('region');
   const referralSource = form.watch('referral_source');
+
+  const mapCenter = watchedRegion ? DEPARTAMENTO_CENTERS[watchedRegion] ?? null : null;
+  const summaryMapCenter = savedProfile?.region ? DEPARTAMENTO_CENTERS[savedProfile.region] ?? null : null;
 
   // ── Edit handlers ───────────────────────────────────────────────────────────
 
@@ -283,6 +298,14 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
       return;
     }
 
+    // Validar ubicación en el mapa
+    if (!location) {
+      setLocationError('Debes marcar en el mapa la ubicación de tu domicilio');
+      setSaveError('Marca tu ubicación en el mapa antes de continuar');
+      return;
+    }
+    setLocationError(null);
+
     const result = await saveAddressProfile({
       address_type:    data.address_type,
       google_address:  data.google_address  || undefined,
@@ -292,6 +315,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
       district:        data.district        ?? '',
       referral_source: data.referral_source,
       referral_other:  data.referral_source === 'OTRO' ? data.referral_other : undefined,
+      location:        location ?? undefined,
     });
 
     if (!result.success) {
@@ -325,6 +349,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
       district:        data.district        ?? '',
       referral_source: data.referral_source,
       referral_other:  data.referral_source === 'OTRO' ? data.referral_other : undefined,
+      location:        location ?? undefined,
       verified:        true,
     });
     setIsVerified(true);
@@ -379,6 +404,22 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
           <DataRow label="Especificación" value={savedProfile.referral_other} />
         )}
       </div>
+
+
+      {/* Mapa en readonly */}
+      {savedProfile?.location && (
+        <div style={{ position: 'relative', zIndex: 0, isolation: 'isolate' }}>
+          <p className="text-sm font-medium mb-2">Ubicación registrada</p>
+          <LocationMapPicker
+            value={savedProfile.location}
+            onChange={() => {}}
+            height={200}
+            readOnly
+            mapCenter={summaryMapCenter}
+            mapZoom={REGION_ZOOM}
+          />
+        </div>
+      )}
 
       {/* Botones */}
       {!dashboardMode && (
@@ -612,6 +653,23 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
               )}
             />
             {renderUbigeoSelects()}
+
+            <div>
+              <FormLabel className="mb-2 block">Ubicación en el mapa</FormLabel>
+              <FormDescription className="mb-3">
+                Haz clic en el mapa para marcar la ubicación aproximada de tu domicilio
+              </FormDescription>
+              <LocationMapPicker
+                value={location}
+                onChange={(coords) => { setLocation(coords); setLocationError(null); }}
+                height={220}
+                mapCenter={mapCenter}
+                mapZoom={REGION_ZOOM}
+              />
+              {locationError && (
+                <p className="text-sm text-destructive mt-1">{locationError}</p>
+              )}
+            </div>
           </div>
         </div>
 
