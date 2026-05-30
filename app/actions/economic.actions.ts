@@ -203,6 +203,7 @@ export async function saveEconomicProfile(
           creditor: d.entity,
           amount:   d.amount,
           type:     d.type,
+          monthlyPayment: d.monthlyPayment,
         })),
         hasProperty:    profile.has_property,
         hasVehicle:     profile.has_vehicle,
