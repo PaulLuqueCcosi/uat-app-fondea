@@ -182,6 +182,9 @@ export function FunnelSummary({
   // Ref para la sección de declaraciones legales (destino del scroll automático)
   const declarationsRef = useRef<HTMLDivElement>(null);
 
+  // Ref para el toast de envío (se muestra inmediatamente al hacer clic)
+  const submitToastRef = useRef<string | number | undefined>(undefined);
+
   // Hook de fingerprint del dispositivo
   const { collect: collectFingerprint } = useDeviceFingerprint();
   const [vpnModalOpen, setVpnModalOpen] = useState(false);
@@ -208,14 +211,16 @@ export function FunnelSummary({
   };
 
   const handleSubmit = async () => {
-    // Bloquear el botón inmediatamente
     setLoading(true);
     setSaveError(null);
     setSaveErrorCategory(undefined);
 
-    // Validar que existe una intención activa en el backend
+    // Mostrar toast inmediatamente — el usuario siente respuesta al instante
+    submitToastRef.current = toast.loading('Preparando tu solicitud...');
+
     const activeIntencion = await getActiveIntencion();
     if (!activeIntencion) {
+      toast.dismiss(submitToastRef.current);
       setSaveError('No tienes un préstamo seleccionado. Ve a la calculadora para elegir monto y plazo.');
       setSaveErrorCategory('validation');
       declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -224,6 +229,7 @@ export function FunnelSummary({
     }
 
     if (!pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms) {
+      toast.dismiss(submitToastRef.current);
       setShowPepErrors(true);
       declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setLoading(false);
@@ -233,6 +239,7 @@ export function FunnelSummary({
     // ── Recolectar fingerprint del dispositivo ──────────────────────────────
     const fp = await collectFingerprint();
     if (!fp) {
+      toast.dismiss(submitToastRef.current);
       console.error('[handleSubmit] No se pudo recolectar fingerprint');
       setSaveError('Error al verificar tu conexión. Inténtalo nuevamente.');
       setSaveErrorCategory('network');
@@ -241,6 +248,7 @@ export function FunnelSummary({
     }
 
     // ── Si no hay GPS: mostrar modal informativo (no bloqueante) ─────────────
+    // El toast se mantiene activo porque el usuario puede continuar sin GPS
     if (!fp.gps) {
       setPendingFingerprint({ fp, activeIntencion });
       setGpsError(fp.gpsError);
@@ -262,6 +270,7 @@ export function FunnelSummary({
 
     // Si detectamos VPN/Proxy: bloquear y mostrar modal
     if (fp.vpnDetected) {
+      toast.dismiss(submitToastRef.current);
       setVpnReasons(fp.vpnReasons);
       setVpnModalOpen(true);
       setLoading(false);
@@ -270,13 +279,16 @@ export function FunnelSummary({
 
     // Si no está en territorio peruano: bloquear y mostrar modal
     if (fp.territoryCheck && !fp.territoryCheck.inPeru) {
+      toast.dismiss(submitToastRef.current);
       setTerritoryReasons(fp.territoryCheck.reasons);
       setTerritoryModalOpen(true);
       setLoading(false);
       return;
     }
 
-    // ── Enviar solicitud al backend ─────────────────────────────────────────
+    // ── Punto sin retorno: actualizar toast e invocar al backend ────────────
+    toast.loading('Enviando solicitud...', { id: submitToastRef.current! });
+
     const deviceFingerprintPayload = {
       ip: fp.ip ? {
         ip: fp.ip.ip,
@@ -339,17 +351,13 @@ export function FunnelSummary({
     };
 
     try {
-      const promise = submitApplication(pepDeclarations, activeIntencion.intencionId, deviceFingerprintPayload);
-      toast.promise(promise, {
-        loading: 'Enviando solicitud...',
-        success: 'Solicitud enviada correctamente',
-        error: (err) => err.message,
-      });
-      const result = await promise;
+      const result = await submitApplication(pepDeclarations, activeIntencion.intencionId, deviceFingerprintPayload);
+      toast.success('Solicitud enviada correctamente', { id: submitToastRef.current! });
       router.push(`/solicitudes/${result.applicationId}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al enviar la solicitud';
       const category = err instanceof ApiError ? err.category : 'network';
+      toast.error(message, { id: submitToastRef.current! });
       setSaveError(message);
       setSaveErrorCategory(category as any);
     }
