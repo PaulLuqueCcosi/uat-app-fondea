@@ -975,18 +975,21 @@ export function FunnelSummary({
         </Card>
 
         {/* DECLARACIONES LEGALES */}
-        <Card ref={declarationsRef} className="p-6 bg-primary/5 border-2 border-primary/20">
-          <div className="flex gap-4">
-            <AlertCircle className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-foreground mb-4">Declaraciones Legales</h4>
-              <div className="space-y-4">
-                <label className="flex items-start gap-3 cursor-pointer group rounded-lg p-2 -mx-2">
+        <Card ref={declarationsRef} className="p-4 md:p-6 bg-primary/5 border-2 border-primary/20">
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+            <AlertCircle className="w-5 h-5 md:w-6 md:h-6 text-primary shrink-0 mt-0.5 hidden md:block" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start gap-2.5 mb-4">
+                <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5 md:hidden" />
+                <h4 className="font-semibold text-foreground">Declaraciones Legales</h4>
+              </div>
+              <div className="space-y-3">
+                <label className="flex items-start gap-2.5 cursor-pointer group rounded-lg p-1">
                   <input
                     type="checkbox"
                     checked={pepDeclarations.not_pep}
                     onChange={(e) => setPepDeclarations(prev => ({ ...prev, not_pep: e.target.checked }))}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary shrink-0"
                   />
                   <span className="text-sm text-foreground leading-relaxed">
                     Declaro que <strong>no soy Persona Expuesta Políticamente (PEP)</strong>
@@ -996,12 +999,12 @@ export function FunnelSummary({
                   </span>
                 </label>
 
-                <label className="flex items-start gap-3 cursor-pointer group rounded-lg p-2 -mx-2">
+                <label className="flex items-start gap-2.5 cursor-pointer group rounded-lg p-1">
                   <input
                     type="checkbox"
                     checked={pepDeclarations.not_pep_relative}
                     onChange={(e) => setPepDeclarations(prev => ({ ...prev, not_pep_relative: e.target.checked }))}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary shrink-0"
                   />
                   <span className="text-sm text-foreground leading-relaxed">
                     Declaro que <strong>no soy pariente de una PEP hasta el 2do grado de consanguinidad o afinidad</strong>
@@ -1011,12 +1014,12 @@ export function FunnelSummary({
                   </span>
                 </label>
 
-                <label className="flex items-start gap-3 cursor-pointer group rounded-lg p-2 -mx-2">
+                <label className="flex items-start gap-2.5 cursor-pointer group rounded-lg p-1">
                   <input
                     type="checkbox"
                     checked={pepDeclarations.accept_terms}
                     onChange={(e) => setPepDeclarations(prev => ({ ...prev, accept_terms: e.target.checked }))}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary shrink-0"
                   />
                   <span className="text-sm text-foreground leading-relaxed">
                     Acepto los{' '}
