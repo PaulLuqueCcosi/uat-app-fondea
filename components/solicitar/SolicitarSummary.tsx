@@ -45,6 +45,10 @@ import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { getActiveIntencion } from '@/lib/client-api/intenciones';
 import { submitApplication } from '@/lib/client-api/applications';
 import { ApiError } from '@/lib/client-api/api-error';
+import { useDeviceFingerprint } from '@/hooks/useDeviceFingerprint';
+import { VPNBlockModal } from './VPNBlockModal';
+import { LocationDeclinedModal } from './LocationDeclinedModal';
+import { type GPSPermissionError } from '@/lib/client-api/device-fingerprint';
 import { toast } from 'sonner';
 
 // Helper functions para obtener labels
@@ -177,6 +181,14 @@ export function FunnelSummary({
   // Ref para la sección de declaraciones legales (destino del scroll automático)
   const declarationsRef = useRef<HTMLDivElement>(null);
 
+  // Hook de fingerprint del dispositivo
+  const { collect: collectFingerprint } = useDeviceFingerprint();
+  const [vpnModalOpen, setVpnModalOpen] = useState(false);
+  const [vpnReasons, setVpnReasons] = useState<string[]>([]);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
+  const [pendingFingerprint, setPendingFingerprint] = useState<any>(null);
+  const [gpsError, setGpsError] = useState<GPSPermissionError | undefined>(undefined);
+
   // Scroll automático a las declaraciones tras 4 segundos
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -215,30 +227,139 @@ export function FunnelSummary({
       return;
     }
 
-    try {
-      const promise = submitApplication(pepDeclarations, activeIntencion.intencionId);
-
-      // Toast observa la promesa — no la modifica
-      toast.promise(promise, {
-        loading: 'Enviando solicitud...',
-        success: 'Solicitud enviada correctamente',
-        error: (err) => err.message,
-      });
-
-      // Await para obtener el resultado real
-      const result = await promise;
-
-      // Navega a la página principal de la solicitud
-      router.push(`/solicitudes/${result.applicationId}`);
-    } catch (err) {
-      // El toast ya mostró el error, solo actualizar el banner local
-      const message = err instanceof Error ? err.message : 'Error al enviar la solicitud';
-      const category = err instanceof ApiError ? err.category : 'network';
-      setSaveError(message);
-      setSaveErrorCategory(category);
-    } finally {
+    // ── Recolectar fingerprint del dispositivo ──────────────────────────────
+    const fp = await collectFingerprint();
+    if (!fp) {
+      console.error('[handleSubmit] No se pudo recolectar fingerprint');
+      setSaveError('Error al verificar tu conexión. Inténtalo nuevamente.');
+      setSaveErrorCategory('network');
       setLoading(false);
+      return;
     }
+
+    // ── Si no hay GPS: mostrar modal informativo (no bloqueante) ─────────────
+    if (!fp.gps) {
+      setPendingFingerprint({ fp, activeIntencion });
+      setGpsError(fp.gpsError);
+      setLocationModalOpen(true);
+      setLoading(false);
+      return;
+    }
+
+    // ── Procesar con fingerprint completo ───────────────────────────────────
+    await processSubmit(fp, activeIntencion);
+  };
+
+  /**
+   * Lógica de envío (o logueo debug) una vez que tenemos fingerprint.
+   * Separada para poder reutilizar desde handleSubmit y desde el modal de ubicación.
+   */
+  const processSubmit = async (fp: any, activeIntencion: any) => {
+    setLoading(true);
+
+    // Si detectamos VPN/Proxy: bloquear y mostrar modal
+    if (fp.vpnDetected) {
+      setVpnReasons(fp.vpnReasons);
+      setVpnModalOpen(true);
+      setLoading(false);
+      return;
+    }
+
+    // ── Por ahora solo logueamos lo que se enviaría (NO enviamos realmente) ──
+    console.group('📤 === PAYLOAD QUE SE ENVIARÍA AL BACKEND ===');
+    console.log('intention_id:', activeIntencion.intencionId);
+    console.log('pep_declarations:', pepDeclarations);
+    console.log('device_fingerprint:', {
+      ip: fp.ip,
+      gps: fp.gps,
+      proxycheck: fp.proxycheck,
+      device: fp.device,
+      vpnDetected: fp.vpnDetected,
+      vpnReasons: fp.vpnReasons,
+      timestamp: fp.timestamp,
+    });
+    console.groupEnd();
+
+    console.log('%c[DEBUG] Solicitud NO enviada — modo de prueba activo', 'color: orange; font-weight: bold;');
+
+    // TODO: Descomentar esto cuando se quiera habilitar el envío real
+    // const deviceFingerprintPayload = {
+    //   ip: fp.ip ? {
+    //     ip: fp.ip.ip,
+    //     city: fp.ip.city,
+    //     region: fp.ip.region,
+    //     country: fp.ip.country,
+    //     country_code: fp.ip.countryCode,
+    //     org: fp.ip.org,
+    //     asn: fp.ip.asn,
+    //     latitude: fp.ip.latitude,
+    //     longitude: fp.ip.longitude,
+    //   } : undefined,
+    //   gps: fp.gps ? {
+    //     latitude: fp.gps.latitude,
+    //     longitude: fp.gps.longitude,
+    //     accuracy: fp.gps.accuracy,
+    //   } : undefined,
+    //   proxycheck: fp.proxycheck ? {
+    //     consulted: fp.proxycheck.consulted,
+    //     vpn: fp.proxycheck.vpn,
+    //     proxy: fp.proxycheck.proxy,
+    //     tor: fp.proxycheck.tor,
+    //     anonymous: fp.proxycheck.anonymous,
+    //     hosting: fp.proxycheck.hosting,
+    //     scraper: fp.proxycheck.scraper,
+    //     compromised: fp.proxycheck.compromised,
+    //     risk_score: fp.proxycheck.risk_score,
+    //     risk_score_high: fp.proxycheck.risk_score_high,
+    //     risk_score_threshold: fp.proxycheck.risk_score_threshold,
+    //     confidence: fp.proxycheck.confidence,
+    //     network_type: fp.proxycheck.network_type,
+    //     provider: fp.proxycheck.provider,
+    //     organisation: fp.proxycheck.organisation,
+    //     asn: fp.proxycheck.asn,
+    //     country_code: fp.proxycheck.country_code,
+    //     city: fp.proxycheck.city,
+    //     region: fp.proxycheck.region,
+    //     operator_name: fp.proxycheck.operator_name,
+    //     operator_anonymity: fp.proxycheck.operator_anonymity,
+    //     reason: fp.proxycheck.reason,
+    //   } : undefined,
+    //   device: {
+    //     userAgent: fp.device.userAgent,
+    //     deviceType: fp.device.deviceType,
+    //     screenResolution: fp.device.screenResolution,
+    //     devicePixelRatio: fp.device.devicePixelRatio,
+    //     language: fp.device.language,
+    //     timezone: fp.device.timezone,
+    //     connectionType: fp.device.connectionType,
+    //     platform: fp.device.platform,
+    //     vendor: fp.device.vendor,
+    //     cores: fp.device.cores,
+    //     memory: fp.device.memory,
+    //     touchSupport: fp.device.touchSupport,
+    //     maxTouchPoints: fp.device.maxTouchPoints,
+    //   },
+    //   vpnDetected: fp.vpnDetected,
+    //   vpnReasons: fp.vpnReasons,
+    //   timestamp: fp.timestamp,
+    // };
+    // try {
+    //   const promise = submitApplication(pepDeclarations, activeIntencion.intencionId, deviceFingerprintPayload);
+    //   toast.promise(promise, {
+    //     loading: 'Enviando solicitud...',
+    //     success: 'Solicitud enviada correctamente',
+    //     error: (err) => err.message,
+    //   });
+    //   const result = await promise;
+    //   router.push(`/solicitudes/${result.applicationId}`);
+    // } catch (err) {
+    //   const message = err instanceof Error ? err.message : 'Error al enviar la solicitud';
+    //   const category = err instanceof ApiError ? err.category : 'network';
+    //   setSaveError(message);
+    //   setSaveErrorCategory(category);
+    // }
+
+    setLoading(false);
   };
 
   // Calcular totales basados en datos reales
@@ -252,6 +373,7 @@ export function FunnelSummary({
   const availableIncome = totalIncome - monthlyExpenses - totalDebtPayment;
 
   return (
+    <>
     <Card className="w-full max-w-5xl mx-auto">
       <CardHeader className="pb-4">
         <FormHeader
@@ -961,5 +1083,38 @@ export function FunnelSummary({
         </div>
       </CardContent>
     </Card>
+
+    {/* Modal de bloqueo por VPN */}
+    <VPNBlockModal
+      open={vpnModalOpen}
+      onClose={() => setVpnModalOpen(false)}
+      reasons={vpnReasons}
+    />
+
+    {/* Modal de ubicación no compartida */}
+    <LocationDeclinedModal
+      open={locationModalOpen}
+      gpsError={gpsError}
+      onRetry={async () => {
+        setLocationModalOpen(false);
+        // Volver a pedir fingerprint (el navegador volverá a pedir permiso de GPS)
+        const fp = await collectFingerprint();
+        if (fp && fp.gps) {
+          // GPS aceptado ahora → continuar
+          await processSubmit(fp, pendingFingerprint?.activeIntencion);
+        } else {
+          // Todavía sin GPS → volver a mostrar modal con nuevo error
+          setPendingFingerprint({ fp, activeIntencion: pendingFingerprint?.activeIntencion });
+          setGpsError(fp?.gpsError);
+          setLocationModalOpen(true);
+        }
+      }}
+      onContinue={async () => {
+        setLocationModalOpen(false);
+        // Continuar sin GPS (puede afectar score)
+        await processSubmit(pendingFingerprint?.fp, pendingFingerprint?.activeIntencion);
+      }}
+    />
+    </>
   );
 }

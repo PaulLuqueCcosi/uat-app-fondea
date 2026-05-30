@@ -1,6 +1,6 @@
 'use client';
 
-import { submitApplicationAction } from '@/app/actions/application.actions';
+import { submitApplicationAction, type DeviceFingerprintPayload } from '@/app/actions/application.actions';
 import { unwrap } from './unwrap';
 import { ApiError } from './api-error';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
@@ -25,7 +25,7 @@ interface SubmitResult {
  * - Recarga la intención y el credit score frescos del backend después del submit.
  *
  * Uso en componente:
- *   const promise = submitApplication(pep, id);
+ *   const promise = submitApplication(pep, id, fingerprint);
  *   toast.promise(promise, {
  *     loading: 'Enviando solicitud...',
  *     success: 'Solicitud enviada',
@@ -37,8 +37,9 @@ interface SubmitResult {
 export async function submitApplication(
   pepDeclarations: PEPDeclarations,
   intentionId: string,
+  deviceFingerprint?: DeviceFingerprintPayload,
 ): Promise<SubmitResult> {
-  const result = await submitApplicationAction(pepDeclarations, intentionId);
+  const result = await submitApplicationAction(pepDeclarations, intentionId, deviceFingerprint);
   const data = unwrap(result);
 
   if (!data.applicationId) {

@@ -41,6 +41,71 @@ export type SubmitApplicationResult = ActionResult & (
   | { success: false }
 );
 
+/**
+ * Device fingerprint enviado al backend junto con la solicitud.
+ * Datos de GPS + device info + proxycheck.io para scoring y prevención de fraude.
+ */
+export interface DeviceFingerprintPayload {
+  ip?: {
+    ip: string;
+    city?: string;
+    region?: string;
+    country?: string;
+    country_code?: string;
+    org?: string;
+    asn?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  gps?: {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  };
+  proxycheck?: {
+    consulted: boolean;
+    vpn: boolean;
+    proxy: boolean;
+    tor: boolean;
+    anonymous?: boolean;
+    hosting?: boolean;
+    scraper?: boolean;
+    compromised?: boolean;
+    risk_score: number;
+    risk_score_high: boolean;
+    risk_score_threshold: number;
+    confidence?: number | null;
+    network_type?: string | null;
+    provider?: string | null;
+    organisation?: string | null;
+    asn?: string | null;
+    country_code?: string | null;
+    city?: string | null;
+    region?: string | null;
+    operator_name?: string | null;
+    operator_anonymity?: string | null;
+    reason?: string;
+  };
+  device?: {
+    userAgent: string;
+    deviceType: string;
+    screenResolution: string;
+    devicePixelRatio: number;
+    language: string;
+    timezone: string;
+    connectionType?: string;
+    platform: string;
+    vendor?: string;
+    cores?: number;
+    memory?: number;
+    touchSupport: boolean;
+    maxTouchPoints: number;
+  };
+  vpnDetected: boolean;
+  vpnReasons: string[];
+  timestamp: string;
+}
+
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 /**
@@ -63,6 +128,7 @@ export type SubmitApplicationResult = ActionResult & (
 export async function submitApplicationAction(
   pepDeclarations: PEPDeclarations,
   intentionId: string,
+  deviceFingerprint?: DeviceFingerprintPayload,
 ): Promise<SubmitApplicationResult> {
   await requireValidSession();
 
@@ -85,12 +151,18 @@ export async function submitApplicationAction(
       };
     }
 
+    const body: Record<string, unknown> = {
+      intention_id: intentionId,
+      pep_declarations: pepDeclarations,
+    };
+
+    if (deviceFingerprint) {
+      body.device_fingerprint = deviceFingerprint;
+    }
+
     const res = await backendFetch('/api/v1/applications/submit', {
       method: 'POST',
-      body: JSON.stringify({
-        intention_id: intentionId,
-        pep_declarations: pepDeclarations,
-      }),
+      body: JSON.stringify(body),
     });
 
     // Log completo de la respuesta del backend
