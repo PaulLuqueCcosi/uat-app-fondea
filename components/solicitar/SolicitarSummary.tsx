@@ -276,99 +276,83 @@ export function FunnelSummary({
       return;
     }
 
-    // ── Por ahora solo logueamos lo que se enviaría (NO enviamos realmente) ──
-    console.group('📤 === PAYLOAD QUE SE ENVIARÍA AL BACKEND ===');
-    console.log('intention_id:', activeIntencion.intencionId);
-    console.log('pep_declarations:', pepDeclarations);
-    console.log('device_fingerprint:', {
-      ip: fp.ip,
-      gps: fp.gps,
-      proxycheck: fp.proxycheck,
-      device: fp.device,
+    // ── Enviar solicitud al backend ─────────────────────────────────────────
+    const deviceFingerprintPayload = {
+      ip: fp.ip ? {
+        ip: fp.ip.ip,
+        city: fp.ip.city,
+        region: fp.ip.region,
+        country: fp.ip.country,
+        country_code: fp.ip.countryCode,
+        org: fp.ip.org,
+        asn: fp.ip.asn,
+        latitude: fp.ip.latitude,
+        longitude: fp.ip.longitude,
+      } : undefined,
+      gps: fp.gps ? {
+        latitude: fp.gps.latitude,
+        longitude: fp.gps.longitude,
+        accuracy: fp.gps.accuracy,
+      } : undefined,
+      proxycheck: fp.proxycheck ? {
+        consulted: fp.proxycheck.consulted,
+        vpn: fp.proxycheck.vpn,
+        proxy: fp.proxycheck.proxy,
+        tor: fp.proxycheck.tor,
+        anonymous: fp.proxycheck.anonymous,
+        hosting: fp.proxycheck.hosting,
+        scraper: fp.proxycheck.scraper,
+        compromised: fp.proxycheck.compromised,
+        risk_score: fp.proxycheck.risk_score,
+        risk_score_high: fp.proxycheck.risk_score_high,
+        risk_score_threshold: fp.proxycheck.risk_score_threshold,
+        confidence: fp.proxycheck.confidence,
+        network_type: fp.proxycheck.network_type,
+        provider: fp.proxycheck.provider,
+        organisation: fp.proxycheck.organisation,
+        asn: fp.proxycheck.asn,
+        country_code: fp.proxycheck.country_code,
+        city: fp.proxycheck.city,
+        region: fp.proxycheck.region,
+        operator_name: fp.proxycheck.operator_name,
+        operator_anonymity: fp.proxycheck.operator_anonymity,
+        reason: fp.proxycheck.reason,
+      } : undefined,
+      device: {
+        userAgent: fp.device.userAgent,
+        deviceType: fp.device.deviceType,
+        screenResolution: fp.device.screenResolution,
+        devicePixelRatio: fp.device.devicePixelRatio,
+        language: fp.device.language,
+        timezone: fp.device.timezone,
+        connectionType: fp.device.connectionType,
+        platform: fp.device.platform,
+        vendor: fp.device.vendor,
+        cores: fp.device.cores,
+        memory: fp.device.memory,
+        touchSupport: fp.device.touchSupport,
+        maxTouchPoints: fp.device.maxTouchPoints,
+      },
       vpnDetected: fp.vpnDetected,
       vpnReasons: fp.vpnReasons,
       timestamp: fp.timestamp,
-    });
-    console.groupEnd();
+    };
 
-    console.log('%c[DEBUG] Solicitud NO enviada — modo de prueba activo', 'color: orange; font-weight: bold;');
-
-    // TODO: Descomentar esto cuando se quiera habilitar el envío real
-    // const deviceFingerprintPayload = {
-    //   ip: fp.ip ? {
-    //     ip: fp.ip.ip,
-    //     city: fp.ip.city,
-    //     region: fp.ip.region,
-    //     country: fp.ip.country,
-    //     country_code: fp.ip.countryCode,
-    //     org: fp.ip.org,
-    //     asn: fp.ip.asn,
-    //     latitude: fp.ip.latitude,
-    //     longitude: fp.ip.longitude,
-    //   } : undefined,
-    //   gps: fp.gps ? {
-    //     latitude: fp.gps.latitude,
-    //     longitude: fp.gps.longitude,
-    //     accuracy: fp.gps.accuracy,
-    //   } : undefined,
-    //   proxycheck: fp.proxycheck ? {
-    //     consulted: fp.proxycheck.consulted,
-    //     vpn: fp.proxycheck.vpn,
-    //     proxy: fp.proxycheck.proxy,
-    //     tor: fp.proxycheck.tor,
-    //     anonymous: fp.proxycheck.anonymous,
-    //     hosting: fp.proxycheck.hosting,
-    //     scraper: fp.proxycheck.scraper,
-    //     compromised: fp.proxycheck.compromised,
-    //     risk_score: fp.proxycheck.risk_score,
-    //     risk_score_high: fp.proxycheck.risk_score_high,
-    //     risk_score_threshold: fp.proxycheck.risk_score_threshold,
-    //     confidence: fp.proxycheck.confidence,
-    //     network_type: fp.proxycheck.network_type,
-    //     provider: fp.proxycheck.provider,
-    //     organisation: fp.proxycheck.organisation,
-    //     asn: fp.proxycheck.asn,
-    //     country_code: fp.proxycheck.country_code,
-    //     city: fp.proxycheck.city,
-    //     region: fp.proxycheck.region,
-    //     operator_name: fp.proxycheck.operator_name,
-    //     operator_anonymity: fp.proxycheck.operator_anonymity,
-    //     reason: fp.proxycheck.reason,
-    //   } : undefined,
-    //   device: {
-    //     userAgent: fp.device.userAgent,
-    //     deviceType: fp.device.deviceType,
-    //     screenResolution: fp.device.screenResolution,
-    //     devicePixelRatio: fp.device.devicePixelRatio,
-    //     language: fp.device.language,
-    //     timezone: fp.device.timezone,
-    //     connectionType: fp.device.connectionType,
-    //     platform: fp.device.platform,
-    //     vendor: fp.device.vendor,
-    //     cores: fp.device.cores,
-    //     memory: fp.device.memory,
-    //     touchSupport: fp.device.touchSupport,
-    //     maxTouchPoints: fp.device.maxTouchPoints,
-    //   },
-    //   vpnDetected: fp.vpnDetected,
-    //   vpnReasons: fp.vpnReasons,
-    //   timestamp: fp.timestamp,
-    // };
-    // try {
-    //   const promise = submitApplication(pepDeclarations, activeIntencion.intencionId, deviceFingerprintPayload);
-    //   toast.promise(promise, {
-    //     loading: 'Enviando solicitud...',
-    //     success: 'Solicitud enviada correctamente',
-    //     error: (err) => err.message,
-    //   });
-    //   const result = await promise;
-    //   router.push(`/solicitudes/${result.applicationId}`);
-    // } catch (err) {
-    //   const message = err instanceof Error ? err.message : 'Error al enviar la solicitud';
-    //   const category = err instanceof ApiError ? err.category : 'network';
-    //   setSaveError(message);
-    //   setSaveErrorCategory(category);
-    // }
+    try {
+      const promise = submitApplication(pepDeclarations, activeIntencion.intencionId, deviceFingerprintPayload);
+      toast.promise(promise, {
+        loading: 'Enviando solicitud...',
+        success: 'Solicitud enviada correctamente',
+        error: (err) => err.message,
+      });
+      const result = await promise;
+      router.push(`/solicitudes/${result.applicationId}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al enviar la solicitud';
+      const category = err instanceof ApiError ? err.category : 'network';
+      setSaveError(message);
+      setSaveErrorCategory(category as any);
+    }
 
     setLoading(false);
   };
