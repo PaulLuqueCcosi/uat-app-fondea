@@ -17,6 +17,14 @@ export default function SolicitudPage() {
   const documents = useSolicitudStore(s => s.documents);
   const documentsStatus = useSolicitudStore(s => s.documentsStatus);
 
+  // Refrescar datos al montar (vienen del backend tras procesar la solicitud)
+  useEffect(() => {
+    const { refreshFullDetail, refreshDocuments, refreshContract } = useSolicitudStore.getState();
+    refreshFullDetail();
+    refreshDocuments();
+    refreshContract();
+  }, []);
+
   // Redirigir a /processing si la solicitud está en evaluación
   useEffect(() => {
     if (application && (application.status === 'SUBMITTED' || application.status === 'PROCESSING')) {

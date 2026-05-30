@@ -36,7 +36,7 @@ export default function ProcessingPage() {
       init(applicationId);
     }
 
-    const { refreshFullDetail, refreshDocuments, refreshContract, fetchIntention } = useSolicitudStore.getState();
+    const { fetchIntention } = useSolicitudStore.getState();
 
     const poll = async () => {
       if (!mountedRef.current) return;
@@ -44,10 +44,6 @@ export default function ProcessingPage() {
       attemptsRef.current += 1;
 
       if (attemptsRef.current > MAX_ATTEMPTS) {
-        const current = useSolicitudStore.getState().application;
-        if (current) {
-          useSolicitudStore.getState().refreshApplication();
-        }
         router.replace(`/solicitudes/${applicationId}`);
         return;
       }
@@ -63,17 +59,13 @@ export default function ProcessingPage() {
 
         if (status === 'SUBMITTED' || status === 'PROCESSING') return;
 
-        // Status terminal → detener polling, cargar datos, navegar
+        // Status terminal → refrescar aplicación en store y navegar
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
 
-        await Promise.all([
-          refreshFullDetail(),
-          refreshDocuments(),
-          refreshContract(),
-        ]);
+        await useSolicitudStore.getState().refreshApplication();
 
         if (!mountedRef.current) return;
 
