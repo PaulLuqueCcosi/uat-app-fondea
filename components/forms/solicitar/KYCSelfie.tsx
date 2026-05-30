@@ -382,6 +382,24 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
           />
         </CardHeader>
         <CardContent className="pt-0">
+          {verification && (verification.dniFront.status !== 'VERIFIED' || verification.dniBack.status !== 'VERIFIED') ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <div className="bg-warning-50 rounded-full p-4 mb-4">
+                <AlertCircle className="w-8 h-8 text-warning-500" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Verifica tu DNI primero</h2>
+              <p className="text-muted-foreground text-sm max-w-sm mb-6">
+                Para continuar con la verificación facial, primero debes verificar ambas fotos de tu DNI (frente y reverso).
+              </p>
+              <Button onClick={() => router.push(
+                isInSolicitudFlow && solicitudId
+                  ? `/solicitudes/${solicitudId}/kyc-documentos`
+                  : '/solicitar/kyc-documentos'
+              )}>
+                Ir a verificar DNI
+              </Button>
+            </div>
+          ) : (
           <form className="w-full">
             {/* Consejos */}
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-10">
@@ -666,6 +684,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
               </Button>
             </div>
           </form>
+          )}
         </CardContent>
       </Card>
 

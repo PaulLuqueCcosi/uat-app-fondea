@@ -58,8 +58,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
   // Detectar si estamos en el flujo de solicitudes
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
   const solicitudId = applicationId || (params.id as string | undefined);
-  const [loading, setLoading] = useState<'front' | 'back' | null>(null);
-  const [verifying, setVerifying] = useState<'front' | 'back' | null>(null);
+  const [processing, setProcessing] = useState<'front' | 'back' | null>(null);
   const [verifyError, setVerifyError] = useState<{ side: 'front' | 'back'; message: string } | null>(null);
   const [confirmDeleteSide, setConfirmDeleteSide] = useState<'front' | 'back' | null>(null);
   const [error, setError] = useState('');
@@ -140,35 +139,80 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
     handleFileSelect(currentSide, file);
   };
 
-  const handleUpload = async (side: 'front' | 'back') => {
+  const handleUploadAndVerify = async (side: 'front' | 'back') => {
     const file = side === 'front' ? frontFile : backFile;
     if (!file || !solicitudId) return;
 
-    setLoading(side);
+    setProcessing(side);
+    setError('');
+    setVerifyError(null);
+
+    const docType: DocumentType = side === 'front' ? 'DNI_FRONT' : 'DNI_BACK';
+
+    try {
+      // 1. Upload
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadResult = await uploadDocumentAction(solicitudId, docType, formData);
+      if (!uploadResult.success) {
+        setError(uploadResult.error || 'Error al subir la imagen. Intenta nuevamente.');
+        setProcessing(null);
+        return;
+      }
+
+      // Update local upload state
+      if (side === 'front') {
+        setFrontUploaded(true);
+        setDocumentUrl('dniFront', frontPreview);
+      } else {
+        setBackUploaded(true);
+        setDocumentUrl('dniBack', backPreview);
+      }
+
+      // 2. Verify
+      const verifyResult = await verifyDocumentAction(solicitudId, docType);
+      if (verifyResult.success && verifyResult.documentsStatus) {
+        setDocumentsVerification(verifyResult.documentsStatus);
+      } else {
+        setVerifyError({
+          side,
+          message: verifyResult.error || 'No se pudo verificar el documento. Revisa la calidad de la imagen.',
+        });
+      }
+    } catch (err) {
+      console.error(`Error uploading/verifying ${side}:`, err);
+      setError('Error al procesar el documento');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleRetryVerify = async (side: 'front' | 'back') => {
+    const docType: DocumentType = side === 'front' ? 'DNI_FRONT' : 'DNI_BACK';
+    if (!solicitudId) return;
+
+    setProcessing(side);
+    setVerifyError(null);
     setError('');
 
     try {
-      const docType: DocumentType = side === 'front' ? 'DNI_FRONT' : 'DNI_BACK';
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const result = await uploadDocumentAction(solicitudId, docType, formData);
-      if (result.success) {
-        if (side === 'front') {
-          setFrontUploaded(true);
-          setDocumentUrl('dniFront', frontPreview);
-        } else {
-          setBackUploaded(true);
-          setDocumentUrl('dniBack', backPreview);
-        }
+      const result = await verifyDocumentAction(solicitudId, docType);
+      if (result.success && result.documentsStatus) {
+        setDocumentsVerification(result.documentsStatus);
       } else {
-        setError(result.error || 'Error al subir la imagen. Por favor, intenta nuevamente.');
+        setVerifyError({
+          side,
+          message: result.error || 'No se pudo verificar el documento.',
+        });
       }
     } catch (err) {
-      console.error(`Error uploading ${side}:`, err);
-      setError(`Error al subir la imagen del ${side === 'front' ? 'frente' : 'reverso'}`);
+      console.error(`Error verifying ${side}:`, err);
+      setVerifyError({
+        side,
+        message: 'Error al verificar el documento.',
+      });
     } finally {
-      setLoading(null);
+      setProcessing(null);
     }
   };
 
@@ -203,116 +247,22 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
       setTimeout(() => setDocumentUrl('dniBack', null), 50);
     }
     setError('');
+    setVerifyError(null);
     setDeleting(null);
   };
 
-  const handleVerify = async (side: 'front' | 'back') => {
-    const docType: DocumentType = side === 'front' ? 'DNI_FRONT' : 'DNI_BACK';
-    if (!solicitudId) return;
-
-    setVerifying(side);
-    setVerifyError(null);
-
-    const result = await verifyDocumentAction(solicitudId, docType);
-
-    if (result.success && result.documentsStatus) {
-      setDocumentsVerification(result.documentsStatus);
-    } else {
-      setVerifyError({
-        side,
-        message: result.error ?? 'No se pudo verificar el documento.',
-      });
-    }
-
-    setVerifying(null);
-  };
-
   const handleContinue = async () => {
-    // Si ambas ya están subidas (del backend o de este session), solo navegar
-    if (frontUploaded && backUploaded) {
+    const dniFrontVerified = frontUploaded && verification?.dniFront.status === 'VERIFIED';
+    const dniBackVerified = backUploaded && verification?.dniBack.status === 'VERIFIED';
+
+    if (dniFrontVerified && dniBackVerified) {
       if (isInSolicitudFlow && solicitudId) {
         router.push(`/solicitudes/${solicitudId}/kyc-selfie`);
       } else {
         router.push(currentStep?.nextPath || '/solicitar/kyc-selfie');
       }
-      return;
-    }
-
-    // Validar que ambas fotos estén seleccionadas si no están subidas
-    if (!frontUploaded && !frontFile) {
-      setError('Debes capturar o subir la imagen del frente del DNI');
-      return;
-    }
-    if (!backUploaded && !backFile) {
-      setError('Debes capturar o subir la imagen del reverso del DNI');
-      return;
-    }
-
-    if (!solicitudId) {
-      setError('No se encontró la solicitud activa.');
-      return;
-    }
-
-    setError('');
-
-    // Si no están subidas, subirlas automáticamente
-    if (!frontUploaded) {
-      setLoading('front');
-      try {
-        if (!frontFile) {
-          setError('No hay archivo para subir');
-          setLoading(null);
-          return;
-        }
-        const formData = new FormData();
-        formData.append('file', frontFile);
-        const result = await uploadDocumentAction(solicitudId, 'DNI_FRONT', formData);
-        if (!result.success) {
-          setError(result.error || 'Error al subir la imagen del frente');
-          setLoading(null);
-          return;
-        }
-        setFrontUploaded(true);
-      } catch (err) {
-        console.error('Error uploading front:', err);
-        setError('Error al subir la imagen del frente');
-        setLoading(null);
-        return;
-      }
-    }
-
-    if (!backUploaded) {
-      setLoading('back');
-      try {
-        if (!backFile) {
-          setError('No hay archivo para subir');
-          setLoading(null);
-          return;
-        }
-        const formData = new FormData();
-        formData.append('file', backFile);
-        const result = await uploadDocumentAction(solicitudId, 'DNI_BACK', formData);
-        if (!result.success) {
-          setError(result.error || 'Error al subir la imagen del reverso');
-          setLoading(null);
-          return;
-        }
-        setBackUploaded(true);
-      } catch (err) {
-        console.error('Error uploading back:', err);
-        setError('Error al subir la imagen del reverso');
-        setLoading(null);
-        return;
-      }
-    }
-
-    setLoading(null);
-
-    // Redirigir según el flujo
-    if (isInSolicitudFlow && solicitudId) {
-      router.push(`/solicitudes/${solicitudId}/kyc-selfie`);
     } else {
-      router.push(currentStep?.nextPath || '/solicitar/kyc-selfie');
+      setError('Debes verificar ambas fotos del DNI antes de continuar.');
     }
   };
 
@@ -393,7 +343,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         alt="Frente DNI"
                         className="w-full h-64 object-contain"
                       />
-                      {frontUploaded && (
+                      {frontUploaded && verification?.dniFront.status === 'VERIFIED' && (
                         <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full p-2">
                           <CheckCircle className="w-5 h-5" />
                         </div>
@@ -401,48 +351,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3">
-                      {/* PENDING: no subió aún — botón subir */}
-                      {!frontUploaded && (
-                        <Button
-                          type="button"
-                          onClick={() => handleUpload('front')}
-                          disabled={loading === 'front'}
-                          className="w-full sm:flex-1"
-                        >
-                          {loading === 'front' ? 'Subiendo...' : 'Subir frente'}
-                        </Button>
-                      )}
-
-                      {/* UPLOADED: subió pero no verificó — eliminar + verificar */}
-                      {frontUploaded && verification?.dniFront.status !== 'VERIFIED' && (
-                        <>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete('front')}
-                            disabled={deleting === 'front'}
-                            className="w-full sm:w-auto"
-                          >
-                            {deleting === 'front' ? (
-                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
-                            ) : (
-                              <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
-                            )}
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() => handleVerify('front')}
-                            disabled={verifying === 'front'}
-                            className="w-full sm:flex-1"
-                          >
-                            {verifying === 'front' ? 'Verificando...' : 'Verificar'}
-                          </Button>
-                        </>
-                      )}
-
-                      {/* VERIFIED: verificado — eliminar con confirmación */}
-                      {frontUploaded && verification?.dniFront.status === 'VERIFIED' && (
+                      {frontUploaded && verification?.dniFront.status === 'VERIFIED' ? (
                         <>
                           <div className="w-full sm:flex-1 flex items-center gap-2 text-sm text-success-700">
                             <CheckCircle className="w-4 h-4 shrink-0" />
@@ -456,6 +365,50 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                             className="w-full sm:w-auto text-muted-foreground"
                           >
                             <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {!frontUploaded ? (
+                            <Button
+                              type="button"
+                              onClick={() => handleUploadAndVerify('front')}
+                              disabled={processing === 'front'}
+                              className="w-full sm:flex-1"
+                            >
+                              {processing === 'front' ? (
+                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…</>
+                              ) : (
+                                'Verificar'
+                              )}
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              onClick={() => handleRetryVerify('front')}
+                              disabled={processing === 'front'}
+                              className="w-full sm:flex-1"
+                            >
+                              {processing === 'front' ? (
+                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…</>
+                              ) : (
+                                'Reintentar'
+                              )}
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete('front')}
+                            disabled={deleting === 'front' || processing === 'front'}
+                            className="w-full sm:w-auto"
+                          >
+                            {deleting === 'front' ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
+                            ) : (
+                              <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
+                            )}
                           </Button>
                         </>
                       )}
@@ -541,7 +494,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         alt="Reverso DNI"
                         className="w-full h-64 object-contain"
                       />
-                      {backUploaded && (
+                      {backUploaded && verification?.dniBack.status === 'VERIFIED' && (
                         <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full p-2">
                           <CheckCircle className="w-5 h-5" />
                         </div>
@@ -549,48 +502,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3">
-                      {/* PENDING: no subió — botón subir */}
-                      {!backUploaded && (
-                        <Button
-                          type="button"
-                          onClick={() => handleUpload('back')}
-                          disabled={loading === 'back'}
-                          className="w-full sm:flex-1"
-                        >
-                          {loading === 'back' ? 'Subiendo...' : 'Subir reverso'}
-                        </Button>
-                      )}
-
-                      {/* UPLOADED: subió pero no verificó — eliminar + verificar */}
-                      {backUploaded && verification?.dniBack.status !== 'VERIFIED' && (
-                        <>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete('back')}
-                            disabled={deleting === 'back'}
-                            className="w-full sm:w-auto"
-                          >
-                            {deleting === 'back' ? (
-                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
-                            ) : (
-                              <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
-                            )}
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() => handleVerify('back')}
-                            disabled={verifying === 'back'}
-                            className="w-full sm:flex-1"
-                          >
-                            {verifying === 'back' ? 'Verificando...' : 'Verificar'}
-                          </Button>
-                        </>
-                      )}
-
-                      {/* VERIFIED: verificado — eliminar con confirmación */}
-                      {backUploaded && verification?.dniBack.status === 'VERIFIED' && (
+                      {backUploaded && verification?.dniBack.status === 'VERIFIED' ? (
                         <>
                           <div className="w-full sm:flex-1 flex items-center gap-2 text-sm text-success-700">
                             <CheckCircle className="w-4 h-4 shrink-0" />
@@ -604,6 +516,50 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                             className="w-full sm:w-auto text-muted-foreground"
                           >
                             <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {!backUploaded ? (
+                            <Button
+                              type="button"
+                              onClick={() => handleUploadAndVerify('back')}
+                              disabled={processing === 'back'}
+                              className="w-full sm:flex-1"
+                            >
+                              {processing === 'back' ? (
+                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…</>
+                              ) : (
+                                'Verificar'
+                              )}
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              onClick={() => handleRetryVerify('back')}
+                              disabled={processing === 'back'}
+                              className="w-full sm:flex-1"
+                            >
+                              {processing === 'back' ? (
+                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…</>
+                              ) : (
+                                'Reintentar'
+                              )}
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete('back')}
+                            disabled={deleting === 'back' || processing === 'back'}
+                            className="w-full sm:w-auto"
+                          >
+                            {deleting === 'back' ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
+                            ) : (
+                              <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
+                            )}
                           </Button>
                         </>
                       )}
@@ -660,10 +616,10 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
               <Button
                 type="button"
                 onClick={handleContinue}
-                disabled={(!frontFile && !frontUploaded) || (!backFile && !backUploaded) || loading !== null}
+                disabled={(!frontFile && !frontUploaded) || (!backFile && !backUploaded) || processing !== null}
                 className="w-full sm:w-auto"
               >
-                {loading ? 'Subiendo...' : 'Continuar'}
+                {processing ? 'Procesando...' : 'Continuar'}
               </Button>
             </div>
           </form>
