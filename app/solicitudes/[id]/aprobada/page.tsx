@@ -179,7 +179,6 @@ export default function AprobadaPage() {
           <Button
             onClick={() => router.push('/dashboard')}
             className="w-full"
-            size="lg"
           >
             <Home className="w-4 h-4 mr-2" />
             Ir a mi dashboard

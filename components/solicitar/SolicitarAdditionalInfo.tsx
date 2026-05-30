@@ -257,7 +257,6 @@ export function FunnelAdditionalInfo({ dashboardMode }: FunnelAdditionalInfoProp
           onClick={handleSubmit}
           disabled={loading}
           className="w-full"
-          size="lg"
         >
           Continuar →
         </Button>

@@ -114,7 +114,6 @@ export function FunnelApproved() {
 
         <Button
           onClick={() => router.push('/solicitar/bank-account')}
-          size="lg"
           className="w-full md:w-auto"
         >
           Continuar con el desembolso →

@@ -544,7 +544,6 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
                 (documentsVerification?.overallStatus !== 'VERIFIED')
               }
               className="w-full"
-              size="lg"
             >
               {loading ? 'Firmando...' : 'Firmar y finalizar →'}
             </Button>
