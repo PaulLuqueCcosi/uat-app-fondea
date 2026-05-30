@@ -428,7 +428,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                   <Button
                     type="button"
                     variant="outline"
-                    className="flex-1"
+                    className="w-full sm:flex-1"
                     onClick={() => setCameraModalOpen(true)}
                     disabled={analyzing}
                   >

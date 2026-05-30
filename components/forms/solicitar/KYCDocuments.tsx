@@ -359,7 +359,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1"
+                      className="w-full sm:flex-1"
                       onClick={() => openCameraModal('front')}
                     >
                       <Camera className="w-4 h-4 mr-2" />
@@ -376,7 +376,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1"
+                      className="w-full sm:flex-1"
                       onClick={() => frontFileInputRef.current?.click()}
                     >
                       <Upload className="w-4 h-4 mr-2" />
@@ -507,7 +507,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1"
+                      className="w-full sm:flex-1"
                       onClick={() => openCameraModal('back')}
                     >
                       <Camera className="w-4 h-4 mr-2" />
@@ -524,7 +524,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1"
+                      className="w-full sm:flex-1"
                       onClick={() => backFileInputRef.current?.click()}
                     >
                       <Upload className="w-4 h-4 mr-2" />
