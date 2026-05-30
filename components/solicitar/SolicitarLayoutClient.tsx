@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation';
 import type { User } from '@/lib/types';
 import { AppNavbar } from '@/components/ui/app-navbar';
-import { FunnelProgressBar } from './SolicitarProgressBar';
 import { FunnelLoanSummaryBanner } from './SolicitarLoanSummaryBanner';
 import { FunnelSidebar } from './SolicitarSidebar';
 import { SolicitarCalcProvider, useSolicitarCalc } from './SolicitarCalcContext';
@@ -95,9 +94,8 @@ function StaticLayoutContent({
         backLink={{ href: '/dashboard', label: 'Volver al Dashboard' }}
       />
 
-      {/* Mobile: Pasos horizontales arriba, resumen abajo */}
+      {/* Mobile: Banner con resumen + pasos expandibles */}
       <div className="md:hidden">
-        <FunnelProgressBar isLoading={isOrchestrating} />
         <FunnelLoanSummaryBanner isOrchestrating={isOrchestrating} />
       </div>
 
