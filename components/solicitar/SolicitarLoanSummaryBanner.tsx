@@ -154,7 +154,7 @@ export function FunnelLoanSummaryBanner({ isOrchestrating = false }: FunnelLoanS
                   size="sm"
                   variant="ghost"
                   className={cn(
-                  "h-7 text-xs text-white/90 hover:text-white hover:bg-white/15 border border-white/25 shrink-0 transition-all px-3",
+                  "text-xs text-white/90 hover:text-white hover:bg-white/15 border border-white/25 shrink-0 transition-all",
                   isOpen && "bg-white/15"
                   )}
                   onClick={handleEditClick}

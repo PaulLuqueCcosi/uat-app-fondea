@@ -18,7 +18,7 @@ export function SolicitarCalcPanel({ showClose = false }: { showClose?: boolean 
       {showClose && (
         <div className="flex items-center justify-between px-4 pb-3 border-b border-border mb-4">
           <h2 className="text-lg font-semibold text-foreground">Editar Solicitud</h2>
-          <Button variant="ghost" size="sm" onClick={close} className="h-8 w-8 p-0">
+          <Button variant="ghost" size="icon" onClick={close}>
             <X className="w-5 h-5" />
           </Button>
         </div>

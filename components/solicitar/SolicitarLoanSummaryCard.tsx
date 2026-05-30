@@ -128,7 +128,7 @@ export function FunnelLoanSummaryCard() {
                 size="sm"
                 variant="ghost"
                 className={cn(
-                  "h-8 text-xs text-white/90 hover:text-white hover:bg-white/15 border border-white/25 transition-all",
+                  "text-xs text-white/90 hover:text-white hover:bg-white/15 border border-white/25 transition-all",
                   isOpen && "bg-white/15"
                 )}
                 onClick={handleEditClick}
