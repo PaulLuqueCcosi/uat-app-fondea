@@ -582,8 +582,10 @@ export const useSolicitudStore = create<SolicitudStore>()(
             get().stopPolling();
 
             if (status === 'PRE_APPROVED' || status === 'PENDING_DOCUMENTS') {
-              set({ showCelebration: true });
-              setTimeout(() => set({ showCelebration: false }), 2500);
+              if (!get().showCelebration) {
+                set({ showCelebration: true });
+                setTimeout(() => set({ showCelebration: false }), 2500);
+              }
             }
 
             // Recargar todo en paralelo
@@ -596,7 +598,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
               loadContract(appId),
             ]);
 
-            set({ fullDetail: detail, detailStatus: 'success' });
+            set({ fullDetail: detail ? parseDetail(detail) : null, detailStatus: 'success' });
             set({ documents: docsResult.documents, documentUrls: docsResult.documentUrls, documentsStatus: 'success' });
             set({ ...contractResult, contractStatus: 'success' });
           }

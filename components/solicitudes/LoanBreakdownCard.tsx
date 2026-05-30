@@ -79,14 +79,14 @@ export function LoanBreakdownCard({ fullDetail, detailStatus }: LoanBreakdownCar
 
   const snap = fullDetail.simulation_snapshot;
 
-  // Si no hay simulation_snapshot, mostrar el resumen simple
-  if (!snap) {
+  // Si no hay simulation_snapshot o está incompleto, mostrar el resumen simple
+  if (!snap || !snap.product || !snap.summary) {
     return <SimpleSummary fullDetail={fullDetail} />;
   }
 
-  const fees = Object.values(snap.fees);
-  const fixedDiscounts = Object.values(snap.discounts.fixed ?? {});
-  const percentageDiscounts = Object.values(snap.discounts.percentage ?? {});
+  const fees = Object.values(snap.fees ?? {});
+  const fixedDiscounts = Object.values(snap.discounts?.fixed ?? {});
+  const percentageDiscounts = Object.values(snap.discounts?.percentage ?? {});
 
   // Subtotal parciales (para mostrar la cadena de descuentos %)
   const subtotalPartials = (() => {
@@ -239,7 +239,7 @@ export function LoanBreakdownCard({ fullDetail, detailStatus }: LoanBreakdownCar
               <p className="font-bold text-sm sm:text-base text-foreground">Cronograma de Pagos</p>
             </div>
             <div className="space-y-1.5">
-              {snap.schedule.map((item) => (
+              {(snap.schedule ?? []).map((item) => (
                 <ScheduleRow key={item.installmentNo} item={item} />
               ))}
             </div>
