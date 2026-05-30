@@ -610,6 +610,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                 variant="outline"
                 className="w-full sm:w-auto"
                 onClick={() => router.back()}
+                disabled={processing !== null}
               >
                 Atrás
               </Button>
