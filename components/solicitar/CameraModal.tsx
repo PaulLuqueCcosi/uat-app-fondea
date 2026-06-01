@@ -387,11 +387,11 @@ export function CameraModal({
               className={`px-4 py-1.5 rounded-full text-white text-xs font-semibold transition-all duration-300 ${cfg.badgeClass}`}
             >
               {cfg.label}
-              {faceScore !== null && (
+              {/* {faceScore !== null && (
                 <span className="ml-2 opacity-80">
                   {Math.round(faceScore * 100)}%
                 </span>
-              )}
+              )} */}
             </div>
           )}
 

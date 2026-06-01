@@ -160,19 +160,23 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
         return;
       }
 
-      // Update local upload state
+      // 2. Verify — NO actualizamos estado visual hasta tener respuesta
+      const verifyResult = await verifyDocumentAction(solicitudId, docType);
+
+      // 3. Ahora sí actualizamos todo de una vez
       if (side === 'front') {
         setFrontUploaded(true);
-        setDocumentUrl('dniFront', frontPreview);
       } else {
         setBackUploaded(true);
-        setDocumentUrl('dniBack', backPreview);
       }
 
-      // 2. Verify
-      const verifyResult = await verifyDocumentAction(solicitudId, docType);
       if (verifyResult.success && verifyResult.documentsStatus) {
         setDocumentsVerification(verifyResult.documentsStatus);
+        if (side === 'front') {
+          setDocumentUrl('dniFront', frontPreview);
+        } else {
+          setDocumentUrl('dniBack', backPreview);
+        }
       } else {
         setVerifyError({
           side,
@@ -343,7 +347,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         alt="Frente DNI"
                         className="w-full h-64 object-contain"
                       />
-                      {frontUploaded && verification?.dniFront.status === 'VERIFIED' && (
+                      {frontUploaded && verification?.dniFront.status === 'VERIFIED' && processing !== 'front' && (
                         <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full p-2">
                           <CheckCircle className="w-5 h-5" />
                         </div>
@@ -351,7 +355,24 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3">
-                      {frontUploaded && verification?.dniFront.status === 'VERIFIED' ? (
+                      {processing === 'front' ? (
+                        <Button
+                          type="button"
+                          disabled
+                          className="w-full sm:flex-1"
+                        >
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…
+                        </Button>
+                      ) : deleting === 'front' ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          disabled
+                          className="w-full sm:flex-1"
+                        >
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…
+                        </Button>
+                      ) : frontUploaded && verification?.dniFront.status === 'VERIFIED' ? (
                         <>
                           <div className="w-full sm:flex-1 flex items-center gap-2 text-sm text-success-700">
                             <CheckCircle className="w-4 h-4 shrink-0" />
@@ -367,48 +388,42 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                             <Trash2 className="w-4 h-4 mr-2" />Eliminar
                           </Button>
                         </>
-                      ) : (
+                      ) : frontUploaded ? (
                         <>
-                          {!frontUploaded ? (
-                            <Button
-                              type="button"
-                              onClick={() => handleUploadAndVerify('front')}
-                              disabled={processing === 'front'}
-                              className="w-full sm:flex-1"
-                            >
-                              {processing === 'front' ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…</>
-                              ) : (
-                                'Verificar'
-                              )}
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              onClick={() => handleRetryVerify('front')}
-                              disabled={processing === 'front'}
-                              className="w-full sm:flex-1"
-                            >
-                              {processing === 'front' ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…</>
-                              ) : (
-                                'Reintentar'
-                              )}
-                            </Button>
-                          )}
+                          <Button
+                            type="button"
+                            onClick={() => handleRetryVerify('front')}
+                            className="w-full sm:flex-1"
+                          >
+                            Reintentar
+                          </Button>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete('front')}
-                            disabled={deleting === 'front' || processing === 'front'}
                             className="w-full sm:w-auto"
                           >
-                            {deleting === 'front' ? (
-                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
-                            ) : (
-                              <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
-                            )}
+                            <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            type="button"
+                            onClick={() => handleUploadAndVerify('front')}
+                            className="w-full sm:flex-1"
+                          >
+                            Verificar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete('front')}
+                            className="w-full sm:w-auto"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />Eliminar
                           </Button>
                         </>
                       )}
@@ -422,16 +437,16 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                       </div>
                     )}
 
-                    {/* Error de verificación */}
-                    {verifyError?.side === 'front' && (
+                    {/* Error de verificación — solo mostrar cuando no está procesando */}
+                    {verifyError?.side === 'front' && processing !== 'front' && (
                       <div className="flex items-start gap-2 p-3 rounded-lg bg-error-50 border border-error-100 text-error-700">
                         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                         <p className="text-xs">{verifyError.message}</p>
                       </div>
                     )}
 
-                    {/* Intentos restantes */}
-                    {verification?.dniFront && verification.dniFront.failedAttempts > 0 && verification.dniFront.status !== 'VERIFIED' && (
+                    {/* Intentos restantes — solo mostrar cuando no está procesando */}
+                    {processing !== 'front' && verification?.dniFront && verification.dniFront.failedAttempts > 0 && verification.dniFront.status !== 'VERIFIED' && (
                       <p className="text-xs text-muted-foreground">
                         Intentos: {verification.dniFront.failedAttempts}/{verification.dniFront.maxAttempts} — Restantes: {verification.dniFront.remainingAttempts}
                       </p>
@@ -494,7 +509,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                         alt="Reverso DNI"
                         className="w-full h-64 object-contain"
                       />
-                      {backUploaded && verification?.dniBack.status === 'VERIFIED' && (
+                      {backUploaded && verification?.dniBack.status === 'VERIFIED' && processing !== 'back' && (
                         <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full p-2">
                           <CheckCircle className="w-5 h-5" />
                         </div>
@@ -502,7 +517,24 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3">
-                      {backUploaded && verification?.dniBack.status === 'VERIFIED' ? (
+                      {processing === 'back' ? (
+                        <Button
+                          type="button"
+                          disabled
+                          className="w-full sm:flex-1"
+                        >
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…
+                        </Button>
+                      ) : deleting === 'back' ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          disabled
+                          className="w-full sm:flex-1"
+                        >
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…
+                        </Button>
+                      ) : backUploaded && verification?.dniBack.status === 'VERIFIED' ? (
                         <>
                           <div className="w-full sm:flex-1 flex items-center gap-2 text-sm text-success-700">
                             <CheckCircle className="w-4 h-4 shrink-0" />
@@ -518,48 +550,42 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                             <Trash2 className="w-4 h-4 mr-2" />Eliminar
                           </Button>
                         </>
-                      ) : (
+                      ) : backUploaded ? (
                         <>
-                          {!backUploaded ? (
-                            <Button
-                              type="button"
-                              onClick={() => handleUploadAndVerify('back')}
-                              disabled={processing === 'back'}
-                              className="w-full sm:flex-1"
-                            >
-                              {processing === 'back' ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…</>
-                              ) : (
-                                'Verificar'
-                              )}
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              onClick={() => handleRetryVerify('back')}
-                              disabled={processing === 'back'}
-                              className="w-full sm:flex-1"
-                            >
-                              {processing === 'back' ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…</>
-                              ) : (
-                                'Reintentar'
-                              )}
-                            </Button>
-                          )}
+                          <Button
+                            type="button"
+                            onClick={() => handleRetryVerify('back')}
+                            className="w-full sm:flex-1"
+                          >
+                            Reintentar
+                          </Button>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete('back')}
-                            disabled={deleting === 'back' || processing === 'back'}
                             className="w-full sm:w-auto"
                           >
-                            {deleting === 'back' ? (
-                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
-                            ) : (
-                              <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
-                            )}
+                            <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            type="button"
+                            onClick={() => handleUploadAndVerify('back')}
+                            className="w-full sm:flex-1"
+                          >
+                            Verificar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete('back')}
+                            className="w-full sm:w-auto"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />Eliminar
                           </Button>
                         </>
                       )}
@@ -573,16 +599,16 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                       </div>
                     )}
 
-                    {/* Error de verificación */}
-                    {verifyError?.side === 'back' && (
+                    {/* Error de verificación — solo mostrar cuando no está procesando */}
+                    {verifyError?.side === 'back' && processing !== 'back' && (
                       <div className="flex items-start gap-2 p-3 rounded-lg bg-error-50 border border-error-100 text-error-700">
                         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                         <p className="text-xs">{verifyError.message}</p>
                       </div>
                     )}
 
-                    {/* Intentos restantes */}
-                    {verification?.dniBack && verification.dniBack.failedAttempts > 0 && verification.dniBack.status !== 'VERIFIED' && (
+                    {/* Intentos restantes — solo mostrar cuando no está procesando */}
+                    {processing !== 'back' && verification?.dniBack && verification.dniBack.failedAttempts > 0 && verification.dniBack.status !== 'VERIFIED' && (
                       <p className="text-xs text-muted-foreground">
                         Intentos: {verification.dniBack.failedAttempts}/{verification.dniBack.maxAttempts} — Restantes: {verification.dniBack.remainingAttempts}
                       </p>

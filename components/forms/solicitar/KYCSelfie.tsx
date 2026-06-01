@@ -290,15 +290,48 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
         return;
       }
 
-      setVerified(true);
-      setDocumentUrl('selfie', selfiePreview);
-
-      // 2. Verify
+      // 2. Verify — NO actualizamos estado visual hasta tener respuesta
       const verifyResult = await verifyDocumentAction(solicitudId, 'SELFIE');
+
       if (verifyResult.success && verifyResult.documentsStatus) {
-        setDocumentsVerification(verifyResult.documentsStatus);
+        const selfieStatus = verifyResult.documentsStatus.selfie.status;
+        console.log('[KYCSelfie] Verify result — selfie status:', selfieStatus);
+
+        if (selfieStatus === 'VERIFIED') {
+          // Éxito real — marcar como verificada
+          setVerified(true);
+          setDocumentsVerification(verifyResult.documentsStatus);
+          setDocumentUrl('selfie', selfiePreview);
+        } else {
+          // Backend respondió OK pero la selfie NO pasó la verificación
+          setDocumentsVerification(verifyResult.documentsStatus);
+          // Eliminar la foto del backend y resetear estado local
+          console.log('[KYCSelfie] Selfie no verificada, eliminando del backend...');
+          await deleteDocumentAction(solicitudId, 'SELFIE');
+          setSelfieFile(null);
+          setSelfiePreview('');
+          setVerified(false);
+          setUploadStatus(null);
+          setUploadScore(null);
+          setDocumentUrl('selfie', null);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          const remaining = verifyResult.documentsStatus.selfie.remainingAttempts;
+          setError(
+            `No se pudo verificar tu selfie. Por favor, intenta con otra foto.${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
+          );
+        }
       } else {
-        setVerifyError(verifyResult.error || 'No se pudo verificar la selfie.');
+        // Error de red o HTTP error
+        console.log('[KYCSelfie] Verify failed:', verifyResult.error);
+        await deleteDocumentAction(solicitudId, 'SELFIE');
+        setSelfieFile(null);
+        setSelfiePreview('');
+        setVerified(false);
+        setUploadStatus(null);
+        setUploadScore(null);
+        setDocumentUrl('selfie', null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setError(verifyResult.error || 'No se pudo verificar tu selfie. Por favor, intenta con otra foto.');
       }
     } catch (err) {
       console.error('Error uploading/verifying selfie:', err);
@@ -346,14 +379,46 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
 
     try {
       const result = await verifyDocumentAction(solicitudId, 'SELFIE');
+
       if (result.success && result.documentsStatus) {
-        setDocumentsVerification(result.documentsStatus);
+        const selfieStatus = result.documentsStatus.selfie.status;
+        console.log('[KYCSelfie] Retry verify — selfie status:', selfieStatus);
+
+        if (selfieStatus === 'VERIFIED') {
+          setDocumentsVerification(result.documentsStatus);
+          setDocumentUrl('selfie', selfiePreview);
+        } else {
+          // No pasó la verificación
+          setDocumentsVerification(result.documentsStatus);
+          console.log('[KYCSelfie] Retry: selfie no verificada, eliminando...');
+          await deleteDocumentAction(solicitudId, 'SELFIE');
+          setSelfieFile(null);
+          setSelfiePreview('');
+          setVerified(false);
+          setUploadStatus(null);
+          setUploadScore(null);
+          setDocumentUrl('selfie', null);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          const remaining = result.documentsStatus.selfie.remainingAttempts;
+          setError(
+            `No se pudo verificar tu selfie. Por favor, intenta con otra foto.${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
+          );
+        }
       } else {
-        setVerifyError(result.error || 'No se pudo verificar la selfie.');
+        console.log('[KYCSelfie] Retry verify failed:', result.error);
+        await deleteDocumentAction(solicitudId, 'SELFIE');
+        setSelfieFile(null);
+        setSelfiePreview('');
+        setVerified(false);
+        setUploadStatus(null);
+        setUploadScore(null);
+        setDocumentUrl('selfie', null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setError(result.error || 'No se pudo verificar tu selfie. Por favor, intenta con otra foto.');
       }
     } catch (err) {
       console.error('Error verifying selfie:', err);
-      setVerifyError('Error al verificar la selfie.');
+      setError('Error al verificar la selfie.');
     } finally {
       setProcessing(false);
     }
@@ -430,6 +495,21 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                   </div>
                 ) : !selfiePreview ? (
                 <>
+                {/* Mensaje de error de verificación fallida */}
+                {error && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-error-50 border border-error-100 text-error-700">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium">{error}</p>
+                      {verification?.selfie && verification.selfie.failedAttempts > 0 && verification.selfie.status !== 'VERIFIED' && (
+                        <p className="mt-1 text-xs opacity-80">
+                          Intentos fallidos: {verification.selfie.failedAttempts}/{verification.selfie.maxAttempts} — Restantes: {verification.selfie.remainingAttempts}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Botones de acción — solo si no hay foto capturada */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
@@ -495,8 +575,8 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                         </div>
                       )}
 
-                      {/* Badge de verificado por backend — solo si está VERIFIED */}
-                      {verified && verification?.selfie.status === 'VERIFIED' && !analyzing && (
+                      {/* Badge de verificado por backend — solo si está VERIFIED y no procesando */}
+                      {verified && verification?.selfie.status === 'VERIFIED' && !analyzing && !processing && (
                         <div className="absolute top-3 right-3">
                           <div className="bg-white/95 rounded-full p-2 shadow-md border border-success-500/30">
                             <CheckCircle className="w-5 h-5 text-success-600" />
@@ -521,19 +601,31 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                           <p className="font-semibold">
                             {uploadStatus === 'green' ? 'Rostro encontrado' : uploadStatus === 'orange' ? 'Confianza insuficiente' : 'No se detectó un rostro'}
                           </p>
-                          <p className="opacity-90">{STATUS_LABEL[uploadStatus]}</p>
-                          {uploadScore !== null && (
-                            <p className="mt-1 opacity-70 text-xs">
-                              Confianza detectada: {Math.round(uploadScore * 100)}% — mínimo requerido: {Math.round(THRESHOLD_GREEN * 100)}%
-                            </p>
-                          )}
+                    
                         </div>
                       </div>
                     )}
 
                     {/* Acciones sobre la foto */}
                     <div className="flex flex-col sm:flex-row gap-3">
-                      {verified && verification?.selfie.status === 'VERIFIED' ? (
+                      {processing ? (
+                        <Button
+                          type="button"
+                          disabled
+                          className="w-full sm:flex-1"
+                        >
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…
+                        </Button>
+                      ) : deleting ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          disabled
+                          className="w-full sm:flex-1"
+                        >
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…
+                        </Button>
+                      ) : verified && verification?.selfie.status === 'VERIFIED' ? (
                         <>
                           <div className="w-full sm:flex-1 flex items-center gap-2 text-sm text-success-700">
                             <CheckCircle className="w-4 h-4 shrink-0" />
@@ -549,79 +641,68 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                             <Trash2 className="w-4 h-4 mr-2" />Eliminar
                           </Button>
                         </>
-                      ) : (
+                      ) : verified ? (
                         <>
-                          {!verified && uploadStatus === 'green' ? (
-                            <Button
-                              type="button"
-                              onClick={handleUploadAndVerify}
-                              disabled={processing}
-                              className="w-full sm:flex-1"
-                            >
-                              {processing ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…</>
-                              ) : (
-                                'Verificar'
-                              )}
-                            </Button>
-                          ) : verified ? (
-                            <Button
-                              type="button"
-                              onClick={handleRetryVerify}
-                              disabled={processing}
-                              className="w-full sm:flex-1"
-                            >
-                              {processing ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando…</>
-                              ) : (
-                                'Reintentar'
-                              )}
-                            </Button>
-                          ) : uploadStatus && uploadStatus !== 'green' ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setCameraModalOpen(true)}
-                              className="w-full sm:w-auto"
-                              disabled={processing || deleting}
-                            >
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              Volver a tomar
-                            </Button>
-                          ) : null}
+                          <Button
+                            type="button"
+                            onClick={handleRetryVerify}
+                            className="w-full sm:flex-1"
+                          >
+                            Reintentar
+                          </Button>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={handleDelete}
-                            disabled={deleting || processing}
                             className="w-full sm:w-auto"
                           >
-                            {deleting ? (
-                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando…</>
-                            ) : (
-                              <><Trash2 className="w-4 h-4 mr-2" />Eliminar</>
-                            )}
+                            <Trash2 className="w-4 h-4 mr-2" />Eliminar
                           </Button>
                         </>
-                      )}
+                      ) : uploadStatus === 'green' ? (
+                        <>
+                          <Button
+                            type="button"
+                            onClick={handleUploadAndVerify}
+                            className="w-full sm:flex-1"
+                          >
+                            Verificar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleDelete}
+                            className="w-full sm:w-auto"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                          </Button>
+                        </>
+                      ) : uploadStatus ? (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCameraModalOpen(true)}
+                            className="w-full sm:w-auto"
+                          >
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Volver a tomar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleDelete}
+                            className="w-full sm:w-auto"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                          </Button>
+                        </>
+                      ) : null}
                     </div>
-
-                    {/* Error de verificación */}
-                    {verifyError && (
-                      <div className="flex items-start gap-2 p-3 rounded-lg bg-error-50 border border-error-100 text-error-700">
-                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                        <p className="text-xs">{verifyError}</p>
-                      </div>
-                    )}
-
-                    {/* Intentos restantes */}
-                    {verification?.selfie && verification.selfie.failedAttempts > 0 && verification.selfie.status !== 'VERIFIED' && (
-                      <p className="text-xs text-muted-foreground">
-                        Intentos fallidos: {verification.selfie.failedAttempts}/{verification.selfie.maxAttempts} — Restantes: {verification.selfie.remainingAttempts}
-                      </p>
-                    )}
 
                     {/* Error inline al intentar eliminar */}
                     {deleteError && (
@@ -636,15 +717,6 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                 )}
               </div>
             </div>
-
-            {error && (
-              <>
-                <Separator className="my-10 bg-primary/20 h-px" />
-                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-sm text-destructive">{error}</p>
-                </div>
-              </>
-            )}
 
             <Separator className="my-10 bg-primary/20 h-px" />
 
