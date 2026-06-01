@@ -485,7 +485,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
             </div>
 
             {/* Selfie */}
-            <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:gap-10 md:grid-cols-3">
               <SectionHeader title="Tu selfie" description="Foto de tu rostro" />
 
               <div className="md:col-span-2 space-y-6">
@@ -553,7 +553,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                   <div className="space-y-3">
                     {/* Imagen */}
                     <div
-                      className={`relative bg-muted/30 rounded-lg overflow-hidden border-2 transition-colors ${
+                      className={`relative bg-muted/30 rounded-lg overflow-hidden border-2 transition-colors aspect-3/4 sm:aspect-4/3 ${
                         uploadStatus === 'green' || uploadStatus === null
                           ? 'border-border'
                           : uploadStatus === 'orange'
@@ -564,12 +564,12 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                       <img
                         src={selfiePreview}
                         alt="Tu selfie"
-                        className="w-full h-64 object-cover rounded-lg"
+                        className="w-full h-full object-cover"
                       />
 
                       {/* Overlay de análisis en curso */}
                       {analyzing && (
-                        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 rounded-lg">
+                        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2">
                           <Loader2 className="w-8 h-8 text-white animate-spin" />
                           <p className="text-white text-sm font-medium">Analizando rostro…</p>
                         </div>
@@ -577,9 +577,9 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
 
                       {/* Badge de verificado por backend — solo si está VERIFIED y no procesando */}
                       {verified && verification?.selfie.status === 'VERIFIED' && !analyzing && !processing && (
-                        <div className="absolute top-3 right-3">
-                          <div className="bg-white/95 rounded-full p-2 shadow-md border border-success-500/30">
-                            <CheckCircle className="w-5 h-5 text-success-600" />
+                        <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+                          <div className="bg-white/95 rounded-full p-1.5 sm:p-2 shadow-md border border-success-500/30">
+                            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-success-600" />
                           </div>
                         </div>
                       )}

@@ -297,7 +297,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
             </div>
 
             {/* Frente del DNI */}
-            <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:gap-10 md:grid-cols-3">
               <SectionHeader
                 title="Frente del DNI"
                 description="Cara principal con tu foto"
@@ -341,15 +341,15 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
 
                 {frontPreview && (
                   <div className="space-y-3">
-                    <div className="relative bg-muted/30 rounded-lg overflow-hidden border border-border">
+                    <div className="relative bg-muted/30 rounded-lg overflow-hidden border border-border aspect-4/3 sm:aspect-16/10">
                       <img
                         src={frontPreview}
                         alt="Frente DNI"
-                        className="w-full h-64 object-contain"
+                        className="w-full h-full object-contain"
                       />
                       {frontUploaded && verification?.dniFront.status === 'VERIFIED' && processing !== 'front' && (
-                        <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full p-2">
-                          <CheckCircle className="w-5 h-5" />
+                        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-primary text-primary-foreground rounded-full p-1.5 sm:p-2">
+                          <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
                       )}
                     </div>
@@ -459,7 +459,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
             <Separator className="my-10 bg-primary/20 h-px" />
 
             {/* Reverso del DNI */}
-            <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:gap-10 md:grid-cols-3">
               <SectionHeader
                 title="Reverso del DNI"
                 description="Cara posterior con tus datos"
@@ -503,15 +503,15 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
 
                 {backPreview && (
                   <div className="space-y-3">
-                    <div className="relative bg-muted/30 rounded-lg overflow-hidden border border-border">
+                    <div className="relative bg-muted/30 rounded-lg overflow-hidden border border-border aspect-4/3 sm:aspect-16/10">
                       <img
                         src={backPreview}
                         alt="Reverso DNI"
-                        className="w-full h-64 object-contain"
+                        className="w-full h-full object-contain"
                       />
                       {backUploaded && verification?.dniBack.status === 'VERIFIED' && processing !== 'back' && (
-                        <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full p-2">
-                          <CheckCircle className="w-5 h-5" />
+                        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-primary text-primary-foreground rounded-full p-1.5 sm:p-2">
+                          <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
                       )}
                     </div>
