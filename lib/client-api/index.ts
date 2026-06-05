@@ -1,12 +1,10 @@
 /**
- * Client API — Capa intermedia para client components.
+ * Client API — DEPRECADO
  *
- * Los client components NUNCA llaman al backend directo.
- * Siempre pasan por esta capa, que hoy llama a las API routes
- * de Next.js (/api/...) y mañana puede cambiar sin tocar componentes.
+ * Los client components ahora llaman directamente a los server actions.
+ * Este archivo se mantiene temporalmente para backward compatibility.
  *
- * Para escritura (formularios) → usar Server Actions (app/actions/*.ts)
- * Para lectura en server components → usar backendFetch directo (lib/backend-fetch.ts)
+ * Migrar imports a: import { ... } from '@/app/actions/intencion.actions'
  */
 
 export {

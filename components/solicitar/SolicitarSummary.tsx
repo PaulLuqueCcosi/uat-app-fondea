@@ -42,7 +42,7 @@ import {
   ACCOUNT_TYPE_OPTIONS,
 } from '@/lib/constants';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
-import { getActiveIntencion } from '@/lib/client-api/intenciones';
+import { getActiveIntencion } from '@/app/actions/intencion.actions';
 import { submitApplication } from '@/lib/client-api/applications';
 import { ApiError } from '@/lib/client-api/api-error';
 import { useDeviceFingerprint } from '@/hooks/useDeviceFingerprint';
@@ -218,8 +218,8 @@ export function FunnelSummary({
     // Mostrar toast inmediatamente — el usuario siente respuesta al instante
     submitToastRef.current = toast.loading('Preparando tu solicitud...');
 
-    const activeIntencion = await getActiveIntencion();
-    if (!activeIntencion) {
+    const intencionResult = await getActiveIntencion();
+    if (!intencionResult.ok || !intencionResult.data) {
       toast.dismiss(submitToastRef.current);
       setSaveError('No tienes un préstamo seleccionado. Ve a la calculadora para elegir monto y plazo.');
       setSaveErrorCategory('validation');
@@ -227,6 +227,8 @@ export function FunnelSummary({
       setLoading(false);
       return;
     }
+
+    const activeIntencion = intencionResult.data;
 
     if (!pepDeclarations.not_pep || !pepDeclarations.not_pep_relative || !pepDeclarations.accept_terms) {
       toast.dismiss(submitToastRef.current);

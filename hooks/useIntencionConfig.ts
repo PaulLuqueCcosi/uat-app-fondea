@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getActiveIntencion } from '@/lib/client-api/intenciones';
+import { getActiveIntencion } from '@/app/actions/intencion.actions';
 import type { IntencionConfig } from '@/lib/types/intencion';
 
 /**
@@ -13,10 +13,12 @@ import type { IntencionConfig } from '@/lib/types/intencion';
 export function useIntencionConfig(skip = false): {
   config: IntencionConfig | null;
   loading: boolean;
+  error: string | null;
   setConfig: (newConfig: IntencionConfig) => void;
 } {
   const [config, setConfig] = useState<IntencionConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (skip) {
@@ -25,17 +27,23 @@ export function useIntencionConfig(skip = false): {
     }
 
     setLoading(true);
+    setError(null);
     getActiveIntencion()
-      .then((data) => {
-        setConfig(data ?? null);
+      .then((result) => {
+        if (result.ok) {
+          setConfig(result.data ?? null);
+        } else {
+          setError(result.error.message);
+        }
       })
       .catch((err) => {
         console.error('[useIntencionConfig] Error:', err);
+        setError('Error al cargar intención');
       })
       .finally(() => {
         setLoading(false);
       });
   }, [skip]);
 
-  return { config, loading, setConfig };
+  return { config, loading, error, setConfig };
 }

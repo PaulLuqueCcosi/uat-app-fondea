@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Plus, FileText } from 'lucide-react';
+import { ArrowRight, Plus, FileText, AlertCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +11,7 @@ import { useIntencionStore } from '@/lib/stores/intencion-store';
 export function LoanSection() {
   const status = useIntencionStore(s => s.status);
   const intencion = useIntencionStore(s => s.intencion);
+  const error = useIntencionStore(s => s.error);
   const fetchIntencion = useIntencionStore(s => s.fetch);
 
   useEffect(() => {
@@ -20,6 +21,23 @@ export function LoanSection() {
   // Skeleton: idle o pending
   if (status === 'idle' || status === 'pending') {
     return <LoanSectionSkeleton />;
+  }
+
+  // Error
+  if (status === 'error') {
+    return (
+      <Card>
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+          <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-error-100">
+            <AlertCircle className="w-4 h-4 text-error-600" />
+          </div>
+          <h2 className="font-semibold text-dark">Tu Préstamo</h2>
+        </div>
+        <div className="px-5 py-5">
+          <p className="text-sm text-muted-foreground">{error || 'Error al cargar información del préstamo.'}</p>
+        </div>
+      </Card>
+    );
   }
 
   return (

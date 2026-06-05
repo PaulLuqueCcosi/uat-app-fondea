@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Calculator, LogIn } from 'lucide-react';
-import { registerIntencion, getActiveIntencion } from '@/lib/client-api/intenciones';
+import { registerIntencion, getActiveIntencion } from '@/app/actions/intencion.actions';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
 import { syncUser } from '@/app/actions/auth.actions';
 import { Button } from '@/components/ui/button';
@@ -49,7 +49,7 @@ export default function SolicitarDispatcherPage() {
           }
 
           // 425 — el backend aún no tiene al usuario sincronizado
-          if (result.code === 'USER_NOT_SYNCED') {
+          if (result.error.status === 425) {
             setError('user_not_synced');
             return;
           }
@@ -58,9 +58,9 @@ export default function SolicitarDispatcherPage() {
         }
 
         // 2. Buscar intención activa del usuario
-        const active = await getActiveIntencion();
-        if (active) {
-          setIntencion(active);
+        const activeResult = await getActiveIntencion();
+        if (activeResult.ok && activeResult.data) {
+          setIntencion(activeResult.data);
           return goToFunnel();
         }
 

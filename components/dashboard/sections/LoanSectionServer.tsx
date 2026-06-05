@@ -5,7 +5,8 @@ import { getActiveIntencion } from '@/app/actions/intencion.actions';
 
 export async function LoanSectionServer() {
   // Obtener datos reales del servidor
-  const activeIntencion = await getActiveIntencion();
+  const result = await getActiveIntencion();
+  const activeIntencion = result.ok ? result.data : null;
 
   return (
     <Card>

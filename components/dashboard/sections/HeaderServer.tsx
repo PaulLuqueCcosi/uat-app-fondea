@@ -5,12 +5,13 @@ import { getActiveIntencion } from '@/app/actions/intencion.actions';
 
 export async function HeaderServer() {
   // Obtener datos reales del servidor
-  const [user, activeIntencion] = await Promise.all([
+  const [user, intencionResult] = await Promise.all([
     getUser(),
     getActiveIntencion(),
   ]);
 
   const userName = user?.name || 'Usuario';
+  const activeIntencion = intencionResult.ok ? intencionResult.data : null;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { IntencionConfig } from '@/lib/types';
-import { getActiveIntencion } from '@/lib/client-api/intenciones';
+import { getActiveIntencion } from '@/app/actions/intencion.actions';
 import type { StoreStatus } from './credit-score-store';
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -27,8 +27,12 @@ export const useIntencionStore = create<IntencionStore>()((set, get) => ({
 
     set({ status: 'pending', error: null });
     try {
-      const data = await getActiveIntencion();
-      set({ status: 'success', intencion: data ?? null });
+      const result = await getActiveIntencion();
+      if (result.ok) {
+        set({ status: 'success', intencion: result.data ?? null });
+      } else {
+        set({ status: 'error', error: result.error.message });
+      }
     } catch (err) {
       console.error('[IntencionStore] Error fetching:', err);
       set({ status: 'error', error: 'Error al cargar intención' });
@@ -38,8 +42,12 @@ export const useIntencionStore = create<IntencionStore>()((set, get) => ({
   refetch: async () => {
     set({ status: 'pending', error: null });
     try {
-      const data = await getActiveIntencion();
-      set({ status: 'success', intencion: data ?? null });
+      const result = await getActiveIntencion();
+      if (result.ok) {
+        set({ status: 'success', intencion: result.data ?? null });
+      } else {
+        set({ status: 'error', error: result.error.message });
+      }
     } catch (err) {
       console.error('[IntencionStore] Error refetching:', err);
       set({ status: 'error', error: 'Error al cargar intención' });

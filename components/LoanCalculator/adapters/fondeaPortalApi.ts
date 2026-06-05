@@ -188,25 +188,17 @@ async function fetchCalculation(
   return { scores };
 }
 
-// ── createIntention (autenticado, via API routes del portal) ──────────────────
+import { createIntencion as createIntencionAction, updateIntencion as updateIntencionAction } from '@/app/actions/intencion.actions';
+
+// ── createIntention (autenticado, via server action) ──────────────────────────
 
 async function createIntention(_data: IntentionRequest): Promise<IntentionResponse> {
-  const res = await fetch("/api/intenciones", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      amount: _data.amount,
-      termDays: _data.termDays,
-      installmentCount: _data.installmentCount,
-    }),
-  });
-  if (!res.ok) throw new Error(`createIntention: ${res.status}`);
-  const result = await res.json();
-  // Retorna la respuesta completa del backend (el core solo usa .id)
-  return result;
+  const result = await createIntencionAction(_data.amount, _data.termDays, _data.installmentCount);
+  if (!result.ok) throw new Error(result.error.message);
+  return result.data as unknown as IntentionResponse;
 }
 
-// ── updateIntention (autenticado, via API routes del portal) ──────────────────
+// ── updateIntention (autenticado, via server action) ──────────────────────────
 
 export async function updateIntention(
   intencionId: string,
@@ -214,16 +206,12 @@ export async function updateIntention(
   termDays: number,
   installmentCount: number,
 ): Promise<IntentionResponse> {
-  const res = await fetch(`/api/intenciones/${intencionId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount, termDays, installmentCount }),
-  });
-  if (res.status === 409) throw new Error("locked");
-  if (!res.ok) throw new Error(`updateIntention: ${res.status}`);
-  const result = await res.json();
-  // Retorna la respuesta completa del backend (el core solo usa .id)
-  return result;
+  const result = await updateIntencionAction(intencionId, amount, termDays, installmentCount);
+  if (!result.ok) {
+    if (result.error.category === 'conflict') throw new Error("locked");
+    throw new Error(result.error.message);
+  }
+  return result.data as unknown as IntentionResponse;
 }
 
 // ── Export del adapter ─────────────────────────────────────────────────────────

@@ -1,59 +1,74 @@
 'use server';
 
+/**
+ * INTENCION ACTIONS — Estandarizado con ApiResult<T>
+ *
+ * Todas las funciones retornan ApiResult<T>:
+ * - { ok: true, data: T }     → éxito
+ * - { ok: false, error: {...} } → error con mensaje, categoría, fields, meta
+ *
+ * Para GET que pueden no encontrar datos (404):
+ * - { ok: true, data: null }  → "no tiene" es un dato válido, no un error
+ *
+ * El frontend siempre puede hacer:
+ *   if (!result.ok) { showError(result.error.message); return; }
+ *   // usar result.data con seguridad
+ */
+
 import { IntencionConfig } from '@/lib/types';
 import { backendFetch } from '@/lib/backend-fetch';
 import { mapIntencionFromBackend } from '@/lib/mappers/intencion.mapper';
+import { parseResponse, apiNetworkError } from '@/lib/api-result';
+import type { ApiResult } from '@/lib/api-result';
 
-// ── CRUD ──────────────────────────────────────────────────────────────────────
+// ── GET: Intención activa ─────────────────────────────────────────────────────
 
 /**
- * Obtiene la intención activa del usuario autenticado.
- * Retorna null si no tiene ninguna (404).
- *
- * GET /api/v1/intentions/active
+ * Obtiene la intención activa del usuario.
+ * - ok + data: IntencionConfig → tiene intención activa
+ * - ok + data: null → no tiene intención activa (404 es dato válido)
+ * - !ok → error real (500, 401, network)
  */
-export async function getActiveIntencion(): Promise<IntencionConfig | null> {
-  console.log('[INTENCION] getActiveIntencion → consultando backend...');
+export async function getActiveIntencion(): Promise<ApiResult<IntencionConfig | null>> {
   try {
     const res = await backendFetch('/api/v1/intentions/active', { context: 'INTENCION' });
 
+    // 404 = sin intención activa — NO es un error, es un estado válido
     if (res.status === 404) {
-      console.log('[INTENCION] getActiveIntencion → 404: sin intención activa');
-      return null;
+      return { ok: true, data: null };
     }
 
     if (!res.ok) {
-      let errorBody = '(sin body)';
-      try { errorBody = await res.text(); } catch {}
-      console.error(`[INTENCION] getActiveIntencion → error ${res.status}:`, errorBody);
-      return null;
+      return parseResponse<IntencionConfig | null>(res, 'intención');
     }
 
     const data = await res.json();
-    console.log('[INTENCION] getActiveIntencion → ✅ encontrada:', { id: data.id, status: data.status });
-    return mapIntencionFromBackend(data);
+    return { ok: true, data: mapIntencionFromBackend(data) };
 
   } catch (error) {
     console.error('[INTENCION] getActiveIntencion → network error:', error);
-    return null;
+    return apiNetworkError();
   }
 }
 
-/**
- * Registra una intención existente (generada en la landing) al usuario autenticado.
- * Si ya existe para ese usuario, la retorna sin duplicar (200).
- * Si es nueva, la crea y retorna (201).
- * Si el ID no existe en el sistema, retorna null (404).
- *
- * POST /api/v1/intentions/{calcId}/register
- */
-export async function registerIntencion(intencionId: string): Promise<IntencionConfig | null> {
-  if (!intencionId?.trim()) {
-    console.warn('[INTENCION] registerIntencion → intencionId vacío, abortando');
-    return null;
-  }
+// ── POST: Registrar intención de la landing ───────────────────────────────────
 
-  console.log('[INTENCION] registerIntencion → iniciando para ID:', intencionId);
+/**
+ * Registra una intención de la landing al usuario autenticado.
+ * - ok + data: IntencionConfig → registrada o ya existente
+ * - !ok → error (404 = ID no existe, 401 = sesión expirada, etc.)
+ */
+export async function registerIntencion(intencionId: string): Promise<ApiResult<IntencionConfig>> {
+  if (!intencionId?.trim()) {
+    return {
+      ok: false,
+      error: {
+        category: 'validation',
+        message: 'ID de intención vacío.',
+        status: 0,
+      },
+    };
+  }
 
   try {
     const res = await backendFetch(`/api/v1/intentions/${intencionId}/register`, {
@@ -61,53 +76,41 @@ export async function registerIntencion(intencionId: string): Promise<IntencionC
       context: 'INTENCION',
     });
 
-    if (res.status === 404) {
-      console.warn('[INTENCION] registerIntencion → 404: ID no existe en el sistema:', intencionId);
-      return null;
-    }
-
     if (!res.ok) {
-      // Leer el body del error para saber qué devuelve el backend
-      let errorBody = '(sin body)';
-      try { errorBody = await res.text(); } catch {}
-      console.error(`[INTENCION] registerIntencion → error ${res.status}:`, errorBody);
-      return null;
+      return parseResponse<IntencionConfig>(res, 'intención');
     }
 
     const data = await res.json();
-    const isNew = res.status === 201;
-    console.log(`[INTENCION] registerIntencion → ✅ ${isNew ? 'NUEVA (201)' : 'EXISTENTE (200)'}`, {
-      id: data.id,
-      amount: data.amount,
-      installmentCount: data.installmentCount,
-      status: data.status,
-    });
-    return mapIntencionFromBackend(data);
+    return { ok: true, data: mapIntencionFromBackend(data) };
 
   } catch (error) {
     console.error('[INTENCION] registerIntencion → network error:', error);
-    return null;
+    return apiNetworkError();
   }
 }
 
+// ── POST: Crear intención desde calculadora interna ───────────────────────────
+
 /**
- * Crea una nueva intención desde la calculadora interna.
- * Si el usuario ya tiene una activa, el backend la reemplaza (REPLACED).
- *
- * POST /api/v1/intentions
- *
- * El backend requiere productId e isFirstLoan en el body.
- * productId se lee de NEXT_PUBLIC_PRODUCT_ID (misma variable que usa la calculadora pública).
+ * Crea una nueva intención.
+ * - ok + data: IntencionConfig → creada
+ * - !ok → error (422 = datos inválidos, 401 = sesión, etc.)
  */
 export async function createIntencion(
   amount: number,
   termDays: number,
   installmentCount: number,
-): Promise<IntencionConfig | null> {
+): Promise<ApiResult<IntencionConfig>> {
   const productId = process.env.NEXT_PUBLIC_PRODUCT_ID;
   if (!productId) {
-    console.error('[INTENCION] createIntencion → NEXT_PUBLIC_PRODUCT_ID no está configurado');
-    return null;
+    return {
+      ok: false,
+      error: {
+        category: 'server',
+        message: 'Error de configuración del servidor. Contacta a soporte.',
+        status: 0,
+      },
+    };
   }
 
   try {
@@ -123,39 +126,32 @@ export async function createIntencion(
       }),
     });
 
-    if (res.status === 422) {
-      const err = await res.json();
-      console.error('[INTENCION] createIntencion validación fallida:', err);
-      return null;
-    }
-
     if (!res.ok) {
-      console.error('[INTENCION] createIntencion error →', res.status);
-      return null;
+      return parseResponse<IntencionConfig>(res, 'intención');
     }
 
     const data = await res.json();
-    console.log('[INTENCION] createIntencion → created:', data.id);
-    return mapIntencionFromBackend(data);
+    return { ok: true, data: mapIntencionFromBackend(data) };
 
   } catch (error) {
-    console.error('[INTENCION] createIntencion network error:', error);
-    return null;
+    console.error('[INTENCION] createIntencion → network error:', error);
+    return apiNetworkError();
   }
 }
 
+// ── PUT: Actualizar intención ─────────────────────────────────────────────────
+
 /**
- * Actualiza el monto, plazo y cuotas de una intención existente.
- * Retorna null si está bloqueada (409) o no existe (404).
- *
- * PUT /api/v1/intentions/{id}
+ * Actualiza monto/plazo/cuotas.
+ * - ok + data: IntencionConfig → actualizada
+ * - !ok → error (409 = bloqueada, 404 = no existe, etc.)
  */
 export async function updateIntencion(
   intencionId: string,
   amount: number,
   termDays: number,
   installmentCount: number,
-): Promise<IntencionConfig | null> {
+): Promise<ApiResult<IntencionConfig>> {
   try {
     const res = await backendFetch(`/api/v1/intentions/${intencionId}`, {
       method: 'PUT',
@@ -163,98 +159,85 @@ export async function updateIntencion(
       body: JSON.stringify({ amount, termDays, installmentCount }),
     });
 
-    if (res.status === 409) {
-      console.warn('[INTENCION] updateIntencion → intención bloqueada (solicitud enviada)');
-      return null;
-    }
-
     if (!res.ok) {
-      console.error('[INTENCION] updateIntencion error →', res.status);
-      return null;
+      return parseResponse<IntencionConfig>(res, 'intención');
     }
 
     const data = await res.json();
-    console.log('[INTENCION] updateIntencion → updated:', data.id);
-    return mapIntencionFromBackend(data);
+    return { ok: true, data: mapIntencionFromBackend(data) };
 
   } catch (error) {
-    console.error('[INTENCION] updateIntencion network error:', error);
-    return null;
+    console.error('[INTENCION] updateIntencion → network error:', error);
+    return apiNetworkError();
   }
 }
 
+// ── DELETE: Cancelar intención ────────────────────────────────────────────────
+
 /**
  * Cancela (soft delete) una intención.
- * Retorna false si está bloqueada (409) o no existe (404).
- *
- * DELETE /api/v1/intentions/{id}
+ * - ok → cancelada exitosamente
+ * - !ok → error (409 = bloqueada, 404 = no existe)
  */
-export async function deleteIntencion(intencionId: string): Promise<boolean> {
+export async function deleteIntencion(intencionId: string): Promise<ApiResult<void>> {
   try {
     const res = await backendFetch(`/api/v1/intentions/${intencionId}`, {
       method: 'DELETE',
       context: 'INTENCION',
     });
 
-    if (res.status === 409) {
-      console.warn('[INTENCION] deleteIntencion → intención bloqueada (solicitud enviada)');
-      return false;
+    if (!res.ok) {
+      return parseResponse<void>(res, 'intención');
     }
 
-    if (res.status === 404) {
-      console.warn('[INTENCION] deleteIntencion → no encontrada:', intencionId);
-      return false;
-    }
-
-    console.log('[INTENCION] deleteIntencion → cancelled:', intencionId);
-    return res.status === 204;
+    return { ok: true, data: undefined };
 
   } catch (error) {
-    console.error('[INTENCION] deleteIntencion network error:', error);
-    return false;
+    console.error('[INTENCION] deleteIntencion → network error:', error);
+    return apiNetworkError();
   }
 }
 
+// ── GET: Intención por ID ─────────────────────────────────────────────────────
+
 /**
- * Obtiene la config de una intención por ID.
- * Si se pasa 'active', retorna la intención activa del usuario.
- *
- * GET /api/v1/intentions/{id}
- * GET /api/v1/intentions/active
+ * Obtiene una intención por ID, o la activa si se pasa 'active'.
+ * - ok + data: IntencionConfig → encontrada
+ * - ok + data: null → no existe (404)
+ * - !ok → error real
  */
-export async function getIntencionConfig(intencionId: string): Promise<IntencionConfig | null> {
+export async function getIntencionConfig(intencionId: string): Promise<ApiResult<IntencionConfig | null>> {
   if (intencionId === 'active') {
     return getActiveIntencion();
   }
 
   if (!intencionId?.trim()) {
-    console.warn('[INTENCION] getIntencionConfig → intencionId vacío');
-    return null;
+    return {
+      ok: false,
+      error: {
+        category: 'validation',
+        message: 'ID de intención vacío.',
+        status: 0,
+      },
+    };
   }
-
-  console.log('[INTENCION] getIntencionConfig → buscando ID:', intencionId);
 
   try {
     const res = await backendFetch(`/api/v1/intentions/${intencionId}`, { context: 'INTENCION' });
 
     if (res.status === 404) {
-      console.log('[INTENCION] getIntencionConfig → 404: no encontrada:', intencionId);
-      return null;
+      return { ok: true, data: null };
     }
 
     if (!res.ok) {
-      let errorBody = '(sin body)';
-      try { errorBody = await res.text(); } catch {}
-      console.error(`[INTENCION] getIntencionConfig → error ${res.status}:`, errorBody);
-      return null;
+      return parseResponse<IntencionConfig | null>(res, 'intención');
     }
 
     const data = await res.json();
-    console.log('[INTENCION] getIntencionConfig → ✅ encontrada:', { id: data.id, status: data.status });
-    return mapIntencionFromBackend(data);
+    return { ok: true, data: mapIntencionFromBackend(data) };
 
   } catch (error) {
     console.error('[INTENCION] getIntencionConfig → network error:', error);
-    return null;
+    return apiNetworkError();
   }
 }
