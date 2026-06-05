@@ -26,7 +26,8 @@ import {
 
 const mainNav = [
   { path: '/dashboard', label: 'Inicio', icon: Home },
-  { path: '/dashboard/profile', label: 'Mi Perfil', icon: User },
+  { path: '/dashboard/mi-perfil', label: 'Mi Perfil', icon: User },
+  { path: '/dashboard/mi-expediente', label: 'Mi Expediente', icon: FileText },
   { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
   { path: '/dashboard/dev-tools', label: 'Dev Tools', icon: Terminal },
   { path: '/dashboard/dev-tools/lambda-tester', label: 'Lambda Tester', icon: Zap },

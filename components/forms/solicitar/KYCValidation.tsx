@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CreditCard, Info, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { CreditCard, Info, CheckCircle2, ChevronDown, ChevronUp, CalendarIcon } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
 import { isValidDNI } from '@/lib/validation';
 import { KYCData } from '@/lib/types';
@@ -14,6 +14,12 @@ import type { DNIField } from '@/components/forms/solicitar/DNIAnnotatedCanvas';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Form,
   FormDescription,
@@ -589,30 +595,70 @@ export function FunnelKYCValidation({
             <FormField
               control={form.control}
               name="birth_date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col gap-1">
-                  <FormLabel>Fecha de nacimiento *</FormLabel>
-                  <Input
-                    type="text"
-                    placeholder="15/05/1990"
-                    {...field}
-                    className="w-full"
-                    maxLength={10}
-                    onChange={(e) => {
-                      // Máscara automática DD/MM/AAAA
-                      let val = e.target.value.replace(/\D/g, '');
-                      if (val.length > 2) val = val.slice(0, 2) + '/' + val.slice(2);
-                      if (val.length > 5) val = val.slice(0, 5) + '/' + val.slice(5);
-                      if (val.length > 10) val = val.slice(0, 10);
-                      field.onChange(val);
-                    }}
-                    onFocus={() => setActiveField('birth_date')}
-                    onBlur={() => setActiveField(null)}
-                  />
-                  <FormDescription>Debes de ser mayor de edad.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                // Parsear DD/MM/YYYY → Date para el Calendar
+                const parseDateFromField = (val: string): Date | undefined => {
+                  if (!val || !/^\d{2}\/\d{2}\/\d{4}$/.test(val)) return undefined;
+                  const [day, month, year] = val.split('/').map(Number);
+                  const d = new Date(year, month - 1, day);
+                  if (isNaN(d.getTime())) return undefined;
+                  return d;
+                };
+
+                // Date → DD/MM/YYYY string
+                const formatDateToField = (date: Date): string => {
+                  const day = String(date.getDate()).padStart(2, '0');
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const year = date.getFullYear();
+                  return `${day}/${month}/${year}`;
+                };
+
+                const selectedDate = parseDateFromField(field.value);
+                const today = new Date();
+                const minDate = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate());
+                const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+
+                return (
+                  <FormItem className="flex flex-col gap-1">
+                    <FormLabel>Fecha de nacimiento *</FormLabel>
+                    <Popover>
+                      <PopoverTrigger
+                        render={(props) => (
+                          <Button
+                            variant="outline"
+                            {...props}
+                            className="w-full justify-start font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate
+                              ? formatDateToField(selectedDate)
+                              : <span className="text-muted-foreground">Selecciona tu fecha de nacimiento</span>
+                            }
+                          </Button>
+                        )}
+                      />
+                      <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          defaultMonth={selectedDate ?? maxDate}
+                          captionLayout="dropdown"
+                          startMonth={minDate}
+                          endMonth={maxDate}
+                          disabled={{ after: maxDate, before: minDate }}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(formatDateToField(date));
+                            }
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription>Debes de ser mayor de edad.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
           </div>
         </div>
