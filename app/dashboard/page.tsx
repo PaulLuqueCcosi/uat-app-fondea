@@ -2,13 +2,9 @@ import { Suspense } from 'react';
 import { DashboardHomeClient } from '@/components/dashboard/DashboardHomeClient';
 import { Header } from '@/components/dashboard/sections/Header';
 import { ProgressBar } from '@/components/dashboard/sections/ProgressBar';
-import { Expediente } from '@/components/dashboard/sections/Expediente';
 import { Applications } from '@/components/dashboard/sections/Applications';
 import { LoanSection } from '@/components/dashboard/sections/LoanSection';
 import { EducationSection } from '@/components/dashboard/sections/EducationSection';
-import { QuickSettings } from '@/components/dashboard/sections/QuickSettings';
-import { PuntajeCard } from '@/components/dashboard/PuntajeCard';
-import { CreditScoreCard } from '@/components/dashboard/CreditScoreCard';
 import { PageHeader } from '@/components/ui/page-header';
 
 // Forzar renderizado dinámico
@@ -24,52 +20,33 @@ export default async function DashboardPage() {
         ]}
       />
 
-      <div className="flex flex-1 flex-col gap-4 p-4">
+      <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
         <DashboardHomeClient>
-          {/* Header con Suspense */}
+          {/* Header: saludo + botones CTA */}
           <Suspense fallback={<Header.Skeleton />}>
             <Header />
           </Suspense>
 
-          {/* Progress Bar con Suspense */}
-          <Suspense fallback={<ProgressBar.Skeleton />}>
-            <ProgressBar />
-          </Suspense>
-
           {/* 2-column layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
-            {/* Left column */}
-            <div className="lg:col-span-3 flex flex-col gap-4 md:gap-6">
-              {/* Expediente con Suspense */}
-              <Suspense fallback={<Expediente.Skeleton />}>
-                <Expediente />
-              </Suspense>
-
-              {/* Solicitudes con Suspense */}
-              <Suspense fallback={<Applications.Skeleton />}>
-                <Applications />
-              </Suspense>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Columna izquierda — Educación financiera */}
+            <div className="lg:col-span-3 flex flex-col gap-6">
+              <EducationSection />
             </div>
 
-            {/* Right column */}
-            <div className="lg:col-span-2 flex flex-col gap-4 md:gap-6">
-              {/* Tu Préstamo — usa intencion-store internamente */}
+            {/* Columna derecha — Préstamo + Expediente + Solicitudes */}
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              {/* Tu Préstamo (compacto) */}
               <LoanSection />
 
-              {/* Score Card */}
-              <PuntajeCard />
-
-              {/* Credit Score Card */}
-              <CreditScoreCard />
-
-              {/* Educación Financiera con Suspense */}
-              <Suspense fallback={<EducationSection.Skeleton />}>
-                <EducationSection />
+              {/* Barra de progreso del expediente */}
+              <Suspense fallback={<ProgressBar.Skeleton />}>
+                <ProgressBar />
               </Suspense>
 
-              {/* Configuración Rápida con Suspense */}
-              <Suspense fallback={<QuickSettings.Skeleton />}>
-                <QuickSettings />
+              {/* Últimas solicitudes */}
+              <Suspense fallback={<Applications.Skeleton />}>
+                <Applications />
               </Suspense>
             </div>
           </div>

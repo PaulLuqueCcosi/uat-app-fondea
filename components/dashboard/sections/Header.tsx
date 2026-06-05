@@ -2,6 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getUser } from '@/app/actions/auth.actions';
 import { HeaderActions } from './HeaderActions';
 import { HeaderSubtitle } from './HeaderSubtitle';
+import { HeaderScore } from './HeaderScore';
 
 async function HeaderContent() {
   const user = await getUser();
@@ -14,6 +15,7 @@ async function HeaderContent() {
           Hola, {userName}
         </h1>
         <HeaderSubtitle />
+        <HeaderScore />
       </div>
       <HeaderActions />
     </div>

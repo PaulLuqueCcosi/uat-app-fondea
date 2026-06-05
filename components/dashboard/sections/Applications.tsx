@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { FileText, ChevronRight, Plus } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getApplicationsAction } from '@/app/actions/application.actions';
 import type { ApplicationRecord } from '@/lib/types';
-import { DeleteApplicationButton } from './DeleteApplicationButton';
 
 function formatDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString('es-PE', {
@@ -37,7 +36,9 @@ function getStatusVariant(status: string): 'completed' | 'pending' | 'error' | '
 
 async function ApplicationsContent() {
   const applicationsData = await getApplicationsAction();
-  const applications = applicationsData?.applications ?? [];
+  const allApplications = applicationsData?.applications ?? [];
+  const applications = allApplications.slice(0, 5);
+  const hasMore = allApplications.length > 5;
 
   return (
     <Card>
@@ -45,9 +46,9 @@ async function ApplicationsContent() {
         <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0">
           <FileText className="w-4 h-4 text-white" />
         </div>
-        <h2 className="font-semibold text-dark">Mis Solicitudes</h2>
+        <h2 className="font-semibold text-dark">Mis últimas solicitudes</h2>
         <span className="ml-auto text-xs text-fondea-text">
-          {applications.length} {applications.length === 1 ? 'solicitud' : 'solicitudes'}
+          {allApplications.length} {allApplications.length === 1 ? 'solicitud' : 'solicitudes'}
         </span>
       </div>
       <div className="divide-y divide-border">
@@ -64,34 +65,45 @@ async function ApplicationsContent() {
             </Link>
           </div>
         ) : (
-          applications.map((app) => (
-            <div key={app.id} className="relative">
-              <Link
-                href={`/solicitudes/${app.id}`}
-                className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-background transition-colors text-left"
-              >
-                <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-dark">
-                    Solicitud #{app.id.slice(0, 8)}
-                  </p>
-                  <p className="text-xs text-fondea-text">
-                    {app.submittedAt ? formatDate(app.submittedAt) : '—'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {/* TODO: Botón temporal para pruebas, eliminar en producción */}
-                  <DeleteApplicationButton applicationId={app.id} />
-                  <Badge variant={getStatusVariant(app.status)}>
-                    {getStatusLabel(app.status)}
-                  </Badge>
-                  <ChevronRight className="w-4 h-4 text-fondea-text" />
-                </div>
-              </Link>
-            </div>
-          ))
+          <>
+            {applications.map((app) => (
+              <div key={app.id} className="relative">
+                <Link
+                  href={`/solicitudes/${app.id}`}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-background transition-colors text-left"
+                >
+                  <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-dark">
+                      Solicitud #{app.id.slice(0, 8)}
+                    </p>
+                    <p className="text-xs text-fondea-text">
+                      {app.submittedAt ? formatDate(app.submittedAt) : '—'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant={getStatusVariant(app.status)}>
+                      {getStatusLabel(app.status)}
+                    </Badge>
+                    <ChevronRight className="w-4 h-4 text-fondea-text" />
+                  </div>
+                </Link>
+              </div>
+            ))}
+            {hasMore && (
+              <div className="px-5 py-3 text-center">
+                <Link
+                  href="/dashboard/loans"
+                  className="text-sm text-primary font-medium hover:underline inline-flex items-center gap-1"
+                >
+                  Ver todas las solicitudes
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
+          </>
         )}
       </div>
     </Card>
