@@ -5,7 +5,6 @@ import { ProgressBar } from '@/components/dashboard/sections/ProgressBar';
 import { Applications } from '@/components/dashboard/sections/Applications';
 import { LoanSection } from '@/components/dashboard/sections/LoanSection';
 import { EducationSection } from '@/components/dashboard/sections/EducationSection';
-import { PageHeader } from '@/components/ui/page-header';
 
 // Forzar renderizado dinámico
 export const dynamic = 'force-dynamic';
@@ -13,15 +12,8 @@ export const revalidate = 0;
 
 export default async function DashboardPage() {
   return (
-    <>
-      <PageHeader
-        breadcrumbs={[
-          { label: 'Dashboard' },
-        ]}
-      />
-
-      <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-        <DashboardHomeClient>
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <DashboardHomeClient>
           {/* Header: saludo + botones CTA */}
           <Suspense fallback={<Header.Skeleton />}>
             <Header />
@@ -51,7 +43,6 @@ export default async function DashboardPage() {
             </div>
           </div>
         </DashboardHomeClient>
-      </div>
-    </>
+    </div>
   );
 }

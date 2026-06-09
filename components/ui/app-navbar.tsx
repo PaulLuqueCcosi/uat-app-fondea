@@ -54,6 +54,11 @@ interface AppNavbarProps {
     href: string;
     label?: string;
   };
+  /**
+   * Slot para contenido entre el logo y el usuario.
+   * En el dashboard se usa para el SidebarTrigger + breadcrumb.
+   */
+  centerContent?: React.ReactNode;
 }
 
 // ── Avatar compartido ─────────────────────────────────────────────────────────
@@ -70,7 +75,7 @@ function UserAvatar({ initials, size = 'sm' }: { initials: string; size?: 'sm' |
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
-export function AppNavbar({ user, onSignOut, backLink }: AppNavbarProps) {
+export function AppNavbar({ user, onSignOut, backLink, centerContent }: AppNavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
@@ -108,6 +113,13 @@ export function AppNavbar({ user, onSignOut, backLink }: AppNavbarProps) {
             </>
           )}
         </div>
+
+        {/* ── Centro: contenido opcional (breadcrumb, etc.) ── */}
+        {centerContent && (
+          <div className="flex-1 flex items-center px-4">
+            {centerContent}
+          </div>
+        )}
 
         {/* ── Derecha: notificaciones + usuario ── */}
         <div className="flex items-center gap-1">

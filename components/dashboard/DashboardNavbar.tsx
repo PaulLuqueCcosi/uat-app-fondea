@@ -1,111 +1,229 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Bell, User, LogOut, Settings, ChevronDown, X } from 'lucide-react';
+import { useTransition } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import {
+  LogOut,
+  Settings,
+  User,
+  CreditCard,
+  LifeBuoy,
+} from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { User as UserType } from '@/lib/types';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join('');
+}
+
+/** Genera breadcrumbs desde el pathname */
+function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
+  const segments = pathname.replace('/dashboard', '').split('/').filter(Boolean);
+
+  if (segments.length === 0) return [{ label: 'Dashboard' }];
+
+  const labelMap: Record<string, string> = {
+    'mi-perfil': 'Mi Perfil',
+    'mi-expediente': 'Mi Expediente',
+    'loans': 'Mis Solicitudes',
+    'calculadora': 'Calculadora',
+    'settings': 'Configuración',
+    'profile': 'Perfil',
+    'dev-tools': 'Dev Tools',
+    'lambda-tester': 'Lambda Tester',
+  };
+
+  const crumbs: { label: string; href?: string }[] = [
+    { label: 'Dashboard', href: '/dashboard' },
+  ];
+
+  let path = '/dashboard';
+  segments.forEach((seg, i) => {
+    path += `/${seg}`;
+    const isLast = i === segments.length - 1;
+    crumbs.push({
+      label: labelMap[seg] || seg,
+      href: isLast ? undefined : path,
+    });
+  });
+
+  return crumbs;
+}
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface DashboardNavbarProps {
   user: UserType;
   onSignOut: () => Promise<void>;
 }
 
+// ── Componente ────────────────────────────────────────────────────────────────
+
 export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const router = useRouter();
   const pathname = usePathname();
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleSignOut = async () => {
-    setIsDropdownOpen(false);
-    await onSignOut();
+  const handleSignOut = () => {
+    startTransition(async () => {
+      await onSignOut();
+    });
   };
 
+  const initials = getInitials(user.name);
+  const subtitle = user.email || user.phone || '';
+  const breadcrumbs = getBreadcrumbs(pathname);
+
   return (
-    <header className="bg-white/80 backdrop-blur-md border-b border-border/50 sticky top-0 z-40 h-16">
-      <div className="flex items-center justify-between h-full px-4 md:px-6">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Logo />
+    <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center border-b border-border bg-white/90 backdrop-blur-md px-4">
+      {/* Izquierda: Logo + SidebarTrigger + Breadcrumb */}
+      <div className="flex flex-1 items-center gap-2">
+        <Link href="/dashboard" className="flex items-center shrink-0">
+          <Logo height={24} />
         </Link>
 
-        <div className="flex items-center gap-4">
-          <button className="relative p-2 text-fondea-text hover:text-dark transition-colors rounded-lg hover:bg-muted/50">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full" />
-          </button>
+        <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-5" />
 
-          <div className="relative flex items-center gap-3 pl-4 border-l border-border" ref={dropdownRef}>
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-medium text-dark">{user.name}</p>
-              <p className="text-xs text-fondea-text truncate max-w-[150px]">{user.email || user.phone}</p>
+        <SidebarTrigger className="-ml-0.5" />
+
+        {breadcrumbs.length > 1 && (
+          <>
+            <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                {breadcrumbs.map((crumb, idx) => {
+                  const isLast = idx === breadcrumbs.length - 1;
+                  return (
+                    <span key={idx} className="flex items-center gap-1.5">
+                      <BreadcrumbItem className={idx < breadcrumbs.length - 1 ? 'hidden md:block' : ''}>
+                        {crumb.href && !isLast ? (
+                          <BreadcrumbLink render={<Link href={crumb.href} />}>
+                            {crumb.label}
+                          </BreadcrumbLink>
+                        ) : (
+                          <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                        )}
+                      </BreadcrumbItem>
+                      {!isLast && (
+                        <BreadcrumbSeparator className="hidden md:block" />
+                      )}
+                    </span>
+                  );
+                })}
+              </BreadcrumbList>
+            </Breadcrumb>
+          </>
+        )}
+      </div>
+
+      {/* Derecha: Usuario */}
+      <div className="flex items-center gap-1">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="flex items-center gap-2.5 rounded-full p-1 pr-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Menú de usuario"
+          >
+            <div className="hidden sm:block text-right leading-tight">
+              <p className="text-sm font-medium text-foreground max-w-[140px] truncate">
+                {user.name}
+              </p>
+              {subtitle && (
+                <p className="text-xs text-muted-foreground max-w-[140px] truncate">
+                  {subtitle}
+                </p>
+              )}
             </div>
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-primary-50 text-primary-700 font-medium text-xs">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
 
-            <button
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="relative group flex items-center gap-2 p-1 rounded-full hover:bg-muted/50 transition-all"
+          <DropdownMenuContent align="end" sideOffset={8} className="w-56">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex items-center gap-2.5 py-0.5">
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-primary-50 text-primary-700 font-medium">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col leading-tight min-w-0">
+                    <span className="text-sm font-medium text-foreground truncate">{user.name}</span>
+                    {subtitle && <span className="text-xs text-muted-foreground truncate">{subtitle}</span>}
+                  </div>
+                </div>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => router.push('/dashboard/mi-perfil')}>
+                <User className="h-4 w-4" />
+                Mi Perfil
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/dashboard/loans')}>
+                <CreditCard className="h-4 w-4" />
+                Mis Solicitudes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
+                <Settings className="h-4 w-4" />
+                Configuración
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuGroup>
+              <DropdownMenuItem disabled>
+                <LifeBuoy className="h-4 w-4" />
+                Soporte
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              disabled={isPending}
+              variant="destructive"
+              className="cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all">
-                <User className="w-5 h-5 text-white" />
-              </div>
-              <ChevronDown className={`w-4 h-4 text-fondea-text transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isDropdownOpen && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-border/50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="px-4 py-3 bg-gradient-to-r from-primary/5 to-primary/10 border-b border-border/50">
-                  <p className="text-sm font-semibold text-dark truncate">{user.name}</p>
-                  <p className="text-xs text-fondea-text truncate">{user.email || user.phone}</p>
-                </div>
-                <div className="py-2">
-                  <Link
-                    href="/dashboard/perfil"
-                    onClick={() => setIsDropdownOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
-                      pathname === '/dashboard/perfil'
-                        ? 'bg-primary-50 text-primary font-semibold'
-                        : 'text-dark hover:bg-background hover:text-primary'
-                    }`}
-                  >
-                    <User className={`w-4 h-4 ${pathname === '/dashboard/perfil' ? 'text-primary' : 'text-fondea-text'}`} />
-                    Mi Perfil
-                  </Link>
-                  <Link
-                    href="/dashboard/configuracion"
-                    onClick={() => setIsDropdownOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
-                      pathname === '/dashboard/configuracion'
-                        ? 'bg-primary-50 text-primary font-semibold'
-                        : 'text-dark hover:bg-background hover:text-primary'
-                    }`}
-                  >
-                    <Settings className={`w-4 h-4 ${pathname === '/dashboard/configuracion' ? 'text-primary' : 'text-fondea-text'}`} />
-                    Configuración
-                  </Link>
-                </div>
-                <div className="py-2 border-t border-border/50">
-                  <button
-                    onClick={handleSignOut}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-error hover:bg-error/5 transition-colors w-full"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Cerrar Sesión
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+              <LogOut className="h-4 w-4" />
+              {isPending ? 'Cerrando sesión…' : 'Cerrar Sesión'}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

@@ -44,7 +44,7 @@ export function AppSidebar({ profileComplete, ...props }: AppSidebarProps) {
   return (
     // collapsible="icon" → colapsa a íconos en desktop
     // SidebarRail → el rail lateral que permite colapsar al hacer hover/click
-    <Sidebar collapsible="icon" className="top-16 h-[calc(100svh-4rem)]" {...props}>
+    <Sidebar collapsible="icon" className="top-14 h-[calc(100svh-3.5rem)]" {...props}>
 
       {/* Header — avatar de usuario */}
       <SidebarHeader>

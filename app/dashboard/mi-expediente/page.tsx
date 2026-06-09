@@ -1,6 +1,5 @@
 'use client';
 
-import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -141,15 +140,7 @@ export default function MiPerfilPage() {
   const initials = `${mockUser.firstName[0]}${mockUser.firstLastName[0]}`;
 
   return (
-    <>
-      <PageHeader
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Mi Expediente' },
-        ]}
-      />
-
-      <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-5xl">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-5xl">
 
         {/* ── Header del perfil ── */}
         <Card>
@@ -364,6 +355,5 @@ export default function MiPerfilPage() {
 
         </div>
       </div>
-    </>
   );
 }

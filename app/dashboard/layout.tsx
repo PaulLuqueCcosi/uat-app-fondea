@@ -1,7 +1,7 @@
 import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
 import { isExpedienteComplete } from '@/app/actions/expediente-summary.actions';
 import { AppSidebar } from '@/components/dashboard/AppSidebar';
-import { AppNavbar } from '@/components/ui/app-navbar';
+import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
 import { AppBackground } from '@/components/ui/app-background';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 
@@ -18,24 +18,21 @@ export default async function DashboardLayout({
   const profileComplete = await isExpedienteComplete();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <AppBackground />
+    <SidebarProvider>
+      <div className="min-h-screen flex flex-col w-full">
+        <AppBackground />
 
-      {/* ── Navbar — sticky, transversal a todo ── */}
-      <AppNavbar
-        user={user}
-        onSignOut={performSignOut}
-      />
+        {/* Navbar con SidebarTrigger + breadcrumb integrados */}
+        <DashboardNavbar user={user} onSignOut={performSignOut} />
 
-      {/* ── Debajo del navbar: sidebar + contenido ── */}
-      <div className="flex flex-1 overflow-hidden">
-        <SidebarProvider className="min-h-0">
+        {/* Sidebar + Contenido */}
+        <div className="flex flex-1 overflow-hidden">
           <AppSidebar profileComplete={profileComplete} />
           <SidebarInset>
             {children}
           </SidebarInset>
-        </SidebarProvider>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

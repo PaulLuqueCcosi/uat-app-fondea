@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { FileText, Download, Check, AlertCircle, PenLine, Loader2, Maximize2, X } from 'lucide-react';
 import { signContractAction } from '@/app/actions/application.actions';
 import { useSolicitudStore, type ContractInfo } from '@/lib/stores/solicitud-store';
+import SignaturePad from '@/components/ui/signature-pad';
 
 interface FunnelContractProps {
   applicationId?: string;
@@ -96,6 +97,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [fullName, setFullName] = useState('');
+  const [signature, setSignature] = useState<string | null>(null);
 
   // Estado del contrato — desde contexto si disponible
   const [contractInfo, setContractInfo] = useState<ContractInfo | null>(ctxContractInfo);
@@ -188,6 +190,11 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
 
     if (fullName.trim().length < 5) {
       setError('El nombre debe tener al menos 5 caracteres');
+      return;
+    }
+
+    if (!signature) {
+      setError('Debes dibujar tu firma para continuar');
       return;
     }
 
@@ -519,6 +526,19 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
               </div>
             )}
 
+            {/* Firma dibujada */}
+            <div>
+              <label className="block text-sm font-medium text-dark mb-2">
+                Tu firma
+              </label>
+              <SignaturePad
+                value={signature}
+                onChange={setSignature}
+                label="Dibujar firma"
+                description="Dibuja tu firma con el dedo o mouse. Mantén presionado el botón para confirmar."
+              />
+            </div>
+
             {error && (
               <div className="p-3 bg-error/10 border border-error rounded-lg">
                 <p className="text-sm text-error">{error}</p>
@@ -540,6 +560,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
                 !accepted ||
                 !fullName.trim() ||
                 fullName.trim().length < 5 ||
+                !signature ||
                 loading ||
                 (documentsVerification?.overallStatus !== 'VERIFIED')
               }
