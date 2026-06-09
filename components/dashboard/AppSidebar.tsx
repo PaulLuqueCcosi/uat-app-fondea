@@ -10,6 +10,7 @@ import {
   Settings,
   Terminal,
   Zap,
+  GraduationCap,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -29,6 +30,7 @@ const mainNav = [
   { path: '/dashboard/mi-perfil', label: 'Mi Perfil', icon: User },
   { path: '/dashboard/mi-expediente', label: 'Mi Expediente', icon: FileText },
   { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
+  { path: '/dashboard/educacion', label: 'Fondea Aprende', icon: GraduationCap },
   { path: '/dashboard/dev-tools', label: 'Dev Tools', icon: Terminal },
   { path: '/dashboard/dev-tools/lambda-tester', label: 'Lambda Tester', icon: Zap },
   { path: '/dashboard/settings', label: 'Configuración', icon: Settings },
