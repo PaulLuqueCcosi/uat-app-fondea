@@ -74,7 +74,11 @@ export function EducationCarousel() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute top-1.5 left-1.5">
-                    <span className="text-sm">{mod.mascot === 'buho' ? '🦉' : '🐿️'}</span>
+                    <img
+                      src={mod.mascot === 'buho' ? '/mascotas/Fondi_pet.png' : '/mascotas/Fondea_pet.png'}
+                      alt={mod.mascot === 'buho' ? 'Fondi' : 'Fondea'}
+                      className="w-6 h-6 object-contain drop-shadow-sm"
+                    />
                   </div>
                   {mod.videoDuration && (
                     <div className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded bg-black/70 px-1 py-0.5">
