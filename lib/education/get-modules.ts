@@ -5,7 +5,7 @@ import type { EducationModule } from './types';
  * Simula latencia de red para desarrollo.
  * En producción esto se elimina — el fetch real tendrá su propia latencia.
  */
-const SIMULATED_DELAY_MS = 800;
+const SIMULATED_DELAY_MS = 10;
 
 async function simulateNetwork<T>(data: T): Promise<T> {
   if (process.env.NODE_ENV === 'development') {
