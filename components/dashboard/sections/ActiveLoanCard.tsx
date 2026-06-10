@@ -128,9 +128,9 @@ export function ActiveLoanCard() {
             <p className="text-[9px] text-muted-foreground">Avance</p>
           </div>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
+        {/* <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
           <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${progressPercent}%` }} />
-        </div>
+        </div> */}
 
         <Separator />
 
