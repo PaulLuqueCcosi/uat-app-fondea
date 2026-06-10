@@ -1,116 +1,136 @@
 'use client';
 
-import { Shield, TrendingUp } from 'lucide-react';
+import { useEffect } from 'react';
+import { Shield } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCreditScoreStore } from '@/lib/stores/credit-score-store';
+import { ScoreGauge } from '@/components/credits';
+import type { ScoreRange } from '@/lib/types';
 
 /**
- * Tu Reputación Crediticia — Score tipo velocímetro.
- * Muestra el score de Sentinel con indicador semafórico.
- *
- * TODO: Conectar con API real de Sentinel/Equifax.
+ * Historial Crediticio — Gauge semicircular segmentado.
+ * Usa el componente reutilizable ScoreGauge + datos del store.
  */
-
-// Mock data
-const mockScore = {
-  value: 720,
-  maxValue: 999,
-  category: 'Bueno' as const,
-  trend: 'up' as const,
-  lastUpdated: '2026-06-01',
-};
-
-function getScoreColor(value: number): { ring: string; text: string; bg: string; label: string } {
-  if (value >= 800) return { ring: 'stroke-success-500', text: 'text-success-700', bg: 'bg-success-50', label: 'Excelente' };
-  if (value >= 700) return { ring: 'stroke-accent-600', text: 'text-accent-800', bg: 'bg-accent-50', label: 'Bueno' };
-  if (value >= 500) return { ring: 'stroke-warning-500', text: 'text-warning-700', bg: 'bg-warning-50', label: 'Regular' };
-  return { ring: 'stroke-error-500', text: 'text-error-700', bg: 'bg-error-50', label: 'Bajo' };
-}
-
 export function CreditScore() {
-  const score = mockScore;
-  const scoreStyle = getScoreColor(score.value);
-  const percentage = (score.value / score.maxValue) * 100;
+  const creditScore = useCreditScoreStore((s) => s.creditScore);
+  const status = useCreditScoreStore((s) => s.status);
+  const fetchCreditScore = useCreditScoreStore((s) => s.fetch);
 
-  // SVG arc para el velocímetro
-  const radius = 45;
-  const circumference = Math.PI * radius; // semicírculo
-  const offset = circumference - (percentage / 100) * circumference;
+  const scoreRanges = useCreditScoreStore((s) => s.scoreRanges);
+  const rangesStatus = useCreditScoreStore((s) => s.rangesStatus);
+  const fetchScoreRanges = useCreditScoreStore((s) => s.fetchScoreRanges);
+
+  useEffect(() => {
+    fetchCreditScore();
+    fetchScoreRanges();
+  }, [fetchCreditScore, fetchScoreRanges]);
+
+  // Rango activo del usuario
+  const activeRange =
+    scoreRanges && scoreRanges.length > 0 && creditScore
+      ? scoreRanges.find(
+          (r: ScoreRange) => creditScore.score >= r.minScore && creditScore.score <= r.maxScore,
+        ) ?? null
+      : null;
+
+  // Loading
+  const isLoading =
+    status === 'idle' || status === 'pending' || rangesStatus === 'idle' || rangesStatus === 'pending';
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-4 w-28" />
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-3">
+          <Skeleton className="h-24 w-40 rounded" />
+          <Skeleton className="h-4 w-32" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Sin datos
+  if (!creditScore) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-neutral-600">
+            <Shield className="w-5 h-5" />
+            Historial Crediticio
+          </CardTitle>
+          <CardDescription>
+            Tu score se calculará después de tu primera solicitud.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  // Cálculos
+  const rangeLabel = activeRange?.label ?? 'Sin categoría';
+  const rangeColor = activeRange?.color ?? '#64748B';
+
+  const globalMin =
+    scoreRanges && scoreRanges.length > 0
+      ? Math.min(...scoreRanges.map((r) => r.minScore))
+      : 0;
+  const globalMax =
+    scoreRanges && scoreRanges.length > 0
+      ? Math.max(...scoreRanges.map((r) => r.maxScore))
+      : 1000;
+  const totalSpan = globalMax - globalMin || 1;
+
+  // Valor normalizado 0-1 para el gauge
+  const gaugeValue = Math.min(1, Math.max(0, (creditScore.score - globalMin) / totalSpan));
+
+  // Labels del gauge (los 3 rangos principales)
+  const gaugeLabels =
+    scoreRanges && scoreRanges.length >= 3
+      ? scoreRanges
+          .sort((a, b) => a.displayOrder - b.displayOrder)
+          .map((r) => r.label)
+          .slice(0, 3)
+      : ['Bajo', 'Medio', 'Alto'];
+
+  const updatedDate = new Date(creditScore.updatedAt).toLocaleDateString('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>
-          <span className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
-            Tu Reputación Crediticia
-          </span>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="w-5 h-5 text-primary" />
+          Historial Crediticio
         </CardTitle>
-        <CardDescription className="flex items-center gap-2">
-          Powered by
-          <span className="font-semibold text-foreground">Sentinel</span>
-        </CardDescription>
+        <CardDescription>Powered by Sentinel</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Velocímetro */}
-        <div className="flex flex-col items-center">
-          <div className="relative w-40 h-24">
-            <svg viewBox="0 0 100 55" className="w-full h-full">
-              {/* Track */}
-              <path
-                d="M 5 50 A 45 45 0 0 1 95 50"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="8"
-                strokeLinecap="round"
-                className="text-neutral-100"
-              />
-              {/* Progress */}
-              <path
-                d="M 5 50 A 45 45 0 0 1 95 50"
-                fill="none"
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray={`${circumference}`}
-                strokeDashoffset={`${offset}`}
-                className={scoreStyle.ring}
-              />
-            </svg>
-            {/* Número central */}
-            <div className="absolute inset-0 flex flex-col items-center justify-end pb-1">
-              <span className={`text-3xl font-bold ${scoreStyle.text}`}>{score.value}</span>
-              <span className="text-[9px] text-muted-foreground">de {score.maxValue}</span>
-            </div>
-          </div>
-
-          {/* Badge de categoría */}
-          <div className={`rounded-full px-3 py-1 mt-2 ${scoreStyle.bg}`}>
-            <span className={`text-xs font-semibold ${scoreStyle.text} flex items-center gap-1`}>
-              {score.trend === 'up' && <TrendingUp className="w-3 h-3" />}
-              {scoreStyle.label}
-            </span>
-          </div>
+      <CardContent className="flex flex-col items-center gap-2">
+        {/* Gauge semicircular reutilizable */}
+        <div className="w-full max-w-[150px]">
+          <ScoreGauge value={gaugeValue} labels={gaugeLabels} />
         </div>
 
-        {/* Escala */}
-        <div className="flex justify-between text-[9px] text-muted-foreground px-2">
-          <span>0</span>
-          <span className="text-error-500">Bajo</span>
-          <span className="text-warning-500">Regular</span>
-          <span className="text-accent-700">Bueno</span>
-          <span className="text-success-600">Excelente</span>
-          <span>999</span>
+        {/* Score + label */}
+        <div className="text-center -mt-2">
+          <p className="text-2xl font-extrabold" style={{ color: rangeColor }}>
+            {creditScore.score}
+          </p>
+          <p className="text-[11px] font-medium" style={{ color: rangeColor }}>
+            {rangeLabel}
+          </p>
         </div>
 
-        {/* Última actualización */}
-        <p className="text-center text-[10px] text-muted-foreground">
-          Actualizado:{' '}
-          {new Date(score.lastUpdated).toLocaleDateString('es-PE', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-          })}
+        {/* Fecha */}
+        <p className="text-[10px] text-muted-foreground">
+          Actualizado: {updatedDate}
         </p>
       </CardContent>
     </Card>
