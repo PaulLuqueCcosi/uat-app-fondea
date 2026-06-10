@@ -34,10 +34,11 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Columna izquierda (2/3) */}
           <div className="lg:col-span-2 flex flex-col gap-6">
-            {/* 4. Pasaporte Financiero + Score lado a lado */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 4. Pasaporte Financiero + Score + Referidos */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FinancialPassport />
               <CreditScore />
+              <ReferralProgram />
             </div>
 
             {/* 6. Calculadora: Tu Próximo Crédito */}
@@ -56,9 +57,6 @@ export default async function DashboardPage() {
             <Suspense fallback={<ProgressBar.Skeleton />}>
               <ProgressBar />
             </Suspense>
-
-            {/* 9. Programa de Referidos */}
-            <ReferralProgram />
 
             {/* 10. Últimas solicitudes */}
             <Suspense fallback={<Applications.Skeleton />}>

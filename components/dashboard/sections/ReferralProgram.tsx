@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, Copy, Check, Share2 } from 'lucide-react';
+import Link from 'next/link';
+import { Users, Copy, Check, MessageCircle, ChevronRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 
 /**
- * Programa de Referidos — Banner para compartir enlace.
- * Código único del usuario + botón copiar/compartir.
+ * Programa de Referidos — Card compacta para el dashboard.
+ * Muestra el código, botón de WhatsApp y link a la página de detalle.
  *
- * TODO: Conectar con sistema real de referidos y puntaje.
+ * TODO: Conectar con sistema real de referidos.
  */
 
 // Mock
@@ -26,82 +26,78 @@ export function ReferralProgram() {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(mockReferral.link);
+    navigator.clipboard.writeText(mockReferral.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShareWhatsApp = () => {
     const message = encodeURIComponent(
-      `¡Solicita tu préstamo en FONDEA! Usa mi código ${mockReferral.code} y ambos ganamos puntos. ${mockReferral.link}`
+      `¡Solicita tu préstamo en FONDEA! Usa mi código ${mockReferral.code} y ambos ganamos puntos para el Pasaporte Financiero. ${mockReferral.link}`
     );
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   return (
     <Card className="border-accent-200 bg-accent-50/30">
-      <CardHeader>
-        <CardTitle>
-          <span className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-accent-800" />
-            Programa de Referidos
-          </span>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Users className="w-4 h-4 text-accent-800" />
+          Referidos
         </CardTitle>
-        <CardDescription>
-          Gana <span className="font-semibold text-accent-800">S/ {mockReferral.pointsPerReferral}</span> en puntos por cada amigo que pague puntual su primera cuota
+        <CardDescription className="text-[11px]">
+          Gana <span className="font-semibold text-accent-800">{mockReferral.pointsPerReferral} puntos</span> para tu Pasaporte Financiero por cada amigo
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {/* Código */}
-        <div className="rounded-lg bg-white border border-accent-200 p-3">
-          <p className="text-[10px] text-muted-foreground mb-1">Tu código único</p>
-          <div className="flex items-center justify-between gap-2">
-            <code className="text-lg font-bold text-accent-900 tracking-wider">
-              {mockReferral.code}
-            </code>
+        <div className="flex items-center gap-2 rounded-md bg-white border border-accent-200 px-2.5 py-2">
+          <code className="text-sm font-bold text-accent-900 tracking-wider flex-1">
+            {mockReferral.code}
+          </code>
+          <button
+            onClick={handleCopy}
+            className="p-1 rounded hover:bg-accent-100 transition-colors"
+            title="Copiar código"
+          >
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-success-600" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+            )}
+          </button>
+        </div>
+
+        {/* Stats mini */}
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+          <span><span className="font-semibold text-foreground">{mockReferral.referralsCount}</span> amigos</span>
+          <span>·</span>
+          <span><span className="font-semibold text-accent-800">{mockReferral.pointsEarned}</span> puntos</span>
+        </div>
+
+        {/* Acciones */}
+        <div className="flex flex-col gap-1.5">
+          <Button
+            size="sm"
+            className="w-full gap-1.5 bg-[#25D366] hover:bg-[#1DA851] text-white text-[11px]"
+            onClick={handleShareWhatsApp}
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            Compartir por WhatsApp
+          </Button>
+
+          <Link href="/dashboard/referidos">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={handleCopy}
-              className="gap-1.5 shrink-0"
+              className="w-full gap-1 text-[11px] text-muted-foreground hover:text-foreground"
             >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-success-600" />
-                  Copiado
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  Copiar enlace
-                </>
-              )}
+              Más detalles
+              <ChevronRight className="w-3.5 h-3.5" />
             </Button>
-          </div>
+          </Link>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg bg-white border border-border p-3 text-center">
-            <p className="text-lg font-bold text-foreground">{mockReferral.referralsCount}</p>
-            <p className="text-[10px] text-muted-foreground">Amigos referidos</p>
-          </div>
-          <div className="rounded-lg bg-white border border-border p-3 text-center">
-            <p className="text-lg font-bold text-accent-800">{mockReferral.pointsEarned} pts</p>
-            <p className="text-[10px] text-muted-foreground">Puntos ganados</p>
-          </div>
-        </div>
-
-        {/* Compartir por WhatsApp */}
-        <Button
-          variant="outline"
-          className="w-full gap-2 border-accent-300 text-accent-900 hover:bg-accent-100"
-          onClick={handleShareWhatsApp}
-        >
-          <Share2 className="w-4 h-4" />
-          Compartir por WhatsApp
-        </Button>
       </CardContent>
     </Card>
   );
