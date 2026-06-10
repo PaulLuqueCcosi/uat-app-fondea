@@ -10,5 +10,5 @@ export const logtoConfig: LogtoNextConfig = {
   
   // Configuraciones adicionales para mejor manejo de sesiones
   resources: process.env.LOGTO_API_RESOURCE ? [process.env.LOGTO_API_RESOURCE] : undefined,
-  scopes: ['openid', 'profile', 'email', 'phone'],
+  scopes: ['openid', 'profile', 'email', 'phone', 'identities'],
 };
