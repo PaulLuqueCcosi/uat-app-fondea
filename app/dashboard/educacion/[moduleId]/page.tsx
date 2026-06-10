@@ -29,12 +29,14 @@ function MascotBanner({ mascot }: { mascot: Mascot }) {
   const isBuho = mascot === 'buho';
   return (
     <div className={`flex items-center gap-3 rounded-lg px-4 py-3 ${isBuho ? 'bg-primary/5 border border-primary/10' : 'bg-accent-50 border border-accent-200'}`}>
-      <span className="text-2xl" aria-hidden="true">
-        {isBuho ? '🦉' : '🐿️'}
-      </span>
+      <img
+        src={isBuho ? '/mascotas/Fondi_pet.png' : '/mascotas/Fondea_pet.png'}
+        alt={isBuho ? 'Fondi' : 'Fondea'}
+        className="w-10 h-10 object-contain"
+      />
       <div>
         <p className={`text-sm font-semibold ${isBuho ? 'text-primary-700' : 'text-accent-800'}`}>
-          {isBuho ? 'El Búho Maestro' : 'La Ardilla Asistente'}
+          {isBuho ? 'Fondi — El Búho Maestro' : 'Fondea — La Ardilla Asistente'}
         </p>
         <p className="text-xs text-muted-foreground">
           {isBuho
@@ -106,13 +108,29 @@ export default async function EducacionModulePage({
             </Badge>
           )}
         </div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground leading-tight">
-          {mod.title}
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-prose">
-          {mod.description}
-        </p>
-        <MascotBanner mascot={mod.mascot} />
+
+        {/* Título + Mascota lado a lado */}
+        <div className="flex items-start gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground leading-tight">
+              {mod.title}
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-prose mt-2">
+              {mod.description}
+            </p>
+          </div>
+          {/* Mascota alineada con el título */}
+          <div className="shrink-0 hidden sm:block">
+            <img
+              src={mod.mascot === 'buho' ? '/mascotas/Fondi_pet.png' : '/mascotas/Fondea_pet.png'}
+              alt={mod.mascot === 'buho' ? 'Fondi' : 'Fondea'}
+              className="w-20 h-20 object-contain"
+            />
+            <p className="text-[10px] text-center text-primary mt-1">
+              {mod.mascot === 'buho' ? 'Fondi' : 'Fondea'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* ═══ 2 COLUMNAS ═══ */}
@@ -274,36 +292,6 @@ export default async function EducacionModulePage({
                       Descargar gratis
                     </Button>
                   </a>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Siguiente módulo */}
-            {nextModule && (
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="pt-4">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2">
-                    Siguiente módulo
-                  </p>
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-lg" aria-hidden="true">
-                      {nextModule.mascot === 'buho' ? '🦉' : '🐿️'}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-foreground leading-tight">
-                        {nextModule.title}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">
-                        {nextModule.description}
-                      </p>
-                    </div>
-                  </div>
-                  <Link href={`/dashboard/educacion/${nextModule.id}`} className="block">
-                    <Button variant="outline" size="sm" className="w-full gap-2">
-                      Continuar aprendiendo
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Button>
-                  </Link>
                 </CardContent>
               </Card>
             )}

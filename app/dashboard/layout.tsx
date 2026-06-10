@@ -2,6 +2,7 @@ import { requireValidSession, performSignOut } from '@/app/actions/auth.actions'
 import { isExpedienteComplete } from '@/app/actions/expediente-summary.actions';
 import { AppSidebar } from '@/components/dashboard/AppSidebar';
 import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
+import { WhatsAppButton } from '@/components/dashboard/WhatsAppButton';
 import { AppBackground } from '@/components/ui/app-background';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 
@@ -32,6 +33,9 @@ export default async function DashboardLayout({
             {children}
           </SidebarInset>
         </div>
+
+        {/* Botón flotante de WhatsApp — Soporte */}
+        <WhatsAppButton />
       </div>
     </SidebarProvider>
   );

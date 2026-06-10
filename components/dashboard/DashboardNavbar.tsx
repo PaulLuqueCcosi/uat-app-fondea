@@ -9,6 +9,7 @@ import {
   User,
   CreditCard,
   LifeBuoy,
+  Bell,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -144,8 +145,18 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
         )}
       </div>
 
-      {/* Derecha: Usuario */}
+      {/* Derecha: Notificaciones + Usuario */}
       <div className="flex items-center gap-1">
+        {/* Campana de notificaciones */}
+        <button
+          className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted transition-colors"
+          aria-label="Notificaciones"
+        >
+          <Bell className="w-5 h-5 text-muted-foreground" />
+          {/* Indicador de notificación sin leer */}
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error-500" />
+        </button>
+
         <DropdownMenu>
           <DropdownMenuTrigger
             className="flex items-center gap-2.5 rounded-full p-1 pr-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
