@@ -9,6 +9,7 @@ export * from './labor';
 export * from './economic';
 export * from './address';
 export * from './bank-account';
+export * from './credit-bureau';
 
 // ─── Shared / App-level constants ────────────────────────────────────────────
 

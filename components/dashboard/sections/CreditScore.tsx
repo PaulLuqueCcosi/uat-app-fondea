@@ -2,10 +2,11 @@
 
 import { useEffect } from 'react';
 import { Shield } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCreditScoreStore } from '@/lib/stores/credit-score-store';
 import { ScoreGauge } from '@/components/credits';
+import { CREDIT_BUREAU } from '@/lib/constants';
 import type { ScoreRange } from '@/lib/types';
 
 /**
@@ -109,7 +110,17 @@ export function CreditScore() {
           <Shield className="w-5 h-5 text-primary" />
           Historial Crediticio
         </CardTitle>
-        <CardDescription>Powered by Sentinel</CardDescription>
+        <CardDescription>
+          Powered by <span className="font-semibold text-foreground">{CREDIT_BUREAU.name}</span>
+        </CardDescription>
+        <CardAction>
+          <img
+            src={CREDIT_BUREAU.logoUrl}
+            alt={CREDIT_BUREAU.name}
+            width={CREDIT_BUREAU.logoWidth}
+            height={CREDIT_BUREAU.logoHeight}
+          />
+        </CardAction>
       </CardHeader>
 
       <CardContent className="flex flex-col items-center gap-2">
