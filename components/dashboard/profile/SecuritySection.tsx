@@ -7,6 +7,7 @@ import {
   Trash2,
   Unlink,
   Pencil,
+  Plus,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,8 +39,8 @@ export function SecuritySection({ security }: SecuritySectionProps) {
           </CardTitle>
           <CardAction>
             <Button variant="outline" size="sm" className="gap-1.5">
-              <Pencil className="w-3.5 h-3.5" />
-              Editar
+              {security.hasPassword ? <Pencil className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+              {security.hasPassword ? 'Editar' : 'Agregar'}
             </Button>
           </CardAction>
         </CardHeader>

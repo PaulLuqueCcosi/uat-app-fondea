@@ -44,15 +44,15 @@ export function ProfileContent({ profile, contact, security }: ProfileContentPro
         <ProfileField
           icon={<Mail className="w-4 h-4 text-primary" />}
           label="Correo electrónico"
-          value={contact.email || '—'}
-          action={<EditEmailDialog currentEmail={contact.email || ''} />}
+          value={contact.email || 'Sin correo registrado'}
+          action={<EditEmailDialog currentEmail={contact.email || ''} hasPassword={security.hasPassword} mode={contact.email ? 'edit' : 'add'} />}
         />
 
         <ProfileField
           icon={<Phone className="w-4 h-4 text-primary" />}
           label="Número de celular"
-          value={contact.phone || '—'}
-          action={<EditPhoneDialog currentPhone={contact.phone || ''} />}
+          value={contact.phone || 'Sin número registrado'}
+          action={<EditPhoneDialog currentPhone={contact.phone || ''} mode={contact.phone ? 'edit' : 'add'} />}
         />
       </div>
 

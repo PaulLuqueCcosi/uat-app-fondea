@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { getUserProfile, getUserContact, getUserSecurity } from '@/lib/user/get-user-profile';
+import { getFullUserProfile } from '@/lib/user/get-user-profile';
 import { PageTitle } from '@/components/ui/page-title';
 import { ProfileContent } from '@/components/dashboard/profile/ProfileContent';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,13 +8,19 @@ import { Card, CardContent } from '@/components/ui/card';
 export const dynamic = 'force-dynamic';
 
 async function ProfileLoader() {
-  const [profile, contact, security] = await Promise.all([
-    getUserProfile(),
-    getUserContact(),
-    getUserSecurity(),
-  ]);
+  const data = await getFullUserProfile();
 
-  return <ProfileContent profile={profile} contact={contact} security={security} />;
+  if (!data) {
+    return (
+      <Card>
+        <CardContent className="pt-4">
+          <p className="text-sm text-error-700">No se pudo obtener información del usuario</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return <ProfileContent profile={data.profile} contact={data.contact} security={data.security} />;
 }
 
 function ProfileSkeleton() {

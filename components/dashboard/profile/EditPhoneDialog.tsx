@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Pencil, Loader2 } from 'lucide-react';
+import { Pencil, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,9 +25,10 @@ import { updatePhone } from '@/lib/user/actions';
 
 interface EditPhoneDialogProps {
   currentPhone: string;
+  mode?: 'edit' | 'add';
 }
 
-export function EditPhoneDialog({ currentPhone }: EditPhoneDialogProps) {
+export function EditPhoneDialog({ currentPhone, mode = 'edit' }: EditPhoneDialogProps) {
   const [open, setOpen] = useState(false);
   const [newPhone, setNewPhone] = useState('');
   const [saving, setSaving] = useState(false);
@@ -42,8 +43,8 @@ export function EditPhoneDialog({ currentPhone }: EditPhoneDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="outline" size="sm" className="gap-1.5" />}>
-        <Pencil className="w-3.5 h-3.5" />
-        Editar
+        {mode === 'add' ? <Plus className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
+        {mode === 'add' ? 'Agregar' : 'Editar'}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

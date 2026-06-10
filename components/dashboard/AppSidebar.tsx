@@ -32,13 +32,13 @@ import {
 const mainNav = [
   { path: '/dashboard', label: 'Inicio', icon: Home },
   { path: '/dashboard/educacion', label: 'Fondea Aprende', icon: GraduationCap },
+  { path: '/dashboard/mi-perfil', label: 'Mi Perfil', icon: User },
 ];
 
 const devNav = [
   { path: '/dashboard/pagar', label: 'Pagar Cuota', icon: DollarSign },
   { path: '/dashboard/creditos', label: 'Mis Créditos', icon: CreditCard },
   { path: '/dashboard/pagos', label: 'Historial de Pagos', icon: History },
-  { path: '/dashboard/mi-perfil', label: 'Mi Perfil', icon: User },
   { path: '/dashboard/mi-expediente', label: 'Mi Expediente', icon: FileText },
   { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
   { path: '/dashboard/dev-tools', label: 'Dev Tools', icon: Terminal },

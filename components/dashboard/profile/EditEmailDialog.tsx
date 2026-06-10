@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Pencil, Loader2, Mail, ShieldCheck, KeyRound } from 'lucide-react';
+import { Pencil, Loader2, Mail, ShieldCheck, KeyRound, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,9 +31,10 @@ type Step = 'verify-identity' | 'new-email' | 'verify-code' | 'success';
 interface EditEmailDialogProps {
   currentEmail: string;
   hasPassword: boolean;
+  mode?: 'edit' | 'add';
 }
 
-export function EditEmailDialog({ currentEmail, hasPassword }: EditEmailDialogProps) {
+export function EditEmailDialog({ currentEmail, hasPassword, mode = 'edit' }: EditEmailDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>('verify-identity');
   const [password, setPassword] = useState('');
@@ -86,8 +87,8 @@ export function EditEmailDialog({ currentEmail, hasPassword }: EditEmailDialogPr
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={<Button variant="outline" size="sm" className="gap-1.5" />}>
-        <Pencil className="w-3.5 h-3.5" />
-        Editar
+        {mode === 'add' ? <Plus className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
+        {mode === 'add' ? 'Agregar' : 'Editar'}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         {/* Step 1: Verificar identidad */}

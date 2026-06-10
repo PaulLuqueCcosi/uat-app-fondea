@@ -1,21 +1,36 @@
+import { getLogtoContext } from '@logto/next/server-actions';
+import { logtoConfig } from '@/app/logto';
+
 /**
- * Obtiene el nombre del usuario.
- *
- * HOY: mock.
- * MAÑANA: Logto, backend, Zustand, lo que sea. Solo se cambia aquí.
+ * Obtiene nombre y email del usuario autenticado desde Logto.
+ * Una sola llamada a getLogtoContext para evitar duplicar la operación.
  */
-export async function getUserName(): Promise<string | null> {
-  // TODO: reemplazar por la fuente real
-  return 'Mario Perez';
+export async function getUserInfo(): Promise<{ name: string | null; email: string | null }> {
+  const { isAuthenticated, claims } = await getLogtoContext(logtoConfig);
+
+  if (!isAuthenticated || !claims) {
+    return { name: null, email: null };
+  }
+
+  return {
+    name: claims.name || claims.username || null,
+    email: claims.email || null,
+  };
 }
 
 /**
- * Obtiene el email del usuario.
- *
- * HOY: mock.
- * MAÑANA: misma fuente que getUserName. Solo se cambia aquí.
+ * Obtiene el nombre del usuario desde Logto.
+ * Usa los claims del token: name > username > null.
+ */
+export async function getUserName(): Promise<string | null> {
+  const { name } = await getUserInfo();
+  return name;
+}
+
+/**
+ * Obtiene el email del usuario desde Logto.
  */
 export async function getUserEmail(): Promise<string | null> {
-  // TODO: reemplazar por la fuente real
-  return 'mario.perez@gmail.com';
+  const { email } = await getUserInfo();
+  return email;
 }

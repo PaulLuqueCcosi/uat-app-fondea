@@ -1,6 +1,6 @@
 import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
 import { isExpedienteComplete } from '@/app/actions/expediente-summary.actions';
-import { getUserName, getUserEmail } from '@/lib/user/get-user-name';
+import { getUserInfo } from '@/lib/user/get-user-name';
 import { AppSidebar } from '@/components/dashboard/AppSidebar';
 import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
 import { WhatsAppButton } from '@/components/dashboard/WhatsAppButton';
@@ -19,16 +19,15 @@ export default async function DashboardLayout({
   // Validar sesión (seguridad — redirige si no hay auth)
   await requireValidSession();
 
-  // Obtener datos del usuario desde las funciones abstractas
-  const [userName, userEmail, profileComplete] = await Promise.all([
-    getUserName(),
-    getUserEmail(),
+  // Obtener datos del usuario desde Logto
+  const [userInfo, profileComplete] = await Promise.all([
+    getUserInfo(),
     isExpedienteComplete(),
   ]);
 
   const user = {
-    name: userName || 'Usuario',
-    email: userEmail || '',
+    name: userInfo.name || 'Usuario',
+    email: userInfo.email || '',
   };
 
   return (
