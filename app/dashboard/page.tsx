@@ -4,7 +4,7 @@ import { Header } from '@/components/dashboard/sections/Header';
 import { ProgressBar } from '@/components/dashboard/sections/ProgressBar';
 import { Applications } from '@/components/dashboard/sections/Applications';
 import { NudgeAlert } from '@/components/dashboard/sections/NudgeAlert';
-import { ActiveLoanCard } from '@/components/dashboard/sections/ActiveLoanCard';
+import { ActiveLoanCardServer } from '@/components/dashboard/sections/ActiveLoanCardServer';
 import { FinancialPassport } from '@/components/dashboard/sections/FinancialPassport';
 import { CreditScore } from '@/components/dashboard/sections/CreditScore';
 import { CalculatorPreview } from '@/components/dashboard/sections/CalculatorPreview';
@@ -28,7 +28,7 @@ export default async function DashboardPage() {
         <NudgeAlert />
 
         {/* 3. Tu Préstamo Actual — El Núcleo (ancho completo, destaca) */}
-        <ActiveLoanCard />
+        <ActiveLoanCardServer />
 
         {/* Layout 2 columnas: izq principal / der secundario */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
