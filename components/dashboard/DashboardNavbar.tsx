@@ -32,7 +32,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import type { User as UserType } from '@/lib/types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -82,7 +81,7 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface DashboardNavbarProps {
-  user: UserType;
+  user: { name: string; email: string };
   onSignOut: () => Promise<void>;
 }
 
@@ -100,7 +99,7 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
   };
 
   const initials = getInitials(user.name);
-  const subtitle = user.email || user.phone || '';
+  const subtitle = user.email || '';
   const breadcrumbs = getBreadcrumbs(pathname);
 
   return (

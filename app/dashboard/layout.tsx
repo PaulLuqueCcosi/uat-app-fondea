@@ -1,5 +1,6 @@
 import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
 import { isExpedienteComplete } from '@/app/actions/expediente-summary.actions';
+import { getUserName, getUserEmail } from '@/lib/user/get-user-name';
 import { AppSidebar } from '@/components/dashboard/AppSidebar';
 import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
 import { WhatsAppButton } from '@/components/dashboard/WhatsAppButton';
@@ -15,8 +16,20 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireValidSession();
-  const profileComplete = await isExpedienteComplete();
+  // Validar sesión (seguridad — redirige si no hay auth)
+  await requireValidSession();
+
+  // Obtener datos del usuario desde las funciones abstractas
+  const [userName, userEmail, profileComplete] = await Promise.all([
+    getUserName(),
+    getUserEmail(),
+    isExpedienteComplete(),
+  ]);
+
+  const user = {
+    name: userName || 'Usuario',
+    email: userEmail || '',
+  };
 
   return (
     <SidebarProvider>

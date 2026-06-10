@@ -1,20 +1,20 @@
 import { Skeleton } from '@/components/ui/skeleton';
-import { getUser } from '@/app/actions/auth.actions';
+import { getUserName } from '@/lib/user/get-user-name';
+import { getUserSubtitle } from '@/lib/user/get-user-subtitle';
 import { HeaderActions } from './HeaderActions';
-import { HeaderSubtitle } from './HeaderSubtitle';
 import { HeaderScore } from './HeaderScore';
+import { DashboardGreeting } from './DashboardGreeting';
 
 async function HeaderContent() {
-  const user = await getUser();
-  const userName = user?.name || 'Usuario';
+  const [name, subtitle] = await Promise.all([
+    getUserName(),
+    getUserSubtitle(),
+  ]);
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-primary-500 mb-1">
-          Hola, {userName}
-        </h1>
-        <HeaderSubtitle />
+        <DashboardGreeting name={name} subtitle={subtitle} />
         <HeaderScore />
       </div>
       <HeaderActions />
