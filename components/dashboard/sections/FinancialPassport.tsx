@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, Lock, ChevronRight } from 'lucide-react';
+import { Award, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,13 +19,14 @@ interface Level {
   color: string;
   bgColor: string;
   borderColor: string;
+  image: string;
 }
 
 const levels: Level[] = [
-  { name: 'Bronce', minPoints: 0, maxAmount: 200, color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
-  { name: 'Plata', minPoints: 100, maxAmount: 350, color: 'text-neutral-600', bgColor: 'bg-neutral-50', borderColor: 'border-neutral-300' },
-  { name: 'Oro', minPoints: 250, maxAmount: 600, color: 'text-yellow-600', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-300' },
-  { name: 'Platino', minPoints: 500, maxAmount: 1000, color: 'text-primary-700', bgColor: 'bg-primary-50', borderColor: 'border-primary-200' },
+  { name: 'Bronce', minPoints: 0, maxAmount: 200, color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200', image: '/levels/Bronze.png' },
+  { name: 'Plata', minPoints: 100, maxAmount: 350, color: 'text-neutral-600', bgColor: 'bg-neutral-50', borderColor: 'border-neutral-300', image: '/levels/Silver.png' },
+  { name: 'Oro', minPoints: 250, maxAmount: 600, color: 'text-yellow-600', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-300', image: '/levels/Gold.png' },
+  { name: 'Master', minPoints: 500, maxAmount: 1000, color: 'text-primary-700', bgColor: 'bg-primary-50', borderColor: 'border-primary-200', image: '/levels/Master.png' },
 ];
 
 // Mock: el usuario está en Bronce con 65 puntos
@@ -59,7 +60,7 @@ export function FinancialPassport() {
         <div className={`rounded-lg border p-3 ${current.bgColor} ${current.borderColor}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Award className={`w-5 h-5 ${current.color}`} />
+              <img src={current.image} alt={current.name} className="w-8 h-8 object-contain" />
               <div>
                 <p className={`text-sm font-bold ${current.color}`}>Nivel {current.name}</p>
                 <p className="text-[10px] text-muted-foreground">Hasta S/ {current.maxAmount}</p>
@@ -93,17 +94,17 @@ export function FinancialPassport() {
           {levels.map((level, i) => (
             <div key={level.name} className="flex flex-col items-center gap-1">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 overflow-hidden ${
                   i <= currentLevel
                     ? `${level.bgColor} ${level.borderColor}`
-                    : 'bg-neutral-50 border-neutral-200'
+                    : 'bg-neutral-50 border-neutral-200 opacity-40'
                 }`}
               >
-                {i <= currentLevel ? (
-                  <Award className={`w-4 h-4 ${level.color}`} />
-                ) : (
-                  <Lock className="w-3 h-3 text-neutral-400" />
-                )}
+                <img
+                  src={level.image}
+                  alt={level.name}
+                  className="w-6 h-6 object-contain"
+                />
               </div>
               <span className={`text-[9px] font-medium ${i <= currentLevel ? level.color : 'text-neutral-400'}`}>
                 {level.name}

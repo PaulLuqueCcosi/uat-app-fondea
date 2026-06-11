@@ -5,7 +5,7 @@ export const mockReferralSummary: ReferralSummary = {
   link: 'https://fondea.pe/r/MARIO2026',
   totalReferrals: 2,
   completedReferrals: 2,
-  totalPoints: 30,
+  totalPointsEarned: 30,
   pointsPerReferral: 15,
 };
 

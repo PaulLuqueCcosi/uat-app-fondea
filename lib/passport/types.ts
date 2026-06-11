@@ -9,6 +9,8 @@ export interface PassportLevel {
   color: string;
   bgColor: string;
   borderColor: string;
+  /** Ruta de la imagen del nivel en /public/levels/ */
+  image: string;
 }
 
 export interface PassportSummary {

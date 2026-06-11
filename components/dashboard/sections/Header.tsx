@@ -2,7 +2,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getUserName } from '@/lib/user/get-user-name';
 import { getUserSubtitle } from '@/lib/user/get-user-subtitle';
 import { HeaderActions } from './HeaderActions';
-import { HeaderScore } from './HeaderScore';
 import { DashboardGreeting } from './DashboardGreeting';
 
 async function HeaderContent() {
@@ -15,7 +14,6 @@ async function HeaderContent() {
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <DashboardGreeting name={name} subtitle={subtitle} />
-        <HeaderScore />
       </div>
       <HeaderActions />
     </div>

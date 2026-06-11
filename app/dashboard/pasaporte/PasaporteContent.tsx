@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, Lock, TrendingUp, Gift } from 'lucide-react';
+import { Award, TrendingUp, Gift } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { PassportSummary, PointsHistoryEntry } from '@/lib/passport';
@@ -103,15 +103,15 @@ export function PasaporteContent({ summary, history }: PasaporteContentProps) {
                 className={`rounded-lg border p-3 text-center ${
                   i <= currentLevelIndex
                     ? `${level.bgColor} ${level.borderColor}`
-                    : 'bg-neutral-50 border-neutral-200'
+                    : 'bg-neutral-50 border-neutral-200 opacity-50'
                 }`}
               >
                 <div className="flex justify-center mb-1">
-                  {i <= currentLevelIndex ? (
-                    <Award className={`w-6 h-6 ${level.color}`} />
-                  ) : (
-                    <Lock className="w-6 h-6 text-neutral-400" />
-                  )}
+                  <img
+                    src={level.image}
+                    alt={level.name}
+                    className="w-10 h-10 object-contain"
+                  />
                 </div>
                 <p className={`text-sm font-bold ${i <= currentLevelIndex ? level.color : 'text-neutral-400'}`}>
                   {level.name}
