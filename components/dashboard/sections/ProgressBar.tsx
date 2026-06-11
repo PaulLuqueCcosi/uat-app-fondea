@@ -1,4 +1,4 @@
-import { ClipboardList, CheckCircle, ArrowRight } from 'lucide-react';
+import { ClipboardList, CheckCircle, ChevronRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -85,7 +85,7 @@ async function ProgressBarContent() {
           className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
         >
           Ver expediente
-          <ArrowRight className="w-3.5 h-3.5" />
+          <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </CardFooter>
     </Card>

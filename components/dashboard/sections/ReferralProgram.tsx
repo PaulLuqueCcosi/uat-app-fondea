@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Users, Copy, Check, MessageCircle, ChevronRight } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -39,7 +39,7 @@ export function ReferralProgram() {
   };
 
   return (
-    <Card className="border-accent-200 bg-accent-50/30">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Users className="w-4 h-4 text-accent-800" />
@@ -50,7 +50,7 @@ export function ReferralProgram() {
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 flex-1">
         {/* Código */}
         <div className="flex items-center gap-2 rounded-md bg-white border border-accent-200 px-2.5 py-2">
           <code className="text-sm font-bold text-accent-900 tracking-wider flex-1">
@@ -61,11 +61,8 @@ export function ReferralProgram() {
             className="p-1 rounded hover:bg-accent-100 transition-colors"
             title="Copiar código"
           >
-            {copied ? (
-              <Check className="w-3.5 h-3.5 text-success-600" />
-            ) : (
-              <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-            )}
+            <Copy className={`w-3.5 h-3.5 text-muted-foreground ${copied ? 'hidden' : ''}`} />
+            <Check className={`w-3.5 h-3.5 text-success-600 ${copied ? '' : 'hidden'}`} />
           </button>
         </div>
 
@@ -77,28 +74,25 @@ export function ReferralProgram() {
         </div>
 
         {/* Acciones */}
-        <div className="flex flex-col gap-1.5">
-          <Button
-            size="sm"
-            className="w-full gap-1.5 bg-[#25D366] hover:bg-[#1DA851] text-white text-[11px]"
-            onClick={handleShareWhatsApp}
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            Compartir por WhatsApp
-          </Button>
-
-          <Link href="/dashboard/referidos">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full gap-1 text-[11px] text-muted-foreground hover:text-foreground"
-            >
-              Más detalles
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Button>
-          </Link>
-        </div>
+        <Button
+          size="sm"
+          className="w-full gap-1.5 bg-[#25D366] hover:bg-[#1DA851] text-white text-[11px]"
+          onClick={handleShareWhatsApp}
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          Compartir por WhatsApp
+        </Button>
       </CardContent>
+
+      <CardFooter>
+        <Link
+          href="/dashboard/referidos"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+        >
+          Ver detalles
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      </CardFooter>
     </Card>
   );
 }

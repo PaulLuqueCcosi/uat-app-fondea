@@ -7,7 +7,6 @@ import { NudgeAlert } from '@/components/dashboard/sections/NudgeAlert';
 import { ActiveLoanCardServer } from '@/components/dashboard/sections/ActiveLoanCardServer';
 import { FinancialPassport } from '@/components/dashboard/sections/FinancialPassport';
 import { CreditScore } from '@/components/dashboard/sections/CreditScore';
-import { CalculatorPreview } from '@/components/dashboard/sections/CalculatorPreview';
 import { EducationCarousel } from '@/components/dashboard/sections/EducationCarousel';
 import { TransparencyCard } from '@/components/dashboard/sections/TransparencyCard';
 import { ReferralProgram } from '@/components/dashboard/sections/ReferralProgram';
@@ -30,24 +29,21 @@ export default async function DashboardPage() {
         {/* 3. Tu Préstamo Actual — El Núcleo (ancho completo, destaca) */}
         <ActiveLoanCardServer />
 
+        {/* 4. Pasaporte Financiero + Score + Referidos — fila ancho completo */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <FinancialPassport />
+          <CreditScore />
+          <ReferralProgram />
+        </div>
+
         {/* Layout 2 columnas: izq principal / der secundario */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Columna izquierda (2/3) */}
           <div className="lg:col-span-2 flex flex-col gap-6">
-            {/* 4. Pasaporte Financiero + Score + Referidos */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FinancialPassport />
-              <CreditScore />
-              <ReferralProgram />
-            </div>
-
-            {/* 6. Calculadora: Tu Próximo Crédito */}
-            <CalculatorPreview />
-
-            {/* 7. Fondea Aprende — Carrusel horizontal */}
+            {/* 6. Fondea Aprende — Carrusel horizontal */}
             <EducationCarousel />
 
-            {/* 8. Transparencia FONDEA */}
+            {/* 7. Transparencia FONDEA */}
             <TransparencyCard />
           </div>
 
@@ -58,7 +54,7 @@ export default async function DashboardPage() {
               <ProgressBar />
             </Suspense>
 
-            {/* 10. Últimas solicitudes */}
+            {/* Últimas solicitudes */}
             <Suspense fallback={<Applications.Skeleton />}>
               <Applications />
             </Suspense>

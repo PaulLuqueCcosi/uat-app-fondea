@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LogOut,
@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SupportDialog } from './SupportDialog';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface DashboardNavbarProps {
-  user: { name: string; email: string };
+  user: { name: string; email: string; dni?: string | null; id?: string | null };
   onSignOut: () => Promise<void>;
 }
 
@@ -91,6 +92,7 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const handleSignOut = () => {
     startTransition(async () => {
@@ -215,7 +217,7 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem onClick={() => setSupportOpen(true)}>
                 <LifeBuoy className="h-4 w-4" />
                 Soporte
               </DropdownMenuItem>
@@ -235,6 +237,14 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Dialog de soporte */}
+      <SupportDialog
+        open={supportOpen}
+        onOpenChange={setSupportOpen}
+        userDni={user.dni}
+        userId={user.id}
+      />
     </header>
   );
 }

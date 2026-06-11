@@ -1,7 +1,8 @@
 'use client';
 
 import { Award, Lock, ChevronRight } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 /**
@@ -53,7 +54,7 @@ export function FinancialPassport() {
         <CardDescription>Tu nivel determina cuánto puedes solicitar</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1">
         {/* Nivel actual */}
         <div className={`rounded-lg border p-3 ${current.bgColor} ${current.borderColor}`}>
           <div className="flex items-center justify-between">
@@ -111,6 +112,16 @@ export function FinancialPassport() {
           ))}
         </div>
       </CardContent>
+
+      <CardFooter>
+        <Link
+          href="/dashboard/pasaporte"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+        >
+          Ver detalles
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      </CardFooter>
     </Card>
   );
 }

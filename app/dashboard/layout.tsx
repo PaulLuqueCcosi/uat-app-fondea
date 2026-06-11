@@ -1,9 +1,9 @@
 import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
 import { isExpedienteComplete } from '@/app/actions/expediente-summary.actions';
 import { getUserInfo } from '@/lib/user/get-user-name';
+import { getUserSupportData } from '@/lib/user/get-user-support-data';
 import { AppSidebar } from '@/components/dashboard/AppSidebar';
 import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
-import { WhatsAppButton } from '@/components/dashboard/WhatsAppButton';
 import { AppBackground } from '@/components/ui/app-background';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 
@@ -20,14 +20,17 @@ export default async function DashboardLayout({
   await requireValidSession();
 
   // Obtener datos del usuario desde Logto
-  const [userInfo, profileComplete] = await Promise.all([
+  const [userInfo, profileComplete, supportData] = await Promise.all([
     getUserInfo(),
     isExpedienteComplete(),
+    getUserSupportData(),
   ]);
 
   const user = {
     name: userInfo.name || 'Usuario',
     email: userInfo.email || '',
+    dni: supportData.dni,
+    id: supportData.accountId,
   };
 
   return (
@@ -45,9 +48,6 @@ export default async function DashboardLayout({
             {children}
           </SidebarInset>
         </div>
-
-        {/* Botón flotante de WhatsApp — Soporte */}
-        <WhatsAppButton />
       </div>
     </SidebarProvider>
   );

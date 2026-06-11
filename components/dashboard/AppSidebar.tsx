@@ -14,6 +14,8 @@ import {
   DollarSign,
   History,
   CreditCard,
+  Award,
+  Users,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -33,14 +35,16 @@ const mainNav = [
   { path: '/dashboard', label: 'Inicio', icon: Home },
   { path: '/dashboard/educacion', label: 'Fondea Aprende', icon: GraduationCap },
   { path: '/dashboard/mi-perfil', label: 'Mi Perfil', icon: User },
+  { path: '/dashboard/pasaporte', label: 'Pasaporte Financiero', icon: Award },
+  { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
 ];
 
 const devNav = [
+  { path: '/dashboard/referidos', label: 'Referidos', icon: Users },
   { path: '/dashboard/pagar', label: 'Pagar Cuota', icon: DollarSign },
   { path: '/dashboard/creditos', label: 'Mis Créditos', icon: CreditCard },
   { path: '/dashboard/pagos', label: 'Historial de Pagos', icon: History },
   { path: '/dashboard/mi-expediente', label: 'Mi Expediente', icon: FileText },
-  { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
   { path: '/dashboard/dev-tools', label: 'Dev Tools', icon: Terminal },
   { path: '/dashboard/dev-tools/lambda-tester', label: 'Lambda Tester', icon: Zap },
   { path: '/dashboard/settings', label: 'Configuración', icon: Settings },
