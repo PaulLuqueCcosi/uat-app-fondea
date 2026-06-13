@@ -1,4 +1,3 @@
-import { PageHeader } from '@/components/ui/page-header';
 import { PageTitle } from '@/components/ui/page-title';
 import { CalculadoraClient } from '@/components/dashboard/CalculadoraClient';
 
@@ -10,23 +9,14 @@ import { CalculadoraClient } from '@/components/dashboard/CalculadoraClient';
  */
 export default function CalculadoraPage() {
   return (
-    <>
-      <PageHeader
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Calculadora' },
-        ]}
+    <div className="flex flex-1 flex-col p-4 md:p-6 bg-background">
+      <PageTitle
+        title="Simula tu préstamo"
+        description="Configura monto, plazo y cuotas. Compara costos según tu perfil y solicítalo cuando estés listo."
       />
 
-      <div className="flex flex-1 flex-col p-4 md:p-6 bg-background">
-        <PageTitle
-          title="Simula tu préstamo"
-          description="Configura monto, plazo y cuotas. Compara costos según tu perfil y solicítalo cuando estés listo."
-        />
-
-        {/* Client component — maneja detailMode responsivo */}
-        <CalculadoraClient />
-      </div>
-    </>
+      {/* Client component — maneja detailMode responsivo */}
+      <CalculadoraClient />
+    </div>
   );
 }
