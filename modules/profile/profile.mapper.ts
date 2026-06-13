@@ -28,59 +28,78 @@ export function mapFullProfileFromClaims(claims: Record<string, unknown>): FullU
 }
 
 /**
- * Logto claims → UserProfile.
+ * Logto claims/Account API → UserProfile.
+ * Account API devuelve: createdAt (ms), name (string o null), username (prefijo_numero)
+ * Claims devuelven: name, created_at (seconds)
  */
 export function mapProfileFromClaims(claims: Record<string, unknown>): UserProfile {
-  const name = String(claims.name || claims.username || '');
+  const name = String(claims.name || '');
   const nameParts = name.split(' ');
+
+  // createdAt puede ser milisegundos (Account API) o segundos (claims)
+  let createdAt: string | null = null;
+  if (claims.createdAt) {
+    createdAt = new Date(Number(claims.createdAt)).toISOString();
+  } else if (claims.created_at) {
+    createdAt = new Date(Number(claims.created_at) * 1000).toISOString();
+  }
+
+  // Parsear username: "dni_73057755" → { type: "dni", number: "73057755" }
+  const { documentType, documentNumber } = parseUsername(claims.username);
 
   return {
     firstName: nameParts[0] || null,
     secondName: nameParts.length > 2 ? nameParts[1] : null,
     firstLastName: nameParts.length > 2 ? nameParts[2] : (nameParts[1] || null),
     secondLastName: nameParts.length > 3 ? nameParts[3] : null,
-    dni: null, // Logto no tiene DNI — vendrá del backend/expediente
-    dniVerified: false,
-    avatar: claims.picture ? String(claims.picture) : null,
-    createdAt: claims.created_at
-      ? new Date(Number(claims.created_at) * 1000).toISOString()
+    documentType,
+    documentNumber,
+    documentVerified: !!documentNumber,
+    avatar: claims.picture ? String(claims.picture) : (claims.avatar ? String(claims.avatar) : null),
+    createdAt,
+    lastLogin: claims.lastSignInAt
+      ? new Date(Number(claims.lastSignInAt)).toISOString()
       : null,
-    lastLogin: null,
   };
 }
 
 /**
- * Logto claims → UserContact.
+ * Logto claims/Account API → UserContact.
+ * La Account API usa: primaryEmail, primaryPhone
+ * Los claims usan: email, phone_number
  */
 export function mapContactFromClaims(claims: Record<string, unknown>): UserContact {
   return {
-    email: claims.email ? String(claims.email) : null,
-    emailVerified: !!claims.email_verified,
-    phone: claims.phone_number ? String(claims.phone_number) : null,
-    phoneVerified: !!claims.phone_number_verified,
+    email: (claims.primaryEmail || claims.email || null) as string | null,
+    emailVerified: !!claims.email_verified || !!claims.primaryEmail,
+    phone: (claims.primaryPhone || claims.phone_number || null) as string | null,
+    phoneVerified: !!claims.phone_number_verified || !!claims.primaryPhone,
   };
 }
 
 /**
- * Logto claims → UserSecurity.
+ * Logto claims/Account API → UserSecurity.
+ * La Account API devuelve: hasPassword (boolean), identities (object)
  */
 export function mapSecurityFromClaims(claims: Record<string, unknown>): UserSecurity {
   const linkedAccounts: LinkedAccount[] = [];
 
   if (claims.identities && typeof claims.identities === 'object') {
-    const identities = claims.identities as Record<string, { userId?: string; details?: { email?: string } }>;
+    const identities = claims.identities as Record<string, { userId?: string; details?: { email?: string; name?: string } }>;
     for (const [provider, data] of Object.entries(identities)) {
       linkedAccounts.push({
         provider,
-        email: data?.details?.email || String(claims.email || ''),
+        email: data?.details?.email || String(claims.primaryEmail || claims.email || ''),
         connectedAt: '',
       });
     }
   }
 
   return {
-    // Logto no expone si tiene password desde claims — asumimos true si no tiene social login
-    hasPassword: linkedAccounts.length === 0,
+    // Si la Account API devuelve hasPassword, usarlo directamente
+    hasPassword: typeof claims.hasPassword === 'boolean'
+      ? claims.hasPassword
+      : linkedAccounts.length === 0, // fallback heurístico
     linkedAccounts,
   };
 }
@@ -92,8 +111,50 @@ export function mapSummaryFromClaims(claims: Record<string, unknown>): UserSumma
   return {
     id: String(claims.sub || ''),
     name: String(claims.name || claims.username || 'Usuario'),
-    email: String(claims.email || ''),
+    email: String(claims.primaryEmail || claims.email || ''),
     avatar: claims.picture ? String(claims.picture) : null,
     dni: null,
   };
+}
+
+// ── Helpers internos ─────────────────────────────────────────────────────────
+
+/**
+ * Parsea el username con formato "prefijo_numero".
+ * Ejemplos: "dni_73057755", "ce_001234567", "pasaporte_AB123456"
+ */
+function parseUsername(username: unknown): { documentType: string | null; documentNumber: string | null } {
+  if (!username || typeof username !== 'string') {
+    return { documentType: null, documentNumber: null };
+  }
+
+  const underscoreIndex = username.indexOf('_');
+  if (underscoreIndex === -1) {
+    return { documentType: null, documentNumber: null };
+  }
+
+  const type = username.slice(0, underscoreIndex).toLowerCase();
+  const number = username.slice(underscoreIndex + 1);
+
+  if (!type || !number) {
+    return { documentType: null, documentNumber: null };
+  }
+
+  return { documentType: type, documentNumber: number };
+}
+
+/**
+ * Mapa de prefijos a labels legibles para la UI.
+ */
+export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  dni: 'DNI',
+  ce: 'Carné de Extranjería',
+  pasaporte: 'Pasaporte',
+  ptp: 'PTP',
+  ruc: 'RUC',
+};
+
+export function getDocumentLabel(type: string | null): string {
+  if (!type) return 'Documento';
+  return DOCUMENT_TYPE_LABELS[type] ?? type.toUpperCase();
 }

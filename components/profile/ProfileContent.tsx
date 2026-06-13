@@ -7,6 +7,7 @@ import { EditEmailDialog } from './EditEmailDialog';
 import { EditPhoneDialog } from './EditPhoneDialog';
 import { SecuritySection } from './SecuritySection';
 import type { UserProfile, UserContact, UserSecurity } from '@/modules/profile';
+import { getDocumentLabel } from '@/modules/profile';
 
 interface ProfileContentProps {
   profile: UserProfile;
@@ -24,13 +25,16 @@ export function ProfileContent({ profile, contact, security }: ProfileContentPro
         <ProfileField
           icon={<CreditCard className="w-4 h-4 text-primary" />}
           label="Documento de identidad"
-          value={`DNI ${profile.dni || '—'}`}
+          value={profile.documentNumber
+            ? `${getDocumentLabel(profile.documentType)} ${profile.documentNumber}`
+            : 'Sin documento registrado'
+          }
           footer={
             <span className="flex items-center gap-1.5">
               <MessageCircle className="w-3.5 h-3.5 shrink-0" />
-              Para cambiar tu DNI,{' '}
+              Para cambiar tu documento,{' '}
               <a
-                href="https://wa.me/51999999999?text=Hola%2C%20necesito%20solicitar%20un%20cambio%20de%20DNI%20en%20mi%20cuenta%20FONDEA."
+                href="https://wa.me/51999999999?text=Hola%2C%20necesito%20solicitar%20un%20cambio%20de%20documento%20en%20mi%20cuenta%20FONDEA."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary font-medium hover:underline"

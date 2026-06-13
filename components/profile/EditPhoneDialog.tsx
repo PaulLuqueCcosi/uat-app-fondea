@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { updatePhone } from '@/app/actions/profile.actions';
+import { sendPhoneVerificationCode } from '@/app/actions/profile.actions';
 
 interface EditPhoneDialogProps {
   currentPhone: string;
@@ -35,9 +35,12 @@ export function EditPhoneDialog({ currentPhone, mode = 'edit' }: EditPhoneDialog
 
   const handleSave = async () => {
     setSaving(true);
-    await updatePhone(newPhone);
+    const result = await sendPhoneVerificationCode(newPhone);
     setSaving(false);
-    setOpen(false);
+    if (result.success) {
+      // TODO: agregar step de verificar código SMS (igual que email)
+      setOpen(false);
+    }
   };
 
   return (

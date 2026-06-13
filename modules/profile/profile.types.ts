@@ -12,8 +12,9 @@ export interface UserProfile {
   secondName: string | null;
   firstLastName: string | null;
   secondLastName: string | null;
-  dni: string | null;
-  dniVerified: boolean;
+  documentType: string | null;  // 'dni', 'ce', 'pasaporte', etc.
+  documentNumber: string | null;
+  documentVerified: boolean;
   avatar: string | null;
   createdAt: string | null;
   lastLogin: string | null;

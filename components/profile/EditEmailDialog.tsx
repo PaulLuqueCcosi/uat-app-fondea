@@ -15,7 +15,14 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { updateEmail } from '@/app/actions/profile.actions';
+import {
+  verifyIdentity,
+  sendIdentityVerificationCode,
+  verifyIdentityCode,
+  sendEmailVerificationCode,
+  verifyEmailCode,
+  confirmEmailChange,
+} from '@/app/actions/profile.actions';
 
 /**
  * Flujo para cambiar email (alineado con Logto Account API):
@@ -26,7 +33,7 @@ import { updateEmail } from '@/app/actions/profile.actions';
  * Step 4: Confirmación
  */
 
-type Step = 'verify-identity' | 'new-email' | 'verify-code' | 'success';
+type Step = 'verify-identity' | 'verify-identity-code' | 'new-email' | 'verify-code' | 'success';
 
 interface EditEmailDialogProps {
   currentEmail: string;
@@ -38,17 +45,25 @@ export function EditEmailDialog({ currentEmail, hasPassword, mode = 'edit' }: Ed
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>('verify-identity');
   const [password, setPassword] = useState('');
+  const [identityCode, setIdentityCode] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // IDs de verificación que se pasan entre pasos
+  const [identityVerificationId, setIdentityVerificationId] = useState('');
+  const [emailVerificationId, setEmailVerificationId] = useState('');
+
   const reset = () => {
     setStep('verify-identity');
     setPassword('');
+    setIdentityCode('');
     setNewEmail('');
     setCode('');
     setError(null);
+    setIdentityVerificationId('');
+    setEmailVerificationId('');
   };
 
   const handleOpenChange = (value: boolean) => {
@@ -59,28 +74,83 @@ export function EditEmailDialog({ currentEmail, hasPassword, mode = 'edit' }: Ed
   const handleVerifyIdentity = async () => {
     setLoading(true);
     setError(null);
-    // TODO: llamar verifyPassword(password) real
-    await new Promise((r) => setTimeout(r, 800));
-    // Simular éxito
+
+    if (hasPassword) {
+      // Verificar con contraseña
+      const result = await verifyIdentity(password);
+      setLoading(false);
+      if (!result.success) {
+        setError(result.error ?? 'Contraseña incorrecta');
+        return;
+      }
+      setIdentityVerificationId(result.verificationRecordId ?? '');
+      setStep('new-email');
+    } else {
+      // Enviar código al email actual
+      const result = await sendIdentityVerificationCode(currentEmail);
+      setLoading(false);
+      if (!result.success) {
+        setError(result.error ?? 'No se pudo enviar el código');
+        return;
+      }
+      setIdentityVerificationId(result.verificationRecordId ?? '');
+      setStep('verify-identity-code');
+    }
+  };
+
+  const handleVerifyIdentityCode = async () => {
+    setLoading(true);
+    setError(null);
+
+    const result = await verifyIdentityCode(currentEmail, identityVerificationId, identityCode);
     setLoading(false);
+
+    if (!result.success) {
+      setError(result.error ?? 'Código incorrecto');
+      return;
+    }
+
+    setIdentityVerificationId(result.verificationRecordId ?? identityVerificationId);
     setStep('new-email');
   };
 
   const handleSendCode = async () => {
     setLoading(true);
     setError(null);
-    // TODO: llamar a Logto para enviar código al nuevo email
-    await new Promise((r) => setTimeout(r, 800));
+
+    const result = await sendEmailVerificationCode(newEmail);
+
     setLoading(false);
+    if (!result.success) {
+      setError(result.error ?? 'No se pudo enviar el código');
+      return;
+    }
+
+    setEmailVerificationId(result.verificationRecordId ?? '');
     setStep('verify-code');
   };
 
   const handleVerifyCode = async () => {
     setLoading(true);
     setError(null);
-    // TODO: verificar código + actualizar email
-    await updateEmail(newEmail);
+
+    // Paso 1: Verificar el código del nuevo email
+    const verifyResult = await verifyEmailCode(newEmail, emailVerificationId, code);
+    if (!verifyResult.success) {
+      setLoading(false);
+      setError(verifyResult.error ?? 'Código incorrecto');
+      return;
+    }
+
+    // Paso 2: Confirmar el cambio de email con ambos IDs
+    const confirmResult = await confirmEmailChange(newEmail, identityVerificationId, emailVerificationId);
+
     setLoading(false);
+    if (!confirmResult.success) {
+      setError(confirmResult.error ?? 'No se pudo actualizar el correo');
+      return;
+    }
+
     setStep('success');
   };
 
@@ -138,6 +208,55 @@ export function EditEmailDialog({ currentEmail, hasPassword, mode = 'edit' }: Ed
               >
                 {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {hasPassword ? 'Verificar' : 'Enviar código'}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {/* Step 1b: Verificar código enviado al email actual (sin contraseña) */}
+        {step === 'verify-identity-code' && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                Código de verificación
+              </DialogTitle>
+              <DialogDescription>
+                Ingresa el código de 6 dígitos que enviamos a <span className="font-medium">{currentEmail}</span>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="identity-code">Código</Label>
+                <Input
+                  id="identity-code"
+                  value={identityCode}
+                  onChange={(e) => setIdentityCode(e.target.value)}
+                  placeholder="123456"
+                  maxLength={6}
+                  autoFocus
+                  className="text-center text-lg tracking-widest"
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">
+                ¿No recibiste el código?{' '}
+                <button className="text-primary font-medium hover:underline" onClick={handleVerifyIdentity}>
+                  Reenviar
+                </button>
+              </p>
+              {error && <p className="text-xs text-error-600">{error}</p>}
+            </div>
+            <DialogFooter>
+              <DialogClose render={<Button variant="outline" />}>
+                Cancelar
+              </DialogClose>
+              <Button
+                onClick={handleVerifyIdentityCode}
+                disabled={loading || identityCode.length < 6}
+                className="gap-1.5"
+              >
+                {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Verificar
               </Button>
             </DialogFooter>
           </>

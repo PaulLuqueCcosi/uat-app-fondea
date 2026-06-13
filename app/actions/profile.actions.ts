@@ -16,46 +16,82 @@ export async function getProfileSummary() {
   return profileService.getProfileSummary();
 }
 
-// ── Mutaciones ───────────────────────────────────────────────────────────────
+// ── Verificación de identidad ────────────────────────────────────────────────
 
 export async function verifyIdentity(password: string) {
   await requireValidSession();
   return profileActions.verifyIdentity(password);
 }
 
+export async function sendIdentityVerificationCode(email: string) {
+  await requireValidSession();
+  return profileActions.sendIdentityVerificationCode(email);
+}
+
+export async function verifyIdentityCode(email: string, verificationId: string, code: string) {
+  await requireValidSession();
+  return profileActions.verifyIdentityCode(email, verificationId, code);
+}
+
+// ── Email ────────────────────────────────────────────────────────────────────
+
 export async function sendEmailVerificationCode(newEmail: string) {
   await requireValidSession();
   return profileActions.sendEmailVerificationCode(newEmail);
 }
 
-export async function confirmEmailChange(newEmail: string, code: string) {
+export async function verifyEmailCode(newEmail: string, verificationId: string, code: string) {
   await requireValidSession();
-  return profileActions.confirmEmailChange(newEmail, code);
+  return profileActions.verifyEmailCode(newEmail, verificationId, code);
 }
+
+export async function confirmEmailChange(
+  newEmail: string,
+  identityVerificationId: string,
+  emailVerificationId: string,
+) {
+  await requireValidSession();
+  return profileActions.confirmEmailChange(newEmail, identityVerificationId, emailVerificationId);
+}
+
+// ── Teléfono ─────────────────────────────────────────────────────────────────
 
 export async function sendPhoneVerificationCode(newPhone: string) {
   await requireValidSession();
   return profileActions.sendPhoneVerificationCode(newPhone);
 }
 
-export async function confirmPhoneChange(newPhone: string, code: string) {
+export async function verifyPhoneCode(newPhone: string, verificationId: string, code: string) {
   await requireValidSession();
-  return profileActions.confirmPhoneChange(newPhone, code);
+  return profileActions.verifyPhoneCode(newPhone, verificationId, code);
 }
 
-export async function changePassword(currentPassword: string, newPassword: string) {
+export async function confirmPhoneChange(
+  newPhone: string,
+  identityVerificationId: string,
+  phoneVerificationId: string,
+) {
   await requireValidSession();
-  return profileActions.changePassword(currentPassword, newPassword);
+  return profileActions.confirmPhoneChange(newPhone, identityVerificationId, phoneVerificationId);
 }
 
-export async function createPassword(newPassword: string) {
+// ── Contraseña ───────────────────────────────────────────────────────────────
+
+export async function changePassword(newPassword: string, verificationRecordId: string) {
   await requireValidSession();
-  return profileActions.createPassword(newPassword);
+  return profileActions.changePassword(newPassword, verificationRecordId);
 }
 
-export async function unlinkGoogle() {
+export async function createPassword(newPassword: string, verificationRecordId: string) {
   await requireValidSession();
-  return profileActions.unlinkGoogle();
+  return profileActions.createPassword(newPassword, verificationRecordId);
+}
+
+// ── Google / Social ──────────────────────────────────────────────────────────
+
+export async function unlinkGoogle(verificationRecordId: string) {
+  await requireValidSession();
+  return profileActions.unlinkGoogle(verificationRecordId);
 }
 
 export async function linkGoogle() {
@@ -63,30 +99,16 @@ export async function linkGoogle() {
   return profileActions.linkGoogle();
 }
 
+// ── Avatar ───────────────────────────────────────────────────────────────────
+
 export async function updateAvatar(avatarUrl: string) {
   await requireValidSession();
   return profileActions.updateAvatar(avatarUrl);
 }
 
+// ── Eliminar cuenta ──────────────────────────────────────────────────────────
+
 export async function deleteAccount() {
   await requireValidSession();
   return profileActions.deleteAccount();
-}
-
-// ── Wrappers de compatibilidad (para componentes que aún usan la firma anterior) ─
-
-/**
- * @deprecated Usar confirmEmailChange cuando se implemente el flujo completo
- */
-export async function updateEmail(newEmail: string) {
-  await requireValidSession();
-  return profileActions.confirmEmailChange(newEmail, '');
-}
-
-/**
- * @deprecated Usar confirmPhoneChange cuando se implemente el flujo completo
- */
-export async function updatePhone(newPhone: string) {
-  await requireValidSession();
-  return profileActions.confirmPhoneChange(newPhone, '');
 }

@@ -12,9 +12,13 @@ export {
 // ── Actions (lo que consumen los server actions) ─────────────────────────────
 export {
   verifyIdentity,
+  sendIdentityVerificationCode,
+  verifyIdentityCode,
   sendEmailVerificationCode,
+  verifyEmailCode,
   confirmEmailChange,
   sendPhoneVerificationCode,
+  verifyPhoneCode,
   confirmPhoneChange,
   changePassword,
   createPassword,
@@ -37,3 +41,6 @@ export type {
 
 // ── Errors (para pattern matching en error states) ───────────────────────────
 export type { ProfileError, ProfileErrorCode } from './profile.errors';
+
+// ── Mapper helpers (para UI) ─────────────────────────────────────────────────
+export { getDocumentLabel, DOCUMENT_TYPE_LABELS } from './profile.mapper';
