@@ -88,22 +88,22 @@ export function InstallmentCalendar({
 
 export function CalendarLegend() {
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <div className="flex items-center gap-1">
-        <div className="w-2 h-2 rounded-full bg-success-500" />
-        <span className="text-[8px] text-muted-foreground">Pagada</span>
+    <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-1.5">
+        <div className="w-2.5 h-2.5 rounded-full bg-success-500" />
+        <span className="text-xs text-muted-foreground">Pagada</span>
       </div>
-      <div className="flex items-center gap-1">
-        <div className="w-2 h-2 rounded-full bg-error-500" />
-        <span className="text-[8px] text-muted-foreground">Vencida</span>
+      <div className="flex items-center gap-1.5">
+        <div className="w-2.5 h-2.5 rounded-full bg-error-500" />
+        <span className="text-xs text-muted-foreground">Vencida</span>
       </div>
-      <div className="flex items-center gap-1">
-        <div className="w-2 h-2 rounded-full bg-warning-400" />
-        <span className="text-[8px] text-muted-foreground">Próxima</span>
+      <div className="flex items-center gap-1.5">
+        <div className="w-2.5 h-2.5 rounded-full bg-warning-400" />
+        <span className="text-xs text-muted-foreground">Próxima</span>
       </div>
-      <div className="flex items-center gap-1">
-        <div className="w-2 h-2 rounded-full bg-primary-200" />
-        <span className="text-[8px] text-muted-foreground">Futura</span>
+      <div className="flex items-center gap-1.5">
+        <div className="w-2.5 h-2.5 rounded-full bg-primary-200" />
+        <span className="text-xs text-muted-foreground">Futura</span>
       </div>
     </div>
   );
@@ -124,7 +124,7 @@ export function MonthSelector({ value, onChange, options = [1, 2, 3, 4] }: Month
         <button
           key={n}
           onClick={() => onChange(n)}
-          className={`px-1 py-0.5 rounded text-[8px] font-medium transition-colors ${
+          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
             value === n
               ? 'bg-primary/10 text-primary'
               : 'text-muted-foreground hover:text-foreground'
