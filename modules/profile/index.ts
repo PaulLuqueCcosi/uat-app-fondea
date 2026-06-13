@@ -23,7 +23,9 @@ export {
   changePassword,
   createPassword,
   unlinkGoogle,
-  linkGoogle,
+  startLinkGoogle,
+  verifySocialCallback,
+  completeLinkGoogle,
   updateAvatar,
   deleteAccount,
 } from './profile.actions';

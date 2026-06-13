@@ -356,11 +356,99 @@ export async function unlinkGoogle(verificationRecordId: string): Promise<Action
 }
 
 /**
- * Vincula una cuenta de Google (inicia el flujo OAuth).
+ * Inicia el flujo de vincular Google.
+ * Retorna la URL de autorización para redirigir al usuario.
  */
-export async function linkGoogle(): Promise<ActionResult> {
-  // TODO: implementar flujo OAuth completo con redirectUri
-  return { success: false, error: 'No implementado aún' };
+export async function startLinkGoogle(redirectUri: string): Promise<ActionResult & { authorizationUrl?: string; verificationRecordId?: string }> {
+  try {
+    const state = crypto.randomUUID();
+    const connectorId = process.env.LOGTO_GOOGLE_CONNECTOR_ID!;
+
+    const res = await accountFetch('/api/verifications/social', {
+      method: 'POST',
+      body: JSON.stringify({ connectorId, redirectUri, state }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.message || 'Error al iniciar vinculación' };
+    }
+
+    const data = await res.json();
+    return {
+      success: true,
+      authorizationUrl: data.authorizationUri,
+      verificationRecordId: data.verificationRecordId,
+    };
+  } catch {
+    return { success: false, error: 'Error de conexión' };
+  }
+}
+
+/**
+ * Verifica el callback de Google después de que el usuario autorizó.
+ */
+export async function verifySocialCallback(
+  connectorData: Record<string, string>,
+  verificationRecordId: string,
+): Promise<ActionResult> {
+  try {
+    const res = await accountFetch('/api/verifications/social/verify', {
+      method: 'POST',
+      body: JSON.stringify({ connectorData, verificationRecordId }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.message || 'Error al verificar Google' };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Error de conexión' };
+  }
+}
+
+/**
+ * Completa la vinculación de Google después de verificar el callback.
+ * Requiere:
+ * - identityVerificationId: de verificar identidad (contraseña o código email)
+ * - socialVerificationId: de POST /api/verifications/social
+ */
+export async function completeLinkGoogle(
+  identityVerificationId: string,
+  socialVerificationId: string,
+): Promise<ActionResult> {
+  try {
+    const res = await accountFetch('/api/my-account/identities', {
+      method: 'POST',
+      headers: {
+        'logto-verification-id': identityVerificationId,
+      },
+      body: JSON.stringify({
+        newIdentifierVerificationRecordId: socialVerificationId,
+      }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+
+      // 422 = la identidad social ya existe en otra cuenta
+      if (res.status === 422) {
+        return { success: false, error: 'Esta cuenta de Google ya está vinculada a otro usuario. Usa una cuenta diferente.' };
+      }
+      // 401 = verificación expirada
+      if (res.status === 401) {
+        return { success: false, error: 'La verificación expiró. Intenta de nuevo.' };
+      }
+
+      return { success: false, error: data.message || 'No se pudo vincular Google' };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Error de conexión' };
+  }
 }
 
 // ── Avatar ────────────────────────────────────────────────────────────────────

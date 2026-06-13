@@ -94,9 +94,19 @@ export async function unlinkGoogle(verificationRecordId: string) {
   return profileActions.unlinkGoogle(verificationRecordId);
 }
 
-export async function linkGoogle() {
+export async function startLinkGoogle(redirectUri: string) {
   await requireValidSession();
-  return profileActions.linkGoogle();
+  return profileActions.startLinkGoogle(redirectUri);
+}
+
+export async function verifySocialCallback(connectorData: Record<string, string>, verificationRecordId: string) {
+  await requireValidSession();
+  return profileActions.verifySocialCallback(connectorData, verificationRecordId);
+}
+
+export async function completeLinkGoogle(identityVerificationId: string, socialVerificationId: string) {
+  await requireValidSession();
+  return profileActions.completeLinkGoogle(identityVerificationId, socialVerificationId);
 }
 
 // ── Avatar ───────────────────────────────────────────────────────────────────
