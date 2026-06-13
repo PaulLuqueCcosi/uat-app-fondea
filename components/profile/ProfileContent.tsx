@@ -7,7 +7,7 @@ import { EditEmailDialog } from './EditEmailDialog';
 import { EditPhoneDialog } from './EditPhoneDialog';
 import { SecuritySection } from './SecuritySection';
 import type { UserProfile, UserContact, UserSecurity } from '@/modules/profile';
-import { getDocumentLabel } from '@/modules/profile';
+import { getDocumentLabel, formatPhoneForDisplay } from '@/modules/profile';
 
 interface ProfileContentProps {
   profile: UserProfile;
@@ -55,8 +55,8 @@ export function ProfileContent({ profile, contact, security }: ProfileContentPro
         <ProfileField
           icon={<Phone className="w-4 h-4 text-primary" />}
           label="Número de celular"
-          value={contact.phone || 'Sin número registrado'}
-          action={<EditPhoneDialog currentPhone={contact.phone || ''} mode={contact.phone ? 'edit' : 'add'} />}
+          value={contact.phone ? formatPhoneForDisplay(contact.phone) : 'Sin número registrado'}
+          action={<EditPhoneDialog currentPhone={contact.phone || ''} currentEmail={contact.email || ''} hasPassword={security.hasPassword} mode={contact.phone ? 'edit' : 'add'} />}
         />
       </div>
 

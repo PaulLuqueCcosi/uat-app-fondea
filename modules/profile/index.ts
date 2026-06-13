@@ -43,4 +43,4 @@ export type {
 export type { ProfileError, ProfileErrorCode } from './profile.errors';
 
 // ── Mapper helpers (para UI) ─────────────────────────────────────────────────
-export { getDocumentLabel, DOCUMENT_TYPE_LABELS } from './profile.mapper';
+export { getDocumentLabel, DOCUMENT_TYPE_LABELS, formatPhoneForDisplay } from './profile.mapper';

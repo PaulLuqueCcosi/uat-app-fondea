@@ -158,3 +158,22 @@ export function getDocumentLabel(type: string | null): string {
   if (!type) return 'Documento';
   return DOCUMENT_TYPE_LABELS[type] ?? type.toUpperCase();
 }
+
+/**
+ * Formatea un teléfono para mostrar en la UI.
+ * Usa libphonenumber-js para formateo internacional automático.
+ * "51927539933" → "+51 927 539 933"
+ */
+export function formatPhoneForDisplay(phone: string | null): string {
+  if (!phone) return '';
+
+  try {
+    const { parsePhoneNumberFromString } = require('libphonenumber-js');
+    const parsed = parsePhoneNumberFromString(`+${phone.replace(/\D/g, '')}`);
+    if (parsed) return parsed.formatInternational();
+  } catch {
+    // Fallback si la librería falla
+  }
+
+  return `+${phone.replace(/\D/g, '')}`;
+}
