@@ -529,10 +529,19 @@ export async function updateAvatar(avatarUrl: string): Promise<ActionResult> {
  * Elimina la cuenta del usuario permanentemente.
  * Requiere verificación de identidad previa.
  *
- * NOTA: Logto no expone DELETE /account en la Account API.
- * Se debe usar la Management API para esto.
+ * TODO: Implementar cuando esté listo. El flujo será:
+ * 1. Verificar identidad (contraseña o código email) → verificationRecordId
+ * 2. Llamar al backend: DELETE /api/v1/users/me (elimina datos en tu DB + S3)
+ * 3. Llamar a Logto Management API: DELETE /api/users/{userId} (elimina la cuenta en Logto)
+ *    - Requiere M2M token (machine-to-machine) con scope `manage:users`
+ *    - Se obtiene via client_credentials grant contra Logto
+ * 4. Cerrar sesión y redirigir a landing
+ *
+ * NOTA: La Account API de Logto NO expone eliminación de cuenta.
+ * Se DEBE usar la Management API con un token M2M desde el backend.
+ * Opción recomendada: crear endpoint en tu backend Java que haga ambas cosas
+ * (eliminar datos + llamar a Logto Management API) en una sola transacción.
  */
 export async function deleteAccount(): Promise<ActionResult> {
-  // TODO: implementar via Management API (requiere M2M token)
-  return { success: false, error: 'No implementado aún — requiere Management API' };
+  return { success: false, error: 'Función no disponible aún. Contacta a soporte.' };
 }
