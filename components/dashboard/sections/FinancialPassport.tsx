@@ -1,11 +1,11 @@
 'use client';
 
-import { PassportDocument } from '@/components/passport/PassportDocument';
+import { PassportFlipBook } from '@/components/passport/PassportFlipBook';
 import type { PassportSummary } from '@/modules/passport';
 
 /**
- * Pasaporte Financiero — Card del dashboard.
- * Usa el PassportDocument en modo compacto.
+ * Pasaporte Financiero — Sección del dashboard.
+ * Muestra el FlipBook directamente.
  *
  * TODO: Recibir datos del servidor (por ahora usa mock inline).
  */
@@ -22,5 +22,5 @@ const mockSummary: PassportSummary = {
 };
 
 export function FinancialPassport() {
-  return <PassportDocument summary={mockSummary} compact />;
+  return <PassportFlipBook summary={mockSummary} />;
 }

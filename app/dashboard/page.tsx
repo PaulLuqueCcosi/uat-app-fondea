@@ -34,9 +34,11 @@ export default async function DashboardPage() {
         {/* 3. Tu Préstamo Actual — El Núcleo (ancho completo, destaca) */}
         <ActiveLoanCardServer />
 
-        {/* 4. Pasaporte Financiero + Score + Referidos — fila ancho completo */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <FinancialPassport />
+        {/* 4. Pasaporte Financiero — ancho completo */}
+        <FinancialPassport />
+
+        {/* 5. Score + Referidos */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <CreditScore />
           <ReferralProgram />
         </div>
