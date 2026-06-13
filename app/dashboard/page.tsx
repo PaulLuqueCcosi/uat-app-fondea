@@ -10,11 +10,16 @@ import { CreditScore } from '@/components/dashboard/sections/CreditScore';
 import { EducationCarousel } from '@/components/dashboard/sections/EducationCarousel';
 import { TransparencyCard } from '@/components/dashboard/sections/TransparencyCard';
 import { ReferralProgram } from '@/components/dashboard/sections/ReferralProgram';
+import { getModuleSummaries } from '@/modules/education';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function DashboardPage() {
+  // Obtener módulos de educación para el carrusel
+  const educationResult = await getModuleSummaries();
+  const educationModules = educationResult.ok ? educationResult.data : [];
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <DashboardHomeClient>
@@ -41,7 +46,7 @@ export default async function DashboardPage() {
           {/* Columna izquierda (2/3) */}
           <div className="lg:col-span-2 flex flex-col gap-6">
             {/* 6. Fondea Aprende — Carrusel horizontal */}
-            <EducationCarousel />
+            <EducationCarousel modules={educationModules} />
 
             {/* 7. Transparencia FONDEA */}
             <TransparencyCard />

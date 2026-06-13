@@ -6,7 +6,7 @@ import { Play, FileText, ExternalLink, Search, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { EducationModule, Mascot } from '@/lib/education/types';
+import type { EducationModule, Mascot } from '@/modules/education';
 
 type FilterOption = 'todos' | 'buho' | 'ardilla';
 

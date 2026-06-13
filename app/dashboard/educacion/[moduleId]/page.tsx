@@ -16,9 +16,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { getModuleById, getAllModuleIds } from '@/lib/education/get-modules';
-import { modules } from '@/lib/education/modules';
-import type { Mascot } from '@/lib/education/types';
+import { getModuleById, getAllModuleIds, getAdjacentModules } from '@/modules/education';
+import type { Mascot } from '@/modules/education';
 
 export async function generateStaticParams() {
   const ids = await getAllModuleIds();
@@ -54,15 +53,14 @@ export default async function EducacionModulePage({
   params: Promise<{ moduleId: string }>;
 }) {
   const { moduleId } = await params;
-  const mod = await getModuleById(moduleId);
+  const result = await getModuleById(moduleId);
 
-  if (!mod) {
+  if (!result.ok) {
     notFound();
   }
 
-  const currentIndex = modules.findIndex((m) => m.id === moduleId);
-  const prevModule = currentIndex > 0 ? modules[currentIndex - 1] : null;
-  const nextModule = currentIndex < modules.length - 1 ? modules[currentIndex + 1] : null;
+  const mod = result.data;
+  const { prev: prevModule, next: nextModule, total } = getAdjacentModules(moduleId);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">
@@ -85,7 +83,7 @@ export default async function EducacionModulePage({
             </Link>
           )}
           <Badge variant="outline" className="text-[10px]">
-            {mod.order} / {modules.length}
+            {mod.order} / {total}
           </Badge>
           {nextModule && (
             <Link href={`/dashboard/educacion/${nextModule.id}`}>

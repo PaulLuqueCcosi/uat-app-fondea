@@ -4,15 +4,20 @@ import { useRef } from 'react';
 import Link from 'next/link';
 import { GraduationCap, ArrowRight, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { modules } from '@/lib/education/modules';
+import type { EducationModuleSummary, Mascot } from '@/modules/education';
+
+interface EducationCarouselProps {
+  modules: EducationModuleSummary[];
+}
 
 /**
  * Fondea Aprende — Carrusel horizontal para el dashboard.
  * Formato "snack" y minimalista. No interrumpe la visión
  * del préstamo, pero invita a hacer clic e interactuar.
+ *
+ * Componente TONTO: solo recibe data y muestra. Sin fetch.
  */
-export function EducationCarousel() {
+export function EducationCarousel({ modules }: EducationCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -23,6 +28,8 @@ export function EducationCarousel() {
       behavior: 'smooth',
     });
   };
+
+  if (modules.length === 0) return null;
 
   return (
     <Card>
