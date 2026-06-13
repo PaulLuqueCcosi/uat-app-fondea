@@ -61,7 +61,7 @@ export function ProfileContent({ profile, contact, security }: ProfileContentPro
       </div>
 
       {/* ═══ COLUMNA DERECHA: Seguridad ═══ */}
-      <SecuritySection security={security} />
+      <SecuritySection security={security} currentEmail={contact.email || ''} />
     </div>
   );
 }

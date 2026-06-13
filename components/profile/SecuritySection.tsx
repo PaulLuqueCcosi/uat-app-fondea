@@ -6,8 +6,6 @@ import {
   Globe,
   Trash2,
   Unlink,
-  Pencil,
-  Plus,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,12 +20,14 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import type { UserSecurity } from '@/modules/profile';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
 
 interface SecuritySectionProps {
   security: UserSecurity;
+  currentEmail: string;
 }
 
-export function SecuritySection({ security }: SecuritySectionProps) {
+export function SecuritySection({ security, currentEmail }: SecuritySectionProps) {
   return (
     <div className="space-y-4">
       {/* Contraseña */}
@@ -38,10 +38,7 @@ export function SecuritySection({ security }: SecuritySectionProps) {
             Contraseña
           </CardTitle>
           <CardAction>
-            <Button variant="outline" size="sm" className="gap-1.5">
-              {security.hasPassword ? <Pencil className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-              {security.hasPassword ? 'Editar' : 'Agregar'}
-            </Button>
+            <ChangePasswordDialog hasPassword={security.hasPassword} currentEmail={currentEmail} />
           </CardAction>
         </CardHeader>
         <CardContent>
