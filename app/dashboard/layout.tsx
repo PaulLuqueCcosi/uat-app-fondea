@@ -1,7 +1,7 @@
 import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
 import { isExpedienteComplete } from '@/app/actions/expediente-summary.actions';
-import { getUserInfo } from '@/lib/user/get-user-name';
-import { getUserSupportData } from '@/lib/user/get-user-support-data';
+import { getUserInfo } from '@/modules/profile';
+import { getUserSupportData } from '@/modules/profile';
 import { AppSidebar } from '@/components/dashboard/AppSidebar';
 import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
 import { AppBackground } from '@/components/ui/app-background';

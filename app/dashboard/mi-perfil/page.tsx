@@ -1,26 +1,32 @@
 import { Suspense } from 'react';
-import { getFullUserProfile } from '@/lib/user/get-user-profile';
+import { getFullProfile } from '@/modules/profile';
 import { PageTitle } from '@/components/ui/page-title';
-import { ProfileContent } from '@/components/dashboard/profile/ProfileContent';
+import { ProfileContent } from '@/components/profile/ProfileContent';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 
 export const dynamic = 'force-dynamic';
 
 async function ProfileLoader() {
-  const data = await getFullUserProfile();
+  const result = await getFullProfile();
 
-  if (!data) {
+  if (!result.ok) {
     return (
       <Card>
         <CardContent className="pt-4">
-          <p className="text-sm text-error-700">No se pudo obtener información del usuario</p>
+          <p className="text-sm text-error-700">{result.error.message}</p>
         </CardContent>
       </Card>
     );
   }
 
-  return <ProfileContent profile={data.profile} contact={data.contact} security={data.security} />;
+  return (
+    <ProfileContent
+      profile={result.data.profile}
+      contact={result.data.contact}
+      security={result.data.security}
+    />
+  );
 }
 
 function ProfileSkeleton() {

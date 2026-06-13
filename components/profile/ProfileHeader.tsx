@@ -4,7 +4,7 @@ import { Camera } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { UserProfile } from '@/lib/user/types';
+import type { UserProfile } from '@/modules/profile';
 
 interface ProfileHeaderProps {
   profile: UserProfile;

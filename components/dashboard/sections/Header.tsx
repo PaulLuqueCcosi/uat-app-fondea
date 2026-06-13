@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
-import { getUserName } from '@/lib/user/get-user-name';
-import { getUserSubtitle } from '@/lib/user/get-user-subtitle';
+import { getUserName } from '@/modules/profile';
+import { getUserSubtitle } from '@/modules/profile';
 import { HeaderActions } from './HeaderActions';
 import { DashboardGreeting } from './DashboardGreeting';
 

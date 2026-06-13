@@ -6,7 +6,7 @@ import { ProfileField } from './ProfileField';
 import { EditEmailDialog } from './EditEmailDialog';
 import { EditPhoneDialog } from './EditPhoneDialog';
 import { SecuritySection } from './SecuritySection';
-import type { UserProfile, UserContact, UserSecurity } from '@/lib/user/types';
+import type { UserProfile, UserContact, UserSecurity } from '@/modules/profile';
 
 interface ProfileContentProps {
   profile: UserProfile;

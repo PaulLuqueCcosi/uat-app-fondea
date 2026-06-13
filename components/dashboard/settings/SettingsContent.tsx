@@ -19,7 +19,7 @@ import {
   unlinkSocialIdentity,
   updatePassword,
 } from '@/app/actions/account.actions';
-import type { UserSecurity } from '@/lib/user/types';
+import type { UserSecurity } from '@/modules/profile';
 
 interface SettingsContentProps {
   security: UserSecurity;

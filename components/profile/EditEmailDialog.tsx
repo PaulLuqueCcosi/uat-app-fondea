@@ -15,7 +15,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { updateEmail } from '@/lib/user/actions';
+import { updateEmail } from '@/app/actions/profile.actions';
 
 /**
  * Flujo para cambiar email (alineado con Logto Account API):

@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { updatePhone } from '@/lib/user/actions';
+import { updatePhone } from '@/app/actions/profile.actions';
 
 interface EditPhoneDialogProps {
   currentPhone: string;

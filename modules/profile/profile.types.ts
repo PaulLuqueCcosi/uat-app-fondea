@@ -1,6 +1,8 @@
 /**
- * Tipos del módulo de Usuario.
- * Centraliza las interfaces de perfil, contacto y seguridad.
+ * Tipos del dominio Perfil de Usuario.
+ *
+ * Contrato entre la data source (hoy Logto claims, mañana backend)
+ * y los componentes. Si cambias la fuente, estos tipos no se tocan.
  */
 
 // ─── Perfil ───────────────────────────────────────────────────────────────────
@@ -37,4 +39,29 @@ export interface LinkedAccount {
 export interface UserSecurity {
   hasPassword: boolean;
   linkedAccounts: LinkedAccount[];
+}
+
+// ─── Perfil Completo (lo que usa la profile page) ─────────────────────────────
+
+export interface FullUserProfile {
+  profile: UserProfile;
+  contact: UserContact;
+  security: UserSecurity;
+}
+
+// ─── Resumen (lo que usa el navbar) ───────────────────────────────────────────
+
+export interface UserSummary {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  dni: string | null;
+}
+
+// ─── Resultado de acciones de mutación ────────────────────────────────────────
+
+export interface ActionResult {
+  success: boolean;
+  error?: string;
 }

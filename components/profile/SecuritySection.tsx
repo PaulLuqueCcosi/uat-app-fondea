@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import type { UserSecurity } from '@/lib/user/types';
+import type { UserSecurity } from '@/modules/profile';
 
 interface SecuritySectionProps {
   security: UserSecurity;
