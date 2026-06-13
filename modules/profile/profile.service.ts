@@ -92,8 +92,7 @@ export async function getFullProfile(): Promise<ProfileResult<FullUserProfile>> 
 
 /**
  * Obtiene resumen ligero del usuario (para navbar, headers, etc.)
- * USA CLAIMS → rápido, no hace request extra.
- * El navbar no necesita datos ultra-frescos.
+ * USA ACCOUNT API → siempre datos frescos (avatar, email, etc.)
  */
 export async function getProfileSummary(): Promise<ProfileResult<UserSummary>> {
   try {
@@ -103,7 +102,13 @@ export async function getProfileSummary(): Promise<ProfileResult<UserSummary>> {
       return { ok: false, error: errors.sessionExpired() };
     }
 
-    const summary = mapSummaryFromClaims(claims as Record<string, unknown>);
+    // Intentar datos frescos
+    const accountData = await fetchAccountData();
+    const source = accountData
+      ? { ...claims, ...accountData } as Record<string, unknown>
+      : claims as Record<string, unknown>;
+
+    const summary = mapSummaryFromClaims(source);
     return { ok: true, data: summary };
   } catch (err) {
     return { ok: false, error: errors.serverError() };

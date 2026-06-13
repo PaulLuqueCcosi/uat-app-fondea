@@ -52,10 +52,14 @@ const devNav = [
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   profileComplete: boolean;
+  user?: { name: string; avatar?: string | null };
 }
 
-export function AppSidebar({ profileComplete, ...props }: AppSidebarProps) {
+export function AppSidebar({ profileComplete, user, ...props }: AppSidebarProps) {
   const pathname = usePathname();
+  const initials = user?.name
+    ? user.name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('')
+    : 'U';
 
   return (
     // collapsible="icon" → colapsa a íconos en desktop
@@ -67,11 +71,15 @@ export function AppSidebar({ profileComplete, ...props }: AppSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="cursor-default hover:bg-transparent active:bg-transparent">
-              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold shrink-0">
-                U
-              </div>
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold shrink-0">
+                  {initials}
+                </div>
+              )}
               <div className="min-w-0 flex-1 grid leading-tight">
-                <span className="font-semibold text-sm truncate">Usuario</span>
+                <span className="font-semibold text-sm truncate">{user?.name || 'Usuario'}</span>
                 <span className={`text-xs truncate ${profileComplete ? 'text-emerald-600' : 'text-warning-700'}`}>
                   {profileComplete ? 'Perfil completo' : 'Perfil incompleto'}
                 </span>

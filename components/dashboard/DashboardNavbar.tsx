@@ -31,7 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SupportDialog } from './SupportDialog';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface DashboardNavbarProps {
-  user: { name: string; email: string; dni?: string | null; id?: string | null };
+  user: { name: string; email: string; avatar?: string | null; dni?: string | null; id?: string | null };
   onSignOut: () => Promise<void>;
 }
 
@@ -174,6 +174,7 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
               )}
             </div>
             <Avatar className="h-8 w-8">
+              {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
               <AvatarFallback className="bg-primary-50 text-primary-700 font-medium text-xs">
                 {initials}
               </AvatarFallback>
@@ -185,6 +186,7 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex items-center gap-2.5 py-0.5">
                   <Avatar className="h-9 w-9">
+                    {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                     <AvatarFallback className="bg-primary-50 text-primary-700 font-medium">
                       {initials}
                     </AvatarFallback>

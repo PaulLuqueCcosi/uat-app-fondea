@@ -1,7 +1,6 @@
 import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
 import { isExpedienteComplete } from '@/app/actions/expediente-summary.actions';
-import { getUserInfo } from '@/modules/profile';
-import { getUserSupportData } from '@/modules/profile';
+import { getProfileSummary } from '@/modules/profile';
 import { AppSidebar } from '@/components/dashboard/AppSidebar';
 import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
 import { AppBackground } from '@/components/ui/app-background';
@@ -19,18 +18,20 @@ export default async function DashboardLayout({
   // Validar sesión (seguridad — redirige si no hay auth)
   await requireValidSession();
 
-  // Obtener datos del usuario desde Logto
-  const [userInfo, profileComplete, supportData] = await Promise.all([
-    getUserInfo(),
+  // Obtener datos del usuario desde el módulo de profile
+  const [profileResult, profileComplete] = await Promise.all([
+    getProfileSummary(),
     isExpedienteComplete(),
-    getUserSupportData(),
   ]);
 
+  const summary = profileResult.ok ? profileResult.data : null;
+
   const user = {
-    name: userInfo.name || 'Usuario',
-    email: userInfo.email || '',
-    dni: supportData.dni,
-    id: supportData.accountId,
+    name: summary?.name || 'Usuario',
+    email: summary?.email || '',
+    avatar: summary?.avatar || null,
+    dni: summary?.dni || null,
+    id: summary?.id || null,
   };
 
   return (
@@ -43,7 +44,7 @@ export default async function DashboardLayout({
 
         {/* Sidebar + Contenido */}
         <div className="flex flex-1 overflow-hidden">
-          <AppSidebar profileComplete={profileComplete} />
+          <AppSidebar profileComplete={profileComplete} user={{ name: user.name, avatar: user.avatar }} />
           <SidebarInset>
             {children}
           </SidebarInset>

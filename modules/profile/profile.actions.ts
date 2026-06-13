@@ -454,7 +454,56 @@ export async function completeLinkGoogle(
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
 /**
- * Actualiza el avatar del usuario.
+ * Sube el avatar al backend (S3) y actualiza la URL en Logto.
+ *
+ * Flujo:
+ * 1. POST /api/v1/users/avatar (multipart) → { url: "https://..." }
+ * 2. PATCH /api/my-account → { avatar: url }
+ *
+ * HOY: simulado con URL fija (backend aún no existe).
+ * MAÑANA: descomentar backendFetch y quitar el mock.
+ */
+// TODO: implementar en el backend
+export async function uploadAndSetAvatar(formData: FormData): Promise<ActionResult & { url?: string }> {
+  try {
+    // ── Paso 1: Subir imagen al backend → S3 ──
+    // TODO: descomentar cuando el backend tenga POST /api/v1/users/avatar
+    // const { backendFetch } = await import('@/lib/backend-fetch');
+    // const uploadRes = await backendFetch('/api/v1/users/avatar', {
+    //   method: 'POST',
+    //   body: formData,
+    //   context: 'AVATAR_UPLOAD',
+    //   // No poner content-type: el browser lo pone con boundary para multipart
+    //   headers: {},
+    // });
+    // if (!uploadRes.ok) {
+    //   const data = await uploadRes.json().catch(() => ({}));
+    //   return { success: false, error: data.message || 'Error al subir la imagen' };
+    // }
+    // const { url } = await uploadRes.json();
+
+    // MOCK: URL fija para testing hasta que el backend esté listo
+    const url = 'https://img.magnific.com/vector-premium/concepto-encuesta-linea-escena-personas-diseno-web-plano-mujer-poniendo-casilla-verificacion-formulario-respondiendo-cuestionario-o-prueba-examen-ilustracion-vectorial-material-marketing-banner-redes-sociales_9209-14359.jpg';
+
+    // ── Paso 2: Actualizar avatar en Logto ──
+    const res = await accountFetch('/api/my-account', {
+      method: 'PATCH',
+      body: JSON.stringify({ avatar: url }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.message || 'Error al actualizar el avatar' };
+    }
+
+    return { success: true, url };
+  } catch {
+    return { success: false, error: 'Error de conexión' };
+  }
+}
+
+/**
+ * Actualiza el avatar con una URL ya existente (sin subir archivo).
  */
 export async function updateAvatar(avatarUrl: string): Promise<ActionResult> {
   try {

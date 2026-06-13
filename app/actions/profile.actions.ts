@@ -116,6 +116,11 @@ export async function updateAvatar(avatarUrl: string) {
   return profileActions.updateAvatar(avatarUrl);
 }
 
+export async function uploadAndSetAvatar(formData: FormData) {
+  await requireValidSession();
+  return profileActions.uploadAndSetAvatar(formData);
+}
+
 // ── Eliminar cuenta ──────────────────────────────────────────────────────────
 
 export async function deleteAccount() {

@@ -55,7 +55,7 @@ export function mapProfileFromClaims(claims: Record<string, unknown>): UserProfi
     documentType,
     documentNumber,
     documentVerified: !!documentNumber,
-    avatar: claims.picture ? String(claims.picture) : (claims.avatar ? String(claims.avatar) : null),
+    avatar: (claims.avatar || claims.picture || null) as string | null,
     createdAt,
     lastLogin: claims.lastSignInAt
       ? new Date(Number(claims.lastSignInAt)).toISOString()
@@ -112,7 +112,7 @@ export function mapSummaryFromClaims(claims: Record<string, unknown>): UserSumma
     id: String(claims.sub || ''),
     name: String(claims.name || claims.username || 'Usuario'),
     email: String(claims.primaryEmail || claims.email || ''),
-    avatar: claims.picture ? String(claims.picture) : null,
+    avatar: (claims.avatar || claims.picture || null) as string | null,
     dni: null,
   };
 }

@@ -27,6 +27,7 @@ export {
   verifySocialCallback,
   completeLinkGoogle,
   updateAvatar,
+  uploadAndSetAvatar,
   deleteAccount,
 } from './profile.actions';
 
