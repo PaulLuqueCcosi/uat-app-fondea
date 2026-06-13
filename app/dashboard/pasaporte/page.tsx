@@ -1,22 +1,48 @@
-import { getPassportSummary, getPointsHistory } from '@/lib/passport';
+import { Suspense } from 'react';
+import { getPassportSummary, getPointsHistory } from '@/modules/passport';
 import { PageTitle } from '@/components/ui/page-title';
-import { PasaporteContent } from './PasaporteContent';
+import {
+  PassportSummaryCards,
+  PassportProgress,
+  PassportHistory,
+  PassportPageSkeleton,
+} from '@/components/passport';
+import { ModuleErrorState } from '@/components/shared/ModuleErrorState';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PasaportePage() {
-  const [summary, history] = await Promise.all([
+async function PassportLoader() {
+  const [summaryResult, historyResult] = await Promise.all([
     getPassportSummary(),
     getPointsHistory(),
   ]);
 
+  if (!summaryResult.ok) {
+    return <ModuleErrorState error={summaryResult.error} />;
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <PassportSummaryCards summary={summaryResult.data} />
+      <PassportProgress summary={summaryResult.data} />
+      <PassportHistory
+        history={historyResult.ok ? historyResult.data : []}
+      />
+    </div>
+  );
+}
+
+export default function PasaportePage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
       <PageTitle
         title="Pasaporte Financiero"
         description="Tu nivel determina cuánto puedes solicitar. Gana puntos pagando puntual y refiriendo amigos."
       />
-      <PasaporteContent summary={summary} history={history} />
+
+      <Suspense fallback={<PassportPageSkeleton />}>
+        <PassportLoader />
+      </Suspense>
     </div>
   );
 }
