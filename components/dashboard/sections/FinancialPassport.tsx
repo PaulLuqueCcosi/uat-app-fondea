@@ -1,128 +1,26 @@
 'use client';
 
-import { Award, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { PassportDocument } from '@/components/passport/PassportDocument';
+import type { PassportSummary } from '@/modules/passport';
 
 /**
- * Pasaporte Financiero — Sistema de niveles gamificado.
- * Muestra el nivel actual y los beneficios de subir.
+ * Pasaporte Financiero — Card del dashboard.
+ * Usa el PassportDocument en modo compacto.
  *
- * TODO: Conectar con datos reales del sistema de niveles.
+ * TODO: Recibir datos del servidor (por ahora usa mock inline).
  */
 
-interface Level {
-  name: string;
-  minPoints: number;
-  maxAmount: number;
-  color: string;
-  bgColor: string;
-  borderColor: string;
-  image: string;
-}
-
-const levels: Level[] = [
-  { name: 'Bronce', minPoints: 0, maxAmount: 200, color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200', image: '/levels/Bronze.png' },
-  { name: 'Plata', minPoints: 100, maxAmount: 350, color: 'text-neutral-600', bgColor: 'bg-neutral-50', borderColor: 'border-neutral-300', image: '/levels/Silver.png' },
-  { name: 'Oro', minPoints: 250, maxAmount: 600, color: 'text-yellow-600', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-300', image: '/levels/Gold.png' },
-  { name: 'Master', minPoints: 500, maxAmount: 1000, color: 'text-primary-700', bgColor: 'bg-primary-50', borderColor: 'border-primary-200', image: '/levels/Master.png' },
-];
-
-// Mock: el usuario está en Bronce con 65 puntos
-const mockUserLevel = {
-  currentLevel: 0, // index en el array levels
+const mockSummary: PassportSummary = {
+  currentLevelIndex: 0,
   points: 65,
+  levels: [
+    { name: 'Bronce', minPoints: 0, maxAmount: 200, color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200', image: '/levels/Bronze.png' },
+    { name: 'Plata', minPoints: 100, maxAmount: 350, color: 'text-neutral-600', bgColor: 'bg-neutral-50', borderColor: 'border-neutral-300', image: '/levels/Silver.png' },
+    { name: 'Oro', minPoints: 250, maxAmount: 600, color: 'text-yellow-600', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-300', image: '/levels/Gold.png' },
+    { name: 'Master', minPoints: 500, maxAmount: 1000, color: 'text-primary-700', bgColor: 'bg-primary-50', borderColor: 'border-primary-200', image: '/levels/Master.png' },
+  ],
 };
 
 export function FinancialPassport() {
-  const { currentLevel, points } = mockUserLevel;
-  const current = levels[currentLevel];
-  const next = levels[currentLevel + 1];
-  const progressToNext = next
-    ? Math.round((points / next.minPoints) * 100)
-    : 100;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <span className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-amber-600" />
-            Pasaporte Financiero
-          </span>
-        </CardTitle>
-        <CardDescription>Tu nivel determina cuánto puedes solicitar</CardDescription>
-      </CardHeader>
-
-      <CardContent className="space-y-4 flex-1">
-        {/* Nivel actual */}
-        <div className={`rounded-lg border p-3 ${current.bgColor} ${current.borderColor}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <img src={current.image} alt={current.name} className="w-8 h-8 object-contain" />
-              <div>
-                <p className={`text-sm font-bold ${current.color}`}>Nivel {current.name}</p>
-                <p className="text-[10px] text-muted-foreground">Hasta S/ {current.maxAmount}</p>
-              </div>
-            </div>
-            <Badge variant="outline" className="text-[10px]">{points} pts</Badge>
-          </div>
-        </div>
-
-        {/* Progreso al siguiente nivel */}
-        {next && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Progreso a {next.name}</span>
-              <span className="font-medium text-foreground">{points}/{next.minPoints} pts</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
-              <div
-                className="h-full rounded-full bg-amber-500 transition-all duration-500"
-                style={{ width: `${Math.min(progressToNext, 100)}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-muted-foreground">
-              Te faltan <span className="font-semibold text-foreground">{next.minPoints - points} puntos</span> para desbloquear hasta S/ {next.maxAmount}
-            </p>
-          </div>
-        )}
-
-        {/* Línea de tiempo de niveles */}
-        <div className="flex items-center justify-between pt-2">
-          {levels.map((level, i) => (
-            <div key={level.name} className="flex flex-col items-center gap-1">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 overflow-hidden ${
-                  i <= currentLevel
-                    ? `${level.bgColor} ${level.borderColor}`
-                    : 'bg-neutral-50 border-neutral-200 opacity-40'
-                }`}
-              >
-                <img
-                  src={level.image}
-                  alt={level.name}
-                  className="w-6 h-6 object-contain"
-                />
-              </div>
-              <span className={`text-[9px] font-medium ${i <= currentLevel ? level.color : 'text-neutral-400'}`}>
-                {level.name}
-              </span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-
-      <CardFooter>
-        <Link
-          href="/dashboard/pasaporte"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-        >
-          Ver detalles
-          <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
-      </CardFooter>
-    </Card>
-  );
+  return <PassportDocument summary={mockSummary} compact />;
 }

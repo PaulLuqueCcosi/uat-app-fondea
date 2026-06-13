@@ -2,6 +2,7 @@
 export { PassportSummaryCards } from './PassportSummaryCards';
 export { PassportProgress } from './PassportProgress';
 export { PassportHistory } from './PassportHistory';
+export { PassportDocument } from './PassportDocument';
 
 // ── Skeletons ────────────────────────────────────────────────────────────────
 export { PassportSummaryCardsSkeleton } from './PassportSummaryCardsSkeleton';

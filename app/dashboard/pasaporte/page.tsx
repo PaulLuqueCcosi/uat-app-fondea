@@ -2,8 +2,7 @@ import { Suspense } from 'react';
 import { getPassportSummary, getPointsHistory } from '@/modules/passport';
 import { PageTitle } from '@/components/ui/page-title';
 import {
-  PassportSummaryCards,
-  PassportProgress,
+  PassportDocument,
   PassportHistory,
   PassportPageSkeleton,
 } from '@/components/passport';
@@ -22,9 +21,8 @@ async function PassportLoader() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <PassportSummaryCards summary={summaryResult.data} />
-      <PassportProgress summary={summaryResult.data} />
+    <div className="flex flex-col gap-6">
+      <PassportDocument summary={summaryResult.data} />
       <PassportHistory
         history={historyResult.ok ? historyResult.data : []}
       />
