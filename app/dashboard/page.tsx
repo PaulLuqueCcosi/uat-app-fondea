@@ -34,34 +34,34 @@ export default async function DashboardPage() {
         {/* 3. Tu Préstamo Actual — El Núcleo (ancho completo, destaca) */}
         <ActiveLoanCardServer />
 
-        {/* 4. Pasaporte Financiero — ancho completo */}
+        {/* 4. Pasaporte Financiero */}
         <FinancialPassport />
 
-        {/* 5. Score + Referidos */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <CreditScore />
-          <ReferralProgram />
-        </div>
-
-        {/* Layout 2 columnas: izq principal / der secundario */}
+        {/* 5. Layout 2 columnas: principal (2/3) + lateral (1/3) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Columna izquierda (2/3) */}
           <div className="lg:col-span-2 flex flex-col gap-6">
-            {/* 6. Fondea Aprende — Carrusel horizontal */}
+            {/* Fila 1: Score + Referidos */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <CreditScore />
+              <ReferralProgram />
+            </div>
+
+            {/* Fila 2: Fondea Aprende */}
             <EducationCarousel modules={educationModules} />
 
-            {/* 7. Transparencia FONDEA */}
+            {/* Fila 3: Transparencia */}
             <TransparencyCard />
           </div>
 
           {/* Columna derecha (1/3) */}
           <div className="lg:col-span-1 flex flex-col gap-6">
-            {/* Barra de progreso del expediente */}
+            {/* Fila 1: Expedientes */}
             <Suspense fallback={<ProgressBar.Skeleton />}>
               <ProgressBar />
             </Suspense>
 
-            {/* Últimas solicitudes */}
+            {/* Fila 2: Últimas solicitudes */}
             <Suspense fallback={<Applications.Skeleton />}>
               <Applications />
             </Suspense>

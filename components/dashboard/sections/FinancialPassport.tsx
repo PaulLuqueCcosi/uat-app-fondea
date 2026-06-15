@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Award, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PassportFlipBook } from '@/components/passport/PassportFlipBook';
 import { PassportErrorRouter } from '@/components/passport/PassportErrorStates';
@@ -11,7 +14,7 @@ type Status = 'loading' | 'success' | 'error';
 
 /**
  * Pasaporte Financiero — Sección del dashboard.
- * Client component que fetchea datos via server action y muestra skeleton mientras carga.
+ * Envuelto en Card para coherencia con las demás secciones.
  */
 export function FinancialPassport() {
   const [status, setStatus] = useState<Status>('loading');
@@ -34,17 +37,41 @@ export function FinancialPassport() {
     }
   }
 
-  if (status === 'loading') {
-    return <FinancialPassportSkeleton />;
-  }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <span className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-amber-600" />
+            Pasaporte Financiero
+          </span>
+        </CardTitle>
+        <CardDescription>
+          Tu nivel determina cuánto puedes solicitar. Gana puntos y desbloquea sellos.
+        </CardDescription>
+      </CardHeader>
 
-  if (status === 'error' && error) {
-    return <PassportErrorRouter error={error} onRetry={fetchData} />;
-  }
+      <CardContent>
+        {status === 'loading' && <FinancialPassportSkeleton />}
+        {status === 'error' && error && (
+          <PassportErrorRouter error={error} onRetry={fetchData} />
+        )}
+        {status === 'success' && summary && (
+          <PassportFlipBook summary={summary} />
+        )}
+      </CardContent>
 
-  if (!summary) return null;
-
-  return <PassportFlipBook summary={summary} />;
+      <CardFooter>
+        <Link
+          href="/dashboard/pasaporte"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+        >
+          Ver pasaporte completo
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      </CardFooter>
+    </Card>
+  );
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────

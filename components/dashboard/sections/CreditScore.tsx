@@ -41,7 +41,7 @@ export function CreditScore() {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className=" h-full">
         <CardHeader>
           <Skeleton className="h-5 w-36" />
           <Skeleton className="h-4 w-28" />
@@ -57,7 +57,7 @@ export function CreditScore() {
   // Sin datos
   if (!creditScore) {
     return (
-      <Card>
+      <Card className=" h-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-neutral-600">
             <Shield className="w-5 h-5" />
@@ -104,7 +104,7 @@ export function CreditScore() {
   });
 
   return (
-    <Card>
+    <Card className=" h-full">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
           <Shield className="w-5 h-5 text-primary" />

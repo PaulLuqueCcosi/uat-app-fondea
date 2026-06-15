@@ -39,7 +39,7 @@ export function ReferralProgram() {
   };
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Users className="w-4 h-4 text-accent-800" />

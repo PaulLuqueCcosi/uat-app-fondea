@@ -36,7 +36,7 @@ export function PassportProgress({ summary }: PassportProgressProps) {
       id: `level-${i}`,
       name: level.name,
       trigger: 'metric' as const,
-      badgeUrl: level.image,
+      badgeUrl: level.meta.image,
       progress,
       achievedAt: isUnlocked ? '2026-01-01' : null,
     };
@@ -84,7 +84,7 @@ export function PassportProgress({ summary }: PassportProgressProps) {
               <span className="font-semibold text-foreground">
                 {next.minPoints - points} puntos
               </span>{' '}
-              para desbloquear hasta S/ {next.maxAmount}
+              para desbloquear hasta S/ {next.maxLoanAmount}
             </p>
           </div>
         )}

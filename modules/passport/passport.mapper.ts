@@ -23,11 +23,15 @@ export function mapLevelFromBackend(data: any): PassportLevel {
   return {
     name: data.name ?? '',
     minPoints: data.min_points ?? data.minPoints ?? 0,
-    maxAmount: data.max_amount ?? data.maxAmount ?? 0,
-    color: data.color ?? 'text-neutral-700',
-    bgColor: data.bg_color ?? data.bgColor ?? 'bg-neutral-50',
-    borderColor: data.border_color ?? data.borderColor ?? 'border-neutral-200',
-    image: data.image ?? '',
+    maxPoints: data.max_points ?? data.maxPoints ?? null,
+    maxLoanAmount: data.max_loan_amount ?? data.maxLoanAmount ?? data.max_amount ?? data.maxAmount ?? 0,
+    currency: data.currency ?? 'PEN',
+    meta: {
+      color: data.color ?? data.meta?.color ?? 'text-neutral-700',
+      bgColor: data.bg_color ?? data.meta?.bgColor ?? 'bg-neutral-50',
+      borderColor: data.border_color ?? data.meta?.borderColor ?? 'border-neutral-200',
+      image: data.image ?? data.meta?.image ?? '',
+    },
   };
 }
 
