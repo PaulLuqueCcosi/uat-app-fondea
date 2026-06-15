@@ -3,12 +3,10 @@ import { getPassportSummary, getPointsHistory } from '@/modules/passport';
 import { PageTitle } from '@/components/ui/page-title';
 import {
   PassportFlipBook,
-  PassportSummaryCards,
-  PassportProgress,
   PassportHistory,
+  PassportErrorRouter,
   PassportPageSkeleton,
 } from '@/components/passport';
-import { ModuleErrorState } from '@/components/shared/ModuleErrorState';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,14 +17,12 @@ async function PassportLoader() {
   ]);
 
   if (!summaryResult.ok) {
-    return <ModuleErrorState error={summaryResult.error} />;
+    return <PassportErrorRouter error={summaryResult.error} />;
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PassportFlipBook summary={summaryResult.data} />
-      <PassportSummaryCards summary={summaryResult.data} />
-      <PassportProgress summary={summaryResult.data} />
       <PassportHistory
         history={historyResult.ok ? historyResult.data : []}
       />

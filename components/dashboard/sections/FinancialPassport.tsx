@@ -1,26 +1,66 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PassportFlipBook } from '@/components/passport/PassportFlipBook';
-import type { PassportSummary } from '@/modules/passport';
+import { PassportErrorRouter } from '@/components/passport/PassportErrorStates';
+import { getPassportSummary } from '@/app/actions/passport.actions';
+import type { PassportSummary, PassportError } from '@/modules/passport';
+
+type Status = 'loading' | 'success' | 'error';
 
 /**
  * Pasaporte Financiero — Sección del dashboard.
- * Muestra el FlipBook directamente.
- *
- * TODO: Recibir datos del servidor (por ahora usa mock inline).
+ * Client component que fetchea datos via server action y muestra skeleton mientras carga.
  */
-
-const mockSummary: PassportSummary = {
-  currentLevelIndex: 0,
-  points: 65,
-  levels: [
-    { name: 'Bronce', minPoints: 0, maxAmount: 200, color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200', image: '/levels/Bronze.png' },
-    { name: 'Plata', minPoints: 100, maxAmount: 350, color: 'text-neutral-600', bgColor: 'bg-neutral-50', borderColor: 'border-neutral-300', image: '/levels/Silver.png' },
-    { name: 'Oro', minPoints: 250, maxAmount: 600, color: 'text-yellow-600', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-300', image: '/levels/Gold.png' },
-    { name: 'Master', minPoints: 500, maxAmount: 1000, color: 'text-primary-700', bgColor: 'bg-primary-50', borderColor: 'border-primary-200', image: '/levels/Master.png' },
-  ],
-};
-
 export function FinancialPassport() {
-  return <PassportFlipBook summary={mockSummary} />;
+  const [status, setStatus] = useState<Status>('loading');
+  const [summary, setSummary] = useState<PassportSummary | null>(null);
+  const [error, setError] = useState<PassportError | null>(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    setStatus('loading');
+    const result = await getPassportSummary();
+    if (result.ok) {
+      setSummary(result.data);
+      setStatus('success');
+    } else {
+      setError(result.error as PassportError);
+      setStatus('error');
+    }
+  }
+
+  if (status === 'loading') {
+    return <FinancialPassportSkeleton />;
+  }
+
+  if (status === 'error' && error) {
+    return <PassportErrorRouter error={error} onRetry={fetchData} />;
+  }
+
+  if (!summary) return null;
+
+  return <PassportFlipBook summary={summary} />;
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function FinancialPassportSkeleton() {
+  return (
+    <div className="flex flex-col items-center gap-4 w-full">
+      <div className="flex gap-1 rounded-xl overflow-hidden shadow-lg">
+        <Skeleton className="w-[200px] h-[270px] md:w-[280px] md:h-[380px] rounded-none" />
+        <Skeleton className="w-[200px] h-[270px] md:w-[280px] md:h-[380px] rounded-none hidden md:block" />
+      </div>
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-8 w-20 rounded-lg" />
+        <Skeleton className="h-3 w-28 hidden sm:block" />
+        <Skeleton className="h-8 w-20 rounded-lg" />
+      </div>
+    </div>
+  );
 }

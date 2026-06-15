@@ -4,6 +4,7 @@
  * Responsabilidades:
  * - Obtener resumen del pasaporte (nivel actual, puntos, niveles disponibles)
  * - Obtener historial de movimientos de puntos
+ * - Calcular en qué nivel está el usuario según sus puntos
  *
  * HOY: retorna data mock.
  * MAÑANA: backendFetch al endpoint real + mappers.
@@ -12,16 +13,26 @@
  */
 
 import type { Result } from '@/modules/shared/result';
-import type { PassportSummary, PointsHistoryEntry } from './passport.types';
+import type { PassportSummary, PassportLevel, PointsHistoryEntry } from './passport.types';
 import type { PassportError } from './passport.errors';
 import { errors } from './passport.errors';
-import { mockSummary, mockHistory } from './passport.data';
+import { mockLevels, mockUserPoints, mockHistory } from './passport.data';
 
 // Re-tipamos Result con nuestro error específico
 type PassportResult<T> = Result<T> & (
   | { ok: true; data: T }
   | { ok: false; error: PassportError }
 );
+
+// ── Helper: calcular nivel actual ─────────────────────────────────────────────
+
+function calculateCurrentLevel(points: number, levels: PassportLevel[]): number {
+  // Buscar el nivel más alto donde el usuario cumple el minPoints
+  for (let i = levels.length - 1; i >= 0; i--) {
+    if (points >= levels[i].minPoints) return i;
+  }
+  return 0;
+}
 
 // ── Simulación de latencia (solo dev) ─────────────────────────────────────────
 
@@ -38,7 +49,7 @@ async function simulateNetwork<T>(data: T): Promise<T> {
 
 /**
  * Obtiene el resumen completo del pasaporte del usuario:
- * nivel actual, puntos, progreso, y todos los niveles disponibles.
+ * nivel actual (calculado), puntos, y todos los niveles con sus rangos.
  *
  * TODO: Reemplazar mock por:
  *   const res = await backendFetch('/api/v1/passport/summary', { context: 'PASSPORT' });
@@ -46,13 +57,19 @@ async function simulateNetwork<T>(data: T): Promise<T> {
 export async function getPassportSummary(): Promise<PassportResult<PassportSummary>> {
   try {
     // TODO: Reemplazar por backendFetch + mapSummaryFromBackend
-    const data = await simulateNetwork(mockSummary);
+    const levels = await simulateNetwork(mockLevels);
+    const points = await simulateNetwork(mockUserPoints);
 
-    if (!data || !data.levels || data.levels.length === 0) {
-      return { ok: false, error: errors.passportUnavailable('Empty summary data') };
+    if (!levels || levels.length === 0) {
+      return { ok: false, error: errors.passportUnavailable('Empty levels data') };
     }
 
-    return { ok: true, data };
+    const currentLevelIndex = calculateCurrentLevel(points, levels);
+
+    return {
+      ok: true,
+      data: { currentLevelIndex, points, levels },
+    };
   } catch (err) {
     console.error('[PASSPORT] getPassportSummary → error:', err);
     return { ok: false, error: errors.networkError() };

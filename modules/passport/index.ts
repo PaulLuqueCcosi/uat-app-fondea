@@ -7,6 +7,7 @@ export {
 // ── Types (para tipar props de componentes) ──────────────────────────────────
 export type {
   PassportLevel,
+  PassportLevelMeta,
   PassportSummary,
   PointsHistoryEntry,
   PointsMovementType,

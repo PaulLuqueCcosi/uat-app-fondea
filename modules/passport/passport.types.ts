@@ -1,32 +1,41 @@
 /**
  * Tipos del dominio Pasaporte Financiero.
  *
- * Describe lo que el frontend necesita para renderizar:
- * - Niveles con su configuración visual (colores personalizables desde backend)
- * - Resumen del usuario (nivel actual, puntos, progreso)
- * - Historial de movimientos de puntos
+ * Cada nivel tiene un rango de puntos (min-max) y un límite de crédito.
+ * Los metadatos visuales (colores, imagen) son configurables desde el servicio.
  */
 
 // ── Nivel ─────────────────────────────────────────────────────────────────────
 
-export interface PassportLevel {
-  /** Nombre visible del nivel (ej: "Bronce", "Plata") */
-  name: string;
-  /** Puntos mínimos para acceder a este nivel */
-  minPoints: number;
-  /** Monto máximo de préstamo en este nivel */
-  maxAmount: number;
-  /** Clase Tailwind para el color de texto (viene del servicio) */
+/** Metadatos visuales del nivel — configurables, no son lógica de negocio */
+export interface PassportLevelMeta {
+  /** Clase Tailwind para el color de texto */
   color: string;
-  /** Clase Tailwind para el fondo (viene del servicio) */
+  /** Clase Tailwind para el fondo */
   bgColor: string;
-  /** Clase Tailwind para el borde (viene del servicio) */
+  /** Clase Tailwind para el borde */
   borderColor: string;
-  /** Ruta de la imagen del nivel */
+  /** Ruta de la imagen/mascota del sello */
   image: string;
 }
 
-// ── Resumen ───────────────────────────────────────────────────────────────────
+/** Un nivel/rango del pasaporte financiero */
+export interface PassportLevel {
+  /** Nombre del nivel (ej: "Bronce") */
+  name: string;
+  /** Puntos mínimos para entrar en este rango (inclusive) */
+  minPoints: number;
+  /** Puntos máximos de este rango (inclusive). null = sin tope (último nivel) */
+  maxPoints: number | null;
+  /** Monto máximo de crédito habilitado en este nivel */
+  maxLoanAmount: number;
+  /** Código de moneda ISO 4217 (ej: "PEN") */
+  currency: string;
+  /** Metadatos visuales (colores, imagen) */
+  meta: PassportLevelMeta;
+}
+
+// ── Resumen del usuario ───────────────────────────────────────────────────────
 
 export interface PassportSummary {
   /** Índice del nivel actual del usuario (0-based) */
