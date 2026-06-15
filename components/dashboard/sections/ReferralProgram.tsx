@@ -40,10 +40,12 @@ export function ReferralProgram() {
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Users className="w-4 h-4 text-accent-800" />
-          Referidos
+      <CardHeader>
+        <CardTitle>
+          <span className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
+            Referidos
+          </span>
         </CardTitle>
         <CardDescription className="text-[11px]">
           Gana <span className="font-semibold text-accent-800">{mockReferral.pointsPerReferral} puntos</span> para tu Pasaporte Financiero por cada amigo

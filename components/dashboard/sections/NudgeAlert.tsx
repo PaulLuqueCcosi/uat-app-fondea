@@ -34,14 +34,14 @@ export function NudgeAlert() {
   const nudge = mockNudge;
 
   const bgStyles = {
-    positive: 'bg-success-50 border-success-200 text-success-900',
-    urgency: 'bg-warning-50 border-warning-200 text-warning-900',
-    info: 'bg-primary/5 border-primary/20 text-primary-900',
+    positive: 'bg-primary-50 border-primary-200 text-primary-900',
+    urgency: 'bg-warning-50 border-warning-100 text-warning-900',
+    info: 'bg-primary-50 border-primary-200 text-primary-900',
   };
 
   const iconStyles = {
-    positive: 'text-success-600',
-    urgency: 'text-warning-600',
+    positive: 'text-primary',
+    urgency: 'text-warning-500',
     info: 'text-primary',
   };
 

@@ -42,9 +42,11 @@ async function ApplicationsContent() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="w-5 h-5 text-primary" />
-          Mis últimas solicitudes
+        <CardTitle>
+          <span className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
+            Mis últimas solicitudes
+          </span>
         </CardTitle>
         <CardDescription>
           {allApplications.length} {allApplications.length === 1 ? 'solicitud' : 'solicitudes'}
@@ -114,9 +116,11 @@ function ApplicationsSkeleton() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Skeleton className="w-5 h-5 rounded" />
-          <Skeleton className="h-5 w-36" />
+        <CardTitle>
+          <span className="flex items-center gap-2">
+            <Skeleton className="w-5 h-5 rounded" />
+            <Skeleton className="h-5 w-36" />
+          </span>
         </CardTitle>
         <CardDescription>
           <Skeleton className="h-3.5 w-20" />

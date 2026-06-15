@@ -38,10 +38,10 @@ const severityStyles: Record<ScenarioSeverity, {
   },
   medium: {
     icon: ShieldAlert,
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-200',
-    iconColor: 'text-orange-600',
-    titleColor: 'text-orange-900',
+    bgColor: 'bg-warning-50',
+    borderColor: 'border-warning-100',
+    iconColor: 'text-warning-700',
+    titleColor: 'text-warning-900',
   },
   high: {
     icon: Ban,

@@ -42,7 +42,7 @@ export function FinancialPassport() {
       <CardHeader>
         <CardTitle>
           <span className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-amber-600" />
+            <Award className="w-5 h-5 text-primary" />
             Pasaporte Financiero
           </span>
         </CardTitle>

@@ -21,7 +21,7 @@ function getStampBorderColor(borderClass: string): string {
   const map: Record<string, string> = {
     'border-amber-200': '#B45309',
     'border-neutral-300': '#6B7280',
-    'border-yellow-300': '#CA8A04',
+    'border-yellow-300': '#F59E0B',
     'border-primary-200': '#0087AD',
   };
   return map[borderClass] ?? '#6B7280';

@@ -59,9 +59,11 @@ export function CreditScore() {
     return (
       <Card className=" h-full">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-neutral-600">
-            <Shield className="w-5 h-5" />
-            Historial Crediticio
+          <CardTitle>
+            <span className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              Historial Crediticio
+            </span>
           </CardTitle>
           <CardDescription>
             Tu score se calculará después de tu primera solicitud.
@@ -105,10 +107,12 @@ export function CreditScore() {
 
   return (
     <Card className=" h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <Shield className="w-5 h-5 text-primary" />
-          Historial Crediticio
+      <CardHeader>
+        <CardTitle>
+          <span className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            Historial Crediticio
+          </span>
         </CardTitle>
         <CardDescription>
           Powered by <span className="font-semibold text-foreground">{CREDIT_BUREAU.name}</span>
