@@ -1,117 +1,151 @@
 'use client';
 
-import { useState } from 'react';
-import { AlertTriangle, Info } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { CheckCircle, AlertTriangle, ShieldAlert, Ban, Lightbulb } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { getTransparencyConfig } from '@/app/actions/passport.actions';
+import type { TransparencyConfig, ScenarioSeverity } from '@/modules/passport';
 
 /**
- * Transparencia FONDEA — Simulador de mora.
- * Muestra claramente las consecuencias de atrasarse.
- * Deslizador interactivo: días de atraso = penalidad.
- *
- * TODO: Conectar fórmula real de penalidades.
+ * Transparencia FONDEA — Cards de escenarios de mora.
+ * Muestra claramente qué pasa si pagas puntual vs si te atrasas.
+ * Los datos vienen del módulo (pueden variar por producto).
  */
 
-const consequences = [
-  { days: 1, label: 'Penalidad económica automática', severity: 'low' },
-  { days: 5, label: 'Reporte a Sentinel (afecta tu score)', severity: 'medium' },
-  { days: 15, label: 'Bloqueo de línea + pérdida de nivel', severity: 'high' },
-  { days: 30, label: 'Calificación SBS cambia a CPP', severity: 'critical' },
-];
+// ── Helper: icono y colores según severidad ───────────────────────────────────
+
+const severityStyles: Record<ScenarioSeverity, {
+  icon: typeof CheckCircle;
+  bgColor: string;
+  borderColor: string;
+  iconColor: string;
+  titleColor: string;
+}> = {
+  positive: {
+    icon: CheckCircle,
+    bgColor: 'bg-success-50',
+    borderColor: 'border-success-200',
+    iconColor: 'text-success-600',
+    titleColor: 'text-success-900',
+  },
+  low: {
+    icon: AlertTriangle,
+    bgColor: 'bg-warning-50',
+    borderColor: 'border-warning-200',
+    iconColor: 'text-warning-600',
+    titleColor: 'text-warning-900',
+  },
+  medium: {
+    icon: ShieldAlert,
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-200',
+    iconColor: 'text-orange-600',
+    titleColor: 'text-orange-900',
+  },
+  high: {
+    icon: Ban,
+    bgColor: 'bg-error-50',
+    borderColor: 'border-error-200',
+    iconColor: 'text-error-600',
+    titleColor: 'text-error-900',
+  },
+  critical: {
+    icon: Ban,
+    bgColor: 'bg-error-50',
+    borderColor: 'border-error-300',
+    iconColor: 'text-error-700',
+    titleColor: 'text-error-900',
+  },
+};
+
+// ── Helper: formatear penalidad ───────────────────────────────────────────────
+
+function formatPenalty(amount: number, currency: string): string {
+  const symbols: Record<string, string> = { PEN: 'S/', USD: '$', EUR: '€' };
+  return `${symbols[currency] ?? currency} ${amount}`;
+}
+
+// ── Componente ────────────────────────────────────────────────────────────────
 
 export function TransparencyCard() {
-  const [daysLate, setDaysLate] = useState(0);
+  const [config, setConfig] = useState<TransparencyConfig | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock: penalidad = S/ 5 por día sobre cuota de S/ 375
-  const penaltyPerDay = 5;
-  const penalty = daysLate * penaltyPerDay;
+  useEffect(() => {
+    getTransparencyConfig().then((result) => {
+      if (result.ok) setConfig(result.data);
+      setLoading(false);
+    });
+  }, []);
 
-  const activeSeverity = consequences.filter((c) => daysLate >= c.days);
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-60" />
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 rounded-lg" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!config) return null;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>
           <span className="flex items-center gap-2">
-            <Info className="w-5 h-5 text-primary" />
+            <Lightbulb className="w-5 h-5 text-primary" />
             Transparencia FONDEA
           </span>
         </CardTitle>
         <CardDescription>
-          Sin letras pequeñas: esto es lo que pasa si te atrasas
+          Sin letras pequeñas. Esto es lo que pasa según cuándo pagues.
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Simulador de días de atraso */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label htmlFor="days-late" className="text-xs font-medium text-foreground">
-              Días de atraso
-            </label>
-            <span className="text-sm font-bold text-foreground">{daysLate} días</span>
-          </div>
-          <input
-            id="days-late"
-            type="range"
-            min={0}
-            max={30}
-            value={daysLate}
-            onChange={(e) => setDaysLate(Number(e.target.value))}
-            className="w-full h-2 bg-neutral-200 rounded-full appearance-none cursor-pointer accent-primary"
-          />
-          <div className="flex justify-between text-[9px] text-muted-foreground">
-            <span>0 días</span>
-            <span>30 días</span>
-          </div>
-        </div>
+      <CardContent className="space-y-3">
+        {/* Grid de escenarios */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {config.scenarios.map((scenario) => {
+            const style = severityStyles[scenario.severity] ?? severityStyles.low;
+            const Icon = style.icon;
+            const penaltyLabel = scenario.penaltyPerDay
+              ? `${formatPenalty(scenario.penaltyPerDay, config.currency)}/día`
+              : null;
 
-        {/* Penalidad calculada */}
-        {daysLate > 0 && (
-          <div className="rounded-lg bg-error-50 border border-error-200 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-error-700 font-medium">Penalidad estimada</span>
-              <span className="text-lg font-bold text-error-700">
-                S/ {penalty.toFixed(0)}
-              </span>
-            </div>
-            <p className="text-[10px] text-error-600 mt-1">
-              Adicional a tu cuota normal de S/ 375
-            </p>
-          </div>
-        )}
-
-        <Separator />
-
-        {/* Consecuencias */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-foreground">Consecuencias</p>
-          {consequences.map((item) => {
-            const isActive = daysLate >= item.days;
             return (
               <div
-                key={item.days}
-                className={`flex items-start gap-2 rounded-md p-2 transition-colors ${
-                  isActive ? 'bg-error-50' : 'bg-neutral-50'
-                }`}
+                key={scenario.id}
+                className={`rounded-lg border p-3 flex flex-col items-center text-center gap-2 ${style.bgColor} ${style.borderColor}`}
               >
-                <AlertTriangle
-                  className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
-                    isActive ? 'text-error-500' : 'text-neutral-300'
-                  }`}
-                />
-                <div>
-                  <p className={`text-xs ${isActive ? 'text-error-700 font-medium' : 'text-muted-foreground'}`}>
-                    Día {item.days}+
-                  </p>
-                  <p className={`text-[10px] ${isActive ? 'text-error-600' : 'text-muted-foreground'}`}>
-                    {item.label}
-                  </p>
-                </div>
+                <Icon className={`w-6 h-6 ${style.iconColor}`} />
+                <p className={`text-sm font-bold ${style.titleColor}`}>
+                  {scenario.title}
+                </p>
+                <p className="text-xs font-medium text-foreground">
+                  {penaltyLabel ?? scenario.description}
+                </p>
               </div>
             );
           })}
+        </div>
+
+        {/* Tip positivo */}
+        <div className="flex items-center gap-2 rounded-lg bg-primary-50 border border-primary-200 p-3">
+          <CheckCircle className="w-4 h-4 text-primary shrink-0" />
+          <p className="text-xs text-primary-800">
+            <span className="font-semibold">Tip:</span> {config.tip}
+          </p>
         </div>
       </CardContent>
     </Card>

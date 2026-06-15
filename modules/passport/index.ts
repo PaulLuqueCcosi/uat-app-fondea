@@ -4,6 +4,10 @@ export {
   getPointsHistory,
 } from './passport.service';
 
+export {
+  getTransparencyConfig,
+} from './transparency.service';
+
 // ── Types (para tipar props de componentes) ──────────────────────────────────
 export type {
   PassportLevel,
@@ -12,6 +16,12 @@ export type {
   PointsHistoryEntry,
   PointsMovementType,
 } from './passport.types';
+
+export type {
+  TransparencyConfig,
+  TransparencyScenario,
+  ScenarioSeverity,
+} from './transparency.types';
 
 // ── Errors (para pattern matching en error states) ───────────────────────────
 export type { PassportError, PassportErrorCode } from './passport.errors';
