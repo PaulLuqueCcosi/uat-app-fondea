@@ -1,11 +1,7 @@
-import { Suspense } from 'react';
-import { LoansListServer } from '@/components/dashboard/LoansListServer';
-import { LoansListSkeleton } from '@/components/dashboard/skeletons/LoansListSkeleton';
 import { PageTitle } from '@/components/ui/page-title';
+import { ApplicationsTable } from '@/components/dashboard/ApplicationsTable';
 
-// Forzar renderizado dinámico
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export default function LoansPage() {
   return (
@@ -15,9 +11,7 @@ export default function LoansPage() {
         description="Revisa el estado de todas tus solicitudes de préstamo."
       />
 
-      <Suspense fallback={<LoansListSkeleton />}>
-        <LoansListServer />
-      </Suspense>
+      <ApplicationsTable />
     </div>
   );
 }
