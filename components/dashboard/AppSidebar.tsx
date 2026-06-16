@@ -37,10 +37,10 @@ const mainNav = [
   { path: '/dashboard/mi-perfil', label: 'Mi Perfil', icon: User },
   { path: '/dashboard/pasaporte', label: 'Pasaporte Financiero', icon: Award },
   { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
+  { path: '/dashboard/referidos', label: 'Referidos', icon: Users },
 ];
 
 const devNav = [
-  { path: '/dashboard/referidos', label: 'Referidos', icon: Users },
   { path: '/dashboard/pagar', label: 'Pagar Cuota', icon: DollarSign },
   { path: '/dashboard/creditos', label: 'Mis Créditos', icon: CreditCard },
   { path: '/dashboard/pagos', label: 'Historial de Pagos', icon: History },

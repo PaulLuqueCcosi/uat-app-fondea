@@ -79,6 +79,7 @@ export function ReferidosClient() {
   const [summary, setSummary] = React.useState<ReferralSummary | null>(null);
   const [referrals, setReferrals] = React.useState<Referral[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [reloading, setReloading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [copiedCode, setCopiedCode] = React.useState(false);
   const [copiedLink, setCopiedLink] = React.useState(false);
@@ -95,6 +96,19 @@ export function ReferidosClient() {
       setError(result.error.message);
     }
     setLoading(false);
+  }, []);
+
+  const reload = React.useCallback(async () => {
+    setReloading(true);
+    setError(null);
+    const result = await getReferralData();
+    if (result.ok) {
+      setSummary(result.data.summary);
+      setReferrals(result.data.referrals);
+    } else {
+      setError(result.error.message);
+    }
+    setReloading(false);
   }, []);
 
   React.useEffect(() => { fetchData(); }, [fetchData]);
@@ -287,8 +301,8 @@ export function ReferidosClient() {
                 className="pl-8"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={fetchData} className="gap-1.5">
-              <RefreshCw className="w-3.5 h-3.5" />
+            <Button variant="outline" size="sm" onClick={reload} disabled={reloading} className="gap-1.5">
+              <RefreshCw className={`w-3.5 h-3.5 ${reloading ? 'animate-spin' : ''}`} />
               Recargar
             </Button>
           </div>
@@ -308,7 +322,17 @@ export function ReferidosClient() {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {reloading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {columns.map((_, j) => (
+                        <TableCell key={j}>
+                          <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
