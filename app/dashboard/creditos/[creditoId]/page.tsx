@@ -6,20 +6,18 @@ import { useParams } from 'next/navigation';
 import {
   ArrowLeft,
   CreditCard,
-  Calendar as CalendarIcon,
+  AlertCircle,
   DollarSign,
-  CheckCircle,
-  Clock,
+  Calendar as CalendarIcon,
+  Info,
   FileText,
   ChevronRight,
-  X,
-  Download,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import {
+  InstallmentList,
   InstallmentCalendar,
   CalendarLegend,
   MonthSelector,
@@ -31,34 +29,73 @@ import { creditStatusLabels } from '@/modules/credits';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 }).format(amount);
+  return new Intl.NumberFormat('es-PE', {
+    style: 'currency',
+    currency: 'PEN',
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
+function formatCurrencyShort(amount: number) {
+  return new Intl.NumberFormat('es-PE', {
+    style: 'currency',
+    currency: 'PEN',
+    minimumFractionDigits: 0,
+  }).format(amount);
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function formatDateShort(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+  return new Date(iso).toLocaleDateString('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 function formatDateLong(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('es-PE', {
+    day: 'numeric',
+    month: 'long',
+  });
 }
+
+// ─── Status badge variant ─────────────────────────────────────────────────────
+
+const statusVariants: Record<string, 'success' | 'completed' | 'error' | 'default'> = {
+  ACTIVE: 'success',
+  COMPLETED: 'completed',
+  OVERDUE: 'error',
+  DEFAULTED: 'error',
+};
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function CreditDetailSkeleton() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 animate-pulse">
-      <div className="h-5 w-32 bg-neutral-200 rounded" />
-      <div className="h-8 w-48 bg-neutral-200 rounded" />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-20 bg-neutral-100 rounded-lg" />
-        ))}
+      {/* Back */}
+      <div className="h-4 w-28 bg-neutral-200 rounded" />
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-32 bg-neutral-200 rounded" />
+        <div className="h-5 w-16 bg-neutral-200 rounded-full" />
       </div>
-      <div className="h-64 bg-neutral-100 rounded-lg" />
+      <div className="h-3 w-48 bg-neutral-100 rounded" />
+      {/* Progress section */}
+      <div className="rounded-lg border border-border p-4 space-y-3">
+        <div className="h-4 w-full bg-neutral-100 rounded" />
+        <div className="h-2.5 w-full bg-neutral-100 rounded-full" />
+        <div className="grid grid-cols-3 gap-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 bg-neutral-50 rounded-md border" />
+          ))}
+        </div>
+      </div>
+      {/* Cuotas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="h-64 bg-neutral-50 rounded-lg border" />
+        <div className="h-64 bg-neutral-50 rounded-lg border" />
+      </div>
     </div>
   );
 }
@@ -75,7 +112,7 @@ export default function CreditoDetallePage() {
 
   const [selectedInstallment, setSelectedInstallment] = useState<Installment | null>(null);
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
-  const [visibleMonths, setVisibleMonths] = useState(2);
+  const [visibleMonths, setVisibleMonths] = useState(1);
 
   useEffect(() => {
     async function fetchCredit() {
@@ -83,8 +120,11 @@ export default function CreditoDetallePage() {
       const result = await getCreditByIdAction(creditoId);
       if (result.ok) {
         setCredit(result.data);
-        const next = result.data.installments.find((i) => i.status === 'PENDING');
-        if (next) setCalendarMonth(new Date(next.dueDate));
+        // Auto-focus en la próxima cuota pendiente o vencida
+        const focus = result.data.installments.find(
+          (i) => i.status === 'OVERDUE' || i.status === 'PENDING',
+        );
+        if (focus) setCalendarMonth(new Date(focus.dueDate));
       } else {
         setError(result.error.message);
       }
@@ -101,21 +141,25 @@ export default function CreditoDetallePage() {
         <CreditCard className="w-12 h-12 text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">{error ?? 'Crédito no encontrado'}</p>
         <Link href="/dashboard/creditos">
-          <Button variant="outline" size="sm">Volver a Mis Créditos</Button>
+          <Button variant="outline" size="sm">
+            Volver a Mis Créditos
+          </Button>
         </Link>
       </div>
     );
   }
 
-  const progress = Math.round((credit.paidAmount / credit.amount) * 100);
+  const progressPercent = Math.round((credit.paidAmount / credit.amount) * 100);
+  const overdueInstallment = credit.installments.find((i) => i.status === 'OVERDUE');
   const nextInstallment = credit.installments.find((i) => i.status === 'PENDING');
 
-  const selectInstallment = (inst: Installment) => {
+  const handleSelectInstallment = (inst: Installment) => {
     if (selectedInstallment?.id === inst.id) {
       setSelectedInstallment(null);
       return;
     }
     setSelectedInstallment(inst);
+    // Mover calendario si la cuota no está visible
     const instDate = new Date(inst.dueDate);
     const startMonth = calendarMonth.getMonth();
     const startYear = calendarMonth.getFullYear();
@@ -133,7 +177,7 @@ export default function CreditoDetallePage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      {/* Nav */}
+      {/* ─── Navegación ─── */}
       <Link
         href="/dashboard/creditos"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
@@ -142,274 +186,223 @@ export default function CreditoDetallePage() {
         Mis Créditos
       </Link>
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-foreground">{formatCurrency(credit.amount)}</h1>
-            <Badge variant="success">{creditStatusLabels[credit.status]}</Badge>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Crédito #{credit.id.slice(-6)} · Desembolsado {formatDate(credit.disbursedDate)}
-          </p>
+      {/* ─── Header ─── */}
+      <div>
+        <div className="flex items-center gap-3 mb-1">
+          <h1 className="text-2xl font-bold text-foreground">
+            {formatCurrencyShort(credit.amount)}
+          </h1>
+          <Badge variant={statusVariants[credit.status] ?? 'default'}>
+            {creditStatusLabels[credit.status]}
+          </Badge>
         </div>
-        <Link href={`/dashboard/creditos/${credit.id}/cuotas`}>
-          <Button variant="outline" className="gap-2">
-            <FileText className="w-4 h-4" />
-            Ver todas las cuotas
-          </Button>
-        </Link>
+        <p className="text-sm text-muted-foreground">
+          {credit.totalInstallments} cuotas · Desembolsado el {formatDate(credit.disbursedDate)}
+        </p>
       </div>
 
-      {/* Tarjetas de resumen */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card size="sm">
-          <CardContent className="pt-3">
-            <p className="text-[10px] text-muted-foreground">Monto total</p>
-            <p className="text-base font-bold text-foreground">{formatCurrency(credit.amount)}</p>
+      {/* ─── Alerta cuota vencida ─── */}
+      {overdueInstallment && (
+        <Card className="border-error-200 bg-error-50">
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-error-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-error-900">
+                  Cuota {overdueInstallment.number} vencida
+                </p>
+                <p className="text-xs text-error-700">
+                  Venció el {formatDateLong(overdueInstallment.dueDate)} · {formatCurrency(overdueInstallment.amount)} sin pagar
+                </p>
+              </div>
+              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${overdueInstallment.id}`}>
+                <Button size="sm" className="bg-error-600 text-white hover:bg-error-700 text-xs shrink-0">
+                  Pagar ahora
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
-        <Card size="sm">
-          <CardContent className="pt-3">
-            <p className="text-[10px] text-muted-foreground">Pagado</p>
-            <p className="text-base font-bold text-success-700">{formatCurrency(credit.paidAmount)}</p>
-          </CardContent>
-        </Card>
-        <Card size="sm">
-          <CardContent className="pt-3">
-            <p className="text-[10px] text-muted-foreground">Pendiente</p>
-            <p className="text-base font-bold text-foreground">{formatCurrency(credit.pendingBalance)}</p>
-          </CardContent>
-        </Card>
-        <Card size="sm">
-          <CardContent className="pt-3">
-            <p className="text-[10px] text-muted-foreground">Tasa mensual</p>
-            <p className="text-base font-bold text-foreground">{credit.interestRate}%</p>
-          </CardContent>
-        </Card>
-      </div>
+      )}
 
-      {/* Progreso */}
+      {/* ─── Progreso del préstamo ─── */}
       <Card>
-        <CardContent className="pt-4 space-y-3">
+        <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-foreground">Progreso de pago</p>
-            <p className="text-sm font-bold text-primary">{progress}%</p>
+            <p className="text-sm font-medium text-muted-foreground">Progreso del préstamo</p>
+            <p className="text-sm font-bold text-foreground">{progressPercent}% completado</p>
           </div>
-          <div className="h-3 overflow-hidden rounded-full bg-neutral-100">
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
             <div
-              className="h-full rounded-full bg-primary transition-all duration-700"
-              style={{ width: `${progress}%` }}
+              className="h-full rounded-full bg-accent-500 transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
             />
           </div>
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            <div className="rounded-md border border-border bg-background p-2.5">
+              <p className="text-xs text-muted-foreground mb-0.5">Total</p>
+              <p className="text-base font-bold text-foreground">
+                {formatCurrencyShort(credit.amount)}
+              </p>
+            </div>
+            <div className="rounded-md border border-accent-200 bg-accent-50 p-2.5">
+              <p className="text-xs text-accent-800 mb-0.5">Pagado</p>
+              <p className="text-base font-bold text-accent-700">
+                {formatCurrencyShort(credit.paidAmount)}
+              </p>
+            </div>
+            <div className="rounded-md border border-error-200 bg-error-50 p-2.5">
+              <p className="text-xs text-error-700 mb-0.5">Pendiente</p>
+              <p className="text-base font-bold text-error-700">
+                {formatCurrencyShort(credit.pendingBalance)}
+              </p>
+            </div>
+          </div>
           <p className="text-[10px] text-muted-foreground">
-            {credit.paidInstallments} de {credit.totalInstallments} cuotas pagadas · Vence {formatDate(credit.endDate)}
+            {credit.paidInstallments} de {credit.totalInstallments} cuotas pagadas · Finaliza el {formatDate(credit.endDate)}
           </p>
         </CardContent>
       </Card>
 
-      {/* Calendario + Cronograma */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-        {/* Calendario interactivo */}
-        <Card className="xl:col-span-3">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <CalendarIcon className="w-4 h-4 text-primary" />
-              Calendario de Pagos
-            </CardTitle>
-            <CardDescription>Haz clic en una fecha marcada para ver los detalles</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center gap-4">
-            <InstallmentCalendar
-              installments={credit.installments}
-              selectedInstallment={selectedInstallment}
-              month={calendarMonth}
-              onMonthChange={setCalendarMonth}
-              onDayClick={selectInstallment}
-              numberOfMonths={visibleMonths}
-            />
-
-            <div className="flex items-center justify-between w-full">
-              <CalendarLegend />
-              <MonthSelector value={visibleMonths} onChange={setVisibleMonths} options={[1, 2, 3, 4]} />
-            </div>
-
-            {/* Detalle de cuota seleccionada */}
-            {selectedInstallment && (
-              <div className="w-full rounded-lg border border-border bg-neutral-50 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      selectedInstallment.status === 'PAID'
-                        ? 'bg-success-100'
-                        : selectedInstallment.status === 'PENDING'
-                          ? 'bg-warning-100'
-                          : selectedInstallment.status === 'OVERDUE'
-                            ? 'bg-error-100'
-                            : 'bg-neutral-100'
-                    }`}>
-                      {selectedInstallment.status === 'PAID' ? (
-                        <CheckCircle className="w-4 h-4 text-success-700" />
-                      ) : (
-                        <Clock className="w-4 h-4 text-warning-700" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        Cuota {selectedInstallment.number}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {formatDateLong(selectedInstallment.dueDate)}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setSelectedInstallment(null)}
-                    className="p-1 rounded hover:bg-neutral-200"
-                    aria-label="Cerrar detalle"
-                  >
-                    <X className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                </div>
-
-                <Separator />
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-[9px] text-muted-foreground">Total</p>
-                    <p className="text-sm font-bold text-foreground">{formatCurrency(selectedInstallment.amount)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-muted-foreground">Vencimiento</p>
-                    <p className="text-sm font-medium text-foreground">{formatDateShort(selectedInstallment.dueDate)}</p>
-                  </div>
-                </div>
-
-                {selectedInstallment.paidDate && (
-                  <p className="text-xs text-success-700 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    Pagada el {formatDateLong(selectedInstallment.paidDate)}
-                  </p>
-                )}
-
-                {/* Acciones */}
-                <div className="flex gap-2">
-                  {(selectedInstallment.status === 'PENDING' || selectedInstallment.status === 'UPCOMING' || selectedInstallment.status === 'OVERDUE') && (
-                    <Link href={`/dashboard/creditos/${credit.id}/cuotas/${selectedInstallment.id}`} className="flex-1">
-                      <Button
-                        size="sm"
-                        className={`w-full gap-1 ${
-                          selectedInstallment.status === 'OVERDUE'
-                            ? 'bg-error-600 text-white hover:bg-error-700'
-                            : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
-                        }`}
-                      >
-                        <DollarSign className="w-3.5 h-3.5" />
-                        {selectedInstallment.status === 'OVERDUE' ? 'Pagar (vencida)' : 'Pagar'}
-                      </Button>
-                    </Link>
-                  )}
-                  <Link href={`/dashboard/creditos/${credit.id}/cuotas`} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full gap-1">
-                      Ver detalle
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Cronograma en lista */}
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="w-4 h-4 text-primary" />
-              Cronograma
-            </CardTitle>
-            <CardDescription>{credit.paidInstallments} de {credit.totalInstallments} pagadas</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {credit.installments.map((inst) => (
-                <button
-                  key={inst.id}
-                  onClick={() => selectInstallment(inst)}
-                  className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 border text-left transition-all hover:ring-2 hover:ring-primary/20 ${
-                    inst.status === 'PAID'
-                      ? 'bg-success-50/50 border-success-200'
-                      : inst.status === 'PENDING'
-                        ? 'bg-warning-50/50 border-warning-200'
-                        : inst.status === 'OVERDUE'
-                          ? 'bg-error-50/50 border-error-200'
-                          : 'border-border hover:bg-neutral-50'
-                  } ${selectedInstallment?.id === inst.id ? 'ring-2 ring-primary/30' : ''}`}
-                >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                    inst.status === 'PAID'
-                      ? 'bg-success-500'
-                      : inst.status === 'PENDING'
-                        ? 'bg-warning-400'
-                        : inst.status === 'OVERDUE'
-                          ? 'bg-error-500'
-                          : 'bg-primary/20'
-                  }`}>
-                    {inst.status === 'PAID' ? (
-                      <CheckCircle className="w-4 h-4 text-white" />
-                    ) : inst.status === 'PENDING' ? (
-                      <Clock className="w-4 h-4 text-warning-900" />
-                    ) : inst.status === 'OVERDUE' ? (
-                      <Clock className="w-4 h-4 text-white" />
-                    ) : (
-                      <span className="text-[10px] font-bold text-primary-700">{inst.number}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground">Cuota {inst.number}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {formatDateShort(inst.dueDate)}
-                      {inst.paidDate && <span className="text-success-700"> · Pagada</span>}
-                    </p>
-                  </div>
-                  <p className="text-xs font-bold text-foreground shrink-0">{formatCurrency(inst.amount)}</p>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                </button>
-              ))}
-            </div>
-
-            <Link href={`/dashboard/creditos/${credit.id}/cuotas`} className="block mt-4">
-              <Button variant="outline" size="sm" className="w-full gap-2">
-                Ver detalle completo
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Próxima cuota + Pagar */}
+      {/* ─── Próxima cuota (CTA prominente) ─── */}
       {nextInstallment && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
+        <Card>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">Próxima cuota</p>
-                <p className="text-xl font-bold text-foreground">{formatCurrency(nextInstallment.amount)}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Vence {formatDate(nextInstallment.dueDate)} · Cuota {nextInstallment.number}/{credit.totalInstallments}
+                <p className="text-xl font-bold text-foreground">
+                  {formatCurrency(nextInstallment.amount)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Vence el {formatDateLong(nextInstallment.dueDate)} · Cuota {nextInstallment.number}/{credit.totalInstallments}
                 </p>
               </div>
+              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextInstallment.id}`}>
+                <Button className="gap-2 bg-accent-500 text-accent-900 hover:bg-accent-400">
+                  <DollarSign className="w-4 h-4" />
+                  Pagar cuota
+                </Button>
+              </Link>
             </div>
-            <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextInstallment.id}`} className="block">
-              <Button className="w-full gap-2 bg-accent-500 text-accent-900 hover:bg-accent-400">
-                <DollarSign className="w-4 h-4" />
-                Pagar cuota
-              </Button>
-            </Link>
           </CardContent>
         </Card>
       )}
+
+      {/* ─── Cuotas + Calendario (mismo estilo que dashboard) ─── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <CalendarIcon className="w-4 h-4 text-primary" />
+            Cronograma de pagos
+          </CardTitle>
+          <CardDescription>
+            {credit.paidInstallments} de {credit.totalInstallments} pagadas — toca una cuota para ver en el calendario
+          </CardDescription>
+          <CardAction>
+            <Link href={`/dashboard/creditos/${credit.id}/cuotas`}>
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <FileText className="w-3.5 h-3.5" />
+                Ver cronograma completo
+              </Button>
+            </Link>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+            {/* Lista de cuotas */}
+            <div className="rounded-lg border border-border p-3 flex flex-col gap-2">
+              <InstallmentList
+                installments={credit.installments}
+                selectedId={selectedInstallment?.id}
+                onSelect={handleSelectInstallment}
+                creditId={credit.id}
+                maxVisible={8}
+              />
+            </div>
+
+            {/* Calendario */}
+            <div className="rounded-lg border border-border p-3 flex flex-col gap-2 h-full">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Calendario de pagos
+              </p>
+              <div className="flex-1 flex items-center justify-center overflow-x-auto">
+                <InstallmentCalendar
+                  installments={credit.installments}
+                  selectedInstallment={selectedInstallment}
+                  month={calendarMonth}
+                  onMonthChange={setCalendarMonth}
+                  onDayClick={handleSelectInstallment}
+                  numberOfMonths={visibleMonths}
+                />
+              </div>
+              <div className="flex items-center justify-between w-full">
+                <CalendarLegend />
+                <MonthSelector value={visibleMonths} onChange={setVisibleMonths} options={[1, 2]} />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Link
+            href={`/dashboard/creditos/${credit.id}/cuotas`}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            Ver detalle completo de cuotas
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </CardFooter>
+      </Card>
+
+      {/* ─── Información del crédito ─── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Info className="w-4 h-4 text-primary" />
+            Información del crédito
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">ID del crédito</p>
+              <p className="text-sm font-medium text-foreground font-mono">
+                #{credit.id.slice(-8)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Fecha de desembolso</p>
+              <p className="text-sm font-medium text-foreground">
+                {formatDate(credit.disbursedDate)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Fecha de vencimiento</p>
+              <p className="text-sm font-medium text-foreground">
+                {formatDate(credit.endDate)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Tasa mensual</p>
+              <p className="text-sm font-medium text-foreground">
+                {credit.interestRate}%
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Total de cuotas</p>
+              <p className="text-sm font-medium text-foreground">
+                {credit.totalInstallments}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Cuotas pagadas</p>
+              <p className="text-sm font-medium text-foreground">
+                {credit.paidInstallments} de {credit.totalInstallments}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

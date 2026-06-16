@@ -179,10 +179,10 @@ export function InstallmentList({
                             </Button>
                           </Link>
                         )}
-                        <Link href={`/dashboard/creditos/${creditId}`} className="flex-1">
+                        <Link href={`/dashboard/creditos/${creditId}/cuotas/${inst.id}`} className="flex-1">
                           <Button variant="outline" size="sm" className="w-full gap-1.5">
                             <CreditCard className="w-3.5 h-3.5" />
-                            Ver crédito
+                            Ver cuota
                           </Button>
                         </Link>
                       </div>
