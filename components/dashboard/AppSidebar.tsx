@@ -11,8 +11,6 @@ import {
   Terminal,
   Zap,
   GraduationCap,
-  DollarSign,
-  History,
   CreditCard,
   Award,
   Users,
@@ -41,9 +39,7 @@ const mainNav = [
 ];
 
 const devNav = [
-  { path: '/dashboard/pagar', label: 'Pagar Cuota', icon: DollarSign },
   { path: '/dashboard/creditos', label: 'Mis Créditos', icon: CreditCard },
-  { path: '/dashboard/pagos', label: 'Historial de Pagos', icon: History },
   { path: '/dashboard/mi-expediente', label: 'Mi Expediente', icon: FileText },
   { path: '/dashboard/dev-tools', label: 'Dev Tools', icon: Terminal },
   { path: '/dashboard/dev-tools/lambda-tester', label: 'Lambda Tester', icon: Zap },
