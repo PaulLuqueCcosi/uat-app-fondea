@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { DollarSign, X, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Installment } from '@/lib/credits/types';
+import type { Installment } from '@/modules/credits';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -1,9 +1,11 @@
 /**
- * Tipos para el módulo de Créditos.
+ * Tipos del dominio Créditos — lo que usa el frontend.
  *
- * Centraliza todas las interfaces de créditos, cuotas y pagos.
- * Cuando se conecte al backend real, solo cambian los fetch —
- * los tipos se mantienen.
+ * Estos tipos representan la forma FINAL de los datos después del mapper.
+ * El backend puede enviar snake_case, campos extra, etc. — el mapper se encarga.
+ *
+ * Si el backend cambia un campo, solo se toca el mapper.
+ * Si el frontend necesita un campo nuevo, se agrega aquí y en el mapper.
  */
 
 // ─── Estados ──────────────────────────────────────────────────────────────────
@@ -42,7 +44,7 @@ export interface Credit {
   nextDueDate: string | null;
   /** Estado del crédito */
   status: CreditStatus;
-  /** Cuotas asociadas */
+  /** Cuotas asociadas (resumen) */
   installments: Installment[];
 }
 
@@ -91,16 +93,13 @@ export interface InstallmentDetail extends Installment {
 
 // ─── Resumen para el dashboard ────────────────────────────────────────────────
 
-/** Resumen del crédito activo — lo que se muestra en el dashboard home */
-export interface ActiveLoanSummary {
-  id: string;
-  totalAmount: number;
-  pendingBalance: number;
-  paidAmount: number;
-  totalInstallments: number;
-  paidInstallments: number;
-  status: CreditStatus;
-  installments: Installment[];
+/** Resumen agregado de los créditos del usuario */
+export interface CreditsSummary {
+  activeCount: number;
+  completedCount: number;
+  overdueCount: number;
+  totalPendingBalance: number;
+  totalPaidAmount: number;
 }
 
 // ─── Historial de pagos ───────────────────────────────────────────────────────
@@ -130,9 +129,8 @@ export interface PaymentRecord {
   receiptUrl: string | null;
 }
 
-// ─── Helpers de formato ───────────────────────────────────────────────────────
+// ─── Labels legibles ──────────────────────────────────────────────────────────
 
-/** Mapa de labels legibles para estados de crédito */
 export const creditStatusLabels: Record<CreditStatus, string> = {
   ACTIVE: 'Activo',
   COMPLETED: 'Completado',
@@ -140,7 +138,6 @@ export const creditStatusLabels: Record<CreditStatus, string> = {
   DEFAULTED: 'En mora',
 };
 
-/** Mapa de labels legibles para estados de cuota */
 export const installmentStatusLabels: Record<InstallmentStatus, string> = {
   PAID: 'Pagada',
   PENDING: 'Pendiente',

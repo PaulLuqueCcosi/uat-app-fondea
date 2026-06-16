@@ -2,7 +2,7 @@
 
 import { Calendar } from '@/components/ui/calendar';
 import { es } from 'react-day-picker/locale';
-import type { Installment } from '@/lib/credits/types';
+import type { Installment } from '@/modules/credits';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

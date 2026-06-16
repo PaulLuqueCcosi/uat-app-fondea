@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
@@ -11,93 +12,17 @@ import {
   Clock,
   AlertCircle,
   CreditCard,
-  FileText,
   Shield,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { PageTitle } from '@/components/ui/page-title';
+import { getInstallmentsByCreditIdAction } from '@/app/actions/credit.actions';
+import type { InstallmentDetail } from '@/modules/credits';
+import { installmentStatusLabels } from '@/modules/credits';
 
-/**
- * Detalle de Cuotas de un Crédito.
- * Cronograma completo con acciones: pagar, descargar comprobante.
- *
- * TODO: Conectar con API real.
- */
-
-interface Installment {
-  id: string;
-  number: number;
-  amount: number;
-  principal: number;
-  interest: number;
-  dueDate: string;
-  paidDate: string | null;
-  status: 'PAID' | 'PENDING' | 'UPCOMING' | 'OVERDUE';
-  method: string | null;
-  receiptUrl: string | null;
-}
-
-const mockInstallments: Installment[] = [
-  {
-    id: 'inst-001',
-    number: 1,
-    amount: 375,
-    principal: 340,
-    interest: 35,
-    dueDate: '2026-05-25',
-    paidDate: '2026-05-24',
-    status: 'PAID',
-    method: 'Visa ****4532',
-    receiptUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-  },
-  {
-    id: 'inst-002',
-    number: 2,
-    amount: 375,
-    principal: 345,
-    interest: 30,
-    dueDate: '2026-06-25',
-    paidDate: null,
-    status: 'PENDING',
-    method: null,
-    receiptUrl: null,
-  },
-  {
-    id: 'inst-003',
-    number: 3,
-    amount: 375,
-    principal: 350,
-    interest: 25,
-    dueDate: '2026-07-25',
-    paidDate: null,
-    status: 'UPCOMING',
-    method: null,
-    receiptUrl: null,
-  },
-  {
-    id: 'inst-004',
-    number: 4,
-    amount: 375,
-    principal: 355,
-    interest: 20,
-    dueDate: '2026-08-25',
-    paidDate: null,
-    status: 'UPCOMING',
-    method: null,
-    receiptUrl: null,
-  },
-];
-
-const mockCreditSummary = {
-  id: 'cred-001',
-  totalAmount: 1500,
-  totalInterest: 110,
-  totalPaid: 375,
-  pendingBalance: 1125,
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 }).format(amount);
@@ -111,7 +36,9 @@ function formatDateShort(iso: string) {
   return new Date(iso).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
 }
 
-function StatusIcon({ status }: { status: Installment['status'] }) {
+// ─── Sub-componentes ──────────────────────────────────────────────────────────
+
+function StatusIcon({ status }: { status: InstallmentDetail['status'] }) {
   switch (status) {
     case 'PAID':
       return <CheckCircle className="w-5 h-5 text-success-700" />;
@@ -124,30 +51,81 @@ function StatusIcon({ status }: { status: Installment['status'] }) {
   }
 }
 
-function StatusBadge({ status }: { status: Installment['status'] }) {
-  switch (status) {
-    case 'PAID':
-      return <Badge variant="success">Pagada</Badge>;
-    case 'PENDING':
-      return <Badge variant="warning">Pendiente</Badge>;
-    case 'OVERDUE':
-      return <Badge variant="error">Vencida</Badge>;
-    default:
-      return <Badge variant="pending">Próxima</Badge>;
-  }
+const statusBadgeVariant: Record<string, 'success' | 'warning' | 'error' | 'pending'> = {
+  PAID: 'success',
+  PENDING: 'warning',
+  OVERDUE: 'error',
+  UPCOMING: 'pending',
+};
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function CuotasSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 animate-pulse">
+      <div className="h-5 w-32 bg-neutral-200 rounded" />
+      <div className="h-8 w-64 bg-neutral-200 rounded" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-16 bg-neutral-100 rounded-lg" />
+        ))}
+      </div>
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="h-32 bg-neutral-100 rounded-lg" />
+      ))}
+    </div>
+  );
 }
+
+// ─── Página ───────────────────────────────────────────────────────────────────
 
 export default function CuotasPage() {
   const params = useParams();
-  const credit = mockCreditSummary;
-  const installments = mockInstallments;
+  const creditoId = params.creditoId as string;
+
+  const [installments, setInstallments] = useState<InstallmentDetail[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchInstallments() {
+      setLoading(true);
+      const result = await getInstallmentsByCreditIdAction(creditoId);
+      if (result.ok) {
+        setInstallments(result.data);
+      } else {
+        setError(result.error.message);
+      }
+      setLoading(false);
+    }
+    fetchInstallments();
+  }, [creditoId]);
+
+  if (loading) return <CuotasSkeleton />;
+
+  if (error) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
+        <CreditCard className="w-12 h-12 text-muted-foreground/40" />
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <Link href={`/dashboard/creditos/${creditoId}`}>
+          <Button variant="outline" size="sm">Volver al crédito</Button>
+        </Link>
+      </div>
+    );
+  }
+
   const paidCount = installments.filter((i) => i.status === 'PAID').length;
+  const totalPaid = installments.filter((i) => i.status === 'PAID').reduce((s, i) => s + i.amount, 0);
+  const totalInterest = installments.reduce((s, i) => s + i.interest, 0);
+  const totalAmount = installments.reduce((s, i) => s + i.amount, 0);
+  const pendingBalance = installments.filter((i) => i.status !== 'PAID').reduce((s, i) => s + i.amount, 0);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       {/* Nav */}
       <Link
-        href={`/dashboard/creditos/${credit.id}`}
+        href={`/dashboard/creditos/${creditoId}`}
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -156,7 +134,7 @@ export default function CuotasPage() {
 
       <PageTitle
         title="Cronograma de Cuotas"
-        description={`Crédito de ${formatCurrency(credit.totalAmount)} · ${paidCount} de ${installments.length} cuotas pagadas`}
+        description={`Crédito de ${formatCurrency(totalAmount)} · ${paidCount} de ${installments.length} cuotas pagadas`}
       />
 
       {/* Resumen */}
@@ -164,25 +142,25 @@ export default function CuotasPage() {
         <Card size="sm">
           <CardContent className="pt-3">
             <p className="text-[10px] text-muted-foreground">Capital total</p>
-            <p className="text-base font-bold text-foreground">{formatCurrency(credit.totalAmount)}</p>
+            <p className="text-base font-bold text-foreground">{formatCurrency(totalAmount)}</p>
           </CardContent>
         </Card>
         <Card size="sm">
           <CardContent className="pt-3">
             <p className="text-[10px] text-muted-foreground">Intereses total</p>
-            <p className="text-base font-bold text-foreground">{formatCurrency(credit.totalInterest)}</p>
+            <p className="text-base font-bold text-foreground">{formatCurrency(totalInterest)}</p>
           </CardContent>
         </Card>
         <Card size="sm">
           <CardContent className="pt-3">
             <p className="text-[10px] text-muted-foreground">Pagado</p>
-            <p className="text-base font-bold text-success-700">{formatCurrency(credit.totalPaid)}</p>
+            <p className="text-base font-bold text-success-700">{formatCurrency(totalPaid)}</p>
           </CardContent>
         </Card>
         <Card size="sm">
           <CardContent className="pt-3">
             <p className="text-[10px] text-muted-foreground">Por pagar</p>
-            <p className="text-base font-bold text-primary">{formatCurrency(credit.pendingBalance)}</p>
+            <p className="text-base font-bold text-primary">{formatCurrency(pendingBalance)}</p>
           </CardContent>
         </Card>
       </div>
@@ -201,10 +179,10 @@ export default function CuotasPage() {
                 inst.status === 'PAID'
                   ? 'border-success-200 bg-success-50/30'
                   : inst.status === 'PENDING'
-                  ? 'border-warning-200 bg-warning-50/30'
-                  : inst.status === 'OVERDUE'
-                  ? 'border-error-200 bg-error-50/30'
-                  : ''
+                    ? 'border-warning-200 bg-warning-50/30'
+                    : inst.status === 'OVERDUE'
+                      ? 'border-error-200 bg-error-50/30'
+                      : ''
               }
             >
               <CardContent className="pt-4">
@@ -214,10 +192,10 @@ export default function CuotasPage() {
                     inst.status === 'PAID'
                       ? 'bg-success-100'
                       : inst.status === 'PENDING'
-                      ? 'bg-warning-100'
-                      : inst.status === 'OVERDUE'
-                      ? 'bg-error-100'
-                      : 'bg-neutral-100'
+                        ? 'bg-warning-100'
+                        : inst.status === 'OVERDUE'
+                          ? 'bg-error-100'
+                          : 'bg-neutral-100'
                   }`}>
                     <StatusIcon status={inst.status} />
                   </div>
@@ -226,9 +204,11 @@ export default function CuotasPage() {
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold text-foreground">
-                        Cuota {inst.number} de {installments.length}
+                        Cuota {inst.number} de {inst.totalInstallments}
                       </p>
-                      <StatusBadge status={inst.status} />
+                      <Badge variant={statusBadgeVariant[inst.status] ?? 'pending'}>
+                        {installmentStatusLabels[inst.status]}
+                      </Badge>
                       {inst.status === 'PENDING' && daysUntil > 0 && (
                         <Badge variant="outline" className="text-[9px]">
                           En {daysUntil} días
@@ -285,14 +265,14 @@ export default function CuotasPage() {
                         </a>
                       )}
                       {(inst.status === 'PENDING' || inst.status === 'OVERDUE') && (
-                        <Link href={`/dashboard/creditos/${credit.id}/cuotas/${inst.id}`}>
+                        <Link href={`/dashboard/creditos/${creditoId}/cuotas/${inst.id}`}>
                           <Button size="xs" className="gap-1 bg-accent-500 text-accent-900 hover:bg-accent-400">
                             <DollarSign className="w-3 h-3" />
                             Pagar esta cuota
                           </Button>
                         </Link>
                       )}
-                      <Link href={`/dashboard/creditos/${credit.id}/cuotas/${inst.id}`}>
+                      <Link href={`/dashboard/creditos/${creditoId}/cuotas/${inst.id}`}>
                         <Button variant="outline" size="xs" className="gap-1">
                           Ver detalle
                         </Button>

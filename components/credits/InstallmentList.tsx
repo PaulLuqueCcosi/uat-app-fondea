@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { CheckCircle, Clock, AlertCircle, DollarSign, CreditCard, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Installment } from '@/lib/credits/types';
+import type { Installment } from '@/modules/credits';
 
 // ─── Keyframe para la animación de expansión ──────────────────────────────────
 

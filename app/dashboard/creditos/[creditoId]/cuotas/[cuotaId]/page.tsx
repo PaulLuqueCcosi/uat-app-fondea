@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
@@ -20,102 +21,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { PageTitle } from '@/components/ui/page-title';
+import { getInstallmentDetailAction } from '@/app/actions/credit.actions';
+import type { InstallmentDetail } from '@/modules/credits';
+import { installmentStatusLabels } from '@/modules/credits';
 
-/**
- * Detalle de una Cuota — toda la información de un pago específico.
- * Muestra estado, desglose, métodos de pago, comprobante.
- *
- * TODO: Conectar con API real.
- */
-
-type CuotaStatus = 'PAID' | 'PENDING' | 'OVERDUE' | 'UPCOMING';
-
-interface CuotaDetail {
-  id: string;
-  number: number;
-  totalInstallments: number;
-  creditId: string;
-  amount: number;
-  principal: number;
-  interest: number;
-  lateFee: number;
-  totalDue: number;
-  dueDate: string;
-  paidDate: string | null;
-  status: CuotaStatus;
-  method: string | null;
-  transactionId: string | null;
-  receiptUrl: string | null;
-  daysLate: number;
-}
-
-// Mock — cuota pagada
-const mockCuotaPaid: CuotaDetail = {
-  id: 'inst-001',
-  number: 1,
-  totalInstallments: 4,
-  creditId: 'cred-001',
-  amount: 375,
-  principal: 340,
-  interest: 35,
-  lateFee: 0,
-  totalDue: 375,
-  dueDate: '2026-05-25',
-  paidDate: '2026-05-24',
-  status: 'PAID',
-  method: 'Visa Débito ****4532',
-  transactionId: 'TXN-2026-05-24-ABC123',
-  receiptUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-  daysLate: 0,
-};
-
-// Mock — cuota pendiente
-const mockCuotaPending: CuotaDetail = {
-  id: 'inst-002',
-  number: 2,
-  totalInstallments: 4,
-  creditId: 'cred-001',
-  amount: 375,
-  principal: 345,
-  interest: 30,
-  lateFee: 0,
-  totalDue: 375,
-  dueDate: '2026-06-25',
-  paidDate: null,
-  status: 'PENDING',
-  method: null,
-  transactionId: null,
-  receiptUrl: null,
-  daysLate: 0,
-};
-
-// Mock — cuota vencida
-const mockCuotaOverdue: CuotaDetail = {
-  id: 'inst-003',
-  number: 3,
-  totalInstallments: 4,
-  creditId: 'cred-001',
-  amount: 375,
-  principal: 350,
-  interest: 25,
-  lateFee: 15,
-  totalDue: 390,
-  dueDate: '2026-07-25',
-  paidDate: null,
-  status: 'OVERDUE',
-  method: null,
-  transactionId: null,
-  receiptUrl: null,
-  daysLate: 3,
-};
-
-// Para la demo, seleccionamos según el param
-const mockCuotas: Record<string, CuotaDetail> = {
-  'inst-001': mockCuotaPaid,
-  'inst-002': mockCuotaPending,
-  'inst-003': mockCuotaOverdue,
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 2 }).format(amount);
@@ -125,7 +35,9 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function StatusHeader({ status, daysLate }: { status: CuotaStatus; daysLate: number }) {
+// ─── Status Header ────────────────────────────────────────────────────────────
+
+function StatusHeader({ status, daysLate }: { status: InstallmentDetail['status']; daysLate: number }) {
   switch (status) {
     case 'PAID':
       return (
@@ -178,16 +90,65 @@ function StatusHeader({ status, daysLate }: { status: CuotaStatus; daysLate: num
   }
 }
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function CuotaDetailSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-2xl mx-auto animate-pulse">
+      <div className="h-5 w-40 bg-neutral-200 rounded" />
+      <div className="h-8 w-48 bg-neutral-200 rounded" />
+      <div className="h-20 bg-neutral-100 rounded-lg" />
+      <div className="h-48 bg-neutral-100 rounded-lg" />
+      <div className="h-32 bg-neutral-100 rounded-lg" />
+    </div>
+  );
+}
+
+// ─── Página ───────────────────────────────────────────────────────────────────
+
 export default function CuotaDetallePage() {
   const params = useParams();
   const cuotaId = params.cuotaId as string;
   const creditoId = params.creditoId as string;
 
-  // Mock: buscar la cuota. Default a pendiente si no existe
-  const cuota = mockCuotas[cuotaId] || mockCuotaPending;
+  const [cuota, setCuota] = useState<InstallmentDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchDetail() {
+      setLoading(true);
+      const result = await getInstallmentDetailAction(cuotaId);
+      if (result.ok) {
+        setCuota(result.data);
+      } else {
+        setError(result.error.message);
+      }
+      setLoading(false);
+    }
+    fetchDetail();
+  }, [cuotaId]);
+
+  if (loading) return <CuotaDetailSkeleton />;
+
+  if (error || !cuota) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
+        <CreditCard className="w-12 h-12 text-muted-foreground/40" />
+        <p className="text-sm text-muted-foreground">{error ?? 'Cuota no encontrada'}</p>
+        <Link href={`/dashboard/creditos/${creditoId}/cuotas`}>
+          <Button variant="outline" size="sm">Volver al cronograma</Button>
+        </Link>
+      </div>
+    );
+  }
 
   const isPaid = cuota.status === 'PAID';
   const needsPayment = cuota.status === 'PENDING' || cuota.status === 'OVERDUE';
+
+  const badgeVariant = cuota.status === 'PAID' ? 'success'
+    : cuota.status === 'OVERDUE' ? 'error'
+      : cuota.status === 'PENDING' ? 'warning' : 'pending';
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-2xl mx-auto">
@@ -210,16 +171,8 @@ export default function CuotaDetallePage() {
             Crédito #{creditoId.slice(-6)}
           </p>
         </div>
-        <Badge
-          variant={
-            cuota.status === 'PAID' ? 'success' :
-            cuota.status === 'OVERDUE' ? 'error' :
-            cuota.status === 'PENDING' ? 'warning' : 'pending'
-          }
-        >
-          {cuota.status === 'PAID' ? 'Pagada' :
-           cuota.status === 'OVERDUE' ? 'Vencida' :
-           cuota.status === 'PENDING' ? 'Pendiente' : 'Futura'}
+        <Badge variant={badgeVariant}>
+          {installmentStatusLabels[cuota.status]}
         </Badge>
       </div>
 

@@ -12,7 +12,7 @@ import {
   CalendarLegend,
   MonthSelector,
 } from '@/components/credits';
-import type { Credit, Installment } from '@/lib/credits/types';
+import type { Credit, Installment } from '@/modules/credits';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
