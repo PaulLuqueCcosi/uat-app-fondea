@@ -12,14 +12,7 @@ import { TransparencyCard } from '@/components/dashboard/sections/TransparencyCa
 import { ReferralProgramSection } from '@/components/dashboard/sections/ReferralProgramServer';
 import { getModuleSummaries } from '@/modules/education';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 export default async function DashboardPage() {
-  // Obtener módulos de educación para el carrusel
-  const educationResult = await getModuleSummaries();
-  const educationModules = educationResult.ok ? educationResult.data : [];
-
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <DashboardHomeClient>
@@ -32,7 +25,9 @@ export default async function DashboardPage() {
         <NudgeAlert />
 
         {/* 3. Tu Préstamo Actual — El Núcleo (ancho completo, destaca) */}
-        <ActiveLoanCardServer />
+        <Suspense fallback={null}>
+          <ActiveLoanCardServer />
+        </Suspense>
 
         {/* 4. Pasaporte Financiero */}
         <FinancialPassport />
@@ -50,7 +45,9 @@ export default async function DashboardPage() {
             </div>
 
             {/* Fila 2: Fondea Aprende */}
-            <EducationCarousel modules={educationModules} />
+            <Suspense fallback={null}>
+              <EducationCarouselServer />
+            </Suspense>
 
             {/* Fila 3: Transparencia */}
             <TransparencyCard />
@@ -72,4 +69,11 @@ export default async function DashboardPage() {
       </DashboardHomeClient>
     </div>
   );
+}
+
+/** Server component que carga educación de forma asíncrona */
+async function EducationCarouselServer() {
+  const educationResult = await getModuleSummaries();
+  const educationModules = educationResult.ok ? educationResult.data : [];
+  return <EducationCarousel modules={educationModules} />;
 }

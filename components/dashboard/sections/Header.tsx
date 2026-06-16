@@ -1,21 +1,25 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUserName } from '@/modules/profile';
 import { getUserSubtitle } from '@/modules/profile';
+import { getActiveIntencion } from '@/app/actions/intencion.actions';
 import { HeaderActions } from './HeaderActions';
 import { DashboardGreeting } from './DashboardGreeting';
 
 async function HeaderContent() {
-  const [name, subtitle] = await Promise.all([
+  const [name, subtitle, intencionResult] = await Promise.all([
     getUserName(),
     getUserSubtitle(),
+    getActiveIntencion(),
   ]);
+
+  const hasActiveIntencion = intencionResult.ok && intencionResult.data != null;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <DashboardGreeting name={name} subtitle={subtitle} />
       </div>
-      <HeaderActions />
+      <HeaderActions hasActiveIntencion={hasActiveIntencion} />
     </div>
   );
 }

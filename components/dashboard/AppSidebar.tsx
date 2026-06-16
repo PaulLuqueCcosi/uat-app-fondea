@@ -47,11 +47,10 @@ const devNav = [
 ];
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  profileComplete: boolean;
   user?: { name: string; avatar?: string | null };
 }
 
-export function AppSidebar({ profileComplete, user, ...props }: AppSidebarProps) {
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const pathname = usePathname();
   const initials = user?.name
     ? user.name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('')
@@ -76,9 +75,6 @@ export function AppSidebar({ profileComplete, user, ...props }: AppSidebarProps)
               )}
               <div className="min-w-0 flex-1 grid leading-tight">
                 <span className="font-semibold text-sm truncate">{user?.name || 'Usuario'}</span>
-                {/* <span className={`text-xs truncate ${profileComplete ? 'text-emerald-600' : 'text-warning-700'}`}>
-                  {profileComplete ? 'Perfil completo' : 'Perfil incompleto'}
-                </span> */}
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
