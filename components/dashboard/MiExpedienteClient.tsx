@@ -17,6 +17,7 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PageTitle } from '@/components/ui/page-title';
 import { Separator } from '@/components/ui/separator';
 
 import { FunnelKYCValidation } from '@/components/forms/solicitar/KYCValidation';
@@ -167,12 +168,10 @@ export function MiExpedienteClient({
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Mi Expediente</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Toda tu información personal verificada. Toca &quot;Editar&quot; para modificar una sección.
-        </p>
-      </div>
+      <PageTitle
+        title="Mi Expediente"
+        description="Toda tu información personal verificada. Toca &quot;Editar&quot; para modificar una sección."
+      />
 
       {/* Grid de secciones */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
