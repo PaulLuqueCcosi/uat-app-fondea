@@ -72,7 +72,7 @@ export function InstallmentCalendar({
         active: selectedDate,
       }}
       modifiersClassNames={{
-        paid: 'bg-success-500 text-white hover:bg-success-600 font-bold cursor-pointer',
+        paid: 'bg-accent-500 text-accent-900 hover:bg-accent-400 font-bold cursor-pointer',
         pending: 'bg-warning-400 text-warning-900 hover:bg-warning-500 font-bold cursor-pointer',
         upcoming: 'bg-primary-200 text-primary-900 hover:bg-primary-300 font-bold cursor-pointer',
         overdue: 'bg-error-500 text-white hover:bg-error-600 font-bold cursor-pointer',
@@ -90,7 +90,7 @@ export function CalendarLegend() {
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <div className="flex items-center gap-1.5">
-        <div className="w-2.5 h-2.5 rounded-full bg-success-500" />
+        <div className="w-2.5 h-2.5 rounded-full bg-accent-500" />
         <span className="text-xs text-muted-foreground">Pagada</span>
       </div>
       <div className="flex items-center gap-1.5">

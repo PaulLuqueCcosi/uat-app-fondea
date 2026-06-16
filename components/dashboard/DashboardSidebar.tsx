@@ -69,7 +69,7 @@ export function DashboardSidebar() {
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-dark text-sm truncate">Usuario</p>
-                <Badge variant="warning" className="mt-0.5">Perfil incompleto</Badge>
+                {/* <Badge variant="warning" className="mt-0.5">Perfil incompleto</Badge> */}
               </div>
             </div>
           )}

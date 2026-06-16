@@ -86,7 +86,7 @@ export function InstallmentList({
                 onClick={() => onSelect?.(inst)}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 border text-left transition-all hover:ring-1 hover:ring-primary/20 ${
                   inst.status === 'PAID'
-                    ? 'bg-success-50/50 border-success-200'
+                    ? 'bg-accent-50/50 border-accent-200'
                     : inst.status === 'PENDING'
                       ? 'bg-warning-50/50 border-warning-200'
                       : inst.status === 'OVERDUE'
@@ -98,7 +98,7 @@ export function InstallmentList({
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
                     inst.status === 'PAID'
-                      ? 'bg-success-500'
+                      ? 'bg-accent-500'
                       : inst.status === 'PENDING'
                         ? 'bg-warning-400'
                         : inst.status === 'OVERDUE'
@@ -126,7 +126,7 @@ export function InstallmentList({
                   </p>
                   <p className="text-xs text-muted-foreground leading-tight">
                     {formatDateShort(inst.dueDate)}
-                    {inst.paidDate && <span className="text-success-700"> · Pagada</span>}
+                    {inst.paidDate && <span className="text-accent-700"> · Pagada</span>}
                   </p>
                 </div>
 
@@ -153,7 +153,7 @@ export function InstallmentList({
                     <p className="text-xs text-muted-foreground mb-2">
                       {formatDateLong(inst.dueDate)}
                       {inst.paidDate && (
-                        <span className="text-success-700">
+                        <span className="text-accent-700">
                           {' '}· Pagada el {formatDateShort(inst.paidDate)}
                         </span>
                       )}

@@ -57,7 +57,7 @@ export function CreditScore() {
   // Sin datos
   if (!creditScore) {
     return (
-      <Card className=" h-full">
+      <Card className="h-full">
         <CardHeader>
           <CardTitle>
             <span className="flex items-center gap-2">
@@ -66,9 +66,30 @@ export function CreditScore() {
             </span>
           </CardTitle>
           <CardDescription>
-            Tu score se calculará después de tu primera solicitud.
+            Powered by <span className="font-semibold text-foreground">{CREDIT_BUREAU.name}</span>
           </CardDescription>
+          <CardAction>
+            <img
+              src={CREDIT_BUREAU.logoUrl}
+              alt={CREDIT_BUREAU.name}
+              width={CREDIT_BUREAU.logoWidth}
+              height={CREDIT_BUREAU.logoHeight}
+            />
+          </CardAction>
         </CardHeader>
+        <CardContent className="flex flex-col items-center gap-3 py-4">
+          <div className="w-14 h-14 rounded-full bg-primary-50 flex items-center justify-center">
+            <Shield className="w-7 h-7 text-primary-300" />
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              Aún no tienes historial
+            </p>
+            <p className="text-xs text-muted-foreground max-w-[200px]">
+              Tu score crediticio se obtendrá automáticamente con tu primera solicitud de préstamo.
+            </p>
+          </div>
+        </CardContent>
       </Card>
     );
   }

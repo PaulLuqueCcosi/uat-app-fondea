@@ -80,9 +80,9 @@ export function AppSidebar({ profileComplete, user, ...props }: AppSidebarProps)
               )}
               <div className="min-w-0 flex-1 grid leading-tight">
                 <span className="font-semibold text-sm truncate">{user?.name || 'Usuario'}</span>
-                <span className={`text-xs truncate ${profileComplete ? 'text-emerald-600' : 'text-warning-700'}`}>
+                {/* <span className={`text-xs truncate ${profileComplete ? 'text-emerald-600' : 'text-warning-700'}`}>
                   {profileComplete ? 'Perfil completo' : 'Perfil incompleto'}
-                </span>
+                </span> */}
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

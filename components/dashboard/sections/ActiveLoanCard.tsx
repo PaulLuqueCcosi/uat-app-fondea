@@ -146,7 +146,7 @@ export function ActiveLoanCard({ credit }: ActiveLoanCardProps) {
               </div>
               <div className="rounded-md border border-accent-200 bg-accent-50 p-2.5">
                 <p className="text-xs text-accent-800 mb-0.5">Pagado</p>
-                <p className="text-base font-bold text-accent-500">
+                <p className="text-base font-bold text-accent-700">
                   {formatCurrencyShort(credit.paidAmount)}
                 </p>
               </div>
