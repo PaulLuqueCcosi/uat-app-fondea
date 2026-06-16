@@ -12,7 +12,7 @@ import {
   CalendarLegend,
   MonthSelector,
 } from '@/components/credits';
-import type { Credit, Installment } from '@/modules/credits';
+import type { Credit, Installment, InstallmentDetail } from '@/modules/credits';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -43,15 +43,16 @@ function formatDateLong(iso: string): string {
 
 interface ActiveLoanCardProps {
   credit: Credit;
+  /** Cuota que toca pagar (resuelta por el backend). null si no hay cuotas pendientes. */
+  nextDueInstallment: InstallmentDetail | null;
 }
 
 /**
  * Card de "Tu Préstamo Actual" para el dashboard.
  * Usa Card anatomy (Header/Content/Footer) + Collapsible para cuotas y calendario.
  */
-export function ActiveLoanCard({ credit }: ActiveLoanCardProps) {
+export function ActiveLoanCard({ credit, nextDueInstallment }: ActiveLoanCardProps) {
   const progressPercent = Math.round((credit.paidAmount / credit.amount) * 100);
-  const overdueInstallment = credit.installments.find((i) => i.status === 'OVERDUE');
 
   const [expanded, setExpanded] = useState(true);
   const [selectedInstallment, setSelectedInstallment] = useState<Installment | null>(null);
@@ -105,21 +106,38 @@ export function ActiveLoanCard({ credit }: ActiveLoanCardProps) {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* ─── Alerta cuota vencida ─── */}
-          {overdueInstallment && (
-            <div className="flex items-center gap-3 rounded-lg border border-error-200 bg-error-50 p-3">
-              <AlertCircle className="w-5 h-5 text-error-600 shrink-0" />
+          {/* ─── Alerta cuota a pagar ─── */}
+          {nextDueInstallment && (
+            <div className={`flex items-center gap-3 rounded-lg border p-3 ${
+              nextDueInstallment.status === 'OVERDUE'
+                ? 'border-error-200 bg-error-50'
+                : 'border-warning-200 bg-warning-50'
+            }`}>
+              <AlertCircle className={`w-5 h-5 shrink-0 ${
+                nextDueInstallment.status === 'OVERDUE' ? 'text-error-600' : 'text-warning-600'
+              }`} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-error-900">
-                  Cuota {overdueInstallment.number} vencida
+                <p className={`text-sm font-semibold ${
+                  nextDueInstallment.status === 'OVERDUE' ? 'text-error-900' : 'text-warning-900'
+                }`}>
+                  Cuota {nextDueInstallment.number} {nextDueInstallment.status === 'OVERDUE' ? 'vencida' : 'pendiente'}
                 </p>
-                <p className="text-xs text-error-700">
-                  Venció el {formatDateLong(overdueInstallment.dueDate)} · {formatCurrency(overdueInstallment.amount)} sin pagar
+                <p className={`text-xs ${
+                  nextDueInstallment.status === 'OVERDUE' ? 'text-error-700' : 'text-warning-700'
+                }`}>
+                  {nextDueInstallment.status === 'OVERDUE'
+                    ? `Venció el ${formatDateLong(nextDueInstallment.dueDate)} · ${formatCurrency(nextDueInstallment.totalDue)} sin pagar`
+                    : `Vence el ${formatDateLong(nextDueInstallment.dueDate)} · ${formatCurrency(nextDueInstallment.totalDue)}`
+                  }
                 </p>
               </div>
-              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${overdueInstallment.id}`}>
-                <Button size="sm" className="bg-error-600 text-white hover:bg-error-700 text-xs shrink-0">
-                  Pagar ahora
+              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextDueInstallment.id}`}>
+                <Button size="sm" className={`text-xs shrink-0 ${
+                  nextDueInstallment.status === 'OVERDUE'
+                    ? 'bg-error-600 text-white hover:bg-error-700'
+                    : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
+                }`}>
+                  {nextDueInstallment.status === 'OVERDUE' ? 'Pagar ahora' : 'Pagar cuota'}
                 </Button>
               </Link>
             </div>

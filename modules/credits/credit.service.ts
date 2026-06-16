@@ -190,3 +190,49 @@ export async function getPaymentsByCreditId(
     return { ok: false, error: errors.networkError() };
   }
 }
+
+// ─── Cuota a pagar (next due) ─────────────────────────────────────────────────
+
+/**
+ * Obtiene la cuota que el usuario debe pagar ahora.
+ *
+ * Prioridad (definida por el backend):
+ *   1. OVERDUE (vencida) — la más urgente
+ *   2. PENDING (próxima a vencer)
+ *   3. null — no hay cuotas pendientes
+ *
+ * TODO: Reemplazar por:
+ *   const res = await backendFetch(`/api/v1/credits/${creditId}/next-installment`, { context: 'CREDITS' });
+ *   El backend debe resolver esta lógica (no el frontend).
+ */
+export async function getNextDueInstallment(
+  creditId: string,
+): Promise<CreditResult<InstallmentDetail | null>> {
+  try {
+    // TODO: backendFetch — un solo endpoint que devuelve la cuota que toca pagar
+    const details = mockInstallmentDetails.filter((d) => d.creditId === creditId);
+
+    // Prioridad: OVERDUE primero (la más antigua), luego PENDING (la más próxima)
+    const overdue = details
+      .filter((d) => d.status === 'OVERDUE')
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+    if (overdue.length > 0) {
+      return { ok: true, data: overdue[0] };
+    }
+
+    const pending = details
+      .filter((d) => d.status === 'PENDING')
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+    if (pending.length > 0) {
+      return { ok: true, data: pending[0] };
+    }
+
+    // No hay cuotas pendientes (crédito completado o todas futuras)
+    return { ok: true, data: null };
+  } catch (err) {
+    console.error('[CREDITS] getNextDueInstallment → error:', err);
+    return { ok: false, error: errors.networkError() };
+  }
+}

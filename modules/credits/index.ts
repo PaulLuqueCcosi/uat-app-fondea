@@ -8,6 +8,7 @@ export {
   getInstallmentDetail,
   getPaymentHistory,
   getPaymentsByCreditId,
+  getNextDueInstallment,
 } from './credit.service';
 
 // ── Types (para tipar props de componentes) ──────────────────────────────────

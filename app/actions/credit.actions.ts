@@ -44,6 +44,11 @@ export async function getInstallmentDetailAction(installmentId: string) {
   return creditService.getInstallmentDetail(installmentId);
 }
 
+export async function getNextDueInstallmentAction(creditId: string) {
+  await requireValidSession();
+  return creditService.getNextDueInstallment(creditId);
+}
+
 // ── Pagos ─────────────────────────────────────────────────────────────────────
 
 export async function getPaymentHistoryAction() {

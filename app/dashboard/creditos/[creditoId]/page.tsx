@@ -22,8 +22,8 @@ import {
   CalendarLegend,
   MonthSelector,
 } from '@/components/credits';
-import { getCreditByIdAction } from '@/app/actions/credit.actions';
-import type { Credit, Installment } from '@/modules/credits';
+import { getCreditByIdAction, getNextDueInstallmentAction } from '@/app/actions/credit.actions';
+import type { Credit, Installment, InstallmentDetail } from '@/modules/credits';
 import { creditStatusLabels } from '@/modules/credits';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -107,6 +107,7 @@ export default function CreditoDetallePage() {
   const creditoId = params.creditoId as string;
 
   const [credit, setCredit] = useState<Credit | null>(null);
+  const [nextDueInstallment, setNextDueInstallment] = useState<InstallmentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,16 +118,22 @@ export default function CreditoDetallePage() {
   useEffect(() => {
     async function fetchCredit() {
       setLoading(true);
-      const result = await getCreditByIdAction(creditoId);
-      if (result.ok) {
-        setCredit(result.data);
-        // Auto-focus en la próxima cuota pendiente o vencida
-        const focus = result.data.installments.find(
+      const [creditResult, nextDueResult] = await Promise.all([
+        getCreditByIdAction(creditoId),
+        getNextDueInstallmentAction(creditoId),
+      ]);
+      if (creditResult.ok) {
+        setCredit(creditResult.data);
+        // Auto-focus en la cuota que toca pagar
+        const focus = creditResult.data.installments.find(
           (i) => i.status === 'OVERDUE' || i.status === 'PENDING',
         );
         if (focus) setCalendarMonth(new Date(focus.dueDate));
       } else {
-        setError(result.error.message);
+        setError(creditResult.error.message);
+      }
+      if (nextDueResult.ok) {
+        setNextDueInstallment(nextDueResult.data);
       }
       setLoading(false);
     }
@@ -150,8 +157,6 @@ export default function CreditoDetallePage() {
   }
 
   const progressPercent = Math.round((credit.paidAmount / credit.amount) * 100);
-  const overdueInstallment = credit.installments.find((i) => i.status === 'OVERDUE');
-  const nextInstallment = credit.installments.find((i) => i.status === 'PENDING');
 
   const handleSelectInstallment = (inst: Installment) => {
     if (selectedInstallment?.id === inst.id) {
@@ -201,23 +206,36 @@ export default function CreditoDetallePage() {
         </p>
       </div>
 
-      {/* ─── Alerta cuota vencida ─── */}
-      {overdueInstallment && (
-        <Card className="border-error-200 bg-error-50">
+      {/* ─── Alerta cuota a pagar ─── */}
+      {nextDueInstallment && (
+        <Card className={nextDueInstallment.status === 'OVERDUE' ? 'border-error-200 bg-error-50' : ''}>
           <CardContent>
             <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-error-600 shrink-0" />
+              <AlertCircle className={`w-5 h-5 shrink-0 ${
+                nextDueInstallment.status === 'OVERDUE' ? 'text-error-600' : 'text-warning-600'
+              }`} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-error-900">
-                  Cuota {overdueInstallment.number} vencida
+                <p className={`text-sm font-semibold ${
+                  nextDueInstallment.status === 'OVERDUE' ? 'text-error-900' : 'text-foreground'
+                }`}>
+                  Cuota {nextDueInstallment.number} {nextDueInstallment.status === 'OVERDUE' ? 'vencida' : 'pendiente'}
                 </p>
-                <p className="text-xs text-error-700">
-                  Venció el {formatDateLong(overdueInstallment.dueDate)} · {formatCurrency(overdueInstallment.amount)} sin pagar
+                <p className={`text-xs ${
+                  nextDueInstallment.status === 'OVERDUE' ? 'text-error-700' : 'text-muted-foreground'
+                }`}>
+                  {nextDueInstallment.status === 'OVERDUE'
+                    ? `Venció el ${formatDateLong(nextDueInstallment.dueDate)} · ${formatCurrency(nextDueInstallment.totalDue)} sin pagar`
+                    : `Vence el ${formatDateLong(nextDueInstallment.dueDate)} · ${formatCurrency(nextDueInstallment.totalDue)}`
+                  }
                 </p>
               </div>
-              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${overdueInstallment.id}`}>
-                <Button size="sm" className="bg-error-600 text-white hover:bg-error-700 text-xs shrink-0">
-                  Pagar ahora
+              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextDueInstallment.id}`}>
+                <Button size="sm" className={`text-xs shrink-0 ${
+                  nextDueInstallment.status === 'OVERDUE'
+                    ? 'bg-error-600 text-white hover:bg-error-700'
+                    : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
+                }`}>
+                  {nextDueInstallment.status === 'OVERDUE' ? 'Pagar ahora' : 'Pagar cuota'}
                 </Button>
               </Link>
             </div>
@@ -264,22 +282,31 @@ export default function CreditoDetallePage() {
         </CardContent>
       </Card>
 
-      {/* ─── Próxima cuota (CTA prominente) ─── */}
-      {nextInstallment && (
+      {/* ─── Cuota a pagar (CTA prominente) ─── */}
+      {nextDueInstallment && (
         <Card>
           <CardContent>
             <div className="flex items-center gap-4">
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">Próxima cuota</p>
+                <p className="text-xs text-muted-foreground">
+                  {nextDueInstallment.status === 'OVERDUE' ? 'Cuota vencida' : 'Próxima cuota'}
+                </p>
                 <p className="text-xl font-bold text-foreground">
-                  {formatCurrency(nextInstallment.amount)}
+                  {formatCurrency(nextDueInstallment.totalDue)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Vence el {formatDateLong(nextInstallment.dueDate)} · Cuota {nextInstallment.number}/{credit.totalInstallments}
+                  {nextDueInstallment.status === 'OVERDUE'
+                    ? `Venció el ${formatDateLong(nextDueInstallment.dueDate)}`
+                    : `Vence el ${formatDateLong(nextDueInstallment.dueDate)}`
+                  } · Cuota {nextDueInstallment.number}/{credit.totalInstallments}
                 </p>
               </div>
-              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextInstallment.id}`}>
-                <Button className="gap-2 bg-accent-500 text-accent-900 hover:bg-accent-400">
+              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextDueInstallment.id}`}>
+                <Button className={`gap-2 ${
+                  nextDueInstallment.status === 'OVERDUE'
+                    ? 'bg-error-600 text-white hover:bg-error-700'
+                    : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
+                }`}>
                   <DollarSign className="w-4 h-4" />
                   Pagar cuota
                 </Button>
