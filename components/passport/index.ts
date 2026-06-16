@@ -2,6 +2,7 @@
 export { PassportSummaryCards } from './PassportSummaryCards';
 export { PassportProgress } from './PassportProgress';
 export { PassportHistory } from './PassportHistory';
+export { PassportHistoryTable } from './PassportHistoryTable';
 export { PassportDocument } from './PassportDocument';
 export { PassportFlipBook } from './PassportFlipBook';
 export { PassportErrorRouter } from './PassportErrorStates';

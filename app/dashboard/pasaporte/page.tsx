@@ -1,9 +1,9 @@
 import { Suspense } from 'react';
-import { getPassportSummary, getPointsHistory } from '@/modules/passport';
+import { getPassportSummary } from '@/modules/passport';
 import { PageTitle } from '@/components/ui/page-title';
 import {
   PassportFlipBook,
-  PassportHistory,
+  PassportHistoryTable,
   PassportErrorRouter,
   PassportPageSkeleton,
 } from '@/components/passport';
@@ -11,10 +11,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 async function PassportLoader() {
-  const [summaryResult, historyResult] = await Promise.all([
-    getPassportSummary(),
-    getPointsHistory(),
-  ]);
+  const summaryResult = await getPassportSummary();
 
   if (!summaryResult.ok) {
     return <PassportErrorRouter error={summaryResult.error} />;
@@ -23,9 +20,8 @@ async function PassportLoader() {
   return (
     <div className="flex flex-col gap-6">
       <PassportFlipBook summary={summaryResult.data} />
-      <PassportHistory
-        history={historyResult.ok ? historyResult.data : []}
-      />
+      {/* La tabla maneja su propia paginación server-side */}
+      <PassportHistoryTable />
     </div>
   );
 }

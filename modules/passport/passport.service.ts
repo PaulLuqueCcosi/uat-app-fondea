@@ -13,6 +13,8 @@
  */
 
 import type { Result } from '@/modules/shared/result';
+import type { PaginatedRequest, PaginatedResponse } from '@/modules/shared/pagination';
+import { DEFAULT_PAGE_REQUEST } from '@/modules/shared/pagination';
 import type { PassportSummary, PassportLevel, PointsHistoryEntry } from './passport.types';
 import type { PassportError } from './passport.errors';
 import { errors } from './passport.errors';
@@ -79,17 +81,50 @@ export async function getPassportSummary(): Promise<PassportResult<PassportSumma
 // ── GET: Historial de puntos ──────────────────────────────────────────────────
 
 /**
- * Obtiene el historial de movimientos de puntos del usuario.
+ * Obtiene el historial de movimientos de puntos del usuario (paginado).
  *
  * TODO: Reemplazar mock por:
- *   const res = await backendFetch('/api/v1/passport/history', { context: 'PASSPORT' });
+ *   const params = buildPageParams(request);
+ *   const res = await backendFetch(`/api/v1/passport/history?${params}`, { context: 'PASSPORT' });
+ *   return mapSpringPage(res, mapHistoryEntryFromBackend);
  */
-export async function getPointsHistory(): Promise<PassportResult<PointsHistoryEntry[]>> {
+export async function getPointsHistory(
+  request: PaginatedRequest = DEFAULT_PAGE_REQUEST,
+): Promise<PassportResult<PaginatedResponse<PointsHistoryEntry>>> {
   try {
-    // TODO: Reemplazar por backendFetch + mapHistoryEntryFromBackend
-    const data = await simulateNetwork(mockHistory);
+    // Simular paginación sobre el mock
+    let filtered = [...mockHistory];
 
-    return { ok: true, data: data ?? [] };
+    // Búsqueda
+    if (request.search) {
+      const q = request.search.toLowerCase();
+      filtered = filtered.filter((e) => e.description.toLowerCase().includes(q));
+    }
+
+    // Ordenamiento (por fecha por defecto)
+    filtered.sort((a, b) => {
+      const dir = request.sortDir === 'asc' ? 1 : -1;
+      return dir * (new Date(a.date).getTime() - new Date(b.date).getTime());
+    });
+
+    // Paginar
+    const totalElements = filtered.length;
+    const totalPages = Math.ceil(totalElements / request.size);
+    const start = request.page * request.size;
+    const items = filtered.slice(start, start + request.size);
+
+    return {
+      ok: true,
+      data: {
+        items,
+        totalElements,
+        totalPages,
+        page: request.page,
+        size: request.size,
+        first: request.page === 0,
+        last: request.page >= totalPages - 1,
+      },
+    };
   } catch (err) {
     console.error('[PASSPORT] getPointsHistory → error:', err);
     return { ok: false, error: errors.historyUnavailable(String(err)) };
