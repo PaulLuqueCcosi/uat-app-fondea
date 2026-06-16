@@ -9,7 +9,7 @@ import { FinancialPassport } from '@/components/dashboard/sections/FinancialPass
 import { CreditScore } from '@/components/dashboard/sections/CreditScore';
 import { EducationCarousel } from '@/components/dashboard/sections/EducationCarousel';
 import { TransparencyCard } from '@/components/dashboard/sections/TransparencyCard';
-import { ReferralProgram } from '@/components/dashboard/sections/ReferralProgram';
+import { ReferralProgramSection } from '@/components/dashboard/sections/ReferralProgramServer';
 import { getModuleSummaries } from '@/modules/education';
 
 export const dynamic = 'force-dynamic';
@@ -44,7 +44,9 @@ export default async function DashboardPage() {
             {/* Fila 1: Score + Referidos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <CreditScore />
-              <ReferralProgram />
+              <Suspense fallback={<ReferralProgramSection.Skeleton />}>
+                <ReferralProgramSection />
+              </Suspense>
             </div>
 
             {/* Fila 2: Fondea Aprende */}
