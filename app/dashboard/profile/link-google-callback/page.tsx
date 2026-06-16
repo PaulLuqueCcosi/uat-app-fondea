@@ -66,7 +66,7 @@ export default function LinkGoogleCallbackPage() {
         sessionStorage.removeItem('linkGoogle_identityVerificationId');
 
         // Redirigir al perfil directamente
-        window.location.href = '/dashboard/mi-perfil';
+        window.location.href = '/dashboard/profile';
       } catch {
         setStatus('error');
         setError('Ocurrió un error inesperado');
@@ -93,7 +93,7 @@ export default function LinkGoogleCallbackPage() {
             <p className="text-sm text-muted-foreground">
               Tu cuenta de Google ha sido vinculada exitosamente.
             </p>
-            <Button onClick={() => router.push('/dashboard/mi-perfil')}>
+            <Button onClick={() => router.push('/dashboard/profile')}>
               Volver a Mi Perfil
             </Button>
           </>
@@ -104,7 +104,7 @@ export default function LinkGoogleCallbackPage() {
             <XCircle className="w-10 h-10 text-error-600 mx-auto" />
             <p className="text-base font-semibold text-foreground">Error al vincular</p>
             <p className="text-sm text-muted-foreground">{error}</p>
-            <Button variant="outline" onClick={() => router.push('/dashboard/mi-perfil')}>
+            <Button variant="outline" onClick={() => router.push('/dashboard/profile')}>
               Volver a Mi Perfil
             </Button>
           </>

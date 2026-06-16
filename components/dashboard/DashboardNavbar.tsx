@@ -202,7 +202,7 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push('/dashboard/mi-perfil')}>
+              <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                 <User className="h-4 w-4" />
                 Mi Perfil
               </DropdownMenuItem>

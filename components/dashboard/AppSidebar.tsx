@@ -32,7 +32,7 @@ import {
 const mainNav = [
   { path: '/dashboard', label: 'Inicio', icon: Home },
   { path: '/dashboard/educacion', label: 'Fondea Aprende', icon: GraduationCap },
-  { path: '/dashboard/mi-perfil', label: 'Mi Perfil', icon: User },
+  { path: '/dashboard/profile', label: 'Mi Perfil', icon: User },
   { path: '/dashboard/pasaporte', label: 'Pasaporte Financiero', icon: Award },
   { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
   { path: '/dashboard/referidos', label: 'Referidos', icon: Users },
