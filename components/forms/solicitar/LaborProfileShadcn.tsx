@@ -867,7 +867,18 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
       <>
         <div className="max-w-3xl mx-auto">
           <Card className="w-full">
-            <CardContent className="pt-6">
+            <CardHeader className="pb-4">
+              <FormHeader
+                icon={Briefcase}
+                title="Perfil laboral"
+                description={
+                  isVerified && !isEditing
+                    ? 'Tu información laboral está registrada'
+                    : 'Cuéntanos sobre tu trabajo e ingresos'
+                }
+              />
+            </CardHeader>
+            <CardContent className="pt-0">
               {content}
             </CardContent>
           </Card>

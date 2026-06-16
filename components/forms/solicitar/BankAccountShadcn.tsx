@@ -539,14 +539,31 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
     <>
       {dashboardMode ? (
         <>
-          {isVerified && !isEditing ? summaryView : formView}
-          {(!isVerified || isEditing) && (
-            <StickyBottomBar
-              ctaLabel={form.formState.isSubmitting ? 'Guardando...' : 'Guardar cambios'}
-              onCta={form.handleSubmit(onSubmit)}
-              loading={form.formState.isSubmitting}
-            />
-          )}
+          <div className="max-w-3xl mx-auto">
+            <Card className="w-full">
+              <CardHeader className="pb-4">
+                <FormHeader
+                  icon={CreditCard}
+                  title="Cuenta bancaria para desembolso"
+                  description={
+                    isVerified && !isEditing
+                      ? 'Tu cuenta está registrada'
+                      : 'Ingresa la cuenta donde recibirás el dinero del préstamo'
+                  }
+                />
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isVerified && !isEditing ? summaryView : formView}
+              </CardContent>
+            </Card>
+            {(!isVerified || isEditing) && (
+              <StickyBottomBar
+                ctaLabel={form.formState.isSubmitting ? 'Guardando...' : 'Guardar cambios'}
+                onCta={form.handleSubmit(onSubmit)}
+                loading={form.formState.isSubmitting}
+              />
+            )}
+          </div>
         </>
       ) : (
         <Card className="w-full max-w-3xl mx-auto">

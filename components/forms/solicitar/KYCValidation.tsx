@@ -774,7 +774,18 @@ export function FunnelKYCValidation({
         <div className="flex flex-col xl:flex-row gap-6 lg:gap-8 xl:items-start xl:justify-center max-w-7xl mx-auto">
           <div className="flex-1 xl:max-w-2xl">
             <Card className="w-full">
-              <CardContent className="pt-6">
+              <CardHeader className="pb-4">
+                <FormHeader
+                  icon={CreditCard}
+                  title="Verificación de identidad"
+                  description={
+                    isVerified && !isEditing
+                      ? 'Tu identidad ha sido verificada correctamente'
+                      : 'Ingresa tus datos exactamente como aparecen en tu DNI'
+                  }
+                />
+              </CardHeader>
+              <CardContent className="pt-0">
                 {content}
               </CardContent>
             </Card>

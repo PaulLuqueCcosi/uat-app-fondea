@@ -782,7 +782,18 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       <>
         <div className="max-w-3xl mx-auto">
           <Card className="w-full">
-            <CardContent className="pt-6">
+            <CardHeader className="pb-4">
+              <FormHeader
+                icon={Wallet}
+                title="Perfil económico"
+                description={
+                  isVerified && !isEditing
+                    ? 'Tu información económica está registrada'
+                    : 'Cuéntanos sobre tus gastos y patrimonio'
+                }
+              />
+            </CardHeader>
+            <CardContent className="pt-0">
               {content}
             </CardContent>
           </Card>

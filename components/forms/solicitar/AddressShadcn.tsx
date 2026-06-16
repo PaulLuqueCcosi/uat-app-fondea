@@ -863,14 +863,31 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
     <>
       {dashboardMode ? (
         <>
-          {content}
-          {(!isVerified || isEditing) && (
-            <StickyBottomBar
-              ctaLabel={form.formState.isSubmitting ? 'Guardando...' : 'Guardar cambios'}
-              onCta={form.handleSubmit(onSubmit)}
-              loading={form.formState.isSubmitting}
-            />
-          )}
+          <div className="max-w-3xl mx-auto">
+            <Card className="w-full">
+              <CardHeader className="pb-4">
+                <FormHeader
+                  icon={MapPin}
+                  title="Información de dirección"
+                  description={
+                    isVerified && !isEditing
+                      ? 'Tu dirección está registrada'
+                      : 'Ingresa tu dirección actual de residencia'
+                  }
+                />
+              </CardHeader>
+              <CardContent className="pt-0">
+                {content}
+              </CardContent>
+            </Card>
+            {(!isVerified || isEditing) && (
+              <StickyBottomBar
+                ctaLabel={form.formState.isSubmitting ? 'Guardando...' : 'Guardar cambios'}
+                onCta={form.handleSubmit(onSubmit)}
+                loading={form.formState.isSubmitting}
+              />
+            )}
+          </div>
         </>
       ) : (
         <Card className="w-full max-w-3xl mx-auto">

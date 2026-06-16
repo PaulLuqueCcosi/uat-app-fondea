@@ -607,7 +607,18 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
       <>
         <div className="max-w-4xl mx-auto">
           <Card className="w-full">
-            <CardContent className="pt-6">
+            <CardHeader className="pb-4">
+              <FormHeader
+                icon={Users}
+                title="Referencias personales"
+                description={
+                  isVerified && !isEditing
+                    ? 'Tus referencias están registradas'
+                    : 'Agrega un contacto familiar y uno no familiar'
+                }
+              />
+            </CardHeader>
+            <CardContent className="pt-0">
               {content}
             </CardContent>
           </Card>
