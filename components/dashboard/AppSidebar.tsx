@@ -36,11 +36,11 @@ const mainNav = [
   { path: '/dashboard/pasaporte', label: 'Pasaporte Financiero', icon: Award },
   { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
   { path: '/dashboard/referidos', label: 'Referidos', icon: Users },
+  { path: '/dashboard/mi-expediente', label: 'Mi Expedientes', icon: FileText },
 ];
 
 const devNav = [
   { path: '/dashboard/creditos', label: 'Mis Créditos', icon: CreditCard },
-  { path: '/dashboard/mi-expediente', label: 'Mi Expediente', icon: FileText },
   { path: '/dashboard/dev-tools', label: 'Dev Tools', icon: Terminal },
   { path: '/dashboard/dev-tools/lambda-tester', label: 'Lambda Tester', icon: Zap },
   // { path: '/dashboard/settings', label: 'Configuración', icon: Settings },
