@@ -27,7 +27,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Separator } from '@/components/ui/separator';
-import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveReferencesProfile } from '@/app/actions/references.actions';
 import type { ReferencesSaveResult } from '@/app/actions/references.actions';
@@ -49,6 +48,7 @@ import {
 interface FunnelReferencesProps {
   dashboardMode?: boolean;
   initialData?: ReferencesProfileStatus;
+  onClose?: () => void;
 }
 
 const FAMILY_RELATIONS = [
@@ -144,7 +144,7 @@ function ButtonSpinner({ label }: { label: string }) {
   );
 }
 
-export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: FunnelReferencesProps) {
+export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onClose }: FunnelReferencesProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
@@ -570,31 +570,29 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
         <Separator className="my-10 bg-primary/20 h-px" />
 
         {/* Botones de acción */}
-        {!dashboardMode && (
-          <div className="flex flex-col sm:flex-row justify-end gap-3">
-            {wasVerified || isVerified ? (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }} disabled={isSubmitting}>
-                Cancelar
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()} disabled={isSubmitting}>
-                Atrás
-              </Button>
-            )}
-            <Button
-              type="submit"
-              className="w-full sm:w-auto"
-              disabled={isSubmitting || blocked}
-            >
-              {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  {isVerified ? 'Guardar cambios' : 'Continuar'}
-                </span>
-              )}
+        <div className="flex flex-col sm:flex-row justify-end gap-3">
+          {wasVerified || isVerified ? (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }} disabled={isSubmitting}>
+              Cancelar
             </Button>
-          </div>
-        )}
+          ) : (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => router.back()} disabled={isSubmitting}>
+              {dashboardMode ? 'Cancelar' : 'Atrás'}
+            </Button>
+          )}
+          <Button
+            type="submit"
+            className="w-full sm:w-auto"
+            disabled={isSubmitting || blocked}
+          >
+            {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                {isVerified ? 'Guardar cambios' : 'Continuar'}
+              </span>
+            )}
+          </Button>
+        </div>
       </form>
     </Form>
   );
@@ -622,13 +620,6 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData }: F
               {content}
             </CardContent>
           </Card>
-          {(!isVerified || isEditing) && (
-            <StickyBottomBar
-              ctaLabel={isSubmitting ? 'Guardando...' : 'Guardar cambios'}
-              onCta={form.handleSubmit(onSubmit)}
-              loading={isSubmitting}
-            />
-          )}
         </div>
 
         {/* Modal de confirmación al editar */}

@@ -122,6 +122,7 @@ type LaborFormValues = z.infer<typeof laborFormSchema>;
 interface LaborProfileProps {
   dashboardMode?: boolean;
   initialData?: LaborProfileStatus | null;
+  onClose?: () => void;
 }
 
 // ── Helpers UI ────────────────────────────────────────────────────────────────
@@ -146,7 +147,7 @@ function ButtonSpinner({ label }: { label: string }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }: LaborProfileProps) {
+export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, onClose }: LaborProfileProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
@@ -833,20 +834,19 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
 
         <Separator className="my-10 bg-primary/20 h-px" />
 
-        {/* Botones — solo en modo funnel */}
-        {!dashboardMode && (
-          <div className="flex flex-col sm:flex-row justify-end gap-3">
-            {wasVerified || isVerified ? (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }} disabled={isSubmitting}>
-                Cancelar
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()} disabled={isSubmitting}>
-                Atrás
-              </Button>
-            )}
-            <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || blocked}>
-              {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
+        {/* Botones */}
+        <div className="flex flex-col sm:flex-row justify-end gap-3">
+          {wasVerified || isVerified ? (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+          ) : (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => router.back()} disabled={isSubmitting}>
+              {dashboardMode ? 'Cancelar' : 'Atrás'}
+            </Button>
+          )}
+          <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || blocked}>
+            {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
                 <span className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
                   {isVerified ? 'Guardar cambios' : 'Continuar'}
@@ -854,7 +854,6 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
               )}
             </Button>
           </div>
-        )}
       </form>
     </Form>
   );
@@ -882,13 +881,6 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData }:
               {content}
             </CardContent>
           </Card>
-          {(!isVerified || isEditing) && (
-            <StickyBottomBar
-              ctaLabel={isSubmitting ? 'Guardando...' : 'Guardar cambios'}
-              onCta={form.handleSubmit(onSubmit)}
-              loading={isSubmitting}
-            />
-          )}
         </div>
 
         {/* Modal de confirmación al editar */}

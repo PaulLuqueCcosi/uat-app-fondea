@@ -9,6 +9,8 @@ interface StickyBottomBarProps {
   loading?: boolean;
   ctaDisabled?: boolean;
   showAutosave?: boolean;
+  cancelLabel?: string;
+  onCancel?: () => void;
 }
 
 export const StickyBottomBar: React.FC<StickyBottomBarProps> = ({
@@ -16,11 +18,17 @@ export const StickyBottomBar: React.FC<StickyBottomBarProps> = ({
   onCta,
   loading = false,
   ctaDisabled = false,
-  showAutosave = true,
+  showAutosave = false,
+  cancelLabel = 'Cancelar',
+  onCancel,
 }) => {
   return (
     <div className="sticky bottom-0 bg-card border-t border-border px-4 sm:px-6 md:px-8 lg:px-10 py-3 sm:py-4 flex items-center justify-between z-30 gap-3">
-      {showAutosave ? (
+      {onCancel ? (
+        <Button variant="outline" onClick={onCancel} className="flex-shrink-0">
+          {cancelLabel}
+        </Button>
+      ) : showAutosave ? (
         <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
           <span className="w-2 h-2 rounded-full bg-secondary inline-block flex-shrink-0" />
           <span className="hidden sm:inline">Guardado automáticamente</span>

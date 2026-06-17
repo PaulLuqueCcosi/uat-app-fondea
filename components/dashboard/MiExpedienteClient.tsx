@@ -8,10 +8,9 @@ import {
   MapPin,
   Users,
   Building2,
-  Pencil,
+  Eye,
   CheckCircle,
   Clock,
-  AlertCircle,
   X,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent } from '@/components/ui/card';
@@ -117,20 +116,25 @@ export function MiExpedienteClient({
   if (editingSection) {
     return (
       <div className="flex flex-col gap-6">
-        {/* Botón volver */}
-        <button
-          onClick={handleClose}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-        >
-          <X className="w-4 h-4" />
-          Volver a Mi Expediente
-        </button>
+        {/* Header con volver */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+            className="gap-2 text-primary hover:text-primary-700 hover:bg-primary-50"
+          >
+            <X className="w-4 h-4" />
+            Volver
+          </Button>
+        </div>
 
         {/* Formulario con el mismo wrapper que /solicitar/* */}
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
           {editingSection === 'kyc' && (
             <FunnelKYCValidation
               dashboardMode
+              onClose={handleClose}
               initialData={kycData}
               initialBlocked={kycBlocked}
               initialBlockedHoursLeft={kycBlockedHoursLeft}
@@ -138,27 +142,20 @@ export function MiExpedienteClient({
             />
           )}
           {editingSection === 'labor' && (
-            <FunnelLaborProfileShadcn dashboardMode initialData={laborData} />
+            <FunnelLaborProfileShadcn dashboardMode onClose={handleClose} initialData={laborData} />
           )}
           {editingSection === 'economic' && (
-            <FunnelEconomicProfileShadcn dashboardMode initialData={economicData} />
+            <FunnelEconomicProfileShadcn dashboardMode onClose={handleClose} initialData={economicData} />
           )}
           {editingSection === 'address' && (
-            <FunnelAddressShadcn dashboardMode initialData={addressData} />
+            <FunnelAddressShadcn dashboardMode onClose={handleClose} initialData={addressData} />
           )}
           {editingSection === 'references' && (
-            <FunnelReferencesShadcn dashboardMode initialData={referencesData} />
+            <FunnelReferencesShadcn dashboardMode onClose={handleClose} initialData={referencesData} />
           )}
           {editingSection === 'bank-account' && (
-            <FunnelBankAccountShadcn dashboardMode initialData={bankAccountData} />
+            <FunnelBankAccountShadcn dashboardMode onClose={handleClose} initialData={bankAccountData} />
           )}
-        </div>
-
-        {/* Botón cancelar */}
-        <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
-          <Button variant="outline" className="w-full" onClick={handleClose}>
-            Cancelar y volver
-          </Button>
         </div>
       </div>
     );
@@ -170,7 +167,7 @@ export function MiExpedienteClient({
       {/* Header */}
       <PageTitle
         title="Mi Expediente"
-        description="Toda tu información personal verificada. Toca &quot;Editar&quot; para modificar una sección."
+        description="Toda tu información personal verificada. Toca &quot;Ver Detalle&quot; para revisar una sección."
       />
 
       {/* Grid de secciones */}
@@ -188,8 +185,8 @@ export function MiExpedienteClient({
               <div className="flex items-center gap-2">
                 <StatusBadge verified={kycData?.status === 'VERIFIED'} />
                 <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('kyc')}>
-                  <Pencil className="w-3.5 h-3.5" />
-                  Editar
+                  <Eye className="w-3.5 h-3.5" />
+                  Ver Detalle
                 </Button>
               </div>
             </CardAction>
@@ -221,8 +218,8 @@ export function MiExpedienteClient({
               <div className="flex items-center gap-2">
                 <StatusBadge verified={laborData.overall_verified} />
                 <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('labor')}>
-                  <Pencil className="w-3.5 h-3.5" />
-                  Editar
+                  <Eye className="w-3.5 h-3.5" />
+                  Ver Detalle
                 </Button>
               </div>
             </CardAction>
@@ -255,8 +252,8 @@ export function MiExpedienteClient({
               <div className="flex items-center gap-2">
                 <StatusBadge verified={economicData.overall_verified} />
                 <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('economic')}>
-                  <Pencil className="w-3.5 h-3.5" />
-                  Editar
+                  <Eye className="w-3.5 h-3.5" />
+                  Ver Detalle
                 </Button>
               </div>
             </CardAction>
@@ -289,8 +286,8 @@ export function MiExpedienteClient({
               <div className="flex items-center gap-2">
                 <StatusBadge verified={addressData.overall_verified} />
                 <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('address')}>
-                  <Pencil className="w-3.5 h-3.5" />
-                  Editar
+                  <Eye className="w-3.5 h-3.5" />
+                  Ver Detalle
                 </Button>
               </div>
             </CardAction>
@@ -324,8 +321,8 @@ export function MiExpedienteClient({
               <div className="flex items-center gap-2">
                 <StatusBadge verified={referencesData.overall_verified} />
                 <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('references')}>
-                  <Pencil className="w-3.5 h-3.5" />
-                  Editar
+                  <Eye className="w-3.5 h-3.5" />
+                  Ver Detalle
                 </Button>
               </div>
             </CardAction>
@@ -367,8 +364,8 @@ export function MiExpedienteClient({
               <div className="flex items-center gap-2">
                 <StatusBadge verified={bankAccountData.overall_verified} />
                 <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('bank-account')}>
-                  <Pencil className="w-3.5 h-3.5" />
-                  Editar
+                  <Eye className="w-3.5 h-3.5" />
+                  Ver Detalle
                 </Button>
               </div>
             </CardAction>

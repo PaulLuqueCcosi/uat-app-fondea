@@ -29,7 +29,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Separator } from '@/components/ui/separator';
-import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import {
   saveBankAccountProfile,
@@ -49,6 +48,7 @@ import { AlertBanner } from '@/components/ui/alert-banner';
 interface FunnelBankAccountProps {
   dashboardMode?: boolean;
   initialData?: BankAccountProfileStatus;
+  onClose?: () => void;
 }
 
 function SectionHeader({ title, description }: { title: string; description: string }) {
@@ -94,7 +94,7 @@ const bankAccountFormSchema = z.object({
 
 type BankAccountFormValues = z.infer<typeof bankAccountFormSchema>;
 
-export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: FunnelBankAccountProps) {
+export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, onClose }: FunnelBankAccountProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
@@ -513,22 +513,20 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
         )}
 
         {/* Botones */}
-        {!dashboardMode && (
-          <div className="flex flex-col sm:flex-row justify-end gap-3">
-            {isVerified ? (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { setIsEditing(false); setSaveError(null); setSaveErrorCategory(undefined); }}>
-                Cancelar
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
-                Atrás
-              </Button>
-            )}
-            <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || blocked}>
-              {form.formState.isSubmitting ? 'Guardando...' : isVerified ? 'Guardar cambios' : 'Continuar'}
+        <div className="flex flex-col sm:flex-row justify-end gap-3">
+          {isVerified ? (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsEditing(false); setSaveError(null); setSaveErrorCategory(undefined); }}>
+              Cancelar
             </Button>
-          </div>
-        )}
+          ) : (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => router.back()}>
+              {dashboardMode ? 'Cancelar' : 'Atrás'}
+            </Button>
+          )}
+          <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || blocked}>
+            {form.formState.isSubmitting ? 'Guardando...' : isVerified ? 'Guardar cambios' : 'Continuar'}
+          </Button>
+        </div>
       </form>
     </Form>
   );
@@ -556,13 +554,6 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData }: 
                 {isVerified && !isEditing ? summaryView : formView}
               </CardContent>
             </Card>
-            {(!isVerified || isEditing) && (
-              <StickyBottomBar
-                ctaLabel={form.formState.isSubmitting ? 'Guardando...' : 'Guardar cambios'}
-                onCta={form.handleSubmit(onSubmit)}
-                loading={form.formState.isSubmitting}
-              />
-            )}
           </div>
         </>
       ) : (

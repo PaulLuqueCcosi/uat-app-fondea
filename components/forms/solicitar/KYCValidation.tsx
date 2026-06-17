@@ -30,7 +30,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveKYCData } from '@/app/actions/kyc.actions';
 import type { KYCSaveResult } from '@/app/actions/kyc.actions';
@@ -59,6 +58,7 @@ interface FunnelKYCValidationProps {
   initialBlocked?: boolean;
   initialBlockedHoursLeft?: number;
   initialAttemptsLeft?: number;
+  onClose?: () => void;
 }
 
 interface SectionHeaderProps {
@@ -152,6 +152,7 @@ export function FunnelKYCValidation({
   initialBlocked = false,
   initialBlockedHoursLeft = 0,
   initialAttemptsLeft = 3,
+  onClose,
 }: FunnelKYCValidationProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -700,39 +701,37 @@ export function FunnelKYCValidation({
         <Separator className="my-10 bg-primary/20 h-px" />
 
         {/* Botones */}
-        {!dashboardMode && (
-          <div className="flex flex-col sm:flex-row justify-end gap-3">
-            {wasVerified ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }}
-                disabled={isVerifying}
-              >
-                Cancelar
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => router.back()}
-                disabled={isVerifying}
-              >
-                Atrás
-              </Button>
-            )}
-            <Button type="submit" className="w-full sm:w-auto" disabled={isVerifying || blocked}>
-              {isVerifying ? <ButtonSpinner label="Verificando..." /> : (
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Verificar datos
-                </span>
-              )}
+        <div className="flex flex-col sm:flex-row justify-end gap-3">
+          {wasVerified ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }}
+              disabled={isVerifying}
+            >
+              Cancelar
             </Button>
-          </div>
-        )}
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={dashboardMode && onClose ? onClose : () => router.back()}
+              disabled={isVerifying}
+            >
+              {dashboardMode ? 'Cancelar' : 'Atrás'}
+            </Button>
+          )}
+          <Button type="submit" className="w-full sm:w-auto" disabled={isVerifying || blocked}>
+            {isVerifying ? <ButtonSpinner label="Verificando..." /> : (
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Verificar datos
+              </span>
+            )}
+          </Button>
+        </div>
       </form>
     </Form>
   );
@@ -789,14 +788,6 @@ export function FunnelKYCValidation({
                 {content}
               </CardContent>
             </Card>
-            {(!isVerified || isEditing) && (
-              <StickyBottomBar
-                ctaLabel={isVerifying ? 'Verificando...' : 'Verificar datos'}
-                onCta={form.handleSubmit(onSubmit)}
-                loading={isVerifying}
-                ctaDisabled={blocked}
-              />
-            )}
           </div>
           <div className="xl:shrink-0">
             {/* Solo mostrar ayuda del DNI cuando está editando */}

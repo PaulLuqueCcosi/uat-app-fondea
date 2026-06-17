@@ -34,7 +34,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Separator } from '@/components/ui/separator';
-import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import { FormHeader } from '@/components/ui/form-header';
 import { REFERRAL_SOURCE_OPTIONS } from '@/lib/constants';
 import { DEPARTAMENTO_CENTERS, REGION_ZOOM } from '@/lib/ubigeo-centers';
@@ -61,6 +60,7 @@ import { AlertBanner } from '@/components/ui/alert-banner';
 interface FunnelAddressProps {
   dashboardMode?: boolean;
   initialData?: AddressProfileStatus;
+  onClose?: () => void;
 }
 
 // ── Helpers UI ────────────────────────────────────────────────────────────────
@@ -117,7 +117,7 @@ type AddressFormValues = z.infer<typeof addressFormSchema>;
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
-export function FunnelAddressShadcn({ dashboardMode = false, initialData }: FunnelAddressProps) {
+export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClose }: FunnelAddressProps) {
   const router   = useRouter();
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
@@ -743,22 +743,20 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
         )}
 
         {/* Botones */}
-        {!dashboardMode && (
-          <div className="flex flex-col sm:flex-row justify-end gap-3">
-            {isVerified ? (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { setIsEditing(false); setSaveError(null); setSaveErrorCategory(undefined); }}>
-                Cancelar
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
-                Atrás
-              </Button>
-            )}
-            <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || blocked}>
-              {form.formState.isSubmitting ? 'Guardando...' : isVerified ? 'Guardar cambios' : 'Continuar'}
+        <div className="flex flex-col sm:flex-row justify-end gap-3">
+          {isVerified ? (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsEditing(false); setSaveError(null); setSaveErrorCategory(undefined); }}>
+              Cancelar
             </Button>
-          </div>
-        )}
+          ) : (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => router.back()}>
+              {dashboardMode ? 'Cancelar' : 'Atrás'}
+            </Button>
+          )}
+          <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || blocked}>
+            {form.formState.isSubmitting ? 'Guardando...' : isVerified ? 'Guardar cambios' : 'Continuar'}
+          </Button>
+        </div>
       </form>
     </Form>
   );
@@ -880,13 +878,6 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData }: Funn
                 {content}
               </CardContent>
             </Card>
-            {(!isVerified || isEditing) && (
-              <StickyBottomBar
-                ctaLabel={form.formState.isSubmitting ? 'Guardando...' : 'Guardar cambios'}
-                onCta={form.handleSubmit(onSubmit)}
-                loading={form.formState.isSubmitting}
-              />
-            )}
           </div>
         </>
       ) : (
