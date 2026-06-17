@@ -56,7 +56,6 @@ async function fetchAccountData(): Promise<Record<string, unknown> | null> {
     }
 
     const data = await res.json();
-    console.log('[PROFILE:fetchAccountData] ✅ Respuesta:', JSON.stringify(data, null, 2));
     return data;
   } catch (err) {
     console.log('[PROFILE:fetchAccountData] ❌ Error:', err);

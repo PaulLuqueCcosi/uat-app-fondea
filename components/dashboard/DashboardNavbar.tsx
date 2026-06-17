@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LogOut,
@@ -10,9 +10,17 @@ import {
   CreditCard,
   LifeBuoy,
   Bell,
+  Check,
+  Trash2,
+  ExternalLink,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useNotificationStore } from '@/modules/notifications';
+import { getNotificationRoute } from '@/modules/notifications';
+import type { Notification } from '@/modules/notifications';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -86,6 +94,180 @@ interface DashboardNavbarProps {
   onSignOut: () => Promise<void>;
 }
 
+// ── Notification Bell ──────────────────────────────────────────────────────────
+
+function formatTimeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'Ahora';
+  if (minutes < 60) return `Hace ${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Hace ${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `Hace ${days}d`;
+  return new Date(iso).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+}
+
+function NotificationBell() {
+  const router = useRouter();
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const hasUrgent = useNotificationStore((s) => s.hasUrgent);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const status = useNotificationStore((s) => s.status);
+  const fetchAll = useNotificationStore((s) => s.fetchAll);
+  const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
+  const markAsRead = useNotificationStore((s) => s.markAsRead);
+  const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
+  const deleteNotification = useNotificationStore((s) => s.deleteNotification);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
+
+  // Cargar lista completa al abrir
+  useEffect(() => {
+    if (open && status === 'idle') {
+      fetchAll();
+    }
+  }, [open, status, fetchAll]);
+
+  const handleClick = (notification: Notification) => {
+    // Al hacer click → marcar como leída
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+  };
+
+  const handleGoToDetail = (notification: Notification) => {
+    const route = getNotificationRoute(notification);
+    if (route) {
+      setOpen(false);
+      router.push(route);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted transition-colors"
+        aria-label={`Notificaciones${unreadCount > 0 ? ` (${unreadCount} sin leer)` : ''}`}
+      >
+        <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'text-foreground' : 'text-muted-foreground'}`} />
+        {unreadCount > 0 && (
+          <span
+            className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 ${
+              hasUrgent ? 'bg-error-500 animate-pulse' : 'bg-primary-500'
+            }`}
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </PopoverTrigger>
+
+      <PopoverContent align="end" sideOffset={8} className="w-80 sm:w-96 p-0 gap-0">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <h3 className="text-sm font-semibold text-foreground">Notificaciones</h3>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-primary h-auto py-1 px-2"
+              onClick={() => markAllAsRead()}
+            >
+              Marcar todo como leído
+            </Button>
+          )}
+        </div>
+
+        {/* Lista */}
+        <div className="max-h-[400px] overflow-y-auto">
+          {status === 'pending' && notifications.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-12 px-4">
+              <Bell className="w-8 h-8 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No tienes notificaciones</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {notifications.slice(0, 20).map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => handleClick(n)}
+                  className={`relative px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                    !n.read ? 'bg-primary-50/50' : ''
+                  }`}
+                >
+                  <div className="flex items-start gap-3 pr-20">
+                    {/* Dot indicador */}
+                    <div className="pt-1.5 shrink-0">
+                      {!n.read ? (
+                        <span className={`block w-2 h-2 rounded-full ${
+                          n.priority === 'urgent' ? 'bg-error-500' :
+                          n.priority === 'high' ? 'bg-warning-500' :
+                          'bg-primary-500'
+                        }`} />
+                      ) : (
+                        <span className="block w-2 h-2 rounded-full bg-transparent" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm leading-tight ${!n.read ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                        {n.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                        {n.message}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/70 mt-1">
+                        {formatTimeAgo(n.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="absolute top-2.5 right-3 flex items-center gap-0.5">
+                    {!n.read && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
+                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                        title="Marcar como leída"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {getNotificationRoute(n) && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleGoToDetail(n); }}
+                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                        title="Ver detalle"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
+                      className="p-1.5 rounded-md hover:bg-error-50 text-muted-foreground hover:text-error-600 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
@@ -149,14 +331,7 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
       {/* Derecha: Notificaciones + Usuario */}
       <div className="flex items-center gap-1">
         {/* Campana de notificaciones */}
-        <button
-          className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted transition-colors"
-          aria-label="Notificaciones"
-        >
-          <Bell className="w-5 h-5 text-muted-foreground" />
-          {/* Indicador de notificación sin leer */}
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error-500" />
-        </button>
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger

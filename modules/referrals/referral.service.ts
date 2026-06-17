@@ -41,7 +41,7 @@ export async function getReferralData(): Promise<RefResult<ReferralSummary>> {
       totalReferrals: raw.total_referred ?? raw.totalReferred ?? 0,
       completedReferrals: raw.total_completed ?? raw.totalCompleted ?? 0,
       totalPointsEarned: raw.total_points ?? raw.totalPoints ?? 0,
-      pointsPerReferral: 15, // Configurable desde backend en el futuro
+      pointsPerReferral: 50, // Configurable desde backend en el futuro
     };
 
     return { ok: true, data: summary };
