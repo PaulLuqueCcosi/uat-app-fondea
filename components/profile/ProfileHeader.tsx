@@ -52,13 +52,17 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Solo se permiten imágenes (JPG, PNG, WebP)');
+    // Validar formato: solo imágenes (JPG, PNG)
+    const allowedTypes = ['image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Formato no permitido. Solo se aceptan JPG o PNG.');
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setError('La imagen no debe superar 2MB');
+    // Validar tamaño: máximo 5MB
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError(`La imagen pesa ${(file.size / 1024 / 1024).toFixed(1)}MB. El máximo es 5MB.`);
       return;
     }
 
@@ -132,7 +136,7 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
           <DialogHeader>
             <DialogTitle>Cambiar foto de perfil</DialogTitle>
             <DialogDescription>
-              Sube una imagen JPG, PNG o WebP (máximo 2MB).
+              Sube una imagen JPG o PNG (máximo 5MB).
             </DialogDescription>
           </DialogHeader>
 
@@ -162,7 +166,7 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
               <p className="text-xs text-muted-foreground mt-0.5">
                 {selectedFile
                   ? `${(selectedFile.size / 1024).toFixed(0)} KB`
-                  : 'JPG, PNG o WebP · Máximo 2MB'
+                  : 'JPG o PNG · Máximo 5MB'
                 }
               </p>
             </button>
@@ -187,7 +191,7 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png"
             className="hidden"
             onChange={handleFileChange}
           />

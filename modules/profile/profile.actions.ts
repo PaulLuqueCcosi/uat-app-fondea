@@ -457,33 +457,33 @@ export async function completeLinkGoogle(
  * Sube el avatar al backend (S3) y actualiza la URL en Logto.
  *
  * Flujo:
- * 1. POST /api/v1/users/avatar (multipart) → { url: "https://..." }
+ * 1. POST /api/v1/uploads/image (multipart) → { url: "https://..." }
  * 2. PATCH /api/my-account → { avatar: url }
- *
- * HOY: simulado con URL fija (backend aún no existe).
- * MAÑANA: descomentar backendFetch y quitar el mock.
  */
-// TODO: implementar en el backend
 export async function uploadAndSetAvatar(formData: FormData): Promise<ActionResult & { url?: string }> {
   try {
     // ── Paso 1: Subir imagen al backend → S3 ──
-    // TODO: descomentar cuando el backend tenga POST /api/v1/users/avatar
-    // const { backendFetch } = await import('@/lib/backend-fetch');
-    // const uploadRes = await backendFetch('/api/v1/users/avatar', {
-    //   method: 'POST',
-    //   body: formData,
-    //   context: 'AVATAR_UPLOAD',
-    //   // No poner content-type: el browser lo pone con boundary para multipart
-    //   headers: {},
-    // });
-    // if (!uploadRes.ok) {
-    //   const data = await uploadRes.json().catch(() => ({}));
-    //   return { success: false, error: data.message || 'Error al subir la imagen' };
-    // }
-    // const { url } = await uploadRes.json();
+    const { backendFetch } = await import('@/lib/backend-fetch');
+    const uploadRes = await backendFetch('/api/v1/uploads/image', {
+      method: 'POST',
+      body: formData,
+      context: 'AVATAR_UPLOAD',
+      // No poner content-type: el browser lo pone con boundary para multipart
+      headers: {},
+    });
 
-    // MOCK: URL fija para testing hasta que el backend esté listo
-    const url = 'https://img.magnific.com/vector-premium/concepto-encuesta-linea-escena-personas-diseno-web-plano-mujer-poniendo-casilla-verificacion-formulario-respondiendo-cuestionario-o-prueba-examen-ilustracion-vectorial-material-marketing-banner-redes-sociales_9209-14359.jpg';
+    if (!uploadRes.ok) {
+      const data = await uploadRes.json().catch(() => ({}));
+      console.error('[AVATAR] ❌ Error subiendo imagen:', uploadRes.status, data);
+      return { success: false, error: data.detail || data.message || 'Error al subir la imagen. Intenta con otro archivo.' };
+    }
+
+    const { url } = await uploadRes.json();
+
+    if (!url) {
+      console.error('[AVATAR] ❌ Backend no devolvió URL');
+      return { success: false, error: 'Error al procesar la imagen. Intenta de nuevo.' };
+    }
 
     // ── Paso 2: Actualizar avatar en Logto ──
     const res = await accountFetch('/api/my-account', {
@@ -493,12 +493,15 @@ export async function uploadAndSetAvatar(formData: FormData): Promise<ActionResu
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      return { success: false, error: data.message || 'Error al actualizar el avatar' };
+      console.error('[AVATAR] ❌ Error actualizando Logto:', res.status, data);
+      return { success: false, error: data.message || 'La imagen se subió pero no se pudo actualizar tu perfil. Intenta de nuevo.' };
     }
 
+    console.log('[AVATAR] ✅ Avatar actualizado:', url);
     return { success: true, url };
-  } catch {
-    return { success: false, error: 'Error de conexión' };
+  } catch (err) {
+    console.error('[AVATAR] ❌ Error:', err);
+    return { success: false, error: 'Error de conexión. Verifica tu internet e intenta de nuevo.' };
   }
 }
 

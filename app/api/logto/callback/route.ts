@@ -37,9 +37,9 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     // NEXT_REDIRECT = handleSignIn hizo redirect via postRedirectUri — es normal
     if (error?.digest?.startsWith('NEXT_REDIRECT')) {
-      // Sincronizar usuario con el backend (fire-and-forget)
-      // Se ejecuta antes de que el redirect se complete
-      syncUserOnLogin().catch(() => {});
+      // Sincronizar usuario con el backend ANTES de dejar que el redirect continue.
+      // handleSignIn ya guardó los tokens en cookie, así que backendFetch puede obtener el JWT.
+      await syncUserOnLogin();
       throw error;
     }
 
@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
  */
 async function syncUserOnLogin(): Promise<void> {
   try {
+    console.log('[AUTH:sync] → POST /api/v1/users/sync');
     const res = await backendFetch('/api/v1/users/sync', {
       method: 'POST',
       context: 'AUTH_SYNC',
@@ -67,10 +68,14 @@ async function syncUserOnLogin(): Promise<void> {
     if (res.ok) {
       const status = res.status === 201 ? 'CREADO' : 'EXISTENTE';
       console.log(`[AUTH:sync] ✅ usuario sincronizado (${status})`);
+    } else if (res.status === 409) {
+      // 409 = el usuario ya existe en el backend — es éxito
+      console.log('[AUTH:sync] ✅ usuario ya existe en el backend');
     } else {
-      console.error(`[AUTH:sync] ❌ error ${res.status}`);
+      const body = await res.text().catch(() => '');
+      console.error(`[AUTH:sync] ❌ error ${res.status} — body: ${body.slice(0, 200)}`);
     }
   } catch (error) {
-    console.error('[AUTH:sync] ❌ network error:', error);
+    console.error('[AUTH:sync] ❌ network error:', error instanceof Error ? error.message : error);
   }
 }

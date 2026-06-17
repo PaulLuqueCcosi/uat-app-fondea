@@ -28,6 +28,9 @@ export async function syncUser(): Promise<void> {
     if (res.ok) {
       const status = res.status === 201 ? 'CREADO' : 'EXISTENTE';
       console.log(`[AUTH:sync] ✅ usuario sincronizado (${status})`);
+    } else if (res.status === 409) {
+      // 409 = el usuario ya existe en el backend — es éxito
+      console.log('[AUTH:sync] ✅ usuario ya existe en el backend');
     } else {
       console.error(`[AUTH:sync] ❌ error ${res.status} al sincronizar usuario`);
     }

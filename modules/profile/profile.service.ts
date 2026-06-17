@@ -20,7 +20,12 @@ import {
   mapSecurityFromClaims,
   mapContactFromClaims,
   mapProfileFromClaims,
+  mapUserDataFromBackend,
+  mergeBackendDataIntoProfile,
+  getNamesFromBackendData,
 } from './profile.mapper';
+import { backendFetch } from '@/lib/backend-fetch';
+import type { BackendUserData } from './profile.mapper';
 
 const LOGTO_ENDPOINT = process.env.LOGTO_ENDPOINT!;
 
@@ -60,8 +65,30 @@ async function fetchAccountData(): Promise<Record<string, unknown> | null> {
 }
 
 /**
+ * Obtiene datos del usuario desde el backend Java (nombres, documento).
+ * GET /api/v1/users/me — autenticado con JWT.
+ * Retorna null si falla (no bloquea el flujo).
+ */
+async function fetchUserData(): Promise<BackendUserData | null> {
+  try {
+    const res = await backendFetch('/api/v1/users/me', { context: 'PROFILE' });
+
+    if (!res.ok) {
+      console.log('[PROFILE:fetchUserData] ⚠️ Backend HTTP', res.status, '— usando fallback Logto');
+      return null;
+    }
+
+    const raw = await res.json();
+    return mapUserDataFromBackend(raw);
+  } catch (err) {
+    console.log('[PROFILE:fetchUserData] ⚠️ Error:', err, '— usando fallback Logto');
+    return null;
+  }
+}
+
+/**
  * Obtiene el perfil completo del usuario autenticado.
- * USA LA ACCOUNT API → siempre datos frescos.
+ * Combina: Logto Account API (email, phone, seguridad) + Backend Java (nombres, documento).
  * Usado por la profile page.
  */
 export async function getFullProfile(): Promise<ProfileResult<FullUserProfile>> {
@@ -72,18 +99,24 @@ export async function getFullProfile(): Promise<ProfileResult<FullUserProfile>> 
       return { ok: false, error: errors.sessionExpired() };
     }
 
-    // Intentar obtener datos frescos de la Account API
-    const accountData = await fetchAccountData();
+    // Obtener datos de ambas fuentes en paralelo
+    const [accountData, backendData] = await Promise.all([
+      fetchAccountData(),
+      fetchUserData(),
+    ]);
 
-    if (accountData) {
-      // Merge: Account API (email, phone, name frescos) + claims (identities, timestamps)
-      const merged = { ...claims, ...accountData } as Record<string, unknown>;
-      const data = mapFullProfileFromClaims(merged);
-      return { ok: true, data };
+    // Base: Logto Account API (email, phone, seguridad) + claims (identities, timestamps)
+    const source = accountData
+      ? { ...claims, ...accountData } as Record<string, unknown>
+      : claims as Record<string, unknown>;
+
+    const data = mapFullProfileFromClaims(source);
+
+    // Sobreescribir nombres y documento con datos del backend (fuente de verdad)
+    if (backendData) {
+      data.profile = mergeBackendDataIntoProfile(data.profile, backendData);
     }
 
-    // Fallback: usar claims (pueden estar desactualizados)
-    const data = mapFullProfileFromClaims(claims as Record<string, unknown>);
     return { ok: true, data };
   } catch (err) {
     return { ok: false, error: errors.serverError() };
@@ -91,8 +124,8 @@ export async function getFullProfile(): Promise<ProfileResult<FullUserProfile>> 
 }
 
 /**
- * Obtiene resumen ligero del usuario (para navbar, headers, etc.)
- * USA ACCOUNT API → siempre datos frescos (avatar, email, etc.)
+ * Obtiene resumen ligero del usuario (para navbar, sidebar).
+ * name = solo nombres (sin apellidos) — del backend si disponible.
  */
 export async function getProfileSummary(): Promise<ProfileResult<UserSummary>> {
   try {
@@ -102,13 +135,33 @@ export async function getProfileSummary(): Promise<ProfileResult<UserSummary>> {
       return { ok: false, error: errors.sessionExpired() };
     }
 
-    // Intentar datos frescos
-    const accountData = await fetchAccountData();
+    // Obtener ambas fuentes en paralelo
+    const [accountData, backendData] = await Promise.all([
+      fetchAccountData(),
+      fetchUserData(),
+    ]);
+
     const source = accountData
       ? { ...claims, ...accountData } as Record<string, unknown>
       : claims as Record<string, unknown>;
 
     const summary = mapSummaryFromClaims(source);
+
+    // Sobreescribir name con solo los nombres del backend (sin apellidos)
+    // Sin fallback — si el backend no tiene nombres, queda vacío
+    const backendNames = backendData ? getNamesFromBackendData(backendData) : null;
+    if (backendNames) {
+      summary.name = backendNames;
+    } else {
+      console.error('[PROFILE:getProfileSummary] ⚠️ Backend no tiene nombres para este usuario');
+      summary.name = '';
+    }
+
+    // Sobreescribir DNI con datos del backend
+    if (backendData?.documentNumber) {
+      summary.dni = backendData.documentNumber;
+    }
+
     return { ok: true, data: summary };
   } catch (err) {
     return { ok: false, error: errors.serverError() };
@@ -117,7 +170,8 @@ export async function getProfileSummary(): Promise<ProfileResult<UserSummary>> {
 
 /**
  * Obtiene nombre y email del usuario autenticado.
- * USA ACCOUNT API → siempre datos frescos (usado por el layout/navbar).
+ * name = solo nombres (sin apellidos) del backend.
+ * Fallback: Logto claims si el backend no responde.
  */
 export async function getUserInfo(): Promise<{ name: string | null; email: string | null }> {
   const { isAuthenticated, claims } = await getLogtoContext(logtoConfig);
@@ -126,21 +180,21 @@ export async function getUserInfo(): Promise<{ name: string | null; email: strin
     return { name: null, email: null };
   }
 
-  // Intentar datos frescos
-  const accountData = await fetchAccountData();
+  // Obtener ambas fuentes en paralelo
+  const [accountData, backendData] = await Promise.all([
+    fetchAccountData(),
+    fetchUserData(),
+  ]);
 
-  if (accountData) {
-    return {
-      name: (accountData.name || claims.name || claims.username || null) as string | null,
-      email: (accountData.primaryEmail || claims.email || null) as string | null,
-    };
+  // Email siempre de Logto (es la fuente de verdad para auth)
+  const email = (accountData?.primaryEmail || claims.email || null) as string | null;
+
+  // Nombres SOLO del backend — sin fallback a Logto
+  const backendNames = backendData ? getNamesFromBackendData(backendData) : null;
+  if (!backendNames) {
+    console.error('[PROFILE:getUserInfo] ⚠️ Backend no tiene nombres para este usuario');
   }
-
-  // Fallback: claims
-  return {
-    name: (claims.name || claims.username || null) as string | null,
-    email: (claims.email || null) as string | null,
-  };
+  return { name: backendNames, email };
 }
 
 /**
@@ -153,7 +207,7 @@ export async function getUserName(): Promise<string | null> {
 
 /**
  * Obtiene datos de soporte (accountId + DNI).
- * Reemplaza a getUserSupportData de lib/user/get-user-support-data.ts
+ * DNI viene del backend Java.
  */
 export async function getUserSupportData(): Promise<{ accountId: string | null; dni: string | null }> {
   const { isAuthenticated, claims } = await getLogtoContext(logtoConfig);
@@ -162,10 +216,11 @@ export async function getUserSupportData(): Promise<{ accountId: string | null; 
     return { accountId: null, dni: null };
   }
 
+  const backendData = await fetchUserData();
+
   return {
     accountId: (claims.sub as string) || null,
-    // TODO: Obtener DNI del backend/expediente cuando esté disponible
-    dni: null,
+    dni: backendData?.documentNumber ?? null,
   };
 }
 

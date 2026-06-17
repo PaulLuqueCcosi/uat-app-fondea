@@ -117,6 +117,68 @@ export function mapSummaryFromClaims(claims: Record<string, unknown>): UserSumma
   };
 }
 
+// ── Backend /api/v1/users/me → datos de nombre y documento ───────────────────
+
+/**
+ * Datos del usuario desde el backend Java.
+ * Campos mapeados de la respuesta real:
+ * { firstName, secondName, paternalSurname, maternalSurname, additionalNames, fullName, documentType, documentNumber }
+ */
+export interface BackendUserData {
+  firstName: string | null;
+  secondName: string | null;
+  paternalSurname: string | null;
+  maternalSurname: string | null;
+  fullName: string | null;
+  documentType: string | null;
+  documentNumber: string | null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapUserDataFromBackend(raw: any): BackendUserData {
+  return {
+    firstName: raw.firstName ?? raw.first_name ?? null,
+    secondName: raw.secondName ?? raw.second_name ?? raw.additionalNames ?? null,
+    paternalSurname: raw.paternalSurname ?? raw.paternal_surname ?? null,
+    maternalSurname: raw.maternalSurname ?? raw.maternal_surname ?? null,
+    fullName: raw.fullName ?? raw.full_name ?? null,
+    documentType: raw.documentType ?? raw.document_type ?? null,
+    documentNumber: raw.documentNumber ?? raw.document_number ?? null,
+  };
+}
+
+/**
+ * Aplica datos del backend sobre un UserProfile existente (de Logto).
+ * Solo sobreescribe los campos que el backend provee (no null).
+ * Sin fallback a Logto para nombres — si el backend no tiene, queda null.
+ */
+export function mergeBackendDataIntoProfile(
+  profile: import('./profile.types').UserProfile,
+  backendData: BackendUserData,
+): import('./profile.types').UserProfile {
+  return {
+    ...profile,
+    firstName: backendData.firstName ?? null,
+    secondName: backendData.secondName ?? null,
+    firstLastName: backendData.paternalSurname ?? null,
+    secondLastName: backendData.maternalSurname ?? null,
+    documentType: backendData.documentType?.toLowerCase() ?? null,
+    documentNumber: backendData.documentNumber ?? null,
+    documentVerified: !!backendData.documentNumber,
+  };
+}
+
+/**
+ * Extrae solo los nombres (sin apellidos) para greeting y navbar.
+ * Prioridad: firstName + secondName > fullName > null
+ */
+export function getNamesFromBackendData(backendData: BackendUserData): string | null {
+  const parts = [backendData.firstName, backendData.secondName].filter(Boolean);
+  if (parts.length > 0) return parts.join(' ');
+  if (backendData.fullName) return backendData.fullName.split(' ')[0] || null;
+  return null;
+}
+
 // ── Helpers internos ─────────────────────────────────────────────────────────
 
 /**
