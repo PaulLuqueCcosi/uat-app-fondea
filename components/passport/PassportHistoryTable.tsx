@@ -4,10 +4,12 @@ import * as React from 'react';
 import {
   flexRender,
   getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table';
-import { ArrowUpDown, TrendingUp, Search } from 'lucide-react';
+import { TrendingUp, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,7 +23,6 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { getPointsHistory } from '@/app/actions/passport.actions';
 import type { PointsHistoryEntry } from '@/modules/passport';
-import type { PaginatedResponse } from '@/modules/shared/pagination';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -92,69 +93,36 @@ const columns: ColumnDef<PointsHistoryEntry>[] = [
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export function PassportHistoryTable() {
-  const [data, setData] = React.useState<PointsHistoryEntry[]>([]);
-  const [page, setPage] = React.useState(0);
-  const [pageSize] = React.useState(10);
-  const [search, setSearch] = React.useState('');
-  const [pagination, setPagination] = React.useState<Omit<PaginatedResponse<unknown>, 'items'>>({
-    totalElements: 0,
-    totalPages: 0,
-    page: 0,
-    size: 10,
-    first: true,
-    last: true,
-  });
+  const [allData, setAllData] = React.useState<PointsHistoryEntry[]>([]);
+  const [globalFilter, setGlobalFilter] = React.useState('');
   const [loading, setLoading] = React.useState(true);
 
-  // Debounce de búsqueda
-  const searchTimeout = React.useRef<NodeJS.Timeout | null>(null);
-
-  const fetchData = React.useCallback(async (p: number, q: string) => {
-    setLoading(true);
-    const result = await getPointsHistory({
-      page: p,
-      size: pageSize,
-      sortBy: 'date',
-      sortDir: 'desc',
-      search: q || undefined,
-    });
-
-    if (result.ok) {
-      setData(result.data.items);
-      setPagination({
-        totalElements: result.data.totalElements,
-        totalPages: result.data.totalPages,
-        page: result.data.page,
-        size: result.data.size,
-        first: result.data.first,
-        last: result.data.last,
-      });
-    }
-    setLoading(false);
-  }, [pageSize]);
-
-  // Fetch inicial y cuando cambia página
   React.useEffect(() => {
-    fetchData(page, search);
-  }, [page, fetchData]);
-
-  // Búsqueda con debounce
-  function handleSearch(value: string) {
-    setSearch(value);
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => {
-      setPage(0); // Reset a primera página
-      fetchData(0, value);
-    }, 300);
-  }
+    async function load() {
+      setLoading(true);
+      const result = await getPointsHistory();
+      if (result.ok) {
+        setAllData(result.data);
+      }
+      setLoading(false);
+    }
+    load();
+  }, []);
 
   const table = useReactTable({
-    data,
+    data: allData,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    pageCount: pagination.totalPages,
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    state: { globalFilter },
+    onGlobalFilterChange: setGlobalFilter,
+    initialState: { pagination: { pageSize: 10 } },
   });
+
+  const pageIndex = table.getState().pagination.pageIndex;
+  const pageCount = table.getPageCount();
+  const totalRows = table.getFilteredRowModel().rows.length;
 
   return (
     <Card>
@@ -166,7 +134,7 @@ export function PassportHistoryTable() {
           </span>
         </CardTitle>
         <CardDescription>
-          {pagination.totalElements} {pagination.totalElements === 1 ? 'movimiento' : 'movimientos'} registrados
+          {totalRows} {totalRows === 1 ? 'movimiento' : 'movimientos'} registrados
         </CardDescription>
       </CardHeader>
 
@@ -176,8 +144,8 @@ export function PassportHistoryTable() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar movimiento..."
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
             className="pl-8"
           />
         </div>
@@ -200,7 +168,6 @@ export function PassportHistoryTable() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                // Skeleton rows
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     {columns.map((_, j) => (
@@ -232,29 +199,31 @@ export function PassportHistoryTable() {
         </div>
 
         {/* Paginación */}
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            Página {pagination.page + 1} de {pagination.totalPages || 1} · {pagination.totalElements} registro{pagination.totalElements !== 1 ? 's' : ''}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => p - 1)}
-              disabled={pagination.first}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={pagination.last}
-            >
-              Siguiente
-            </Button>
+        {pageCount > 1 && (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Página {pageIndex + 1} de {pageCount} · {totalRows} registro{totalRows !== 1 ? 's' : ''}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                Siguiente
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

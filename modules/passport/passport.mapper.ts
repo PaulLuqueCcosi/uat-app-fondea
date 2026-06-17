@@ -1,47 +1,118 @@
 /**
  * Mapper: respuesta del backend → tipos del frontend.
  *
- * HOY: los datos mock ya vienen en formato correcto.
- * MAÑANA: cuando haya backend real, aquí se transformará snake_case → camelCase.
- *
- * Si el backend cambia un campo, SOLO se toca este archivo.
+ * Backend endpoints:
+ * - GET /api/v1/score → { points, maxLoanAmount, categoryName }
+ * - GET /api/v1/score/rangos → [{ categoryName, minPoints, maxPoints, maxLoanAmount, isActive }]
+ * - GET /api/v1/score/historial → [{ id, points, type, reason, reference_id, created_at }]
  */
 
-import type { PassportSummary, PassportLevel, PointsHistoryEntry } from './passport.types';
+import type { PassportSummary, PassportLevel, PassportLevelMeta, PointsHistoryEntry } from './passport.types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function mapSummaryFromBackend(data: any): PassportSummary {
+// ── Mapeo visual por nombre de categoría ──────────────────────────────────────
+
+const LEVEL_META: Record<string, PassportLevelMeta> = {
+  BRONCE: {
+    color: 'text-amber-700',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    image: '/levels/Bronze.png',
+  },
+  PLATA: {
+    color: 'text-neutral-600',
+    bgColor: 'bg-neutral-50',
+    borderColor: 'border-neutral-300',
+    image: '/levels/Silver.png',
+  },
+  ORO: {
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50',
+    borderColor: 'border-yellow-300',
+    image: '/levels/Gold.png',
+  },
+  MASTER: {
+    color: 'text-primary-700',
+    bgColor: 'bg-primary-50',
+    borderColor: 'border-primary-200',
+    image: '/levels/Master.png',
+  },
+};
+
+const DEFAULT_META: PassportLevelMeta = {
+  color: 'text-neutral-700',
+  bgColor: 'bg-neutral-50',
+  borderColor: 'border-neutral-200',
+  image: '',
+};
+
+// ── Mapeo de nombres de categoría para la UI ──────────────────────────────────
+
+const LEVEL_DISPLAY_NAMES: Record<string, string> = {
+  BRONCE: 'Bronce',
+  PLATA: 'Plata',
+  ORO: 'Oro',
+  MASTER: 'Master',
+};
+
+// ── Mappers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Combina la respuesta de /api/v1/score + /api/v1/score/rangos → PassportSummary.
+ */
+export function mapSummaryFromBackend(
+  scoreData: { points: number; maxLoanAmount: number; categoryName: string },
+  rangosData: Array<{ categoryName: string; minPoints: number; maxPoints: number | null; maxLoanAmount: number; isActive?: boolean }>,
+): PassportSummary {
+  // Solo niveles activos, ordenados por minPoints
+  const levels = rangosData
+    .filter((r) => r.isActive !== false)
+    .sort((a, b) => a.minPoints - b.minPoints)
+    .map(mapLevelFromBackend);
+
+  // Encontrar el nivel actual por categoryName
+  const currentCategoryUpper = (scoreData.categoryName ?? '').toUpperCase();
+  let currentLevelIndex = levels.findIndex(
+    (l) => l.name.toUpperCase() === currentCategoryUpper || LEVEL_DISPLAY_NAMES[currentCategoryUpper] === l.name,
+  );
+  if (currentLevelIndex === -1) currentLevelIndex = 0;
+
   return {
-    currentLevelIndex: data.current_level_index ?? data.currentLevelIndex ?? 0,
-    points: data.points ?? 0,
-    levels: (data.levels ?? []).map(mapLevelFromBackend),
+    currentLevelIndex,
+    points: scoreData.points ?? 0,
+    levels,
   };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapLevelFromBackend(data: any): PassportLevel {
+  const categoryUpper = (data.categoryName ?? data.category_name ?? '').toUpperCase();
+  const displayName = LEVEL_DISPLAY_NAMES[categoryUpper] ?? data.categoryName ?? '';
+
   return {
-    name: data.name ?? '',
-    minPoints: data.min_points ?? data.minPoints ?? 0,
-    maxPoints: data.max_points ?? data.maxPoints ?? null,
-    maxLoanAmount: data.max_loan_amount ?? data.maxLoanAmount ?? data.max_amount ?? data.maxAmount ?? 0,
+    name: displayName,
+    minPoints: data.minPoints ?? data.min_points ?? 0,
+    maxPoints: data.maxPoints ?? data.max_points ?? null,
+    maxLoanAmount: data.maxLoanAmount ?? data.max_loan_amount ?? 0,
     currency: data.currency ?? 'PEN',
     meta: {
-      color: data.color ?? data.meta?.color ?? 'text-neutral-700',
-      bgColor: data.bg_color ?? data.meta?.bgColor ?? 'bg-neutral-50',
-      borderColor: data.border_color ?? data.meta?.borderColor ?? 'border-neutral-200',
-      image: data.image ?? data.meta?.image ?? '',
+      ...(LEVEL_META[categoryUpper] ?? DEFAULT_META),
+      image: data.imageUrl || '',
     },
   };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapHistoryEntryFromBackend(data: any): PointsHistoryEntry {
+  // Backend types: REGISTRATION, PAYMENT, REFERRAL, PENALTY, etc.
+  // Frontend types: EARNED | REDEEMED
+  const backendType = (data.type ?? '').toUpperCase();
+  const isRedeemed = backendType === 'PENALTY' || backendType === 'REDEEMED';
+
   return {
     id: data.id ?? '',
-    description: data.description ?? '',
+    description: data.reason ?? data.description ?? '',
     points: data.points ?? 0,
-    date: data.date ?? data.created_at ?? '',
-    type: data.type ?? 'EARNED',
+    date: data.created_at ?? data.createdAt ?? data.date ?? '',
+    type: isRedeemed ? 'REDEEMED' : 'EARNED',
   };
 }

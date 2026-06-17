@@ -27,7 +27,7 @@ export type {
 export type { PassportError, PassportErrorCode } from './passport.errors';
 export { errors as passportErrors } from './passport.errors';
 
-// ── Mapper (re-export para cuando se conecte el backend real) ────────────────
+// ── Mapper (re-export para testing) ──────────────────────────────────────────
 export {
   mapSummaryFromBackend,
   mapLevelFromBackend,
