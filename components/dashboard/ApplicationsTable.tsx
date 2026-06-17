@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   flexRender,
   getCoreRowModel,
@@ -13,7 +14,7 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from '@tanstack/react-table';
-import { FileText, Search, ChevronRight, Plus, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { FileText, Search, ChevronRight, Plus, ArrowUpDown, RefreshCw, Calendar, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -63,7 +64,7 @@ const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
   REJECTED: 'Rechazadas',
 };
 
-// ── Columnas ──────────────────────────────────────────────────────────────────
+// ── Columnas (sin botón "Ver" separado — toda la fila es clickeable) ──────────
 
 const columns: ColumnDef<ApplicationRecord>[] = [
   {
@@ -115,22 +116,83 @@ const columns: ColumnDef<ApplicationRecord>[] = [
     },
   },
   {
-    id: 'actions',
+    id: 'chevron',
     header: '',
-    cell: ({ row }) => (
-      <Link href={`/solicitudes/${row.original.id}`}>
-        <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-primary">
-          Ver
-          <ChevronRight className="w-3.5 h-3.5" />
-        </Button>
-      </Link>
+    cell: () => (
+      <ChevronRight className="w-4 h-4 text-muted-foreground" />
     ),
   },
 ];
 
-// ── Componente ────────────────────────────────────────────────────────────────
+// ── Card móvil para cada solicitud ────────────────────────────────────────────
+
+function ApplicationMobileCard({ app }: { app: ApplicationRecord }) {
+  return (
+    <Link
+      href={`/solicitudes/${app.id}`}
+      className="block group"
+    >
+      <div className="rounded-lg border border-border bg-card p-4 transition-all group-hover:border-primary/40 group-hover:shadow-sm group-active:scale-[0.98]">
+        {/* Header: ID + estado */}
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-mono text-muted-foreground">
+            #{app.id.slice(0, 8)}
+          </span>
+          <div className="flex items-center gap-2">
+            <Badge variant={applicationStatusVariants[app.status]}>
+              {applicationStatusLabels[app.status]}
+            </Badge>
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          {app.submittedAt && (
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              {formatDate(app.submittedAt)}
+            </span>
+          )}
+          {app.evaluatedAt && (
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              Evaluada {formatDate(app.evaluatedAt)}
+            </span>
+          )}
+        </div>
+
+        {/* Motivo de rechazo si existe */}
+        {app.rejectionReason && (
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <span className="text-xs text-error-600">{app.rejectionReason}</span>
+          </div>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+// ── Skeleton móvil ────────────────────────────────────────────────────────────
+
+function ApplicationMobileCardSkeleton() {
+  return (
+    <div className="rounded-lg border border-border bg-card p-4 animate-pulse">
+      <div className="flex items-center justify-between mb-2">
+        <div className="h-4 w-20 rounded bg-muted" />
+        <div className="h-5 w-16 rounded-full bg-muted" />
+      </div>
+      <div className="flex gap-4">
+        <div className="h-4 w-24 rounded bg-muted" />
+      </div>
+    </div>
+  );
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
 
 export function ApplicationsTable() {
+  const router = useRouter();
   const [data, setData] = React.useState<ApplicationRecord[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -262,8 +324,42 @@ export function ApplicationsTable() {
           </div>
         )}
 
-        {/* Tabla */}
-        <div className="overflow-hidden rounded-md border">
+        {/* ═══════════════════════════════════════════════════════════════════
+            Vista MÓVIL — Cards apiladas (visible < md)
+        ═══════════════════════════════════════════════════════════════════ */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <ApplicationMobileCardSkeleton key={i} />
+            ))
+          ) : table.getFilteredRowModel().rows.length > 0 ? (
+            table.getFilteredRowModel().rows.map((row) => (
+              <ApplicationMobileCard key={row.id} app={row.original} />
+            ))
+          ) : (
+            <div className="flex flex-col items-center gap-2 py-8">
+              <FileText className="w-10 h-10 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">
+                {globalFilter || statusFilter !== 'ALL'
+                  ? 'No se encontraron solicitudes con esos filtros'
+                  : 'Aún no tienes solicitudes'}
+              </p>
+              {!globalFilter && statusFilter === 'ALL' && (
+                <Link href="/solicitar">
+                  <Button size="sm" variant="outline" className="gap-1.5 mt-1">
+                    <Plus className="w-3.5 h-3.5" />
+                    Crear primera solicitud
+                  </Button>
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            Vista DESKTOP — Tabla con filas clickeables (visible >= md)
+        ═══════════════════════════════════════════════════════════════════ */}
+        <div className="hidden md:block overflow-hidden rounded-md border">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -291,7 +387,19 @@ export function ApplicationsTable() {
                 ))
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} className="hover:bg-muted/50">
+                  <TableRow
+                    key={row.id}
+                    className="cursor-pointer hover:bg-primary/5 transition-colors group"
+                    onClick={() => router.push(`/solicitudes/${row.original.id}`)}
+                    role="link"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        router.push(`/solicitudes/${row.original.id}`);
+                      }
+                    }}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
