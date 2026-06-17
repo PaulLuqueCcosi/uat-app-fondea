@@ -2,14 +2,15 @@
  * Tipos del módulo Referidos.
  */
 
-export type ReferralStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED';
+export type ReferralStatus = 'REGISTERED' | 'ACTIVE' | 'LOAN_COMPLETED';
 
 export interface Referral {
   id: string;
-  name: string;
+  referredUserId: string;
   registeredAt: string;
+  completedAt: string | null;
   status: ReferralStatus;
-  pointsEarned: number;
+  pointsAwarded: number;
 }
 
 export interface ReferralSummary {
@@ -22,7 +23,7 @@ export interface ReferralSummary {
 }
 
 export const referralStatusLabels: Record<ReferralStatus, string> = {
-  PENDING: 'Pendiente',
+  REGISTERED: 'Registrado',
   ACTIVE: 'Activo',
-  COMPLETED: 'Completado',
+  LOAN_COMPLETED: 'Completado',
 };

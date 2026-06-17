@@ -15,7 +15,7 @@ async function ReferralProgramContent() {
     return <ModuleErrorState error={result.error} />;
   }
 
-  return <ReferralProgram summary={result.data.summary} />;
+  return <ReferralProgram summary={result.data} />;
 }
 
 function ReferralProgramSkeleton() {

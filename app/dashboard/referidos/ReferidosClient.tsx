@@ -4,15 +4,13 @@ import * as React from 'react';
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table';
-import { Users, Copy, Check, MessageCircle, Gift, Search, RefreshCw } from 'lucide-react';
+import { Users, Copy, Check, MessageCircle, Gift, RefreshCw } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -23,9 +21,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getReferralData } from '@/app/actions/referrals.actions';
+import { getReferralData, getReferralsList } from '@/app/actions/referrals.actions';
 import type { Referral, ReferralSummary } from '@/modules/referrals';
 import { referralStatusLabels } from '@/modules/referrals';
+import type { ReferralStatus } from '@/modules/referrals';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -35,14 +34,19 @@ function formatDate(iso: string): string {
 
 // ── Columnas de la tabla ──────────────────────────────────────────────────────
 
+const statusVariants: Record<ReferralStatus, 'success' | 'warning' | 'pending'> = {
+  LOAN_COMPLETED: 'success',
+  ACTIVE: 'warning',
+  REGISTERED: 'pending',
+};
+
+const statusDescriptions: Record<ReferralStatus, string> = {
+  REGISTERED: 'Tu amigo se registró en la plataforma',
+  ACTIVE: 'Tu amigo tiene un crédito en curso',
+  LOAN_COMPLETED: 'Tu amigo completó su primer crédito',
+};
+
 const columns: ColumnDef<Referral>[] = [
-  {
-    accessorKey: 'name',
-    header: 'Nombre',
-    cell: ({ row }) => (
-      <span className="text-sm font-medium text-foreground">{row.original.name}</span>
-    ),
-  },
   {
     accessorKey: 'registeredAt',
     header: 'Fecha',
@@ -56,18 +60,27 @@ const columns: ColumnDef<Referral>[] = [
     cell: ({ row }) => {
       const status = row.original.status;
       return (
-        <Badge variant={status === 'COMPLETED' ? 'success' : status === 'ACTIVE' ? 'warning' : 'pending'}>
-          {referralStatusLabels[status]}
+        <Badge variant={statusVariants[status] ?? 'pending'}>
+          {referralStatusLabels[status] ?? status}
         </Badge>
       );
     },
   },
   {
-    accessorKey: 'pointsEarned',
+    id: 'description',
+    header: 'Descripción',
+    cell: ({ row }) => (
+      <span className="text-sm text-foreground">
+        {statusDescriptions[row.original.status] ?? ''}
+      </span>
+    ),
+  },
+  {
+    accessorKey: 'pointsAwarded',
     header: () => <div className="text-right">Puntos</div>,
     cell: ({ row }) => (
-      <div className={`text-right text-sm font-bold ${row.original.pointsEarned > 0 ? 'text-accent-600' : 'text-muted-foreground'}`}>
-        {row.original.pointsEarned > 0 ? `+${row.original.pointsEarned}` : '—'}
+      <div className={`text-right text-sm font-bold ${row.original.pointsAwarded > 0 ? 'text-accent-600' : 'text-muted-foreground'}`}>
+        {row.original.pointsAwarded > 0 ? `+${row.original.pointsAwarded}` : '—'}
       </div>
     ),
   },
@@ -83,17 +96,21 @@ export function ReferidosClient() {
   const [error, setError] = React.useState<string | null>(null);
   const [copiedCode, setCopiedCode] = React.useState(false);
   const [copiedLink, setCopiedLink] = React.useState(false);
-  const [globalFilter, setGlobalFilter] = React.useState('');
 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
     setError(null);
-    const result = await getReferralData();
-    if (result.ok) {
-      setSummary(result.data.summary);
-      setReferrals(result.data.referrals);
+    const [summaryResult, listResult] = await Promise.all([
+      getReferralData(),
+      getReferralsList(),
+    ]);
+    if (summaryResult.ok) {
+      setSummary(summaryResult.data);
     } else {
-      setError(result.error.message);
+      setError(summaryResult.error.message);
+    }
+    if (listResult.ok) {
+      setReferrals(listResult.data);
     }
     setLoading(false);
   }, []);
@@ -101,12 +118,17 @@ export function ReferidosClient() {
   const reload = React.useCallback(async () => {
     setReloading(true);
     setError(null);
-    const result = await getReferralData();
-    if (result.ok) {
-      setSummary(result.data.summary);
-      setReferrals(result.data.referrals);
+    const [summaryResult, listResult] = await Promise.all([
+      getReferralData(),
+      getReferralsList(),
+    ]);
+    if (summaryResult.ok) {
+      setSummary(summaryResult.data);
     } else {
-      setError(result.error.message);
+      setError(summaryResult.error.message);
+    }
+    if (listResult.ok) {
+      setReferrals(listResult.data);
     }
     setReloading(false);
   }, []);
@@ -138,10 +160,7 @@ export function ReferidosClient() {
   const table = useReactTable({
     data: referrals,
     columns,
-    state: { globalFilter },
-    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 10 } },
   });
@@ -290,17 +309,8 @@ export function ReferidosClient() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Buscador + Recargar */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre..."
-                value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-8"
-              />
-            </div>
+          {/* Recargar */}
+          <div className="flex items-center justify-end">
             <Button variant="outline" size="sm" onClick={reload} disabled={reloading} className="gap-1.5">
               <RefreshCw className={`w-3.5 h-3.5 ${reloading ? 'animate-spin' : ''}`} />
               Recargar
@@ -345,7 +355,7 @@ export function ReferidosClient() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                      {globalFilter ? 'No se encontraron referidos' : 'Aún no tienes referidos. ¡Comparte tu código!'}
+                      Aún no tienes referidos. ¡Comparte tu código!
                     </TableCell>
                   </TableRow>
                 )}
@@ -357,7 +367,7 @@ export function ReferidosClient() {
           {table.getPageCount() > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
-                {table.getFilteredRowModel().rows.length} resultado{table.getFilteredRowModel().rows.length !== 1 ? 's' : ''}
+                {referrals.length} resultado{referrals.length !== 1 ? 's' : ''}
               </p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>

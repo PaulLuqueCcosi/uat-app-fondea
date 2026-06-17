@@ -1,4 +1,4 @@
-export { getReferralData } from './referral.service';
+export { getReferralData, getReferralsList } from './referral.service';
 
 export type {
   Referral,
