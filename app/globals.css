@@ -259,6 +259,11 @@
     -moz-appearance: textfield;
     appearance: textfield;
   }
+
+  /* Leaflet: evitar que el mapa se ponga sobre modales/dialogs */
+  .leaflet-container {
+    z-index: 0;
+  }
 }
 
 @layer utilities {

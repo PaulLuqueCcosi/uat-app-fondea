@@ -357,14 +357,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
       <VerifiedBanner
         title="Dirección guardada"
         description="Tu dirección está registrada. Puedes editarla si algo cambió."
-        onEdit={() => {
-          if (isVerified) {
-            setShowConfirmDialog(true);
-            return;
-          }
-          setIsEditing(true);
-          errorHandler.clear();
-        }}
+        onEdit={handleEdit}
       />
 
       {/* Datos */}
@@ -637,7 +630,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
             />
             {renderUbigeoSelects()}
 
-            <div>
+            <div style={{ position: 'relative', zIndex: 0, isolation: 'isolate' }}>
               <FormLabel className="mb-2 block">Ubicación en el mapa</FormLabel>
               <FormDescription className="mb-3">
                 Haz clic en el mapa para marcar la ubicación aproximada de tu domicilio
