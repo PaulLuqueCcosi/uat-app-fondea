@@ -5,17 +5,9 @@ import { requireValidSession } from './auth.actions';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
 
-// Importar los datos locales de ubigeo
-import departamentosData from '@/lib/ubigeo_departamentos.json';
-import provinciasData from '@/lib/ubigeo_provincias.json';
-import distritosData from '@/lib/ubigeo_distritos.json';
-
 const backendFetch = (path: string, options?: RequestInit) =>
   _backendFetch(path, { ...options, context: 'ADDRESS' });
 
-function toTitleCase(str: string): string {
-  return str.toLowerCase().split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}
 
 // ── Tipos públicos ────────────────────────────────────────────────────────────
 
@@ -239,12 +231,19 @@ export async function saveAddressProfile(
   }
 }
 
-// ── Ubigeo (local JSON, sin backend) ─────────────────────────────────────────
+// ── Ubigeo (usando ubigeo-fns) ───────────────────────────────────────────────
+
+import {
+  getDepartments,
+  getProvinces,
+  getDistricts,
+  getUbigeoData,
+} from 'ubigeo-fns';
 
 export async function getDepartamentosAction(): Promise<UbigeoOption[]> {
   try {
-    const data = departamentosData.ubigeo_departamentos;
-    return data.map((d) => ({ value: d.ubigeo, label: toTitleCase(d.departamento) }))
+    const data = getDepartments();
+    return data.map((d) => ({ value: d.code, label: d.name }))
                .sort((a, b) => a.label.localeCompare(b.label));
   } catch { return []; }
 }
@@ -252,10 +251,8 @@ export async function getDepartamentosAction(): Promise<UbigeoOption[]> {
 export async function getProvinciasAction(regionId: string): Promise<UbigeoOption[]> {
   if (!regionId) return [];
   try {
-    const departamento = departamentosData.ubigeo_departamentos.find(d => d.ubigeo === regionId);
-    if (!departamento) return [];
-    const data = provinciasData.ubigeo_provincias.filter(p => p.departamento_id === departamento.id);
-    return data.map((p) => ({ value: p.ubigeo, label: toTitleCase(p.provincia) }))
+    const data = getProvinces(regionId);
+    return data.map((p) => ({ value: p.code, label: p.name }))
                .sort((a, b) => a.label.localeCompare(b.label));
   } catch { return []; }
 }
@@ -263,12 +260,43 @@ export async function getProvinciasAction(regionId: string): Promise<UbigeoOptio
 export async function getDistritosAction(provinceId: string): Promise<UbigeoOption[]> {
   if (!provinceId) return [];
   try {
-    const provincia = provinciasData.ubigeo_provincias.find(p => p.ubigeo === provinceId);
-    if (!provincia) return [];
-    const data = distritosData.ubigeo_distritos.filter(d => d.provincia_id === provincia.id);
-    return data.map((d) => ({ value: d.ubigeo, label: toTitleCase(d.distrito) }))
+    const data = getDistricts(provinceId);
+    return data.map((d) => ({ value: d.code, label: d.name }))
                .sort((a, b) => a.label.localeCompare(b.label));
   } catch { return []; }
+}
+
+/** Obtiene las coordenadas del ubigeo más específico disponible (distrito > provincia > departamento) */
+export async function getUbigeoCoordinates(
+  districtCode?: string,
+  provinceCode?: string,
+  departmentCode?: string
+): Promise<{ lat: number; lng: number } | null> {
+  // Intentar obtener coords del distrito (más preciso)
+  if (districtCode) {
+    const data = getUbigeoData(districtCode);
+    if (data?.lat && data?.lng) return { lat: data.lat, lng: data.lng };
+  }
+  // Fallback: primer distrito de la provincia
+  if (provinceCode) {
+    const districts = getDistricts(provinceCode);
+    if (districts.length > 0) {
+      const data = getUbigeoData(districts[0].code);
+      if (data?.lat && data?.lng) return { lat: data.lat, lng: data.lng };
+    }
+  }
+  // Fallback: primer distrito del primer provincia del departamento
+  if (departmentCode) {
+    const provinces = getProvinces(departmentCode);
+    if (provinces.length > 0) {
+      const districts = getDistricts(provinces[0].code);
+      if (districts.length > 0) {
+        const data = getUbigeoData(districts[0].code);
+        if (data?.lat && data?.lng) return { lat: data.lat, lng: data.lng };
+      }
+    }
+  }
+  return null;
 }
 
 // ── Google Places ─────────────────────────────────────────────────────────────

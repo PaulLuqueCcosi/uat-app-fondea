@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Maximize2, Minimize2, Layers } from 'lucide-react';
-import { REGION_ZOOM } from '@/lib/ubigeo-centers';
+import { Maximize2, Minimize2, Layers, X } from 'lucide-react';
 
 const PERU_CENTER: [number, number] = [-9.19, -75.01];
 const DEFAULT_ZOOM = 5;
@@ -44,7 +43,7 @@ const MARKER_ICON = L.icon({
 
 interface LocationMapPickerProps {
   value?: { lat: number; lng: number } | null;
-  onChange: (coords: { lat: number; lng: number }) => void;
+  onChange: (coords: { lat: number; lng: number } | null) => void;
   height?: number;
   readOnly?: boolean;
   mapCenter?: { lat: number; lng: number } | null;
@@ -79,6 +78,14 @@ export function LocationMapPicker({ value, onChange, height = 250, readOnly = fa
     if (!readOnly) map.panTo([lat, lng]);
   }
 
+  function clearMarker() {
+    const map = mapInstance.current;
+    if (!map || !markerRef.current) return;
+    map.removeLayer(markerRef.current);
+    markerRef.current = null;
+    onChange(null);
+  }
+
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
@@ -91,7 +98,7 @@ export function LocationMapPicker({ value, onChange, height = 250, readOnly = fa
       : mapCenter
         ? [mapCenter.lat, mapCenter.lng]
         : PERU_CENTER;
-    const zoom = hasSavedValue ? 14 : mapCenter ? (mapZoom ?? REGION_ZOOM) : DEFAULT_ZOOM;
+    const zoom = hasSavedValue ? 14 : mapCenter ? (mapZoom ?? DEFAULT_ZOOM) : DEFAULT_ZOOM;
 
     const map = L.map(mapRef.current, {
       center: center as L.LatLngExpression,
@@ -140,10 +147,9 @@ export function LocationMapPicker({ value, onChange, height = 250, readOnly = fa
 
   useEffect(() => {
     if (!mapInstance.current || !mapCenter) return;
-    if (value) return;
     const zoom = mapZoom ?? DEFAULT_ZOOM;
     mapInstance.current.setView([mapCenter.lat, mapCenter.lng], zoom, { animate: true, duration: 0.5 });
-  }, [mapCenter?.lat, mapCenter?.lng, mapZoom, value]);
+  }, [mapCenter?.lat, mapCenter?.lng, mapZoom]);
 
   useEffect(() => {
     if (!mapInstance.current) return;
@@ -187,6 +193,18 @@ export function LocationMapPicker({ value, onChange, height = 250, readOnly = fa
       />
       {!readOnly && (
         <div className="absolute top-2 right-2 flex gap-1.5 z-[1000]">
+          {/* Botón limpiar marcador */}
+          {value && (
+            <button
+              type="button"
+              onClick={clearMarker}
+              className="flex items-center gap-1.5 bg-background/90 backdrop-blur-sm border border-border rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-destructive shadow-sm cursor-pointer"
+              title="Limpiar ubicación"
+            >
+              <X className="w-3.5 h-3.5" />
+              Limpiar
+            </button>
+          )}
           <div className="relative">
             <button
               type="button"

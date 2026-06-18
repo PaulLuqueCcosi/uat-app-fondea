@@ -29,11 +29,11 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Separator } from '@/components/ui/separator';
 import { FormHeader } from '@/components/ui/form-header';
 import { REFERRAL_SOURCE_OPTIONS } from '@/lib/constants';
-import { DEPARTAMENTO_CENTERS, REGION_ZOOM } from '@/lib/ubigeo-centers';
 import {
   getDepartamentosAction,
   getProvinciasAction,
   getDistritosAction,
+  getUbigeoCoordinates,
   type UbigeoOption,
 } from '@/app/actions/additional-address.actions';
 // COMENTADO: GoogleAddressAutocomplete — solo usaremos opción manual por ahora
@@ -255,8 +255,33 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
   const watchedRegion  = form.watch('region');
   const referralSource = form.watch('referral_source');
 
-  const mapCenter = watchedRegion ? DEPARTAMENTO_CENTERS[watchedRegion] ?? null : null;
-  const summaryMapCenter = savedProfile?.region ? DEPARTAMENTO_CENTERS[savedProfile.region] ?? null : null;
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapZoom, setMapZoom] = useState(6);
+
+  // Actualizar centro del mapa cuando cambia la selección de ubigeo
+  const watchedDistrict = form.watch('district');
+  const watchedProvince = form.watch('province');
+
+  useEffect(() => {
+    async function updateMapCenter() {
+      const coords = await getUbigeoCoordinates(
+        watchedDistrict || undefined,
+        watchedProvince || undefined,
+        watchedRegion || undefined
+      );
+      if (coords) {
+        setMapCenter(coords);
+        // Zoom según nivel de detalle
+        if (watchedDistrict) setMapZoom(14);
+        else if (watchedProvince) setMapZoom(11);
+        else if (watchedRegion) setMapZoom(8);
+      }
+    }
+    if (watchedRegion) updateMapCenter();
+  }, [watchedRegion, watchedProvince, watchedDistrict]);
+
+  const summaryMapCenter = savedProfile?.location ?? null;
+  const summaryMapZoom = 14;
 
   // ── Edit handlers ───────────────────────────────────────────────────────────
 
@@ -291,12 +316,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
       return;
     }
 
-    // Validar ubicación en el mapa
-    if (!location) {
-      setLocationError('Debes marcar en el mapa la ubicación de tu domicilio');
-      toast.error('Marca tu ubicación en el mapa antes de continuar');
-      return;
-    }
+    // Ubicación del mapa es opcional
     setLocationError(null);
 
     const result = await errorHandler.execute(
@@ -392,7 +412,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
             height={200}
             readOnly
             mapCenter={summaryMapCenter}
-            mapZoom={REGION_ZOOM}
+            mapZoom={summaryMapZoom}
           />
         </div>
       )}
@@ -640,7 +660,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
                 onChange={(coords) => { setLocation(coords); setLocationError(null); }}
                 height={220}
                 mapCenter={mapCenter}
-                mapZoom={REGION_ZOOM}
+                mapZoom={mapZoom}
               />
               {locationError && (
                 <p className="text-sm text-destructive mt-1">{locationError}</p>
