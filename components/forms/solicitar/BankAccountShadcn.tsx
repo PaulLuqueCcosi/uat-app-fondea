@@ -43,6 +43,7 @@ import { ContinueButton } from '@/components/ui/continue-button';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { toast } from 'sonner';
 import { AlertBanner } from '@/components/ui/alert-banner';
 
 interface FunnelBankAccountProps {
@@ -220,47 +221,57 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
     setAttemptsLeft(undefined);
     setMaxAttempts(undefined);
 
-    const result = await saveBankAccountProfile({
-      bank_name: data.bank_name,
-      account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
-      cci: data.cci,
-      account_number: data.account_number,
-    });
+    const toastId = !dashboardMode ? toast.loading('Guardando cuenta bancaria...') : undefined;
 
-    if (!result.success) {
-      if (result.errorCategory === 'rate_limit') {
-        setBlocked(true);
-        setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
+    try {
+      const result = await saveBankAccountProfile({
+        bank_name: data.bank_name,
+        account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
+        cci: data.cci,
+        account_number: data.account_number,
+      });
+
+      if (!result.success) {
+        if (toastId) toast.error('Error al guardar', { id: toastId });
+        if (result.errorCategory === 'rate_limit') {
+          setBlocked(true);
+          setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
+        }
+        if (result.httpStatus === 422) {
+          setAttemptsLeft(result.attemptsLeft);
+          setMaxAttempts(result.maxAttempts);
+        }
+        setSaveError(result.error ?? 'Error al guardar.');
+        setSaveErrorCategory(result.errorCategory);
+        return;
       }
-      if (result.httpStatus === 422) {
-        setAttemptsLeft(result.attemptsLeft);
-        setMaxAttempts(result.maxAttempts);
+
+      // Guardar datos para la vista readonly
+      setSavedProfile({
+        bank_name: data.bank_name,
+        account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
+        cci: data.cci,
+        account_number: data.account_number,
+        verified: true,
+      });
+      setIsVerified(true);
+      setIsEditing(false);
+      setLocalStatus('VERIFIED');
+
+      // Clear revealed data
+      setRevealedAccountNumber(null);
+      setRevealedCCI(null);
+      setShowAccountNumber(false);
+      setShowCCI(false);
+
+      if (!dashboardMode) {
+        toast.success('Cuenta bancaria guardada', { id: toastId });
+        router.push(nextPath);
       }
-      setSaveError(result.error ?? 'Error al guardar.');
-      setSaveErrorCategory(result.errorCategory);
-      return;
-    }
-
-    // Guardar datos para la vista readonly
-    setSavedProfile({
-      bank_name: data.bank_name,
-      account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
-      cci: data.cci,
-      account_number: data.account_number,
-      verified: true,
-    });
-    setIsVerified(true);
-    setIsEditing(false);
-    setLocalStatus('VERIFIED');
-
-    // Clear revealed data
-    setRevealedAccountNumber(null);
-    setRevealedCCI(null);
-    setShowAccountNumber(false);
-    setShowCCI(false);
-
-    if (!dashboardMode) {
-      autoNavigate.start();
+    } catch {
+      if (toastId) toast.error('Error de conexión', { id: toastId });
+      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
+      setSaveErrorCategory('network');
     }
   };
 

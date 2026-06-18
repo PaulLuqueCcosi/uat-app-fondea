@@ -20,6 +20,7 @@ import { useState, useEffect } from 'react';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { AlertBanner } from '@/components/ui/alert-banner';
@@ -261,6 +262,9 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
     setBlockedHoursLeft(0);
     setAttemptsLeft(undefined);
     setMaxAttempts(undefined);
+
+    const toastId = !dashboardMode ? toast.loading('Guardando perfil laboral...') : undefined;
+
     try {
       const result = await saveLaborProfile(
         data.employment_status as EmploymentStatus,
@@ -284,6 +288,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
       );
 
       if (!result.success) {
+        if (toastId) toast.error('Error al guardar', { id: toastId });
         // 429 — módulo bloqueado
         if (result.errorCategory === 'rate_limit') {
           setBlocked(true);
@@ -329,9 +334,11 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
       setLocalStatus('VERIFIED');
 
       if (!dashboardMode) {
-        autoNavigate.start();
+        toast.success('Perfil laboral guardado', { id: toastId });
+        router.push(nextPath);
       }
     } catch {
+      if (toastId) toast.error('Error de conexión', { id: toastId });
       setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
       setSaveErrorCategory('network');
     }

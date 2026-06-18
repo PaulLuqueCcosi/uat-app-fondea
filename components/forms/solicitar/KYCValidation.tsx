@@ -37,6 +37,7 @@ import { performSignOut } from '@/app/actions/auth.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { AlertBanner } from '@/components/ui/alert-banner';
@@ -263,6 +264,8 @@ export function FunnelKYCValidation({
     setSaveError(null);
     setSaveErrorCategory(undefined);
 
+    const toastId = !dashboardMode ? toast.loading('Verificando identidad...') : undefined;
+
     try {
       const kycData: KYCData = {
         dni: data.dni,
@@ -277,6 +280,8 @@ export function FunnelKYCValidation({
       const result: KYCSaveResult = await saveKYCData(kycData);
 
       if (!result.success) {
+        if (toastId) toast.error('Error en la verificación', { id: toastId });
+
         // 409 — cuenta sin DNI, necesita re-login
         if (result.action === 're-login') {
           setNeedsRelogin(true);
@@ -311,15 +316,18 @@ export function FunnelKYCValidation({
         verified: true,
       });
 
-      setIsVerified(true);
-      setIsEditing(false);
       setIsVerifying(false);
 
       if (!dashboardMode) {
-        autoNavigate.start();
+        toast.success('Identidad verificada', { id: toastId });
+        router.push(nextPath);
+      } else {
+        setIsVerified(true);
+        setIsEditing(false);
       }
     } catch (error) {
       console.error('Error en verificación KYC:', error);
+      if (toastId) toast.error('Error de conexión', { id: toastId });
       setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
       setSaveErrorCategory('network');
       setIsVerifying(false);

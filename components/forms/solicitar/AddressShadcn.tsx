@@ -51,6 +51,7 @@ import type { AddressProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { AlertBanner } from '@/components/ui/alert-banner';
@@ -306,58 +307,68 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
     }
     setLocationError(null);
 
-    const result = await saveAddressProfile({
-      address_type:    data.address_type,
-      google_address:  data.google_address  || undefined,
-      street_address:  data.street_address  || undefined,
-      region:          data.region          ?? '',
-      province:        data.province        ?? '',
-      district:        data.district        ?? '',
-      referral_source: data.referral_source,
-      referral_other:  data.referral_source === 'OTRO' ? data.referral_other : undefined,
-      location:        location ?? undefined,
-    });
+    const toastId = !dashboardMode ? toast.loading('Guardando dirección...') : undefined;
 
-    if (!result.success) {
-      if (result.errorCategory === 'rate_limit') {
-        setBlocked(true);
-        setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
+    try {
+      const result = await saveAddressProfile({
+        address_type:    data.address_type,
+        google_address:  data.google_address  || undefined,
+        street_address:  data.street_address  || undefined,
+        region:          data.region          ?? '',
+        province:        data.province        ?? '',
+        district:        data.district        ?? '',
+        referral_source: data.referral_source,
+        referral_other:  data.referral_source === 'OTRO' ? data.referral_other : undefined,
+        location:        location ?? undefined,
+      });
+
+      if (!result.success) {
+        if (toastId) toast.error('Error al guardar', { id: toastId });
+        if (result.errorCategory === 'rate_limit') {
+          setBlocked(true);
+          setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
+        }
+        if (result.httpStatus === 422) {
+          setAttemptsLeft(result.attemptsLeft);
+          setMaxAttempts(result.maxAttempts);
+        }
+        setSaveError(result.error ?? 'Error al guardar.');
+        setSaveErrorCategory(result.errorCategory);
+        return;
       }
-      if (result.httpStatus === 422) {
-        setAttemptsLeft(result.attemptsLeft);
-        setMaxAttempts(result.maxAttempts);
+
+      // Actualiza labels para la vista resumen
+      const dep  = departamentos.find((x) => x.value === data.region);
+      const prov = provincias.find((x) => x.value === data.province);
+      const dist = distritos.find((x) => x.value === data.district);
+      if (dep)  setLabelDep(dep.label);
+      if (prov) setLabelProv(prov.label);
+      if (dist) setLabelDist(dist.label);
+
+      setSavedProfile({
+        address_type:    data.address_type!,
+        google_address:  data.google_address  || undefined,
+        street_address:  data.street_address  || undefined,
+        region:          data.region          ?? '',
+        province:        data.province        ?? '',
+        district:        data.district        ?? '',
+        referral_source: data.referral_source,
+        referral_other:  data.referral_source === 'OTRO' ? data.referral_other : undefined,
+        location:        location ?? undefined,
+        verified:        true,
+      });
+      setIsVerified(true);
+      setIsEditing(false);
+      setLocalStatus('VERIFIED');
+
+      if (!dashboardMode) {
+        toast.success('Dirección guardada', { id: toastId });
+        router.push(nextPath);
       }
-      setSaveError(result.error ?? 'Error al guardar.');
-      setSaveErrorCategory(result.errorCategory);
-      return;
-    }
-
-    // Actualiza labels para la vista resumen
-    const dep  = departamentos.find((x) => x.value === data.region);
-    const prov = provincias.find((x) => x.value === data.province);
-    const dist = distritos.find((x) => x.value === data.district);
-    if (dep)  setLabelDep(dep.label);
-    if (prov) setLabelProv(prov.label);
-    if (dist) setLabelDist(dist.label);
-
-    setSavedProfile({
-      address_type:    data.address_type!,
-      google_address:  data.google_address  || undefined,
-      street_address:  data.street_address  || undefined,
-      region:          data.region          ?? '',
-      province:        data.province        ?? '',
-      district:        data.district        ?? '',
-      referral_source: data.referral_source,
-      referral_other:  data.referral_source === 'OTRO' ? data.referral_other : undefined,
-      location:        location ?? undefined,
-      verified:        true,
-    });
-    setIsVerified(true);
-    setIsEditing(false);
-    setLocalStatus('VERIFIED');
-
-    if (!dashboardMode) {
-      autoNavigate.start();
+    } catch {
+      if (toastId) toast.error('Error de conexión', { id: toastId });
+      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
+      setSaveErrorCategory('network');
     }
   };
 

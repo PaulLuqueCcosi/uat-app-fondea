@@ -30,6 +30,7 @@ import type { EconomicProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { AlertBanner } from '@/components/ui/alert-banner';
@@ -220,6 +221,8 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
     setAttemptsLeft(undefined);
     setMaxAttempts(undefined);
 
+    const toastId = !dashboardMode ? toast.loading('Guardando perfil económico...') : undefined;
+
     try {
       const economicProfile = {
         loan_purpose: data.loan_purpose as any,
@@ -241,6 +244,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       const result: EconomicSaveResult = await saveEconomicProfile(economicProfile);
 
       if (!result.success) {
+        if (toastId) toast.error('Error al guardar', { id: toastId });
         if (result.errorCategory === 'rate_limit') {
           setBlocked(true);
           setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
@@ -278,9 +282,11 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       setLocalStatus('VERIFIED');
 
       if (!dashboardMode) {
-        autoNavigate.start();
+        toast.success('Perfil económico guardado', { id: toastId });
+        router.push(nextPath);
       }
     } catch {
+      if (toastId) toast.error('Error de conexión', { id: toastId });
       setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
       setSaveErrorCategory('network');
     }
