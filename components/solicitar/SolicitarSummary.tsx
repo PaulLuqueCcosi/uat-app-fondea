@@ -652,7 +652,7 @@ export function FunnelSummary({
             <div className="px-6 pb-6 space-y-4 border-t">
               {/* Resumen financiero */}
               <div className="bg-muted/50 rounded-lg p-4 mt-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Ingresos totales</p>
                     <p className="text-lg font-bold text-primary">S/ {totalIncome.toLocaleString()}</p>
@@ -662,10 +662,6 @@ export function FunnelSummary({
                     <p className="text-lg font-bold text-foreground">
                       S/ {(monthlyExpenses + totalDebtPayment).toLocaleString()}
                     </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Capacidad de pago</p>
-                    <p className="text-lg font-bold text-success-600">S/ {availableIncome.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
