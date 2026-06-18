@@ -48,7 +48,6 @@ import { ApiError } from '@/lib/client-api/api-error';
 import { useDeviceFingerprint } from '@/hooks/useDeviceFingerprint';
 import { VPNBlockModal } from './VPNBlockModal';
 import { LocationDeclinedModal } from './LocationDeclinedModal';
-import { type GPSPermissionError } from '@/lib/client-api/device-fingerprint';
 import { toast } from 'sonner';
 
 // Helper functions para obtener labels
@@ -190,7 +189,6 @@ export function FunnelSummary({
   const [vpnReasons, setVpnReasons] = useState<string[]>([]);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [pendingFingerprint, setPendingFingerprint] = useState<any>(null);
-  const [gpsError, setGpsError] = useState<GPSPermissionError | undefined>(undefined);
 
   // Scroll automático a las declaraciones tras 4 segundos
   useEffect(() => {
@@ -246,11 +244,9 @@ export function FunnelSummary({
       return;
     }
 
-    // ── Si no hay GPS: mostrar modal informativo (no bloqueante) ─────────────
-    // El toast se mantiene activo porque el usuario puede continuar sin GPS
+    // ── Si no hay GPS: mostrar modal simple ─────────────────────────────────
     if (!fp.gps) {
       setPendingFingerprint({ fp, activeIntencion });
-      setGpsError(fp.gpsError);
       setLocationModalOpen(true);
       setLoading(false);
       return;
@@ -1086,24 +1082,18 @@ export function FunnelSummary({
     {/* Modal de ubicación no compartida */}
     <LocationDeclinedModal
       open={locationModalOpen}
-      gpsError={gpsError}
       onRetry={async () => {
         setLocationModalOpen(false);
-        // Volver a pedir fingerprint (el navegador volverá a pedir permiso de GPS)
         const fp = await collectFingerprint();
         if (fp && fp.gps) {
-          // GPS aceptado ahora → continuar
           await processSubmit(fp, pendingFingerprint?.activeIntencion);
         } else {
-          // Todavía sin GPS → volver a mostrar modal con nuevo error
           setPendingFingerprint({ fp, activeIntencion: pendingFingerprint?.activeIntencion });
-          setGpsError(fp?.gpsError);
           setLocationModalOpen(true);
         }
       }}
       onContinue={async () => {
         setLocationModalOpen(false);
-        // Continuar sin GPS (puede afectar score)
         await processSubmit(pendingFingerprint?.fp, pendingFingerprint?.activeIntencion);
       }}
     />
