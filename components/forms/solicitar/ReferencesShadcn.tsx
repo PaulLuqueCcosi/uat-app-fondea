@@ -526,6 +526,16 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
 
         <Separator className="my-10 bg-primary/20 h-px" />
 
+        {/* Nota informativa — siempre visible */}
+        <div className="text-xs text-muted-foreground space-y-1 mb-6">
+          <p className="font-medium text-foreground">Ten en cuenta:</p>
+          <ul className="list-disc list-inside space-y-1 ml-1">
+            <li>No vamos a contactar a estas personas</li>
+            {/* <li>Esta información es solo para validación interna</li> */}
+            {/* <li>Tus referencias no serán notificadas ni llamadas</li> */}
+          </ul>
+        </div>
+
         {/* Botones de acción */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
           {wasVerified || isVerified ? (

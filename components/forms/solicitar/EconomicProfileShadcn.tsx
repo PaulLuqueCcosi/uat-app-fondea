@@ -65,6 +65,25 @@ const DEBT_TYPES = [
   { value: 'other', label: 'Otro' },
 ];
 
+const FINANCIAL_ENTITIES = [
+  { value: 'BCP', label: 'BCP' },
+  { value: 'BBVA', label: 'BBVA' },
+  { value: 'Interbank', label: 'Interbank' },
+  { value: 'Scotiabank', label: 'Scotiabank' },
+  { value: 'Banco de la Nación', label: 'Banco de la Nación' },
+  { value: 'Banco Pichincha', label: 'Banco Pichincha' },
+  { value: 'BanBif', label: 'BanBif' },
+  // { value: 'Falabella', label: 'Falabella' },
+  // { value: 'Ripley', label: 'Ripley' },
+  // { value: 'Mibanco', label: 'Mibanco' },
+  // { value: 'Caja Arequipa', label: 'Caja Arequipa' },
+  // { value: 'Caja Huancayo', label: 'Caja Huancayo' },
+  // { value: 'Caja Piura', label: 'Caja Piura' },
+  // { value: 'Compartamos', label: 'Compartamos' },
+  // { value: 'Crediscotia', label: 'Crediscotia' },
+  // { value: 'Otro', label: 'Otro' },
+];
+
 const economicFormSchema = z.object({
   loan_purpose: z.string().min(1, 'Selecciona para qué usarás el dinero'),
   monthly_expenses: z
@@ -503,8 +522,15 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                       name={`debts.${index}.entity`}
                       render={({ field }) => (
                         <FormItem className="flex flex-col gap-1">
-                          <FormLabel>Entidad *</FormLabel>
-                          <Input placeholder="Banco BCP" {...field} className="w-full" />
+                          <FormLabel>Entidad financiera *</FormLabel>
+                          <NativeSelect {...field} className="w-full">
+                            <NativeSelectOption value="">Selecciona la entidad</NativeSelectOption>
+                            {FINANCIAL_ENTITIES.map((opt) => (
+                              <NativeSelectOption key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </NativeSelectOption>
+                            ))}
+                          </NativeSelect>
                           <FormMessage />
                         </FormItem>
                       )}
