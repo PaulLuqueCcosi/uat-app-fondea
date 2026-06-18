@@ -100,7 +100,7 @@ export async function getPointsHistory(): Promise<PassportResult<PointsHistoryEn
     const history = (Array.isArray(raw) ? raw : raw.content ?? []).map(mapHistoryEntryFromBackend);
 
     // Ordenar por fecha descendente
-    history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    history.sort((a: PointsHistoryEntry, b: PointsHistoryEntry) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return { ok: true, data: history };
   } catch (err) {

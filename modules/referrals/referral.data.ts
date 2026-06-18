@@ -10,6 +10,6 @@ export const mockSummary: ReferralSummary = {
 };
 
 export const mockReferrals: Referral[] = [
-  { id: 'ref-001', name: 'Carlos M.', registeredAt: '2026-04-10', status: 'COMPLETED', pointsEarned: 15 },
-  { id: 'ref-002', name: 'Ana L.', registeredAt: '2026-05-22', status: 'COMPLETED', pointsEarned: 15 },
+  { id: 'ref-001', referredUserId: 'user-carlos', registeredAt: '2026-04-10', completedAt: '2026-04-15', status: 'LOAN_COMPLETED', pointsAwarded: 15 },
+  { id: 'ref-002', referredUserId: 'user-ana', registeredAt: '2026-05-22', completedAt: '2026-05-28', status: 'LOAN_COMPLETED', pointsAwarded: 15 },
 ];
