@@ -99,14 +99,7 @@ async function parseAddressResponse(res: Response): Promise<AddressSaveResult> {
   if (res.status === 422) {
     const attemptsLeft = json.attempts_left ?? json.attemptsLeft;
     const maxAttempts = json.max_attempts ?? 3;
-    const baseError = json.message ?? json.detail ?? 'La dirección no es válida.';
-
-    let error = baseError;
-    if (attemptsLeft === 1) {
-      error = `${baseError} ¡Cuidado! Este es tu último intento antes de quedar bloqueado.`;
-    } else if (attemptsLeft !== undefined) {
-      error = `${baseError} Te quedan ${attemptsLeft} intento${attemptsLeft !== 1 ? 's' : ''}.`;
-    }
+    const error = json.message ?? json.detail ?? 'La dirección no es válida.';
 
     return {
       success: false,

@@ -10,14 +10,7 @@ import { getCurrentStep } from '@/lib/funnel-steps';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
 import {
   Form,
   FormDescription,
@@ -137,19 +130,22 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
     }
   }, [isExpired, isEditing, isVerified]);
 
+  const isReplaced = initialData?.status === 'REPLACED';
+
   const form = useForm<BankAccountFormValues>({
     resolver: zodResolver(bankAccountFormSchema),
     defaultValues: {
-      bank_name: initialData?.profile?.bank_name || '',
-      account_type: initialData?.profile?.account_type || '',
-      cci: initialData?.profile?.cci || '',
-      account_number: initialData?.profile?.account_number || '',
+      bank_name: isReplaced ? '' : (initialData?.profile?.bank_name || ''),
+      account_type: isReplaced ? '' : (initialData?.profile?.account_type || ''),
+      cci: isReplaced ? '' : (initialData?.profile?.cci || ''),
+      account_number: isReplaced ? '' : (initialData?.profile?.account_number || ''),
     },
   });
 
   // Efecto para resetear el formulario cuando se entra en modo edición
+  // (NO aplicar cuando es REPLACED — el form debe quedarse vacío)
   useEffect(() => {
-    if (isEditing && initialData?.profile) {
+    if (isEditing && initialData?.profile && initialData?.status !== 'REPLACED') {
       const profile = initialData.profile;
       form.reset({
         bank_name: profile.bank_name || '',
@@ -163,16 +159,6 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
   // ── Edit handlers ───────────────────────────────────────────────────────────
 
   const handleEdit = () => {
-    if (isVerified) {
-      setShowConfirmDialog(true);
-      return;
-    }
-    setIsEditing(true);
-    errorHandler.clear();
-  };
-
-  const confirmEdit = () => {
-    setShowConfirmDialog(false);
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
@@ -182,6 +168,11 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
     setRevealedCCI(null);
     setShowAccountNumber(false);
     setShowCCI(false);
+  };
+
+  const confirmSubmit = () => {
+    setShowConfirmDialog(false);
+    form.handleSubmit(doSubmit)();
   };
 
   // ── Reveal handlers ─────────────────────────────────────────────────────────
@@ -213,6 +204,14 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const onSubmit = async (data: BankAccountFormValues) => {
+    if (wasVerified && !showConfirmDialog) {
+      setShowConfirmDialog(true);
+      return;
+    }
+    await doSubmit(data);
+  };
+
+  const doSubmit = async (data: BankAccountFormValues) => {
     errorHandler.clear();
 
     const result = await errorHandler.execute(
@@ -539,25 +538,11 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
       )}
 
       {/* Modal de confirmación al editar */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>⚠️ ¿Editar cuenta bancaria?</DialogTitle>
-            <DialogDescription>
-              Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
-              Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={confirmEdit}>
-              Sí, editar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmSaveDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        onConfirm={confirmSubmit}
+      />
     </>
   );
 }

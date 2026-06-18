@@ -59,14 +59,7 @@ async function parseReferencesResponse(res: Response): Promise<ReferencesSaveRes
   if (res.status === 422) {
     const attemptsLeft = json.attempts_left ?? json.attemptsLeft;
     const maxAttempts = json.max_attempts ?? 3;
-    const baseError = json.message ?? json.detail ?? 'Las referencias no son válidas.';
-
-    let error = baseError;
-    if (attemptsLeft === 1) {
-      error = `${baseError} ¡Cuidado! Este es tu último intento antes de quedar bloqueado.`;
-    } else if (attemptsLeft !== undefined) {
-      error = `${baseError} Te quedan ${attemptsLeft} intento${attemptsLeft !== 1 ? 's' : ''}.`;
-    }
+    const error = json.message ?? json.detail ?? 'Las referencias no son válidas.';
 
     return {
       success: false,

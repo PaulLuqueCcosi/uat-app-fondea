@@ -15,14 +15,7 @@ const LocationMapPicker = dynamic(
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
 import {
   Form,
   FormDescription,
@@ -221,23 +214,27 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
     if (found) setLabelDep(found.label);
   }, [departamentos, initialData]);
 
+  const isReplaced = initialData?.status === 'REPLACED';
+
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressFormSchema),
     defaultValues: {
-      address_type:    initialData?.profile?.address_type    ?? undefined,
-      google_address:  initialData?.profile?.google_address  ?? '',
-      street_address:  initialData?.profile?.street_address  ?? '',
-      region:          initialData?.profile?.region          ?? '',
-      province:        initialData?.profile?.province        ?? '',
-      district:        initialData?.profile?.district        ?? '',
-      referral_source: initialData?.profile?.referral_source ?? '',
-      referral_other:  initialData?.profile?.referral_other  ?? '',
+      address_type:    isReplaced ? undefined : (initialData?.profile?.address_type    ?? undefined),
+      google_address:  isReplaced ? '' : (initialData?.profile?.google_address  ?? ''),
+      street_address:  isReplaced ? '' : (initialData?.profile?.street_address  ?? ''),
+      region:          isReplaced ? '' : (initialData?.profile?.region          ?? ''),
+      province:        isReplaced ? '' : (initialData?.profile?.province        ?? ''),
+      district:        isReplaced ? '' : (initialData?.profile?.district        ?? ''),
+      referral_source: isReplaced ? '' : (initialData?.profile?.referral_source ?? ''),
+      referral_other:  isReplaced ? '' : (initialData?.profile?.referral_other  ?? ''),
     },
   });
 
   // Efecto para resetear el formulario cuando se entra en modo edición
+  // Efecto para resetear el formulario cuando se entra en modo edición
+  // (NO aplicar cuando es REPLACED — el form debe quedarse vacío)
   useEffect(() => {
-    if (isEditing && initialData?.profile) {
+    if (isEditing && initialData?.profile && initialData?.status !== 'REPLACED') {
       const profile = initialData.profile;
       form.reset({
         address_type:    profile.address_type    ?? undefined,
@@ -264,25 +261,28 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
   // ── Edit handlers ───────────────────────────────────────────────────────────
 
   const handleEdit = () => {
-    if (isVerified) {
-      setShowConfirmDialog(true);
-      return;
-    }
-    setIsEditing(true);
-    errorHandler.clear();
-  };
-
-  const confirmEdit = () => {
-    setShowConfirmDialog(false);
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
     errorHandler.clear();
   };
 
+  const confirmSubmit = () => {
+    setShowConfirmDialog(false);
+    form.handleSubmit(doSubmit)();
+  };
+
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const onSubmit = async (data: AddressFormValues) => {
+    if (wasVerified && !showConfirmDialog) {
+      setShowConfirmDialog(true);
+      return;
+    }
+    await doSubmit(data);
+  };
+
+  const doSubmit = async (data: AddressFormValues) => {
     errorHandler.clear();
 
     // Validar que address_type esté definido (debería estarlo por el schema)
@@ -860,25 +860,11 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
       )}
 
       {/* Modal de confirmación al editar */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>⚠️ ¿Editar dirección?</DialogTitle>
-            <DialogDescription>
-              Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
-              Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={confirmEdit}>
-              Sí, editar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmSaveDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        onConfirm={confirmSubmit}
+      />
     </>
   );
 }

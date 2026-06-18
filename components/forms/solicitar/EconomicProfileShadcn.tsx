@@ -35,14 +35,7 @@ import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { AlertBanner } from '@/components/ui/alert-banner';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
 
 interface FunnelEconomicProfileProps {
   dashboardMode?: boolean;
@@ -160,22 +153,24 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
 
   const prevProfile = initialData?.profile;
 
+  const isReplaced = initialData?.status === 'REPLACED';
+
   const form = useForm<EconomicFormValues>({
     resolver: zodResolver(economicFormSchema),
     defaultValues: {
-      loan_purpose: prevProfile?.loan_purpose || '',
-      monthly_expenses: prevProfile?.monthly_expenses?.toString() || '',
-      has_debts: prevProfile?.has_debts || false,
-      debts: prevProfile?.debts?.map(d => ({
+      loan_purpose: isReplaced ? '' : (prevProfile?.loan_purpose || ''),
+      monthly_expenses: isReplaced ? '' : (prevProfile?.monthly_expenses?.toString() || ''),
+      has_debts: isReplaced ? false : (prevProfile?.has_debts || false),
+      debts: isReplaced ? [] : (prevProfile?.debts?.map(d => ({
         entity: d.entity,
         type: d.type,
         amount: d.amount.toString(),
         monthly_payment: d.monthlyPayment.toString(),
-      })) || [],
-      has_property: prevProfile?.has_property || false,
-      has_vehicle: prevProfile?.has_vehicle || false,
-      has_services: prevProfile?.has_services || false,
-      education_level: prevProfile?.education_level || '',
+      })) || []),
+      has_property: isReplaced ? false : (prevProfile?.has_property || false),
+      has_vehicle: isReplaced ? false : (prevProfile?.has_vehicle || false),
+      has_services: isReplaced ? false : (prevProfile?.has_services || false),
+      education_level: isReplaced ? '' : (prevProfile?.education_level || ''),
     },
   });
 
@@ -188,23 +183,26 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
   const isSubmitting = form.formState.isSubmitting;
 
   const handleEdit = () => {
-    if (isVerified) {
-      setShowConfirmDialog(true);
-      return;
-    }
-    setIsEditing(true);
-    errorHandler.clear();
-  };
-
-  const confirmEdit = () => {
-    setShowConfirmDialog(false);
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
     errorHandler.clear();
   };
 
+  const confirmSubmit = () => {
+    setShowConfirmDialog(false);
+    form.handleSubmit(doSubmit)();
+  };
+
   const onSubmit = async (data: EconomicFormValues) => {
+    if (wasVerified && !showConfirmDialog) {
+      setShowConfirmDialog(true);
+      return;
+    }
+    await doSubmit(data);
+  };
+
+  const doSubmit = async (data: EconomicFormValues) => {
     errorHandler.clear();
 
     const economicProfile = {
@@ -751,27 +749,11 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
         </div>
 
         {/* Modal de confirmación al editar */}
-        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                ⚠️ ¿Editar perfil económico?
-              </DialogTitle>
-              <DialogDescription>
-                Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
-                Esta acción no se puede deshacer.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
-                Cancelar
-              </Button>
-              <Button type="button" onClick={confirmEdit}>
-                Sí, editar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ConfirmSaveDialog
+          open={showConfirmDialog}
+          onOpenChange={setShowConfirmDialog}
+          onConfirm={confirmSubmit}
+        />
       </>
     );
   }
@@ -798,27 +780,11 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       </Card>
 
       {/* Modal de confirmación al editar */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              ⚠️ ¿Editar perfil económico?
-            </DialogTitle>
-            <DialogDescription>
-              Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
-              Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={confirmEdit}>
-              Sí, editar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmSaveDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        onConfirm={confirmSubmit}
+      />
     </>
   );
 }

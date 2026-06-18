@@ -62,6 +62,8 @@ export async function getKYCData(): Promise<{
 
     const json = await res.json();
 
+    console.log('[KYC] Respuesta del backend:', JSON.stringify(json, null, 2));
+
     // El backend puede devolver dos formatos:
     // 1. Formato plano: { data: { dni, firstName, ..., birthDate } }
     // 2. Formato verificado: { status: "VERIFIED", submission: { submission_data: '{"dni":...}' } }
@@ -185,13 +187,8 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       const maxAttempts = json.max_attempts ?? 3;
       const baseError = json.message ?? json.error ?? 'Los datos no coinciden con los registros de RENIEC.';
 
-      // Construir mensaje con advertencia de intentos si quedan pocos
-      let error = baseError;
-      if (attemptsLeft === 1) {
-        error = `${baseError} ¡Cuidado! Este es tu último intento antes de quedar bloqueado.`;
-      } else if (attemptsLeft !== undefined) {
-        error = `${baseError} Te quedan ${attemptsLeft} intento${attemptsLeft !== 1 ? 's' : ''}.`;
-      }
+      // Solo usar el mensaje del backend, sin agregar info de intentos
+      const error = baseError;
 
       return {
         success: false,

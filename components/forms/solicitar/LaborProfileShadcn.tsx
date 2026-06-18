@@ -40,14 +40,7 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -189,23 +182,25 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
   const prevDetails = initialData?.details;
   const prevIncome = initialData?.income;
 
+  const isReplaced = initialData?.status === 'REPLACED';
+
   const form = useForm<LaborFormValues>({
     resolver: zodResolver(laborFormSchema),
     defaultValues: {
-      employment_status: prevSituation?.employment_status ?? '',
-      industry: prevDetails?.industry ?? '',
-      years_of_activity: prevDetails?.years_of_activity ? String(prevDetails.years_of_activity) : '',
-      business_ruc: prevDetails?.business_ruc ?? '',
-      monthly_income: prevIncome?.monthly_income ? String(prevIncome.monthly_income) : '',
-      income_receipt_method: prevIncome?.income_receipt_method ?? '',
-      has_additional_income: prevIncome?.has_additional_income ?? false,
-      additional_incomes: prevIncome?.additional_incomes?.map(i => ({
+      employment_status: isReplaced ? '' : (prevSituation?.employment_status ?? ''),
+      industry: isReplaced ? '' : (prevDetails?.industry ?? ''),
+      years_of_activity: isReplaced ? '' : (prevDetails?.years_of_activity ? String(prevDetails.years_of_activity) : ''),
+      business_ruc: isReplaced ? '' : (prevDetails?.business_ruc ?? ''),
+      monthly_income: isReplaced ? '' : (prevIncome?.monthly_income ? String(prevIncome.monthly_income) : ''),
+      income_receipt_method: isReplaced ? '' : (prevIncome?.income_receipt_method ?? ''),
+      has_additional_income: isReplaced ? false : (prevIncome?.has_additional_income ?? false),
+      additional_incomes: isReplaced ? [] : (prevIncome?.additional_incomes?.map(i => ({
         id: i.id,
         type: i.type,
         custom_type: i.custom_type ?? '',
         amount: String(i.amount),
         description: i.description ?? '',
-      })) ?? [],
+      })) ?? []),
     },
   });
 
@@ -215,20 +210,17 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
   const isSubmitting = form.formState.isSubmitting;
 
   const handleEdit = () => {
-    if (isVerified) {
-      setShowConfirmDialog(true);
-      return;
-    }
-    setIsEditing(true);
-    errorHandler.clear();
-  };
-
-  const confirmEdit = () => {
-    setShowConfirmDialog(false);
+    // Entra directo a edición — sin modal
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
     errorHandler.clear();
+  };
+
+  /** Modal de confirmación se muestra al enviar si ya estaba verificado */
+  const confirmSubmit = () => {
+    setShowConfirmDialog(false);
+    form.handleSubmit(doSubmit)();
   };
 
   // Cuando cambia el tipo de empleo, resetear campos de detalles del tipo anterior
@@ -243,6 +235,14 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
   };
 
   const onSubmit = async (data: LaborFormValues) => {
+    if (wasVerified && !showConfirmDialog) {
+      setShowConfirmDialog(true);
+      return;
+    }
+    await doSubmit(data);
+  };
+
+  const doSubmit = async (data: LaborFormValues) => {
     errorHandler.clear();
 
     const result = await errorHandler.execute(
@@ -821,28 +821,12 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
           </Card>
         </div>
 
-        {/* Modal de confirmación al editar */}
-        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-              ¿Editar perfil laboral?
-            </DialogTitle>
-              <DialogDescription>
-                Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
-                Esta acción no se puede deshacer.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
-                Cancelar
-              </Button>
-              <Button type="button" onClick={confirmEdit}>
-                Sí, editar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Modal de confirmación al guardar */}
+        <ConfirmSaveDialog
+          open={showConfirmDialog}
+          onOpenChange={setShowConfirmDialog}
+          onConfirm={confirmSubmit}
+        />
       </>
     );
   }
@@ -866,28 +850,12 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
         <CardContent className="pt-0">{content}</CardContent>
       </Card>
 
-      {/* Modal de confirmación al editar */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              ⚠️ ¿Editar perfil laboral?
-            </DialogTitle>
-            <DialogDescription>
-              Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
-              Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={confirmEdit}>
-              Sí, editar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Modal de confirmación al guardar */}
+      <ConfirmSaveDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        onConfirm={confirmSubmit}
+      />
     </>
   );
 }

@@ -43,15 +43,7 @@ import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { AlertBanner } from '@/components/ui/alert-banner';
 import { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
 import { Clock, AlertTriangle } from 'lucide-react';
 
 interface FunnelKYCValidationProps {
@@ -237,8 +229,9 @@ export function FunnelKYCValidation({
   });
 
   // Efecto para resetear el formulario cuando se entra en modo edición
+  // (NO aplicar cuando es REPLACED — el form debe quedarse vacío)
   useEffect(() => {
-    if (isEditing && savedData) {
+    if (isEditing && savedData && savedData.status !== 'REPLACED') {
       form.reset({
         dni: savedData.dni ?? '',
         firstName: savedData.firstName ?? '',
@@ -252,18 +245,30 @@ export function FunnelKYCValidation({
   }, [isEditing, savedData, form]);
 
   const handleEdit = () => {
-    setShowConfirmDialog(true);
-  };
-
-  const confirmEdit = () => {
-    setShowConfirmDialog(false);
+    // Entra directo a edición — sin modal
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
     errorHandler.clear();
   };
 
+  /** Se llama desde el form.handleSubmit cuando wasVerified es true y el usuario confirma en el modal */
+  const confirmSubmit = () => {
+    setShowConfirmDialog(false);
+    // Ejecutar el submit real que estaba pendiente
+    form.handleSubmit(doSubmit)();
+  };
+
   const onSubmit = async (data: KYCValidationFormValues) => {
+    // Si el usuario estaba verificado antes, mostrar modal de confirmación ANTES de enviar
+    if (wasVerified && !showConfirmDialog) {
+      setShowConfirmDialog(true);
+      return;
+    }
+    await doSubmit(data);
+  };
+
+  const doSubmit = async (data: KYCValidationFormValues) => {
     setIsVerifying(true);
     errorHandler.clear();
 
@@ -767,25 +772,11 @@ export function FunnelKYCValidation({
         </div>
 
         {/* Modal de confirmación al editar */}
-        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>¿Editar verificación?</DialogTitle>
-              <DialogDescription>
-                Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
-                Esta acción no se puede deshacer.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
-                Cancelar
-              </Button>
-              <Button type="button" onClick={confirmEdit}>
-                Sí, editar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ConfirmSaveDialog
+          open={showConfirmDialog}
+          onOpenChange={setShowConfirmDialog}
+          onConfirm={confirmSubmit}
+        />
       </>
     );
   }
@@ -818,25 +809,11 @@ export function FunnelKYCValidation({
       </div>
 
       {/* Modal de confirmación al editar */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>¿Editar verificación?</DialogTitle>
-            <DialogDescription>
-              Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
-              Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={confirmEdit}>
-              Sí, editar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmSaveDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        onConfirm={confirmSubmit}
+      />
     </>
   );
 }

@@ -38,14 +38,7 @@ import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { AlertBanner } from '@/components/ui/alert-banner';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
 
 interface FunnelReferencesProps {
   dashboardMode?: boolean;
@@ -181,18 +174,20 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
 
   const prevProfile = initialData?.profile;
 
+  const isReplaced = initialData?.status === 'REPLACED';
+
   const form = useForm<ReferencesFormValues>({
     resolver: zodResolver(referencesFormSchema),
     defaultValues: {
-      family_name: prevProfile?.family_reference.name || '',
-      family_relation: prevProfile?.family_reference.relationship || '',
-      family_relation_other: prevProfile?.family_reference.relationship_other || '',
-      family_phone: prevProfile?.family_reference.phone || '',
-      non_family_name: prevProfile?.non_family_reference.name || '',
-      non_family_relation: prevProfile?.non_family_reference.relationship || '',
-      non_family_relation_other: prevProfile?.non_family_reference.relationship_other || '',
-      non_family_phone: prevProfile?.non_family_reference.phone || '',
-      years_known: prevProfile?.non_family_reference.years_known ? String(prevProfile.non_family_reference.years_known) : '',
+      family_name: isReplaced ? '' : (prevProfile?.family_reference.name || ''),
+      family_relation: isReplaced ? '' : (prevProfile?.family_reference.relationship || ''),
+      family_relation_other: isReplaced ? '' : (prevProfile?.family_reference.relationship_other || ''),
+      family_phone: isReplaced ? '' : (prevProfile?.family_reference.phone || ''),
+      non_family_name: isReplaced ? '' : (prevProfile?.non_family_reference.name || ''),
+      non_family_relation: isReplaced ? '' : (prevProfile?.non_family_reference.relationship || ''),
+      non_family_relation_other: isReplaced ? '' : (prevProfile?.non_family_reference.relationship_other || ''),
+      non_family_phone: isReplaced ? '' : (prevProfile?.non_family_reference.phone || ''),
+      years_known: isReplaced ? '' : (prevProfile?.non_family_reference.years_known ? String(prevProfile.non_family_reference.years_known) : ''),
     },
   });
 
@@ -201,23 +196,26 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
   const isSubmitting = form.formState.isSubmitting;
 
   const handleEdit = () => {
-    if (isVerified) {
-      setShowConfirmDialog(true);
-      return;
-    }
-    setIsEditing(true);
-    errorHandler.clear();
-  };
-
-  const confirmEdit = () => {
-    setShowConfirmDialog(false);
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
     errorHandler.clear();
   };
 
+  const confirmSubmit = () => {
+    setShowConfirmDialog(false);
+    form.handleSubmit(doSubmit)();
+  };
+
   const onSubmit = async (data: ReferencesFormValues) => {
+    if (wasVerified && !showConfirmDialog) {
+      setShowConfirmDialog(true);
+      return;
+    }
+    await doSubmit(data);
+  };
+
+  const doSubmit = async (data: ReferencesFormValues) => {
     errorHandler.clear();
 
     const referencesProfile = {
@@ -582,27 +580,11 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
         </div>
 
         {/* Modal de confirmación al editar */}
-        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                ⚠️ ¿Editar referencias?
-              </DialogTitle>
-              <DialogDescription>
-                Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
-                Esta acción no se puede deshacer.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
-                Cancelar
-              </Button>
-              <Button type="button" onClick={confirmEdit}>
-                Sí, editar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ConfirmSaveDialog
+          open={showConfirmDialog}
+          onOpenChange={setShowConfirmDialog}
+          onConfirm={confirmSubmit}
+        />
       </>
     );
   }
@@ -629,27 +611,11 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
       </Card>
 
       {/* Modal de confirmación al editar */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              ⚠️ ¿Editar referencias?
-            </DialogTitle>
-            <DialogDescription>
-              Al editar, tu verificación actual se eliminará y deberás volver a validar tus datos.
-              Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={confirmEdit}>
-              Sí, editar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmSaveDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        onConfirm={confirmSubmit}
+      />
     </>
   );
 }

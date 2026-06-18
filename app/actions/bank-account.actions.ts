@@ -59,14 +59,7 @@ async function parseBankAccountResponse(res: Response): Promise<BankAccountSaveR
   if (res.status === 422) {
     const attemptsLeft = json.attempts_left ?? json.attemptsLeft;
     const maxAttempts = json.max_attempts ?? 3;
-    const baseError = json.message ?? json.detail ?? 'La cuenta bancaria no es válida.';
-
-    let error = baseError;
-    if (attemptsLeft === 1) {
-      error = `${baseError} ¡Cuidado! Este es tu último intento antes de quedar bloqueado.`;
-    } else if (attemptsLeft !== undefined) {
-      error = `${baseError} Te quedan ${attemptsLeft} intento${attemptsLeft !== 1 ? 's' : ''}.`;
-    }
+    const error = json.message ?? json.detail ?? 'La cuenta bancaria no es válida.';
 
     return {
       success: false,
