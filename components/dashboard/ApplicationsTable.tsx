@@ -14,10 +14,11 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from '@tanstack/react-table';
-import { FileText, Search, ChevronRight, Plus, ArrowUpDown, RefreshCw, Calendar, Clock } from 'lucide-react';
+import { FileText, Search, ChevronRight, Plus, ArrowUpDown, RefreshCw, Calendar, Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import {
   Table,
   TableBody,
@@ -27,7 +28,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { getApplicationsList } from '@/app/actions/applications-list.actions';
+import { getApplicationsList, deleteApplication } from '@/app/actions/applications-list.actions';
 import {
   applicationStatusLabels,
   applicationStatusVariants,
@@ -116,37 +117,42 @@ const columns: ColumnDef<ApplicationRecord>[] = [
     },
   },
   {
-    id: 'chevron',
+    id: 'actions',
     header: '',
-    cell: () => (
-      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+    cell: ({ row }) => (
+      <div className="flex items-center gap-1">
+        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+      </div>
     ),
   },
 ];
 
 // ── Card móvil para cada solicitud ────────────────────────────────────────────
 
-function ApplicationMobileCard({ app }: { app: ApplicationRecord }) {
+function ApplicationMobileCard({ app, onDelete }: { app: ApplicationRecord; onDelete: (id: string) => void }) {
   return (
-    <Link
-      href={`/solicitudes/${app.id}`}
-      className="block group"
-    >
-      <div className="rounded-lg border border-border bg-card p-4 transition-all group-hover:border-primary/40 group-hover:shadow-sm group-active:scale-[0.98]">
-        {/* Header: ID + estado */}
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-mono text-muted-foreground">
-            #{app.id.slice(0, 8)}
-          </span>
-          <div className="flex items-center gap-2">
-            <Badge variant={applicationStatusVariants[app.status]}>
-              {applicationStatusLabels[app.status]}
-            </Badge>
-            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-          </div>
+    <div className="rounded-lg border border-border bg-card p-4">
+      {/* Header: ID + estado + eliminar */}
+      <div className="flex items-center justify-between mb-2">
+        <Link href={`/solicitudes/${app.id}`} className="text-sm font-mono text-muted-foreground hover:text-primary">
+          #{app.id.slice(0, 8)}
+        </Link>
+        <div className="flex items-center gap-2">
+          <Badge variant={applicationStatusVariants[app.status]}>
+            {applicationStatusLabels[app.status]}
+          </Badge>
+          <button
+            onClick={() => onDelete(app.id)}
+            className="p-1.5 rounded-md hover:bg-error-50 text-muted-foreground hover:text-error-600 transition-colors"
+            title="Eliminar"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
+      </div>
 
-        {/* Info */}
+      {/* Info */}
+      <Link href={`/solicitudes/${app.id}`} className="block">
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           {app.submittedAt && (
             <span className="flex items-center gap-1">
@@ -161,15 +167,13 @@ function ApplicationMobileCard({ app }: { app: ApplicationRecord }) {
             </span>
           )}
         </div>
-
-        {/* Motivo de rechazo si existe */}
         {app.rejectionReason && (
           <div className="mt-2 pt-2 border-t border-border/50">
             <span className="text-xs text-error-600">{app.rejectionReason}</span>
           </div>
         )}
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
 
@@ -218,6 +222,18 @@ export function ApplicationsTable() {
   React.useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Eliminar solicitud (temporal — admin endpoint)
+  const handleDelete = React.useCallback(async (id: string) => {
+    const toastId = toast.loading('Eliminando...');
+    const result = await deleteApplication(id);
+    if (result.ok) {
+      toast.success('Solicitud eliminada', { id: toastId });
+      setData((prev) => prev.filter((a) => a.id !== id));
+    } else {
+      toast.error('No se pudo eliminar', { id: toastId });
+    }
+  }, []);
 
   // Aplicar filtro de estado como column filter
   const columnFilters = React.useMemo<ColumnFiltersState>(() => {
@@ -334,7 +350,7 @@ export function ApplicationsTable() {
             ))
           ) : table.getFilteredRowModel().rows.length > 0 ? (
             table.getFilteredRowModel().rows.map((row) => (
-              <ApplicationMobileCard key={row.id} app={row.original} />
+              <ApplicationMobileCard key={row.id} app={row.original} onDelete={handleDelete} />
             ))
           ) : (
             <div className="flex flex-col items-center gap-2 py-8">

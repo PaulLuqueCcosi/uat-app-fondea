@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getApplicationsAction } from '@/app/actions/application.actions';
 import type { ApplicationRecord } from '@/lib/types';
+import { ApplicationsListClient } from './ApplicationsListClient';
 
 function formatDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString('es-PE', {
@@ -68,31 +69,7 @@ async function ApplicationsContent() {
               </Link>
             </div>
           ) : (
-            applications.map((app) => (
-              <Link
-                key={app.id}
-                href={`/solicitudes/${app.id}`}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium text-foreground">
-                    Solicitud #{app.id.slice(0, 8)}
-                  </p>
-                  <p className="text-[9px] text-muted-foreground">
-                    {app.submittedAt ? formatDate(app.submittedAt) : '—'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Badge variant={getStatusVariant(app.status)} className="text-[9px]">
-                    {getStatusLabel(app.status)}
-                  </Badge>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                </div>
-              </Link>
-            ))
+            <ApplicationsListClient applications={applications} />
           )}
         </div>
       </CardContent>
