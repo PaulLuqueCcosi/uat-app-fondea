@@ -15,11 +15,11 @@ import {
   LABOR_CONFIG,
 } from '@/lib/constants';
 import { saveLaborProfile } from '@/app/actions/labor.actions';
-import type { LaborSaveResult } from '@/app/actions/labor.actions';
 import { useState, useEffect } from 'react';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
 import { ContinueButton } from '@/components/ui/continue-button';
-import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { FormErrorFeedback } from '@/components/ui/form-error-feedback';
 import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
@@ -40,7 +40,6 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { StickyBottomBar } from '@/components/ui/sticky-bottom-bar';
 import {
   Dialog,
   DialogContent,
@@ -155,18 +154,16 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
 
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
-  /** Módulo bloqueado por max intentos de validación de RUC */
-  const [blocked, setBlocked] = useState(false);
-  const [blockedHoursLeft, setBlockedHoursLeft] = useState(0);
-  /** Intentos restantes para 422 */
-  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(undefined);
-  const [maxAttempts, setMaxAttempts] = useState<number | undefined>(undefined);
   /** Modal de confirmación al editar datos ya verificados */
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   /** Indica si el usuario venía de un estado verificado (para mostrar "Cancelar" en vez de "Atrás") */
   const [wasVerified, setWasVerified] = useState(initialData?.overall_verified === true);
+
+  // Hook centralizado de manejo de errores
+  const errorHandler = useFormErrorHandler({
+    moduleName: 'Perfil laboral',
+    dashboardMode,
+  });
 
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedSituation, setSavedSituation] = useState(initialData?.situation ?? null);
@@ -223,12 +220,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
       return;
     }
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
   };
 
   const confirmEdit = () => {
@@ -236,12 +228,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
   };
 
   // Cuando cambia el tipo de empleo, resetear campos de detalles del tipo anterior
@@ -256,17 +243,10 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
   };
 
   const onSubmit = async (data: LaborFormValues) => {
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
 
-    const toastId = !dashboardMode ? toast.loading('Guardando perfil laboral...') : undefined;
-
-    try {
-      const result = await saveLaborProfile(
+    const result = await errorHandler.execute(
+      () => saveLaborProfile(
         data.employment_status as EmploymentStatus,
         {
           industry: data.industry as LaborIndustry,
@@ -285,62 +265,43 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
             description: i.description || undefined,
           })),
         }
-      );
+      ),
+      'Perfil laboral guardado',
+    );
 
-      if (!result.success) {
-        if (toastId) toast.error('Error al guardar', { id: toastId });
-        // 429 — módulo bloqueado
-        if (result.errorCategory === 'rate_limit') {
-          setBlocked(true);
-          setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
-        }
-        // 422 — guardar intentos restantes
-        if (result.httpStatus === 422) {
-          setAttemptsLeft(result.attemptsLeft);
-          setMaxAttempts(result.maxAttempts);
-        }
-        setSaveError(result.error);
-        setSaveErrorCategory(result.errorCategory);
-        return;
-      }
+    if (!result) return;
 
-      // Guardar los datos del form para mostrarlos en el readonly
-      setSavedSituation({
-        employment_status: data.employment_status as EmploymentStatus,
-        verified: true,
-      });
-      setSavedDetails({
-        industry: data.industry as LaborIndustry,
-        years_of_activity: data.years_of_activity ? Number(data.years_of_activity) : undefined,
-        business_ruc: data.business_ruc || undefined,
-        verified: true,
-      });
-      setSavedIncome({
-        monthly_income: Number(data.monthly_income),
-        income_receipt_method: data.income_receipt_method as IncomeReceiptMethod,
-        has_additional_income: data.has_additional_income,
-        additional_incomes: (data.has_additional_income ? data.additional_incomes ?? [] : []).map(i => ({
-          id: i.id,
-          type: i.type as AdditionalIncomeType,
-          custom_type: i.type === 'OTRO' ? i.custom_type : undefined,
-          amount: Number(i.amount),
-          description: i.description || undefined,
-        })),
-        verified: true,
-      });
+    // Guardar los datos del form para mostrarlos en el readonly
+    setSavedSituation({
+      employment_status: data.employment_status as EmploymentStatus,
+      verified: true,
+    });
+    setSavedDetails({
+      industry: data.industry as LaborIndustry,
+      years_of_activity: data.years_of_activity ? Number(data.years_of_activity) : undefined,
+      business_ruc: data.business_ruc || undefined,
+      verified: true,
+    });
+    setSavedIncome({
+      monthly_income: Number(data.monthly_income),
+      income_receipt_method: data.income_receipt_method as IncomeReceiptMethod,
+      has_additional_income: data.has_additional_income,
+      additional_incomes: (data.has_additional_income ? data.additional_incomes ?? [] : []).map(i => ({
+        id: i.id,
+        type: i.type as AdditionalIncomeType,
+        custom_type: i.type === 'OTRO' ? i.custom_type : undefined,
+        amount: Number(i.amount),
+        description: i.description || undefined,
+      })),
+      verified: true,
+    });
 
-      setIsVerified(true);
-      setIsEditing(false);
-      setLocalStatus('VERIFIED');
+    setIsVerified(true);
+    setIsEditing(false);
+    setLocalStatus('VERIFIED');
 
-      if (!dashboardMode) {
-        toast.success('Perfil laboral guardado', { id: toastId });
-        router.push(nextPath);
-      }
-    } catch {
-      if (toastId) toast.error('Error de conexión', { id: toastId });
-      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
-      setSaveErrorCategory('network');
+    if (!dashboardMode) {
+      router.push(nextPath);
     }
   };
 
@@ -484,15 +445,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
         {expiredBanner}
 
         {/* Error de guardado — arriba del formulario */}
-        {saveError && (
-          <>
-            <SaveErrorBanner
-              error={saveError}
-              errorCategory={saveErrorCategory}
-            />
-            <Separator className="my-10 bg-primary/20 h-px" />
-          </>
-        )}
+        <FormErrorFeedback handler={errorHandler} />
 
         {/* Situación laboral */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
@@ -817,34 +770,12 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
           </div>
         </div>
 
-        {/* Panel de bloqueo — aparece cuando el módulo está bloqueado por max intentos de RUC */}
-        {blocked && (
-          <>
-            <Separator className="my-10 bg-primary/20 h-px" />
-            <div className="rounded-lg border border-error-200 bg-error-50 p-4">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 shrink-0 text-lg">🔒</span>
-                <div className="space-y-2 w-full">
-                  <div>
-                    <p className="text-sm font-semibold text-error-700">
-                      Módulo bloqueado por {blockedHoursLeft} hora{blockedHoursLeft !== 1 ? 's' : ''}
-                    </p>
-                    <p className="text-xs text-error-600 mt-1">
-                      Has superado el número máximo de intentos de validación de RUC. Podrás intentarlo nuevamente cuando expire el bloqueo.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
         <Separator className="my-10 bg-primary/20 h-px" />
 
         {/* Botones */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
           {wasVerified || isVerified ? (
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }} disabled={isSubmitting}>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); errorHandler.clear(); }} disabled={isSubmitting}>
               Cancelar
             </Button>
           ) : (
@@ -852,7 +783,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
               {dashboardMode ? 'Cancelar' : 'Atrás'}
             </Button>
           )}
-          <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || blocked}>
+          <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || errorHandler.state.blocked}>
             {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
                 <span className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />

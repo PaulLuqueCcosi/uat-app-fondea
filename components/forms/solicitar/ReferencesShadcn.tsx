@@ -31,8 +31,9 @@ import { FormHeader } from '@/components/ui/form-header';
 import { saveReferencesProfile } from '@/app/actions/references.actions';
 import type { ReferencesSaveResult } from '@/app/actions/references.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
 import { ContinueButton } from '@/components/ui/continue-button';
-import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { FormErrorFeedback } from '@/components/ui/form-error-feedback';
 import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
@@ -152,14 +153,14 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
 
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified ?? false);
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
-  const [blocked, setBlocked] = useState(false);
-  const [blockedHoursLeft, setBlockedHoursLeft] = useState(0);
-  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(undefined);
-  const [maxAttempts, setMaxAttempts] = useState<number | undefined>(undefined);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [wasVerified, setWasVerified] = useState(initialData?.overall_verified ?? false);
+
+  // Hook centralizado de manejo de errores
+  const errorHandler = useFormErrorHandler({
+    moduleName: 'Referencias',
+    dashboardMode,
+  });
 
   // Datos guardados en este submit
   const [savedProfile, setSavedProfile] = useState<ReferencesProfile & { verified?: boolean } | null>(initialData?.profile ?? null);
@@ -205,12 +206,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
       return;
     }
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
   };
 
   const confirmEdit = () => {
@@ -218,88 +214,47 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
   };
 
   const onSubmit = async (data: ReferencesFormValues) => {
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
 
-    const toastId = !dashboardMode ? toast.loading('Guardando referencias...') : undefined;
+    const referencesProfile = {
+      family_reference: {
+        name: data.family_name,
+        phone: data.family_phone,
+        relationship: data.family_relation as FamilyRelationship,
+        relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
+      },
+      non_family_reference: {
+        name: data.non_family_name,
+        phone: data.non_family_phone,
+        relationship: data.non_family_relation as NonFamilyRelationship,
+        relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
+        years_known: Number(data.years_known),
+      },
+    };
 
-    try {
-      const referencesProfile = {
-        family_reference: {
-          name: data.family_name,
-          phone: data.family_phone,
-          relationship: data.family_relation as FamilyRelationship,
-          relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
-        },
-        non_family_reference: {
-          name: data.non_family_name,
-          phone: data.non_family_phone,
-          relationship: data.non_family_relation as NonFamilyRelationship,
-          relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
-          years_known: Number(data.years_known),
-        },
-      };
+    const result = await errorHandler.execute(
+      () => saveReferencesProfile(referencesProfile),
+      'Referencias guardadas',
+    );
 
-      const result: ReferencesSaveResult = await saveReferencesProfile(referencesProfile);
+    if (!result) return;
 
-      if (!result.success) {
-        if (toastId) toast.error('Error al guardar', { id: toastId });
-        if (result.errorCategory === 'rate_limit') {
-          setBlocked(true);
-          setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
-        }
-        if (result.httpStatus === 422) {
-          setAttemptsLeft(result.attemptsLeft);
-          setMaxAttempts(result.maxAttempts);
-        }
-        setSaveError(result.error);
-        setSaveErrorCategory(result.errorCategory);
-        return;
-      }
+    // Guardar los datos para la vista readonly
+    setSavedProfile({
+      ...referencesProfile,
+      verified: true,
+    });
 
-      // Guardar los datos para la vista readonly
-      setSavedProfile({
-        family_reference: {
-          name: data.family_name,
-          phone: data.family_phone,
-          relationship: data.family_relation as FamilyRelationship,
-          relationship_other: data.family_relation === 'OTRO' ? data.family_relation_other : undefined,
-        },
-        non_family_reference: {
-          name: data.non_family_name,
-          phone: data.non_family_phone,
-          relationship: data.non_family_relation as NonFamilyRelationship,
-          relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
-          years_known: Number(data.years_known),
-        },
-        verified: true,
-      });
+    setIsVerified(true);
+    setIsEditing(false);
+    setLocalStatus('VERIFIED');
 
-      setIsVerified(true);
-      setIsEditing(false);
-      setLocalStatus('VERIFIED');
-
-      if (!dashboardMode) {
-        toast.success('Referencias guardadas', { id: toastId });
-        router.push(nextPath);
-      }
-    } catch {
-      if (toastId) toast.error('Error de conexión', { id: toastId });
-      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
-      setSaveErrorCategory('network');
+    if (!dashboardMode) {
+      router.push(nextPath);
     }
   };
 
@@ -386,15 +341,8 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
         {/* Banner de expirado */}
         {expiredBanner}
 
-        {saveError && (
-          <>
-            <SaveErrorBanner
-              error={saveError}
-              errorCategory={saveErrorCategory}
-            />
-            <Separator className="my-10 bg-primary/20 h-px" />
-          </>
-        )}
+        {/* Error feedback centralizado */}
+        <FormErrorFeedback handler={errorHandler} />
 
         {/* Referencias en 2 columnas */}
         <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -583,7 +531,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
         {/* Botones de acción */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
           {wasVerified || isVerified ? (
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }} disabled={isSubmitting}>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); errorHandler.clear(); }} disabled={isSubmitting}>
               Cancelar
             </Button>
           ) : (
@@ -594,7 +542,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
           <Button
             type="submit"
             className="w-full sm:w-auto"
-            disabled={isSubmitting || blocked}
+            disabled={isSubmitting || errorHandler.state.blocked}
           >
             {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
               <span className="flex items-center gap-2">

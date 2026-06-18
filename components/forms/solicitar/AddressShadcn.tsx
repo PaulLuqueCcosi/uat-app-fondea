@@ -49,8 +49,9 @@ import {
 import { saveAddressProfile, getAddressProfileStatus } from '@/app/actions/additional-address.actions';
 import type { AddressProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
 import { ContinueButton } from '@/components/ui/continue-button';
-import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { FormErrorFeedback } from '@/components/ui/form-error-feedback';
 import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
@@ -123,20 +124,18 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  console.log('[ADDRESS DEBUG] initialData:', JSON.parse(JSON.stringify(initialData)));
-
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified ?? false);
   const [isEditing,  setIsEditing]  = useState(!initialData?.overall_verified);
-  const [saveError,  setSaveError]  = useState<string | null>(null);
-  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
-  const [blocked, setBlocked] = useState(false);
-  const [blockedHoursLeft, setBlockedHoursLeft] = useState(0);
-  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(undefined);
-  const [maxAttempts, setMaxAttempts] = useState<number | undefined>(undefined);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [wasVerified, setWasVerified] = useState(initialData?.overall_verified ?? false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(initialData?.profile?.location ?? null);
   const [locationError, setLocationError] = useState<string | null>(null);
+
+  // Hook centralizado de manejo de errores
+  const errorHandler = useFormErrorHandler({
+    moduleName: 'Dirección',
+    dashboardMode,
+  });
 
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
@@ -270,8 +269,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
       return;
     }
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
+    errorHandler.clear();
   };
 
   const confirmEdit = () => {
@@ -279,73 +277,30 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
+    errorHandler.clear();
   };
 
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const onSubmit = async (data: AddressFormValues) => {
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
 
     // Validar que address_type esté definido (debería estarlo por el schema)
     if (!data.address_type) {
-      setSaveError('Selecciona un método para ingresar tu dirección');
+      toast.error('Selecciona un método para ingresar tu dirección');
       return;
     }
 
     // Validar ubicación en el mapa
     if (!location) {
       setLocationError('Debes marcar en el mapa la ubicación de tu domicilio');
-      setSaveError('Marca tu ubicación en el mapa antes de continuar');
+      toast.error('Marca tu ubicación en el mapa antes de continuar');
       return;
     }
     setLocationError(null);
 
-    const toastId = !dashboardMode ? toast.loading('Guardando dirección...') : undefined;
-
-    try {
-      const result = await saveAddressProfile({
-        address_type:    data.address_type,
-        google_address:  data.google_address  || undefined,
-        street_address:  data.street_address  || undefined,
-        region:          data.region          ?? '',
-        province:        data.province        ?? '',
-        district:        data.district        ?? '',
-        referral_source: data.referral_source,
-        referral_other:  data.referral_source === 'OTRO' ? data.referral_other : undefined,
-        location:        location ?? undefined,
-      });
-
-      if (!result.success) {
-        if (toastId) toast.error('Error al guardar', { id: toastId });
-        if (result.errorCategory === 'rate_limit') {
-          setBlocked(true);
-          setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
-        }
-        if (result.httpStatus === 422) {
-          setAttemptsLeft(result.attemptsLeft);
-          setMaxAttempts(result.maxAttempts);
-        }
-        setSaveError(result.error ?? 'Error al guardar.');
-        setSaveErrorCategory(result.errorCategory);
-        return;
-      }
-
-      // Actualiza labels para la vista resumen
-      const dep  = departamentos.find((x) => x.value === data.region);
-      const prov = provincias.find((x) => x.value === data.province);
-      const dist = distritos.find((x) => x.value === data.district);
-      if (dep)  setLabelDep(dep.label);
-      if (prov) setLabelProv(prov.label);
-      if (dist) setLabelDist(dist.label);
-
-      setSavedProfile({
+    const result = await errorHandler.execute(
+      () => saveAddressProfile({
         address_type:    data.address_type!,
         google_address:  data.google_address  || undefined,
         street_address:  data.street_address  || undefined,
@@ -355,20 +310,38 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
         referral_source: data.referral_source,
         referral_other:  data.referral_source === 'OTRO' ? data.referral_other : undefined,
         location:        location ?? undefined,
-        verified:        true,
-      });
-      setIsVerified(true);
-      setIsEditing(false);
-      setLocalStatus('VERIFIED');
+      }),
+      'Dirección guardada',
+    );
 
-      if (!dashboardMode) {
-        toast.success('Dirección guardada', { id: toastId });
-        router.push(nextPath);
-      }
-    } catch {
-      if (toastId) toast.error('Error de conexión', { id: toastId });
-      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
-      setSaveErrorCategory('network');
+    if (!result) return;
+
+    // Actualiza labels para la vista resumen
+    const dep  = departamentos.find((x) => x.value === data.region);
+    const prov = provincias.find((x) => x.value === data.province);
+    const dist = distritos.find((x) => x.value === data.district);
+    if (dep)  setLabelDep(dep.label);
+    if (prov) setLabelProv(prov.label);
+    if (dist) setLabelDist(dist.label);
+
+    setSavedProfile({
+      address_type:    data.address_type!,
+      google_address:  data.google_address  || undefined,
+      street_address:  data.street_address  || undefined,
+      region:          data.region          ?? '',
+      province:        data.province        ?? '',
+      district:        data.district        ?? '',
+      referral_source: data.referral_source,
+      referral_other:  data.referral_source === 'OTRO' ? data.referral_other : undefined,
+      location:        location ?? undefined,
+      verified:        true,
+    });
+    setIsVerified(true);
+    setIsEditing(false);
+    setLocalStatus('VERIFIED');
+
+    if (!dashboardMode) {
+      router.push(nextPath);
     }
   };
 
@@ -390,8 +363,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
             return;
           }
           setIsEditing(true);
-          setSaveError(null);
-          setSaveErrorCategory(undefined);
+          errorHandler.clear();
         }}
       />
 
@@ -725,38 +697,13 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
 
         <Separator className="my-10 bg-primary/20 h-px" />
 
-        {/* Error de guardado */}
-        {saveError && (
-          <SaveErrorBanner
-            error={saveError}
-            errorCategory={saveErrorCategory}
-          />
-        )}
-
-        {/* Bloqueo por max intentos */}
-        {blocked && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            <div className="flex items-center gap-2 font-semibold">
-              <span>🔒</span>
-              Módulo bloqueado por {blockedHoursLeft} hora{blockedHoursLeft !== 1 ? 's' : ''}
-            </div>
-            <p className="mt-1 text-red-700">
-              Has superado el máximo de intentos permitidos. Podrás volver a intentarlo cuando termine el tiempo de bloqueo.
-            </p>
-          </div>
-        )}
-
-        {/* Intentos restantes */}
-        {attemptsLeft !== undefined && attemptsLeft > 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            Te queda{attemptsLeft !== 1 ? 'n' : ''} {attemptsLeft} intento{attemptsLeft !== 1 ? 's' : ''} de {maxAttempts}.
-          </div>
-        )}
+        {/* Error feedback centralizado */}
+        <FormErrorFeedback handler={errorHandler} />
 
         {/* Botones */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
           {isVerified ? (
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsEditing(false); setSaveError(null); setSaveErrorCategory(undefined); }}>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsEditing(false); errorHandler.clear(); }}>
               Cancelar
             </Button>
           ) : (
@@ -764,7 +711,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
               {dashboardMode ? 'Cancelar' : 'Atrás'}
             </Button>
           )}
-          <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || blocked}>
+          <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || errorHandler.state.blocked}>
             {form.formState.isSubmitting ? 'Guardando...' : isVerified ? 'Guardar cambios' : 'Continuar'}
           </Button>
         </div>

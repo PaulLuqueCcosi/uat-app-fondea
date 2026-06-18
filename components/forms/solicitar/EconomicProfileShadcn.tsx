@@ -28,8 +28,9 @@ import type { EconomicSaveResult } from '@/app/actions/economic.actions';
 import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/lib/constants';
 import type { EconomicProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
 import { ContinueButton } from '@/components/ui/continue-button';
-import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { FormErrorFeedback } from '@/components/ui/form-error-feedback';
 import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
@@ -131,14 +132,14 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
 
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
-  const [blocked, setBlocked] = useState(false);
-  const [blockedHoursLeft, setBlockedHoursLeft] = useState(0);
-  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(undefined);
-  const [maxAttempts, setMaxAttempts] = useState<number | undefined>(undefined);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [wasVerified, setWasVerified] = useState(initialData?.overall_verified === true);
+
+  // Hook centralizado de manejo de errores
+  const errorHandler = useFormErrorHandler({
+    moduleName: 'Perfil económico',
+    dashboardMode,
+  });
 
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
@@ -192,12 +193,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       return;
     }
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
   };
 
   const confirmEdit = () => {
@@ -205,90 +201,48 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
   };
 
   const onSubmit = async (data: EconomicFormValues) => {
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
 
-    const toastId = !dashboardMode ? toast.loading('Guardando perfil económico...') : undefined;
+    const economicProfile = {
+      loan_purpose: data.loan_purpose as any,
+      monthly_expenses: Number(data.monthly_expenses),
+      has_debts: data.has_debts,
+      debts: data.has_debts ? data.debts?.map(debt => ({
+        id: debt.entity + '-' + Date.now(),
+        entity: debt.entity,
+        type: debt.type,
+        amount: Number(debt.amount),
+        monthlyPayment: Number(debt.monthly_payment),
+      })) || [] : [],
+      has_property: data.has_property,
+      has_vehicle: data.has_vehicle,
+      has_services: data.has_services,
+      education_level: data.education_level as any,
+    };
 
-    try {
-      const economicProfile = {
-        loan_purpose: data.loan_purpose as any,
-        monthly_expenses: Number(data.monthly_expenses),
-        has_debts: data.has_debts,
-        debts: data.has_debts ? data.debts?.map(debt => ({
-          id: debt.entity + '-' + Date.now(),
-          entity: debt.entity,
-          type: debt.type,
-          amount: Number(debt.amount),
-          monthlyPayment: Number(debt.monthly_payment),
-        })) || [] : [],
-        has_property: data.has_property,
-        has_vehicle: data.has_vehicle,
-        has_services: data.has_services,
-        education_level: data.education_level as any,
-      };
+    const result = await errorHandler.execute(
+      () => saveEconomicProfile(economicProfile),
+      'Perfil económico guardado',
+    );
 
-      const result: EconomicSaveResult = await saveEconomicProfile(economicProfile);
+    if (!result) return;
 
-      if (!result.success) {
-        if (toastId) toast.error('Error al guardar', { id: toastId });
-        if (result.errorCategory === 'rate_limit') {
-          setBlocked(true);
-          setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
-        }
-        if (result.httpStatus === 422) {
-          setAttemptsLeft(result.attemptsLeft);
-          setMaxAttempts(result.maxAttempts);
-        }
-        setSaveError(result.error);
-        setSaveErrorCategory(result.errorCategory);
-        return;
-      }
+    // Guardar los datos para la vista readonly
+    setSavedProfile({
+      ...economicProfile,
+      verified: true,
+    });
 
-      // Guardar los datos para la vista readonly
-      setSavedProfile({
-        loan_purpose: data.loan_purpose as any,
-        monthly_expenses: Number(data.monthly_expenses),
-        has_debts: data.has_debts,
-        debts: data.has_debts ? data.debts?.map(debt => ({
-          id: debt.entity + '-' + Date.now(),
-          entity: debt.entity,
-          type: debt.type,
-          amount: Number(debt.amount),
-          monthlyPayment: Number(debt.monthly_payment),
-        })) || [] : [],
-        has_property: data.has_property,
-        has_vehicle: data.has_vehicle,
-        has_services: data.has_services,
-        education_level: data.education_level as any,
-        verified: true,
-      });
+    setIsVerified(true);
+    setIsEditing(false);
+    setLocalStatus('VERIFIED');
 
-      setIsVerified(true);
-      setIsEditing(false);
-      setLocalStatus('VERIFIED');
-
-      if (!dashboardMode) {
-        toast.success('Perfil económico guardado', { id: toastId });
-        router.push(nextPath);
-      }
-    } catch {
-      if (toastId) toast.error('Error de conexión', { id: toastId });
-      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
-      setSaveErrorCategory('network');
+    if (!dashboardMode) {
+      router.push(nextPath);
     }
   };
 
@@ -424,15 +378,8 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
         {/* Banner de expirado */}
         {expiredBanner}
 
-        {saveError && (
-          <>
-            <SaveErrorBanner
-              error={saveError}
-              errorCategory={saveErrorCategory}
-            />
-            <Separator className="my-10 bg-primary/20 h-px" />
-          </>
-        )}
+        {/* Error feedback centralizado */}
+        <FormErrorFeedback handler={errorHandler} />
 
         {/* Sección 0: Propósito del préstamo */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
@@ -753,7 +700,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
         {/* Botones de acción */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
           {wasVerified || isVerified ? (
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }} disabled={isSubmitting}>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); errorHandler.clear(); }} disabled={isSubmitting}>
               Cancelar
             </Button>
           ) : (
@@ -764,7 +711,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
           <Button
             type="submit"
             className="w-full sm:w-auto"
-            disabled={isSubmitting || blocked}
+            disabled={isSubmitting || errorHandler.state.blocked}
           >
             {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
               <span className="flex items-center gap-2">

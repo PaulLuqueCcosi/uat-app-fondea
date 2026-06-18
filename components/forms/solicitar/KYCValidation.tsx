@@ -35,8 +35,9 @@ import { saveKYCData } from '@/app/actions/kyc.actions';
 import type { KYCSaveResult } from '@/app/actions/kyc.actions';
 import { performSignOut } from '@/app/actions/auth.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
 import { ContinueButton } from '@/components/ui/continue-button';
-import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { FormErrorFeedback } from '@/components/ui/form-error-feedback';
 import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
@@ -163,9 +164,13 @@ export function FunnelKYCValidation({
   const [isEditing, setIsEditing] = useState(initialData?.status !== 'VERIFIED');
   const [wasVerified, setWasVerified] = useState(initialData?.status === 'VERIFIED');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
   const [needsRelogin, setNeedsRelogin] = useState(false);
+
+  // Hook centralizado de manejo de errores
+  const errorHandler = useFormErrorHandler({
+    moduleName: 'Verificación de identidad',
+    dashboardMode,
+  });
 
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedData, setSavedData] = useState(initialData ?? null);
@@ -255,82 +260,66 @@ export function FunnelKYCValidation({
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
+    errorHandler.clear();
   };
 
   const onSubmit = async (data: KYCValidationFormValues) => {
     setIsVerifying(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
+    errorHandler.clear();
 
-    const toastId = !dashboardMode ? toast.loading('Verificando identidad...') : undefined;
+    const kycData: KYCData = {
+      dni: data.dni,
+      firstName: data.firstName,
+      secondName: data.secondName,
+      firstLastName: data.firstLastName,
+      secondLastName: data.secondLastName,
+      verificationCode: data.verificationCode,
+      birth_date: data.birth_date,
+    };
 
-    try {
-      const kycData: KYCData = {
-        dni: data.dni,
-        firstName: data.firstName,
-        secondName: data.secondName,
-        firstLastName: data.firstLastName,
-        secondLastName: data.secondLastName,
-        verificationCode: data.verificationCode,
-        birth_date: data.birth_date,
-      };
+    const result = await errorHandler.execute(
+      () => saveKYCData(kycData),
+      'Identidad verificada',
+    );
 
-      const result: KYCSaveResult = await saveKYCData(kycData);
-
-      if (!result.success) {
-        if (toastId) toast.error('Error en la verificación', { id: toastId });
-
-        // 409 — cuenta sin DNI, necesita re-login
-        if (result.action === 're-login') {
-          setNeedsRelogin(true);
-          setSaveError(result.error);
-          setIsVerifying(false);
-          return;
-        }
-
-        if (result.errorCategory === 'rate_limit') {
-          setBlocked(true);
-          setBlockedHoursLeft(result.blockedHoursLeft ?? 0);
-          setAttemptsLeft(0);
-        } else if (result.attemptsLeft !== undefined) {
-          setAttemptsLeft(result.attemptsLeft);
-        }
-        setSaveError(result.error || 'Error en la verificación');
-        setSaveErrorCategory(result.errorCategory);
-        setIsVerifying(false);
-        return;
+    if (!result) {
+      // Check if it's a re-login case (409)
+      if (errorHandler.state.specialAction === 're-login') {
+        setNeedsRelogin(true);
       }
-
-      // Guardar los datos que acabamos de verificar para mostrarlos en readonly
-      setSavedData({
-        dni: data.dni,
-        firstName: data.firstName,
-        secondName: data.secondName,
-        firstLastName: data.firstLastName,
-        secondLastName: data.secondLastName,
-        verificationCode: data.verificationCode,
-        birth_date: data.birth_date,
-        status: 'VERIFIED',
-        verified: true,
-      });
-
-      setIsVerifying(false);
-
-      if (!dashboardMode) {
-        toast.success('Identidad verificada', { id: toastId });
-        router.push(nextPath);
-      } else {
-        setIsVerified(true);
-        setIsEditing(false);
+      // Update local attempts state from error handler
+      if (errorHandler.state.attemptsLeft !== undefined) {
+        setAttemptsLeft(errorHandler.state.attemptsLeft);
       }
-    } catch (error) {
-      console.error('Error en verificación KYC:', error);
-      if (toastId) toast.error('Error de conexión', { id: toastId });
-      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
-      setSaveErrorCategory('network');
+      if (errorHandler.state.blocked) {
+        setBlocked(true);
+        setBlockedHoursLeft(errorHandler.state.blockedHoursLeft);
+        setAttemptsLeft(0);
+      }
       setIsVerifying(false);
+      return;
+    }
+
+    // Guardar los datos que acabamos de verificar para mostrarlos en readonly
+    setSavedData({
+      dni: data.dni,
+      firstName: data.firstName,
+      secondName: data.secondName,
+      firstLastName: data.firstLastName,
+      secondLastName: data.secondLastName,
+      verificationCode: data.verificationCode,
+      birth_date: data.birth_date,
+      status: 'VERIFIED',
+      verified: true,
+    });
+
+    setIsVerifying(false);
+
+    if (!dashboardMode) {
+      router.push(nextPath);
+    } else {
+      setIsVerified(true);
+      setIsEditing(false);
     }
   };
 
@@ -415,16 +404,8 @@ export function FunnelKYCValidation({
         {/* Banner de expirado */}
         {expiredBanner}
 
-        {/* Error de guardado */}
-        {saveError && (
-          <>
-            <SaveErrorBanner
-              error={saveError}
-              errorCategory={saveErrorCategory}
-            />
-            <Separator className="my-10 bg-primary/20 h-px" />
-          </>
-        )}
+        {/* Error feedback centralizado */}
+        <FormErrorFeedback handler={errorHandler} />
 
         {/* DNI */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
@@ -672,37 +653,19 @@ export function FunnelKYCValidation({
           </div>
         </div>
 
-        {/* Panel de intentos y bloqueo */}
-        {(blocked || (saveError && attemptsLeft !== undefined && attemptsLeft < initialAttemptsLeft)) && (
+        {/* Checklist de ayuda — aparece cuando el backend no pudo validar */}
+        {errorHandler.state.error && (
           <>
             <Separator className="my-10 bg-primary/20 h-px" />
-            {blocked ? (
-              <AlertBanner
-                variant="error"
-                title={`Bloqueado por ${blockedHoursLeft} hora${blockedHoursLeft !== 1 ? 's' : ''}`}
-                description="Has superado el número máximo de intentos. Podrás intentarlo nuevamente cuando expire el bloqueo."
-                blockedHoursLeft={blockedHoursLeft}
-              />
-            ) : (
-              <AlertBanner
-                variant={attemptsLeft === 1 ? 'error' : 'warning'}
-                title={attemptsLeft === 1 ? 'Último intento' : 'Datos no válidos'}
-                description={saveError ?? ''}
-                attemptsLeft={attemptsLeft}
-                maxAttempts={initialAttemptsLeft}
-              />
-            )}
-            {!blocked && (
-              <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border mt-4">
-                <p className="font-medium text-foreground">Revisa lo siguiente:</p>
-                <ul className="list-disc list-inside space-y-1 ml-1">
-                  <li>Los datos deben coincidir <strong>exactamente</strong> con tu DNI físico</li>
-                  <li>Nombres y apellidos en mayúsculas, sin tildes</li>
-                  <li>El código de verificación es el dígito al final de tu DNI</li>
-                  <li>La fecha de nacimiento en formato DD/MM/AAAA</li>
-                </ul>
-              </div>
-            )}
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">Revisa lo siguiente:</p>
+              <ul className="list-disc list-inside space-y-1 ml-1">
+                <li>Los datos deben coincidir <strong>exactamente</strong> con tu DNI físico</li>
+                <li>Nombres y apellidos en mayúsculas, sin tildes</li>
+                <li>El código de verificación es el dígito al final de tu DNI</li>
+                <li>La fecha de nacimiento en formato DD/MM/AAAA</li>
+              </ul>
+            </div>
           </>
         )}
 
@@ -715,7 +678,7 @@ export function FunnelKYCValidation({
               type="button"
               variant="outline"
               className="w-full sm:w-auto"
-              onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); setSaveError(null); }}
+              onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); errorHandler.clear(); }}
               disabled={isVerifying}
             >
               Cancelar
@@ -758,7 +721,7 @@ export function FunnelKYCValidation({
                 Cuenta incompleta
               </h2>
               <p className="text-sm text-neutral-600 leading-relaxed max-w-sm">
-                {saveError || 'No se encontró un documento registrado en tu cuenta. Por favor, cierra sesión e inicia sesión nuevamente.'}
+                {errorHandler.state.error || 'No se encontró un documento registrado en tu cuenta. Por favor, cierra sesión e inicia sesión nuevamente.'}
               </p>
             </div>
             <Button onClick={() => performSignOut()} className="w-full max-w-xs">

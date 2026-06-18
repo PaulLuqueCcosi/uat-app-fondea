@@ -39,10 +39,11 @@ import {
 } from '@/app/actions/bank-account.actions';
 import type { BankAccountProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
+import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
-import { SaveErrorBanner } from '@/components/ui/save-error-banner';
+import { FormErrorFeedback } from '@/components/ui/form-error-feedback';
 import { toast } from 'sonner';
 import { AlertBanner } from '@/components/ui/alert-banner';
 
@@ -102,14 +103,14 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
 
   const [isVerified, setIsVerified] = useState(initialData?.overall_verified ?? false);
   const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
-  const [blocked, setBlocked] = useState(false);
-  const [blockedHoursLeft, setBlockedHoursLeft] = useState(0);
-  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(undefined);
-  const [maxAttempts, setMaxAttempts] = useState<number | undefined>(undefined);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [wasVerified, setWasVerified] = useState(initialData?.overall_verified ?? false);
+
+  // Hook centralizado de manejo de errores
+  const errorHandler = useFormErrorHandler({
+    moduleName: 'Cuenta bancaria',
+    dashboardMode,
+  });
 
   // Datos guardados en este submit
   const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
@@ -167,8 +168,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
       return;
     }
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
+    errorHandler.clear();
   };
 
   const confirmEdit = () => {
@@ -176,8 +176,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
     setWasVerified(true);
     setIsVerified(false);
     setIsEditing(true);
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
+    errorHandler.clear();
     // Clear revealed data on edit
     setRevealedAccountNumber(null);
     setRevealedCCI(null);
@@ -214,64 +213,40 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const onSubmit = async (data: BankAccountFormValues) => {
-    setSaveError(null);
-    setSaveErrorCategory(undefined);
-    setBlocked(false);
-    setBlockedHoursLeft(0);
-    setAttemptsLeft(undefined);
-    setMaxAttempts(undefined);
+    errorHandler.clear();
 
-    const toastId = !dashboardMode ? toast.loading('Guardando cuenta bancaria...') : undefined;
-
-    try {
-      const result = await saveBankAccountProfile({
+    const result = await errorHandler.execute(
+      () => saveBankAccountProfile({
         bank_name: data.bank_name,
         account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
         cci: data.cci,
         account_number: data.account_number,
-      });
+      }),
+      'Cuenta bancaria guardada',
+    );
 
-      if (!result.success) {
-        if (toastId) toast.error('Error al guardar', { id: toastId });
-        if (result.errorCategory === 'rate_limit') {
-          setBlocked(true);
-          setBlockedHoursLeft(result.blockedHoursLeft ?? 24);
-        }
-        if (result.httpStatus === 422) {
-          setAttemptsLeft(result.attemptsLeft);
-          setMaxAttempts(result.maxAttempts);
-        }
-        setSaveError(result.error ?? 'Error al guardar.');
-        setSaveErrorCategory(result.errorCategory);
-        return;
-      }
+    if (!result) return;
 
-      // Guardar datos para la vista readonly
-      setSavedProfile({
-        bank_name: data.bank_name,
-        account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
-        cci: data.cci,
-        account_number: data.account_number,
-        verified: true,
-      });
-      setIsVerified(true);
-      setIsEditing(false);
-      setLocalStatus('VERIFIED');
+    // Guardar datos para la vista readonly
+    setSavedProfile({
+      bank_name: data.bank_name,
+      account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
+      cci: data.cci,
+      account_number: data.account_number,
+      verified: true,
+    });
+    setIsVerified(true);
+    setIsEditing(false);
+    setLocalStatus('VERIFIED');
 
-      // Clear revealed data
-      setRevealedAccountNumber(null);
-      setRevealedCCI(null);
-      setShowAccountNumber(false);
-      setShowCCI(false);
+    // Clear revealed data
+    setRevealedAccountNumber(null);
+    setRevealedCCI(null);
+    setShowAccountNumber(false);
+    setShowCCI(false);
 
-      if (!dashboardMode) {
-        toast.success('Cuenta bancaria guardada', { id: toastId });
-        router.push(nextPath);
-      }
-    } catch {
-      if (toastId) toast.error('Error de conexión', { id: toastId });
-      setSaveError('Error de conexión. Por favor, inténtalo nuevamente.');
-      setSaveErrorCategory('network');
+    if (!dashboardMode) {
+      router.push(nextPath);
     }
   };
 
@@ -495,38 +470,13 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
 
         <Separator className="my-10 bg-primary/20 h-px" />
 
-        {/* Error de guardado */}
-        {saveError && (
-          <SaveErrorBanner
-            error={saveError}
-            errorCategory={saveErrorCategory}
-          />
-        )}
-
-        {/* Bloqueo por max intentos */}
-        {blocked && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 mb-4">
-            <div className="flex items-center gap-2 font-semibold">
-              <span>🔒</span>
-              Módulo bloqueado por {blockedHoursLeft} hora{blockedHoursLeft !== 1 ? 's' : ''}
-            </div>
-            <p className="mt-1 text-red-700">
-              Has superado el máximo de intentos permitidos. Podrás volver a intentarlo cuando termine el tiempo de bloqueo.
-            </p>
-          </div>
-        )}
-
-        {/* Intentos restantes */}
-        {attemptsLeft !== undefined && attemptsLeft > 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 mb-4">
-            Te queda{attemptsLeft !== 1 ? 'n' : ''} {attemptsLeft} intento{attemptsLeft !== 1 ? 's' : ''} de {maxAttempts}.
-          </div>
-        )}
+        {/* Error feedback centralizado */}
+        <FormErrorFeedback handler={errorHandler} />
 
         {/* Botones */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
           {isVerified ? (
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsEditing(false); setSaveError(null); setSaveErrorCategory(undefined); }}>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsEditing(false); errorHandler.clear(); }}>
               Cancelar
             </Button>
           ) : (
@@ -534,7 +484,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
               {dashboardMode ? 'Cancelar' : 'Atrás'}
             </Button>
           )}
-          <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || blocked}>
+          <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || errorHandler.state.blocked}>
             {form.formState.isSubmitting ? 'Guardando...' : isVerified ? 'Guardar cambios' : 'Continuar'}
           </Button>
         </div>
