@@ -382,16 +382,23 @@ export async function cancelApplicationAction(
 export async function signContractAction(
   applicationId: string,
   signedName: string,
+  signatureImage?: string,
 ): Promise<ActionResult> {
   await requireValidSession();
 
   try {
+    const body: Record<string, unknown> = { signed_name: signedName };
+
+    if (signatureImage) {
+      body.signature_image = signatureImage;
+    }
+
     const res = await backendFetch(
       `/api/v1/applications/${applicationId}/contract/sign`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signed_name: signedName }),
+        body: JSON.stringify(body),
       },
     );
 

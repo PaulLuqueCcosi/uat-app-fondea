@@ -207,7 +207,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     setError('');
 
     try {
-      const result = await signContractAction(solicitudId, fullName);
+      const result = await signContractAction(solicitudId, fullName, signature ?? undefined);
 
       if (!result.success) {
         setError(result.error ?? 'Error al firmar el contrato');
