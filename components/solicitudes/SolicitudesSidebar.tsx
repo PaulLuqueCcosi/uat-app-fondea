@@ -46,7 +46,7 @@ export function SolicitudesSidebar() {
     new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   const formatDate = (dateString: string) =>
-    new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(dateString));
+    new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(dateString + 'T00:00:00'));
 
   return (
     <aside className="hidden md:flex flex-col w-80 bg-white border-r border-border fixed left-0 top-16 bottom-0 overflow-y-auto scrollbar-primary">

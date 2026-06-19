@@ -17,7 +17,7 @@ const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
 const formatDate = (dateString: string) =>
-  new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(dateString));
+  new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(dateString + 'T00:00:00'));
 
 export function SolicitudesLoanSummaryBanner() {
   const pathname = usePathname();
