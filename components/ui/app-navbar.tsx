@@ -25,6 +25,7 @@ import {
 import {
   Avatar,
   AvatarFallback,
+  AvatarImage,
 } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import type { User as UserType } from '@/lib/types';
@@ -63,9 +64,10 @@ interface AppNavbarProps {
 
 // ── Avatar compartido ─────────────────────────────────────────────────────────
 
-function UserAvatar({ initials, size = 'sm' }: { initials: string; size?: 'sm' | 'md' }) {
+function UserAvatar({ initials, avatar, size = 'sm' }: { initials: string; avatar?: string | null; size?: 'sm' | 'md' }) {
   return (
     <Avatar className={size === 'md' ? 'h-9 w-9' : 'h-8 w-8'}>
+      {avatar && <AvatarImage src={avatar} alt="Avatar" />}
       <AvatarFallback className="bg-primary-50 text-primary-700 font-medium">
         {initials}
       </AvatarFallback>
@@ -158,7 +160,7 @@ export function AppNavbar({ user, onSignOut, backLink, centerContent }: AppNavba
                 )}
               </div>
 
-              <UserAvatar initials={initials} size="sm" />
+              <UserAvatar initials={initials} avatar={user.avatar} size="sm" />
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" sideOffset={8} className="w-56">
@@ -167,7 +169,7 @@ export function AppNavbar({ user, onSignOut, backLink, centerContent }: AppNavba
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex items-center gap-2.5 py-0.5">
-                    <UserAvatar initials={initials} size="md" />
+                    <UserAvatar initials={initials} avatar={user.avatar} size="md" />
                     <div className="flex flex-col leading-tight min-w-0">
                       <span className="text-sm font-medium text-foreground truncate">
                         {user.name}

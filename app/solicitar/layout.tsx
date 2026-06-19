@@ -14,11 +14,11 @@ export default async function FunnelLayout({
   const summary = profileResult.ok ? profileResult.data : null;
 
   const user = {
+    id: summary?.id || '',
     name: summary?.name || 'Usuario',
     email: summary?.email || '',
     avatar: summary?.avatar || null,
-    dni: summary?.dni || null,
-    id: summary?.id || null,
+    dni: summary?.dni || undefined,
   };
 
   return (

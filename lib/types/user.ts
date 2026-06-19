@@ -6,6 +6,7 @@ export interface User {
   email?: string;
   phone?: string;
   dni?: string;
+  avatar?: string | null;
   profileProgress?: number;
   sections?: ProfileSections;
 }
