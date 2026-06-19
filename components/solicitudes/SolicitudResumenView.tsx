@@ -190,56 +190,36 @@ function PreApprovedView({
 
         {/* Próximos pasos */}
         <Card className="border-0 shadow-md">
-          <CardContent className="p-5 space-y-4">
-            <h3 className="font-semibold text-foreground">Próximos pasos:</h3>
+          <CardContent className="p-5 space-y-3">
+            <h3 className="font-semibold text-foreground">Próximos pasos</h3>
 
             <div className="space-y-2">
               {[
-                {
-                  icon: FileText,
-                  title: '1. Verificar tu identidad (DNI)',
-                  desc: 'Sube fotos de tu DNI (adelante y atrás)',
-                  done: isDniUploaded,
-                  path: `/solicitudes/${application.id}/kyc-documentos`,
-                },
-                {
-                  icon: Camera,
-                  title: '2. Verificación biométrica',
-                  desc: 'Toma una selfie para confirmar tu identidad',
-                  done: isSelfieUploaded,
-                  path: `/solicitudes/${application.id}/kyc-selfie`,
-                },
-                {
-                  icon: PenLine,
-                  title: '3. Firmar el contrato',
-                  desc: 'Revisa y firma digitalmente tu contrato',
-                  done: isContractSigned,
-                  path: `/solicitudes/${application.id}/contrato`,
-                },
+                { title: '1. Verificar tu identidad (DNI)', done: isDniUploaded },
+                { title: '2. Verificación biométrica', done: isSelfieUploaded },
+                { title: '3. Firmar el contrato', done: isContractSigned },
               ].map((step, i) => (
-                <button
+                <div
                   key={i}
-                  onClick={() => router.push(step.path)}
-                  className="w-full flex items-center gap-3 p-4 border border-border rounded-lg bg-background hover:border-primary/50 transition-colors text-left"
+                  className="flex items-center gap-3 p-3 rounded-lg border border-border"
                 >
                   <div className={cn(
-                    'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
-                    step.done ? 'bg-success-100' : 'bg-primary-50'
+                    'w-7 h-7 rounded-full flex items-center justify-center shrink-0',
+                    step.done ? 'bg-success-100' : 'bg-muted'
                   )}>
                     {step.done ? (
                       <CheckCircle2 className="w-4 h-4 text-success-600" />
                     ) : (
-                      <step.icon className="w-4 h-4 text-primary-600" />
+                      <span className="text-xs font-semibold text-muted-foreground">{i + 1}</span>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{step.title}</p>
-                    <p className="text-sm text-muted-foreground">{step.desc}</p>
-                  </div>
-                  <Badge variant={step.done ? 'success' : 'warning'}>
-                    {step.done ? 'Completado' : 'Pendiente'}
-                  </Badge>
-                </button>
+                  <p className={cn(
+                    'text-sm',
+                    step.done ? 'text-muted-foreground line-through' : 'font-medium text-foreground'
+                  )}>
+                    {step.title}
+                  </p>
+                </div>
               ))}
             </div>
           </CardContent>

@@ -188,8 +188,8 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
       return;
     }
 
-    if (fullName.trim().length < 5) {
-      setError('El nombre debe tener al menos 5 caracteres');
+    if (fullName.trim().length < 1) {
+      setError('Debes ingresar tu nombre para firmar');
       return;
     }
 
