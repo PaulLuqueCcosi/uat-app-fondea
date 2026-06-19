@@ -1,4 +1,5 @@
 import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
+import { getProfileSummary } from '@/modules/profile';
 import { SolicitudesLayoutClient } from '@/components/solicitudes/SolicitudesLayoutClient';
 import { appBackgroundStyle, blobTopRight, blobBottomLeft } from '@/lib/backgroundStyle';
 
@@ -7,7 +8,18 @@ export default async function SolicitudesLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireValidSession();
+  await requireValidSession();
+
+  const profileResult = await getProfileSummary();
+  const summary = profileResult.ok ? profileResult.data : null;
+
+  const user = {
+    name: summary?.name || 'Usuario',
+    email: summary?.email || '',
+    avatar: summary?.avatar || null,
+    dni: summary?.dni || null,
+    id: summary?.id || null,
+  };
 
   return (
     <div className="min-h-screen flex flex-col relative">

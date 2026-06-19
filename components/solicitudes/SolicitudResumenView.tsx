@@ -312,7 +312,7 @@ function ApprovedView({
               Solicitud aprobada
             </h1>
             <p className="text-white/80 text-base">
-              Tu contrato fue firmado exitosamente. El desembolso se realizará en las próximas 24-48 horas.
+              Tu contrato fue firmado exitosamente.
             </p>
           </div>
 
