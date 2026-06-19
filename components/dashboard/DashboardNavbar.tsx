@@ -1,14 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
-  LogOut,
-  Settings,
-  User,
-  CreditCard,
-  LifeBuoy,
   Bell,
   Check,
   Trash2,
@@ -30,28 +25,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { SupportDialog } from './SupportDialog';
+import { UserMenuDropdown } from '@/components/ui/user-menu-dropdown';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0].toUpperCase())
-    .join('');
-}
 
 /** Genera breadcrumbs desde el pathname */
 function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
@@ -271,19 +247,7 @@ function NotificationBell() {
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
-  const router = useRouter();
   const pathname = usePathname();
-  const [isPending, startTransition] = useTransition();
-  const [supportOpen, setSupportOpen] = useState(false);
-
-  const handleSignOut = () => {
-    startTransition(async () => {
-      await onSignOut();
-    });
-  };
-
-  const initials = getInitials(user.name);
-  const subtitle = user.email || '';
   const breadcrumbs = getBreadcrumbs(pathname);
 
   return (
@@ -333,95 +297,9 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
         {/* Campana de notificaciones */}
         <NotificationBell />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className="flex items-center gap-2.5 rounded-full p-1 pr-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Menú de usuario"
-          >
-            <div className="hidden sm:block text-right leading-tight">
-              <p className="text-sm font-medium text-foreground max-w-[140px] truncate">
-                {user.name}
-              </p>
-              {subtitle && (
-                <p className="text-xs text-muted-foreground max-w-[140px] truncate">
-                  {subtitle}
-                </p>
-              )}
-            </div>
-            <Avatar className="h-8 w-8">
-              {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-              <AvatarFallback className="bg-primary-50 text-primary-700 font-medium text-xs">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent align="end" sideOffset={8} className="w-56">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex items-center gap-2.5 py-0.5">
-                  <Avatar className="h-9 w-9">
-                    {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-                    <AvatarFallback className="bg-primary-50 text-primary-700 font-medium">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col leading-tight min-w-0">
-                    <span className="text-sm font-medium text-foreground truncate">{user.name}</span>
-                    {subtitle && <span className="text-xs text-muted-foreground truncate">{subtitle}</span>}
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-            </DropdownMenuGroup>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
-                <User className="h-4 w-4" />
-                Mi Perfil
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/dashboard/loans')}>
-                <CreditCard className="h-4 w-4" />
-                Mis Solicitudes
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
-                <Settings className="h-4 w-4" />
-                Configuración
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => setSupportOpen(true)}>
-                <LifeBuoy className="h-4 w-4" />
-                Soporte
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              onClick={handleSignOut}
-              disabled={isPending}
-              variant="destructive"
-              className="cursor-pointer"
-            >
-              <LogOut className="h-4 w-4" />
-              {isPending ? 'Cerrando sesión…' : 'Cerrar Sesión'}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <UserMenuDropdown user={user} onSignOut={onSignOut} />
       </div>
 
-      {/* Dialog de soporte */}
-      <SupportDialog
-        open={supportOpen}
-        onOpenChange={setSupportOpen}
-        userDni={user.dni}
-        userId={user.id}
-      />
     </header>
   );
 }
