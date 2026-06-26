@@ -1,4 +1,4 @@
-import { requireAdminRole } from '@/app/actions/auth.actions';
+import { requireAdminRole, performSignOut } from '@/app/actions/auth.actions';
 import { getProfileSummary } from '@/modules/profile';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminNavbar } from '@/components/admin/AdminNavbar';
@@ -27,7 +27,7 @@ export default async function AdminLayout({
       <div className="min-h-screen flex flex-col w-full">
         <AppBackground />
 
-        <AdminNavbar user={user} />
+        <AdminNavbar user={user} onSignOut={performSignOut} />
 
         <div className="flex flex-1 overflow-hidden">
           <AdminSidebar user={{ name: user.name, avatar: user.avatar }} />

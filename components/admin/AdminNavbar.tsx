@@ -6,6 +6,7 @@ import { Logo } from '@/components/ui/logo';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { AdminUserMenu } from '@/components/admin/AdminUserMenu';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -52,20 +53,14 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
 
 interface AdminNavbarProps {
   user: { name: string; email: string; avatar?: string | null };
+  onSignOut: () => Promise<void>;
 }
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
-export function AdminNavbar({ user }: AdminNavbarProps) {
+export function AdminNavbar({ user, onSignOut }: AdminNavbarProps) {
   const pathname = usePathname();
   const breadcrumbs = getBreadcrumbs(pathname);
-
-  const initials = user.name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(n => n[0].toUpperCase())
-    .join('');
 
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center border-b border-border bg-neutral-900 px-4">
@@ -113,15 +108,9 @@ export function AdminNavbar({ user }: AdminNavbarProps) {
         )}
       </div>
 
-      {/* Derecha: Avatar */}
-      <div className="flex items-center gap-2">
-        {user.avatar ? (
-          <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
-            {initials}
-          </div>
-        )}
+      {/* Derecha: User menu con sign out */}
+      <div className="flex items-center gap-1">
+        <AdminUserMenu user={user} onSignOut={onSignOut} />
       </div>
     </header>
   );
