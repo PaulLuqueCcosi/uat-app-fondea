@@ -247,3 +247,23 @@ export async function requireAdminRole() {
     redirect('/dashboard');
   }
 }
+
+/**
+ * Obtiene los roles del usuario desde el access token.
+ * No redirige — devuelve array vacío si falla.
+ * Usar para decisiones de UI (mostrar/ocultar opciones de admin).
+ */
+export async function getUserRoles(): Promise<string[]> {
+  try {
+    const accessToken = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
+    if (!accessToken) return [];
+
+    const payload = JSON.parse(
+      Buffer.from(accessToken.split('.')[1], 'base64').toString('utf-8')
+    );
+
+    return payload.roles ?? [];
+  } catch {
+    return [];
+  }
+}

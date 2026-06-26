@@ -14,6 +14,7 @@ import {
   CreditCard,
   Award,
   Users,
+  Shield,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -48,9 +49,10 @@ const devNav = [
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user?: { name: string; avatar?: string | null };
+  isAdmin?: boolean;
 }
 
-export function AppSidebar({ user, ...props }: AppSidebarProps) {
+export function AppSidebar({ user, isAdmin = false, ...props }: AppSidebarProps) {
   const pathname = usePathname();
   const initials = user?.name
     ? user.name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('')
@@ -138,7 +140,21 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter />
+      <SidebarFooter>
+        {isAdmin && (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Panel Admin"
+                render={<Link href="/admin" />}
+              >
+                <Shield />
+                <span>Panel Admin</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
+      </SidebarFooter>
 
       {/* Rail — permite colapsar el sidebar al hacer hover */}
       <SidebarRail />

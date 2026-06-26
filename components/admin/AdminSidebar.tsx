@@ -11,6 +11,7 @@ import {
   Settings,
   BarChart3,
   Shield,
+  ArrowLeftRight,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -127,7 +128,19 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter />
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Ir al portal cliente"
+              render={<Link href="/dashboard" />}
+            >
+              <ArrowLeftRight />
+              <span>Modo Cliente</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

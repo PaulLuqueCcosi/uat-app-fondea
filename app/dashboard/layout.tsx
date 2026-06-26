@@ -1,4 +1,5 @@
 import { requireValidSession, performSignOut } from '@/app/actions/auth.actions';
+import { getUserRoles } from '@/app/actions/auth.actions';
 import { getProfileSummary } from '@/modules/profile';
 import { AppSidebar } from '@/components/dashboard/AppSidebar';
 import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
@@ -14,6 +15,10 @@ export default async function DashboardLayout({
 }) {
   // Validar sesión (seguridad — redirige si no hay auth)
   await requireValidSession();
+
+  // Obtener roles para mostrar/ocultar opción de admin en el sidebar
+  const roles = await getUserRoles();
+  const isAdmin = roles.includes('ADMIN');
 
   // Solo perfil básico — rápido (1 llamada a Logto)
   const profileResult = await getProfileSummary();
@@ -41,7 +46,7 @@ export default async function DashboardLayout({
 
           {/* Sidebar + Contenido */}
           <div className="flex flex-1 overflow-hidden">
-            <AppSidebar user={{ name: user.name, avatar: user.avatar }} />
+            <AppSidebar user={{ name: user.name, avatar: user.avatar }} isAdmin={isAdmin} />
             <SidebarInset>
               {children}
             </SidebarInset>
