@@ -206,3 +206,44 @@ export async function requireValidSessionStrict() {
     phone: claims!.phone_number || '',
   };
 }
+
+// ── Admin role validation ─────────────────────────────────────────────────────
+
+/**
+ * Verifica que el usuario tenga rol ADMIN en el JWT.
+ * El access token de Logto incluye `roles: ["ADMIN", "USER"]` en el payload.
+ *
+ * Si no es admin, redirige a /dashboard.
+ * Si no hay sesión, redirige a sign-in.
+ */
+export async function requireAdminRole() {
+  const user = await requireValidSession();
+
+  try {
+    // Obtener el access token para el API resource (contiene roles en el payload)
+    const accessToken = await getAccessTokenRSC(logtoConfig, process.env.LOGTO_API_RESOURCE);
+
+    if (!accessToken) {
+      console.warn('[AUTH:admin] No se pudo obtener access token → /dashboard');
+      redirect('/dashboard');
+    }
+
+    // Decodificar payload del JWT (sin verificar firma — ya fue validado por Logto)
+    const payload = JSON.parse(
+      Buffer.from(accessToken.split('.')[1], 'base64').toString('utf-8')
+    );
+
+    const roles: string[] = payload.roles ?? [];
+
+    if (!roles.includes('ADMIN')) {
+      console.warn('[AUTH:admin] Usuario sin rol ADMIN →', { userId: user.id, roles });
+      redirect('/dashboard');
+    }
+
+    return { ...user, roles };
+  } catch (error: any) {
+    if (error?.digest?.startsWith('NEXT_REDIRECT')) throw error;
+    console.error('[AUTH:admin] Error validando rol:', error);
+    redirect('/dashboard');
+  }
+}
