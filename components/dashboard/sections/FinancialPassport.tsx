@@ -38,7 +38,7 @@ export function FinancialPassport() {
   }
 
   return (
-    <Card>
+    <Card className="flex flex-col h-full">
       <CardHeader>
         <CardTitle>
           <span className="flex items-center gap-2">
@@ -51,7 +51,7 @@ export function FinancialPassport() {
         </CardDescription>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="flex-1">
         {status === 'loading' && <FinancialPassportSkeleton />}
         {status === 'error' && error && (
           <PassportErrorRouter error={error} onRetry={fetchData} />
@@ -61,7 +61,7 @@ export function FinancialPassport() {
         )}
       </CardContent>
 
-      <CardFooter>
+      <CardFooter className="mt-auto">
         <Link
           href="/dashboard/pasaporte"
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"

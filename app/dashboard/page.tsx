@@ -6,6 +6,7 @@ import { Applications } from '@/components/dashboard/sections/Applications';
 import { NudgeAlert } from '@/components/dashboard/sections/NudgeAlert';
 import { ActiveLoanCardServer } from '@/components/dashboard/sections/ActiveLoanCardServer';
 import { FinancialPassport } from '@/components/dashboard/sections/FinancialPassport';
+import { DashboardCalculator } from '@/components/dashboard/sections/DashboardCalculator';
 import { CreditScore } from '@/components/dashboard/sections/CreditScore';
 import { EducationCarousel } from '@/components/dashboard/sections/EducationCarousel';
 import { TransparencyCard } from '@/components/dashboard/sections/TransparencyCard';
@@ -29,8 +30,11 @@ export default async function DashboardPage() {
           <ActiveLoanCardServer />
         </Suspense>
 
-        {/* 4. Pasaporte Financiero */}
-        <FinancialPassport />
+        {/* 4. Pasaporte Financiero (izq) + Calculadora (der) — 50/50 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <FinancialPassport />
+          <DashboardCalculator />
+        </div>
 
         {/* 5. Layout 2 columnas: principal (2/3) + lateral (1/3) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
