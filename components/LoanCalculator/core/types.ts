@@ -174,6 +174,8 @@ export interface LoanCalculatorProps {
   className?: string;
   /** Ancho máximo del panel de detalle en px (default: 380) */
   detailMaxWidth?: number;
+  /** Monto máximo permitido — si el monto seleccionado lo supera, muestra warning y deshabilita submit */
+  maxAmount?: number | null;
 }
 
 // ── Info para componentes internos ─────────────────────────────────────────────

@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import LoanCalculatorPortal from '@/components/LoanCalculator/LoanCalculatorPortal';
 import { useContainerWidth } from '@/hooks/useContainerWidth';
 import { DETAIL_SIDEBAR_BREAKPOINT } from '@/components/LoanCalculator/core/constants';
+import { useScoreStore } from '@/lib/stores/score-store';
 
 /**
  * CalculadoraClient — Wrapper responsivo de la calculadora del dashboard.
@@ -15,6 +16,12 @@ import { DETAIL_SIDEBAR_BREAKPOINT } from '@/components/LoanCalculator/core/cons
  */
 export function CalculadoraClient() {
   const { ref, width } = useContainerWidth();
+  const puntaje = useScoreStore(s => s.puntaje);
+  const fetchPuntaje = useScoreStore(s => s.fetchPuntaje);
+
+  useEffect(() => {
+    fetchPuntaje();
+  }, [fetchPuntaje]);
 
   // Calcular modo automáticamente según el ancho del contenedor
   const detailMode = useMemo(() => {
@@ -28,6 +35,7 @@ export function CalculadoraClient() {
           dedicated
           detailMode={detailMode}
           detailMaxWidth={420}
+          maxAmount={puntaje?.maxLoanAmount ?? null}
         />
       </div>
     </div>

@@ -1,14 +1,24 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Calculator } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { LoanCalculatorPortal } from '@/components/LoanCalculator';
+import { useScoreStore } from '@/lib/stores/score-store';
 
 /**
  * Calculadora de préstamo embebida en el dashboard.
  * CTA crea una nueva intención y redirige al flujo normal (/solicitar/start).
+ * Pasa el maxLoanAmount del puntaje para validación reactiva en tiempo real.
  */
 export function DashboardCalculator() {
+  const puntaje = useScoreStore(s => s.puntaje);
+  const fetchPuntaje = useScoreStore(s => s.fetchPuntaje);
+
+  useEffect(() => {
+    fetchPuntaje();
+  }, [fetchPuntaje]);
+
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
@@ -24,7 +34,7 @@ export function DashboardCalculator() {
       </CardHeader>
 
       <CardContent className="flex-1">
-        <LoanCalculatorPortal />
+        <LoanCalculatorPortal maxAmount={puntaje?.maxLoanAmount ?? null} />
       </CardContent>
     </Card>
   );

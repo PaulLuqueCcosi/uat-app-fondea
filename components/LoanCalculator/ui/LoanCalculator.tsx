@@ -28,6 +28,7 @@ export default function LoanCalculator({
   initialSelection,
   className,
   detailMaxWidth = DETAIL_MAX_WIDTH,
+  maxAmount,
 }: LoanCalculatorProps = {}) {
   const api = useLoanCalculatorApi();
 
@@ -57,6 +58,9 @@ export default function LoanCalculator({
   }, [config, selectedAmountIndex]);
 
   const monto = selectedAmount?.value ?? 0;
+
+  // ── Validación de límite ───────────────────────────────────────────────────
+  const exceedsLimit = maxAmount != null && monto > maxAmount;
 
   // ── Cascading: terms disponibles según monto seleccionado ──────────────────
   const availableTerms = useMemo(() => {
@@ -247,10 +251,22 @@ export default function LoanCalculator({
             />
           </div>
 
+          {/* Warning de límite excedido */}
+          {exceedsLimit && (
+            <div className="mb-3 rounded-lg border border-warning-400 bg-warning-50 px-3 py-2 text-center">
+              <p className="text-xs font-medium text-warning-900">
+                Tu límite actual es S/ {maxAmount!.toLocaleString('es-PE')}
+              </p>
+              <p className="text-[11px] text-warning-700 mt-0.5">
+                Gana más puntos en tu pasaporte para desbloquear montos mayores.
+              </p>
+            </div>
+          )}
+
           <SubmitButton
             calculating={calculating}
             requesting={requesting}
-            disabled={calculating || !calc || requesting}
+            disabled={calculating || !calc || requesting || exceedsLimit}
             label={submitLabel}
             onClick={async () => {
               if (calculating || !calc || requesting || !config) return;

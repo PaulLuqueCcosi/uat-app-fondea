@@ -1,9 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import { LoanCalculatorPortal } from '@/components/LoanCalculator';
 import { useSolicitarCalc } from './SolicitarCalcContext';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useScoreStore } from '@/lib/stores/score-store';
 
 /**
  * Panel con la calculadora para editar la intención.
@@ -12,6 +14,12 @@ import { Button } from '@/components/ui/button';
  */
 export function SolicitarCalcPanel({ showClose = false }: { showClose?: boolean }) {
   const { close, initialValues } = useSolicitarCalc();
+  const puntaje = useScoreStore(s => s.puntaje);
+  const fetchPuntaje = useScoreStore(s => s.fetchPuntaje);
+
+  useEffect(() => {
+    fetchPuntaje();
+  }, [fetchPuntaje]);
 
   return (
     <div className="py-4">
@@ -30,6 +38,7 @@ export function SolicitarCalcPanel({ showClose = false }: { showClose?: boolean 
           detailMode="modal"
           initialValues={initialValues}
           onDone={close}
+          maxAmount={puntaje?.maxLoanAmount ?? null}
         />
       </div>
     </div>

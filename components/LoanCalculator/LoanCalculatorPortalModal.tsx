@@ -6,7 +6,7 @@
  * Este modal solo maneja abrir/cerrar.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/sheet';
 import LoanCalculatorPortal from './LoanCalculatorPortal';
 import type { PortalInitialValues } from './LoanCalculatorPortal';
+import { useScoreStore } from '@/lib/stores/score-store';
 
 interface LoanCalculatorPortalModalProps {
   open: boolean;
@@ -31,6 +32,13 @@ export function LoanCalculatorPortalModal({
   const handleDone = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
+
+  const puntaje = useScoreStore(s => s.puntaje);
+  const fetchPuntaje = useScoreStore(s => s.fetchPuntaje);
+
+  useEffect(() => {
+    fetchPuntaje();
+  }, [fetchPuntaje]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -56,6 +64,7 @@ export function LoanCalculatorPortalModal({
             onDone={handleDone}
             detailMode="modal"
             dedicated
+            maxAmount={puntaje?.maxLoanAmount ?? null}
           />
         </div>
       </SheetContent>

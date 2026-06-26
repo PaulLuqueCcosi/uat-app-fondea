@@ -37,6 +37,8 @@ interface LoanCalculatorPortalProps extends Omit<LoanCalculatorProps, 'submitLab
   initialValues?: PortalInitialValues;
   /** Callback opcional para cerrar el panel después del submit */
   onDone?: () => void;
+  /** Monto máximo permitido — si se supera, muestra warning y deshabilita submit */
+  maxAmount?: number | null;
 }
 
 // ── Theme por defecto (basado en la paleta del proyecto) ──────────────────────
@@ -58,6 +60,7 @@ const DEFAULT_PORTAL_THEME: LoanCalculatorTheme = {
 export default function LoanCalculatorPortal({
   initialValues,
   onDone,
+  maxAmount,
   ...calcProps
 }: LoanCalculatorPortalProps) {
   const router = useRouter();
@@ -127,6 +130,7 @@ export default function LoanCalculatorPortal({
           termDays: initialValues.termDays,
           installmentCount: initialValues.installmentCount,
         } : undefined}
+        maxAmount={maxAmount}
       />
     </LoanCalculatorProvider>
   );
