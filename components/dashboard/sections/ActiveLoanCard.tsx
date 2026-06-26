@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { CreditCard, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CreditCard, AlertCircle, ChevronDown, ChevronRight, FileText, ExternalLink, Download, ScrollText, Shield, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
   CalendarLegend,
   MonthSelector,
 } from '@/components/credits';
+import { getContractInfoAction, getContractPdfUrlAction } from '@/app/actions/contract.actions';
 import type { Credit, Installment, InstallmentDetail } from '@/modules/credits';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -45,13 +46,15 @@ interface ActiveLoanCardProps {
   credit: Credit;
   /** Cuota que toca pagar (resuelta por el backend). null si no hay cuotas pendientes. */
   nextDueInstallment: InstallmentDetail | null;
+  /** ID de la solicitud asociada al crédito (para documentos). */
+  applicationId?: string | null;
 }
 
 /**
  * Card de "Tu Préstamo Actual" para el dashboard.
  * Usa Card anatomy (Header/Content/Footer) + Collapsible para cuotas y calendario.
  */
-export function ActiveLoanCard({ credit, nextDueInstallment }: ActiveLoanCardProps) {
+export function ActiveLoanCard({ credit, nextDueInstallment, applicationId }: ActiveLoanCardProps) {
   const progressPercent = Math.round((credit.paidAmount / credit.amount) * 100);
 
   const [expanded, setExpanded] = useState(true);
@@ -61,6 +64,33 @@ export function ActiveLoanCard({ credit, nextDueInstallment }: ActiveLoanCardPro
     initialMonth ? new Date(initialMonth.dueDate) : new Date()
   );
   const [visibleMonths, setVisibleMonths] = useState(1);
+
+  // ─── Documentos legales ─────────────────────────────────────────────────────
+  const [contractUrl, setContractUrl] = useState<string | null>(null);
+  const [loadingContract, setLoadingContract] = useState(!!applicationId);
+
+  useEffect(() => {
+    if (!applicationId) return;
+    async function fetchContract() {
+      try {
+        const contractInfo = await getContractInfoAction(applicationId!);
+        if (!contractInfo || contractInfo.status !== 'SIGNED') {
+          setLoadingContract(false);
+          return;
+        }
+        const pdfUrl = await getContractPdfUrlAction(contractInfo.contractId);
+        setContractUrl(pdfUrl);
+      } catch (err) {
+        console.error('[ActiveLoanCard] Error fetching contract:', err);
+      } finally {
+        setLoadingContract(false);
+      }
+    }
+    fetchContract();
+  }, [applicationId]);
+
+  const termsUrl = process.env.NEXT_PUBLIC_TERMS_URL ?? null;
+  const privacyUrl = process.env.NEXT_PUBLIC_PRIVACY_URL ?? null;
 
   const handleSelectInstallment = (inst: Installment) => {
     if (selectedInstallment?.id === inst.id) {
@@ -211,6 +241,60 @@ export function ActiveLoanCard({ credit, nextDueInstallment }: ActiveLoanCardPro
                   <MonthSelector value={visibleMonths} onChange={setVisibleMonths} options={[1, 2]} />
                 </div>
               </div>
+            </div>
+
+            {/* ─── Documentos legales ─── */}
+            <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-border">
+              <span className="text-sm font-medium text-foreground mr-1">Documentos:</span>
+
+              {loadingContract ? (
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/40 text-sm text-primary">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Contrato
+                </span>
+              ) : contractUrl ? (
+                <a
+                  href={contractUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/40 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                >
+                  <ScrollText className="w-4 h-4" />
+                  Contrato
+                  <Download className="w-4 h-4" />
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/25 text-sm text-primary/60">
+                  <ScrollText className="w-4 h-4" />
+                  Contrato
+                </span>
+              )}
+
+              {termsUrl && (
+                <a
+                  href={termsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/40 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                >
+                  <FileText className="w-4 h-4" />
+                  Términos y condiciones
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+
+              {privacyUrl && (
+                <a
+                  href={privacyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/40 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                  Política de privacidad
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
             </div>
           </CollapsibleContent>
         </CardContent>

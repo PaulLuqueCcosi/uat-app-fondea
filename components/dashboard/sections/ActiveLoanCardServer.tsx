@@ -1,4 +1,5 @@
 import { getActiveCredits, getNextDueInstallment } from '@/modules/credits';
+import { getActiveApplicationAction } from '@/app/actions/application.actions';
 import { ActiveLoanCard } from './ActiveLoanCard';
 
 /**
@@ -17,5 +18,14 @@ export async function ActiveLoanCardServer() {
   const nextDueResult = await getNextDueInstallment(credit.id);
   const nextDueInstallment = nextDueResult.ok ? nextDueResult.data : null;
 
-  return <ActiveLoanCard credit={credit} nextDueInstallment={nextDueInstallment} />;
+  // Obtener applicationId para los documentos legales
+  const activeApp = await getActiveApplicationAction();
+
+  return (
+    <ActiveLoanCard
+      credit={credit}
+      nextDueInstallment={nextDueInstallment}
+      applicationId={activeApp?.id ?? null}
+    />
+  );
 }
