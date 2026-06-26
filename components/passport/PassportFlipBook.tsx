@@ -44,7 +44,7 @@ export function PassportFlipBook({ summary }: PassportFlipBookProps) {
       const containerW = containerRef.current.offsetWidth;
       const viewportW = window.innerWidth;
       const viewportH = window.innerHeight;
-      const isMobile = viewportW < 768;
+      const isMobile = viewportW < 1280;
 
       let pageW: number;
       if (isMobile) {
