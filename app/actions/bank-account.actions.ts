@@ -4,6 +4,7 @@ import { BankAccountProfile, BankAccountProfileStatus } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
+import { getEditMetadata } from '@/lib/server/form-edit-policies';
 
 const backendFetch = (path: string, options?: RequestInit) =>
   _backendFetch(path, { ...options, context: 'BANK_ACCOUNT' });
@@ -150,10 +151,14 @@ export async function getBankAccountProfileStatus(): Promise<BankAccountProfileS
     const status = json.status as import('@/lib/types').BankAccountStatus | undefined;
     const verified = status === 'VERIFIED';
 
+    // Calcular metadatos de edición
+    const editMetadata = getEditMetadata('bank_account', verified);
+
     return {
       profile: parsedData ? mapProfileFromBackend(parsedData) : null,
       overall_verified: verified,
       status,
+      editMetadata,
     };
   } catch (error) {
     console.error('[BANK_ACCOUNT] Error al obtener estado:', error);

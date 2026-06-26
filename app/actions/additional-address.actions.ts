@@ -4,6 +4,7 @@ import { AddressProfile, AddressProfileStatus, ActionResult } from '@/lib/types'
 import { requireValidSession } from './auth.actions';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
+import { getEditMetadata } from '@/lib/server/form-edit-policies';
 
 const backendFetch = (path: string, options?: RequestInit) =>
   _backendFetch(path, { ...options, context: 'ADDRESS' });
@@ -187,10 +188,14 @@ export async function getAddressProfileStatus(): Promise<AddressProfileStatus> {
     const status = json.status as import('@/lib/types').AddressStatus | undefined;
     const verified = status === 'VERIFIED';
 
+    // Calcular metadatos de edición
+    const editMetadata = getEditMetadata('address', verified);
+
     return {
       profile:          parsedData ? mapProfileFromBackend(parsedData) : null,
       overall_verified: verified,
       status,
+      editMetadata,
     };
   } catch (error) {
     console.error('[ADDRESS] Error al obtener estado:', error);

@@ -1,5 +1,7 @@
 // ─── References ──────────────────────────────────────────────────────────────
 
+import type { FormEditMetadata } from './form-edit-policy';
+
 export type ReferencesStatus = 'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING';
 
 export interface Reference {
@@ -54,4 +56,6 @@ export interface ReferencesProfileStatus {
   overall_verified: boolean;
   /** Estado del backend (VERIFIED, EXPIRED, REPLACED, PENDING) */
   status?: ReferencesStatus;
+  /** Metadatos de edición (permisos y políticas) */
+  editMetadata?: FormEditMetadata;
 }

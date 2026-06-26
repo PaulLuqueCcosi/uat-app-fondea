@@ -1,5 +1,7 @@
 // ─── KYC ─────────────────────────────────────────────────────────────────────
 
+import type { FormEditMetadata } from './form-edit-policy';
+
 export type KycStatus = 'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING';
 
 export interface KYCData {
@@ -13,4 +15,6 @@ export interface KYCData {
   status?: KycStatus;
   /** @deprecated usar status === 'VERIFIED' */
   verified?: boolean;
+  /** Metadatos de edición (permisos y políticas) */
+  editMetadata?: FormEditMetadata;
 }

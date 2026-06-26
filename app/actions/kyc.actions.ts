@@ -4,6 +4,7 @@ import { KYCData, KycStatus } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
+import { getEditMetadata } from '@/lib/server/form-edit-policies';
 
 // ── Respuesta pública al frontend ────────────────────────────────────────────
 
@@ -90,6 +91,9 @@ export async function getKYCData(): Promise<{
     const status = backendStatus ?? parsedData?.status;
     const verified = status === 'VERIFIED';
 
+    // Calcular metadatos de edición
+    const editMetadata = getEditMetadata('kyc', verified);
+
     const data: KYCData | null = parsedData
       ? {
           dni: parsedData.dni ?? '',
@@ -101,6 +105,7 @@ export async function getKYCData(): Promise<{
           birth_date: birth_date ?? '',
           status,
           verified,
+          editMetadata,
         }
       : null;
 

@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus, Trash2, Wallet, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -29,13 +29,14 @@ import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/lib/constants';
 import type { EconomicProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
+import { useFormEditControl } from '@/hooks/use-form-edit-control';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { FormErrorFeedback } from '@/components/ui/form-error-feedback';
+import { FormEditPolicyDialog } from '@/components/ui/form-edit-policy-dialog';
 import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { AlertBanner } from '@/components/ui/alert-banner';
-import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
 
 interface FunnelEconomicProfileProps {
   dashboardMode?: boolean;
@@ -142,10 +143,12 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  const [isVerified, setIsVerified] = useState(initialData?.overall_verified === true);
-  const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [wasVerified, setWasVerified] = useState(initialData?.overall_verified === true);
+  // Hook centralizado de control de edición
+  const editControl = useFormEditControl({
+    editMetadata: initialData?.editMetadata,
+    onEdit: () => errorHandler.clear(),
+    onConfirmSubmit: () => form.handleSubmit(doSubmit)(),
+  });
 
   // Hook centralizado de manejo de errores
   const errorHandler = useFormErrorHandler({
@@ -159,13 +162,6 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
   // Status local — se actualiza después de submit exitoso
   const [localStatus, setLocalStatus] = useState(initialData?.status);
   const isExpired = localStatus === 'EXPIRED';
-
-  // Forzar modo edición si está expirado (solo si no está verificado)
-  useEffect(() => {
-    if (isExpired && !isEditing && !isVerified) {
-      setIsEditing(true);
-    }
-  }, [isExpired, isEditing, isVerified]);
 
   const nextPath = currentStep?.nextPath || '/solicitar/references';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -202,22 +198,11 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
   const isSubmitting = form.formState.isSubmitting;
 
   const handleEdit = () => {
-    setWasVerified(true);
-    setIsVerified(false);
-    setIsEditing(true);
-    errorHandler.clear();
-  };
-
-  const confirmSubmit = () => {
-    setShowConfirmDialog(false);
-    form.handleSubmit(doSubmit)();
+    editControl.requestEdit();
   };
 
   const onSubmit = async (data: EconomicFormValues) => {
-    if (wasVerified && !showConfirmDialog) {
-      setShowConfirmDialog(true);
-      return;
-    }
+    if (!editControl.requestSubmit()) return;
     await doSubmit(data);
   };
 
@@ -254,9 +239,8 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       verified: true,
     });
 
-    setIsVerified(true);
-    setIsEditing(false);
     setLocalStatus('VERIFIED');
+    editControl.confirmSaved();
 
     if (!dashboardMode) {
       router.push(nextPath);
@@ -272,7 +256,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
       <VerifiedBanner
         title="Perfil económico guardado"
         description="Tu información económica está registrada. Puedes editarla si algo cambió."
-        onEdit={handleEdit}
+        {...(editControl.canEdit ? { onEdit: handleEdit } : {})}
       />
 
       {/* Propósito del préstamo */}
@@ -723,8 +707,8 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
 
         {/* Botones de acción */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
-          {wasVerified || isVerified ? (
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); errorHandler.clear(); }} disabled={isSubmitting}>
+          {editControl.isVerified ? (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { editControl.cancelEdit(); errorHandler.clear(); }} disabled={isSubmitting}>
               Cancelar
             </Button>
           ) : (
@@ -740,7 +724,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
             {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
               <span className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                {isVerified ? 'Guardar cambios' : 'Continuar'}
+                {editControl.isVerified ? 'Guardar cambios' : 'Continuar'}
               </span>
             )}
           </Button>
@@ -750,7 +734,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
   );
 
   // ── Renderizado final ────────────────────────────────────────────────────────
-  const content = isVerified && !isEditing ? verifiedView : editForm;
+  const content = editControl.isReadOnly ? verifiedView : editForm;
 
   if (dashboardMode) {
     return (
@@ -762,7 +746,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                 icon={Wallet}
                 title="Perfil económico"
                 description={
-                  isVerified && !isEditing
+                  editControl.isReadOnly
                     ? 'Tu información económica está registrada'
                     : 'Cuéntanos sobre tus gastos y patrimonio'
                 }
@@ -774,12 +758,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
           </Card>
         </div>
 
-        {/* Modal de confirmación al editar */}
-        <ConfirmSaveDialog
-          open={showConfirmDialog}
-          onOpenChange={setShowConfirmDialog}
-          onConfirm={confirmSubmit}
-        />
+        <FormEditPolicyDialog {...editControl.dialogProps} />
       </>
     );
   }
@@ -792,9 +771,9 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
             icon={currentStep?.icon || Wallet}
             title="Perfil económico"
             description={
-              isVerified && !isEditing
+              editControl.isReadOnly
                 ? 'Tu información económica está registrada'
-                : isExpired && !isEditing
+                : isExpired
                 ? 'Tu verificación ha expirado, debes validar nuevamente'
                 : 'Cuéntanos sobre tu situación financiera para evaluar tu solicitud'
             }
@@ -805,12 +784,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
         </CardContent>
       </Card>
 
-      {/* Modal de confirmación al editar */}
-      <ConfirmSaveDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}
-        onConfirm={confirmSubmit}
-      />
+      <FormEditPolicyDialog {...editControl.dialogProps} />
     </>
   );
 }

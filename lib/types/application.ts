@@ -5,6 +5,7 @@ import type { EconomicData } from './economic';
 import type { ReferencesData } from './references';
 import type { AdditionalData } from './address';
 import type { AccountType } from './common';
+import type { FormEditMetadata } from './form-edit-policy';
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
@@ -89,6 +90,8 @@ export interface BankAccountProfileStatus {
   profile: (BankAccountProfile & { verified: boolean }) | null;
   overall_verified: boolean;
   status?: BankAccountStatus;
+  /** Metadatos de edición (permisos y políticas) */
+  editMetadata?: FormEditMetadata;
 }
 
 // ─── PEP Declarations ────────────────────────────────────────────────────────

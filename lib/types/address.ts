@@ -1,4 +1,5 @@
 import type { ReferralSource } from './common';
+import type { FormEditMetadata } from './form-edit-policy';
 
 // ─── Address / Additional ────────────────────────────────────────────────────
 
@@ -36,4 +37,6 @@ export interface AddressProfileStatus {
   overall_verified: boolean;
   /** Estado del backend (VERIFIED, EXPIRED, REPLACED, PENDING) */
   status?: AddressStatus;
+  /** Metadatos de edición (permisos y políticas) */
+  editMetadata?: FormEditMetadata;
 }

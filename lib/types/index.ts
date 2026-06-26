@@ -19,3 +19,4 @@ export * from './puntaje';
 export * from './score-range';
 export * from './simulation';
 export * from './ui';
+export * from './form-edit-policy';

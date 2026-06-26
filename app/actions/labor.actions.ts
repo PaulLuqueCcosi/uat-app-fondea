@@ -11,6 +11,7 @@ import {
 import { requireValidSession } from './auth.actions';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
+import { getEditMetadata } from '@/lib/server/form-edit-policies';
 
 const backendFetch = (path: string, options?: RequestInit) =>
   _backendFetch(path, { ...options, context: 'LABOR' });
@@ -186,12 +187,16 @@ export async function getLaborProfileStatus(): Promise<LaborProfileStatus> {
     const status = json.status as import('@/lib/types').LaborStatus | undefined;
     const verified = status === 'VERIFIED';
 
+    // Calcular metadatos de edición
+    const editMetadata = getEditMetadata('labor', verified);
+
     return {
       situation: parsedData?.situation ? mapSituationFromBackend(parsedData) : null,
       details:   parsedData?.details   ? mapDetailsFromBackend(parsedData.details)   : null,
       income:    parsedData?.income    ? mapIncomeFromBackend(parsedData.income)     : null,
       overall_verified: verified,
       status,
+      editMetadata,
     };
   } catch (error) {
     console.error('[LABOR] Error de conexión al obtener estado:', error);

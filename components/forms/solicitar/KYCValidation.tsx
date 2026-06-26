@@ -36,14 +36,15 @@ import type { KYCSaveResult } from '@/app/actions/kyc.actions';
 import { performSignOut } from '@/app/actions/auth.actions';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
+import { useFormEditControl } from '@/hooks/use-form-edit-control';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { FormErrorFeedback } from '@/components/ui/form-error-feedback';
+import { FormEditPolicyDialog } from '@/components/ui/form-edit-policy-dialog';
 import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { AlertBanner } from '@/components/ui/alert-banner';
 import { useState, useEffect } from 'react';
-import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
 import { Clock, AlertTriangle } from 'lucide-react';
 
 interface FunnelKYCValidationProps {
@@ -152,11 +153,14 @@ export function FunnelKYCValidation({
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  const [isVerified, setIsVerified] = useState(initialData?.status === 'VERIFIED');
-  const [isEditing, setIsEditing] = useState(initialData?.status !== 'VERIFIED');
-  const [wasVerified, setWasVerified] = useState(initialData?.status === 'VERIFIED');
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [needsRelogin, setNeedsRelogin] = useState(false);
+
+  // Hook centralizado de control de edición (KYC = LOCKED cuando verificado)
+  const editControl = useFormEditControl({
+    editMetadata: initialData?.editMetadata,
+    onEdit: () => errorHandler.clear(),
+    onConfirmSubmit: () => form.handleSubmit(doSubmit)(),
+  });
 
   // Hook centralizado de manejo de errores
   const errorHandler = useFormErrorHandler({
@@ -189,13 +193,6 @@ export function FunnelKYCValidation({
       fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
-
-  // Forzar modo edición si está expirado
-  useEffect(() => {
-    if (isExpired && !isEditing) {
-      setIsEditing(true);
-    }
-  }, [isExpired, isEditing]);
 
   // Cuenta regresiva del bloqueo (en horas)
   useEffect(() => {
@@ -231,7 +228,7 @@ export function FunnelKYCValidation({
   // Efecto para resetear el formulario cuando se entra en modo edición
   // (NO aplicar cuando es REPLACED — el form debe quedarse vacío)
   useEffect(() => {
-    if (isEditing && savedData && savedData.status !== 'REPLACED') {
+    if (editControl.isEditing && savedData && savedData.status !== 'REPLACED') {
       form.reset({
         dni: savedData.dni ?? '',
         firstName: savedData.firstName ?? '',
@@ -242,29 +239,14 @@ export function FunnelKYCValidation({
         birth_date: savedData.birth_date ?? '',
       });
     }
-  }, [isEditing, savedData, form]);
+  }, [editControl.isEditing, savedData, form]);
 
   const handleEdit = () => {
-    // Entra directo a edición — sin modal
-    setWasVerified(true);
-    setIsVerified(false);
-    setIsEditing(true);
-    errorHandler.clear();
-  };
-
-  /** Se llama desde el form.handleSubmit cuando wasVerified es true y el usuario confirma en el modal */
-  const confirmSubmit = () => {
-    setShowConfirmDialog(false);
-    // Ejecutar el submit real que estaba pendiente
-    form.handleSubmit(doSubmit)();
+    editControl.requestEdit();
   };
 
   const onSubmit = async (data: KYCValidationFormValues) => {
-    // Si el usuario estaba verificado antes, mostrar modal de confirmación ANTES de enviar
-    if (wasVerified && !showConfirmDialog) {
-      setShowConfirmDialog(true);
-      return;
-    }
+    if (!editControl.requestSubmit()) return;
     await doSubmit(data);
   };
 
@@ -319,12 +301,10 @@ export function FunnelKYCValidation({
     });
 
     setIsVerifying(false);
+    editControl.confirmSaved();
 
     if (!dashboardMode) {
       router.push(nextPath);
-    } else {
-      setIsVerified(true);
-      setIsEditing(false);
     }
   };
 
@@ -334,8 +314,8 @@ export function FunnelKYCValidation({
       {/* Banner de verificación exitosa */}
       <VerifiedBanner
         title="Identidad verificada"
-        description="Tus datos fueron validados correctamente. Si necesitas corregir algo, puedes editar."
-        onEdit={handleEdit}
+        description="Tus datos fueron validados correctamente."
+        {...(editControl.canEdit ? { onEdit: handleEdit } : {})}
       />
 
       {/* Resumen de datos en readonly */}
@@ -678,12 +658,12 @@ export function FunnelKYCValidation({
 
         {/* Botones */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
-          {wasVerified ? (
+          {editControl.isVerified ? (
             <Button
               type="button"
               variant="outline"
               className="w-full sm:w-auto"
-              onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); errorHandler.clear(); }}
+              onClick={dashboardMode && onClose ? onClose : () => { editControl.cancelEdit(); errorHandler.clear(); }}
               disabled={isVerifying}
             >
               Cancelar
@@ -739,7 +719,7 @@ export function FunnelKYCValidation({
   }
 
   // ── Contenido activo según estado ────────────────────────────────────────
-  const content = isVerified && !isEditing && !isExpired
+  const content = editControl.isReadOnly
     ? verifiedView
     : editForm;
 
@@ -754,7 +734,7 @@ export function FunnelKYCValidation({
                   icon={CreditCard}
                   title="Verificación de identidad"
                   description={
-                    isVerified && !isEditing
+                    editControl.isReadOnly
                       ? 'Tu identidad ha sido verificada correctamente'
                       : 'Ingresa tus datos exactamente como aparecen en tu DNI'
                   }
@@ -767,16 +747,12 @@ export function FunnelKYCValidation({
           </div>
           <div className="xl:shrink-0">
             {/* Solo mostrar ayuda del DNI cuando está editando */}
-            {(!isVerified || isEditing) && <DNIHelpCard activeField={activeField} onFieldClick={focusField} />}
+            {!editControl.isReadOnly && <DNIHelpCard activeField={activeField} onFieldClick={focusField} />}
           </div>
         </div>
 
-        {/* Modal de confirmación al editar */}
-        <ConfirmSaveDialog
-          open={showConfirmDialog}
-          onOpenChange={setShowConfirmDialog}
-          onConfirm={confirmSubmit}
-        />
+        {/* Modal de confirmación al editar datos verificados */}
+        <FormEditPolicyDialog {...editControl.dialogProps} />
       </>
     );
   }
@@ -791,9 +767,9 @@ export function FunnelKYCValidation({
                 icon={currentStep?.icon || CreditCard}
                 title="Verificación de identidad"
                 description={
-                  isVerified && !isEditing
+                  editControl.isReadOnly
                     ? 'Tu identidad ha sido verificada correctamente'
-                    : currentStatus === 'EXPIRED' && !isEditing
+                    : isExpired
                     ? 'Tu verificación ha expirado, debes validar nuevamente'
                     : 'Ingresa tus datos exactamente como aparecen en tu DNI'
                 }
@@ -804,16 +780,12 @@ export function FunnelKYCValidation({
         </div>
         <div className="xl:shrink-0">
           {/* Solo mostrar ayuda del DNI cuando está editando */}
-          {(!isVerified || isEditing) && <DNIHelpCard activeField={activeField} onFieldClick={focusField} />}
+          {!editControl.isReadOnly && <DNIHelpCard activeField={activeField} onFieldClick={focusField} />}
         </div>
       </div>
 
-      {/* Modal de confirmación al editar */}
-      <ConfirmSaveDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}
-        onConfirm={confirmSubmit}
-      />
+      {/* Modal de confirmación al editar datos verificados */}
+      <FormEditPolicyDialog {...editControl.dialogProps} />
     </>
   );
 }

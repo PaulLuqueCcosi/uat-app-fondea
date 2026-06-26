@@ -6,7 +6,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Users, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useFormEditControl } from '@/hooks/use-form-edit-control';
+import { FormEditPolicyDialog } from '@/components/ui/form-edit-policy-dialog';
 import {
   ReferencesProfileStatus,
   ReferencesProfile,
@@ -38,7 +40,7 @@ import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
 import { AlertBanner } from '@/components/ui/alert-banner';
-import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
+
 
 interface FunnelReferencesProps {
   dashboardMode?: boolean;
@@ -144,10 +146,12 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  const [isVerified, setIsVerified] = useState(initialData?.overall_verified ?? false);
-  const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [wasVerified, setWasVerified] = useState(initialData?.overall_verified ?? false);
+  // Hook centralizado de control de edición
+  const editControl = useFormEditControl({
+    editMetadata: initialData?.editMetadata,
+    onEdit: () => errorHandler.clear(),
+    onConfirmSubmit: () => form.handleSubmit(doSubmit)(),
+  });
 
   // Hook centralizado de manejo de errores
   const errorHandler = useFormErrorHandler({
@@ -162,12 +166,6 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
   const [localStatus, setLocalStatus] = useState(initialData?.status);
   const isExpired = localStatus === 'EXPIRED';
 
-  // Forzar modo edición si está expirado (solo si no está verificado)
-  useEffect(() => {
-    if (isExpired && !isEditing && !isVerified) {
-      setIsEditing(true);
-    }
-  }, [isExpired, isEditing, isVerified]);
 
   const nextPath = currentStep?.nextPath || '/solicitar/additional';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
@@ -196,22 +194,11 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
   const isSubmitting = form.formState.isSubmitting;
 
   const handleEdit = () => {
-    setWasVerified(true);
-    setIsVerified(false);
-    setIsEditing(true);
-    errorHandler.clear();
-  };
-
-  const confirmSubmit = () => {
-    setShowConfirmDialog(false);
-    form.handleSubmit(doSubmit)();
+    editControl.requestEdit();
   };
 
   const onSubmit = async (data: ReferencesFormValues) => {
-    if (wasVerified && !showConfirmDialog) {
-      setShowConfirmDialog(true);
-      return;
-    }
+    if (!editControl.requestSubmit()) return;
     await doSubmit(data);
   };
 
@@ -247,9 +234,8 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
       verified: true,
     });
 
-    setIsVerified(true);
-    setIsEditing(false);
     setLocalStatus('VERIFIED');
+    editControl.confirmSaved();
 
     if (!dashboardMode) {
       router.push(nextPath);
@@ -273,7 +259,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
       <VerifiedBanner
         title="Referencias guardadas"
         description="Tus referencias están registradas. Puedes editarlas si algo cambió."
-        onEdit={handleEdit}
+        {...(editControl.canEdit ? { onEdit: handleEdit } : {})}
       />
 
       {/* Referencias en 2 columnas */}
@@ -538,8 +524,8 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
 
         {/* Botones de acción */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
-          {wasVerified || isVerified ? (
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsVerified(true); setIsEditing(false); setWasVerified(true); errorHandler.clear(); }} disabled={isSubmitting}>
+          {editControl.isVerified ? (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { editControl.cancelEdit(); errorHandler.clear(); }} disabled={isSubmitting}>
               Cancelar
             </Button>
           ) : (
@@ -555,7 +541,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
             {isSubmitting ? <ButtonSpinner label="Guardando..." /> : (
               <span className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                {isVerified ? 'Guardar cambios' : 'Continuar'}
+                {editControl.isVerified ? 'Guardar cambios' : 'Continuar'}
               </span>
             )}
           </Button>
@@ -565,7 +551,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
   );
 
   // ── Renderizado final ────────────────────────────────────────────────────────
-  const content = isVerified && !isEditing ? verifiedView : editForm;
+  const content = editControl.isReadOnly ? verifiedView : editForm;
 
   if (dashboardMode) {
     return (
@@ -577,7 +563,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
                 icon={Users}
                 title="Referencias personales"
                 description={
-                  isVerified && !isEditing
+                  editControl.isReadOnly
                     ? 'Tus referencias están registradas'
                     : 'Agrega un contacto familiar y uno no familiar'
                 }
@@ -589,12 +575,8 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
           </Card>
         </div>
 
-        {/* Modal de confirmación al editar */}
-        <ConfirmSaveDialog
-          open={showConfirmDialog}
-          onOpenChange={setShowConfirmDialog}
-          onConfirm={confirmSubmit}
-        />
+        {/* Modal de confirmación al editar datos verificados */}
+        <FormEditPolicyDialog {...editControl.dialogProps} />
       </>
     );
   }
@@ -607,9 +589,9 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
             icon={currentStep?.icon || Users}
             title="Referencias personales"
             description={
-              isVerified && !isEditing
+              editControl.isReadOnly
                 ? 'Tus referencias están registradas'
-                : isExpired && !isEditing
+                : isExpired
                 ? 'Tu verificación ha expirado, debes validar nuevamente'
                 : 'Necesitamos al menos 2 referencias de personas que te conozcan'
             }
@@ -620,12 +602,8 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
         </CardContent>
       </Card>
 
-      {/* Modal de confirmación al editar */}
-      <ConfirmSaveDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}
-        onConfirm={confirmSubmit}
-      />
+      {/* Modal de confirmación al editar datos verificados */}
+      <FormEditPolicyDialog {...editControl.dialogProps} />
     </>
   );
 }

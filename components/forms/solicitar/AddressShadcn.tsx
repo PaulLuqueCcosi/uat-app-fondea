@@ -15,7 +15,6 @@ const LocationMapPicker = dynamic(
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
 import {
   Form,
   FormDescription,
@@ -43,8 +42,10 @@ import { saveAddressProfile, getAddressProfileStatus } from '@/app/actions/addit
 import type { AddressProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
+import { useFormEditControl } from '@/hooks/use-form-edit-control';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { FormErrorFeedback } from '@/components/ui/form-error-feedback';
+import { FormEditPolicyDialog } from '@/components/ui/form-edit-policy-dialog';
 import { toast } from 'sonner';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
@@ -117,18 +118,21 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  const [isVerified, setIsVerified] = useState(initialData?.overall_verified ?? false);
-  const [isEditing,  setIsEditing]  = useState(!initialData?.overall_verified);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [wasVerified, setWasVerified] = useState(initialData?.overall_verified ?? false);
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(initialData?.profile?.location ?? null);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  // Hook centralizado de control de edición
+  const editControl = useFormEditControl({
+    editMetadata: initialData?.editMetadata,
+    onEdit: () => errorHandler.clear(),
+    onConfirmSubmit: () => form.handleSubmit(doSubmit)(),
+  });
 
   // Hook centralizado de manejo de errores
   const errorHandler = useFormErrorHandler({
     moduleName: 'Dirección',
     dashboardMode,
   });
+
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(initialData?.profile?.location ?? null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   // Datos guardados en este submit — tienen prioridad sobre initialData para el readonly
   const [savedProfile, setSavedProfile] = useState(initialData?.profile ?? null);
@@ -151,14 +155,6 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
   const [labelDep,  setLabelDep]  = useState<string>('');
   const [labelProv, setLabelProv] = useState<string>('');
   const [labelDist, setLabelDist] = useState<string>('');
-
-  // Forzar modo edición si está expirado (solo si no está verificado)
-  useEffect(() => {
-    if (isExpired && !isEditing && !isVerified) {
-      setIsEditing(true);
-      setIsVerified(false);
-    }
-  }, [isExpired, isEditing, isVerified]);
 
   // Carga inicial de departamentos
   useEffect(() => {
@@ -190,7 +186,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
   // COMENTADO: Solo usaremos opción manual
   /*
   useEffect(() => {
-    if (isEditing && initialData?.profile) {
+    if (editControl.isEditing && initialData?.profile) {
       const p = initialData.profile;
       
       // Recargar provincias si hay región seleccionada
@@ -203,7 +199,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
         getDistritosAction(p.province).then(setDistritos);
       }
     }
-  }, [isEditing, initialData, provincias.length, distritos.length]);
+  }, [editControl.isEditing, initialData, provincias.length, distritos.length]);
   */
 
   // Resuelve el label del departamento cuando la lista carga
@@ -234,7 +230,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
   // Efecto para resetear el formulario cuando se entra en modo edición
   // (NO aplicar cuando es REPLACED — el form debe quedarse vacío)
   useEffect(() => {
-    if (isEditing && initialData?.profile && initialData?.status !== 'REPLACED') {
+    if (editControl.isEditing && initialData?.profile && initialData?.status !== 'REPLACED') {
       const profile = initialData.profile;
       form.reset({
         address_type:    profile.address_type    ?? undefined,
@@ -249,7 +245,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
       setLocation(profile.location ?? null);
       setLocationError(null);
     }
-  }, [isEditing, initialData, form]);
+  }, [editControl.isEditing, initialData, form]);
 
   const addressType    = form.watch('address_type');
   const watchedRegion  = form.watch('region');
@@ -286,24 +282,13 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
   // ── Edit handlers ───────────────────────────────────────────────────────────
 
   const handleEdit = () => {
-    setWasVerified(true);
-    setIsVerified(false);
-    setIsEditing(true);
-    errorHandler.clear();
-  };
-
-  const confirmSubmit = () => {
-    setShowConfirmDialog(false);
-    form.handleSubmit(doSubmit)();
+    editControl.requestEdit();
   };
 
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const onSubmit = async (data: AddressFormValues) => {
-    if (wasVerified && !showConfirmDialog) {
-      setShowConfirmDialog(true);
-      return;
-    }
+    if (!editControl.requestSubmit()) return;
     await doSubmit(data);
   };
 
@@ -356,8 +341,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
       location:        location ?? undefined,
       verified:        true,
     });
-    setIsVerified(true);
-    setIsEditing(false);
+    editControl.confirmSaved();
     setLocalStatus('VERIFIED');
 
     if (!dashboardMode) {
@@ -377,7 +361,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
       <VerifiedBanner
         title="Dirección guardada"
         description="Tu dirección está registrada. Puedes editarla si algo cambió."
-        onEdit={handleEdit}
+        {...(editControl.canEdit ? { onEdit: handleEdit } : {})}
       />
 
       {/* Datos */}
@@ -715,8 +699,8 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
 
         {/* Botones */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
-          {isVerified ? (
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsEditing(false); errorHandler.clear(); }}>
+          {editControl.isVerified ? (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { editControl.cancelEdit(); errorHandler.clear(); }}>
               Cancelar
             </Button>
           ) : (
@@ -725,7 +709,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
             </Button>
           )}
           <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || errorHandler.state.blocked}>
-            {form.formState.isSubmitting ? 'Guardando...' : isVerified ? 'Guardar cambios' : 'Continuar'}
+            {form.formState.isSubmitting ? 'Guardando...' : editControl.isVerified ? 'Guardar cambios' : 'Continuar'}
           </Button>
         </div>
       </form>
@@ -826,7 +810,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  const content = isVerified && !isEditing ? summaryView : formView;
+  const content = editControl.isReadOnly ? summaryView : formView;
 
   return (
     <>
@@ -839,7 +823,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
                   icon={MapPin}
                   title="Información de dirección"
                   description={
-                    isVerified && !isEditing
+                    editControl.isReadOnly
                       ? 'Tu dirección está registrada'
                       : 'Ingresa tu dirección actual de residencia'
                   }
@@ -858,9 +842,9 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
               icon={currentStep?.icon || MapPin}
               title="Información de dirección"
               description={
-                isVerified && !isEditing
+                editControl.isReadOnly
                   ? 'Tu dirección está registrada'
-                  : isExpired && !isEditing
+                  : isExpired
                   ? 'Tu verificación ha expirado, debes validar nuevamente'
                   : 'Ingresa tu dirección actual de residencia'
               }
@@ -873,11 +857,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
       )}
 
       {/* Modal de confirmación al editar */}
-      <ConfirmSaveDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}
-        onConfirm={confirmSubmit}
-      />
+      <FormEditPolicyDialog {...editControl.dialogProps} />
     </>
   );
 }

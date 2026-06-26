@@ -4,6 +4,7 @@ import { EconomicProfile, EconomicProfileStatus, Debt } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
+import { getEditMetadata } from '@/lib/server/form-edit-policies';
 
 const backendFetch = (path: string, options?: RequestInit) =>
   _backendFetch(path, { ...options, context: 'ECONOMIC' });
@@ -166,10 +167,14 @@ export async function getEconomicProfileStatus(): Promise<EconomicProfileStatus>
     const status = json.status as import('@/lib/types').EconomicStatus | undefined;
     const verified = status === 'VERIFIED';
 
+    // Calcular metadatos de edición
+    const editMetadata = getEditMetadata('economic', verified);
+
     return {
       profile:          parsedData ? mapProfileFromBackend(parsedData) : null,
       overall_verified: verified,
       status,
+      editMetadata,
     };
   } catch (error) {
     console.error('[ECONOMIC] Error de conexión al obtener estado:', error);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +10,7 @@ import { getCurrentStep } from '@/lib/funnel-steps';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ConfirmSaveDialog } from '@/components/ui/confirm-save-dialog';
+import { FormEditPolicyDialog } from '@/components/ui/form-edit-policy-dialog';
 import {
   Form,
   FormDescription,
@@ -33,6 +33,7 @@ import {
 import type { BankAccountProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
+import { useFormEditControl } from '@/hooks/use-form-edit-control';
 import { ContinueButton } from '@/components/ui/continue-button';
 import { DataRow } from '@/components/ui/data-row';
 import { VerifiedBanner } from '@/components/ui/verified-banner';
@@ -94,10 +95,12 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
   const pathname = usePathname();
   const currentStep = getCurrentStep(pathname);
 
-  const [isVerified, setIsVerified] = useState(initialData?.overall_verified ?? false);
-  const [isEditing, setIsEditing] = useState(!initialData?.overall_verified);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [wasVerified, setWasVerified] = useState(initialData?.overall_verified ?? false);
+  // Hook centralizado de control de edición
+  const editControl = useFormEditControl({
+    editMetadata: initialData?.editMetadata,
+    onEdit: () => errorHandler.clear(),
+    onConfirmSubmit: () => form.handleSubmit(doSubmit)(),
+  });
 
   // Hook centralizado de manejo de errores
   const errorHandler = useFormErrorHandler({
@@ -122,14 +125,6 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
   const nextPath = currentStep?.nextPath || '/solicitar/summary';
   const autoNavigate = useAutoNavigate(() => router.push(nextPath));
 
-  // Forzar modo edición si está expirado (solo si no está verificado)
-  useEffect(() => {
-    if (isExpired && !isEditing && !isVerified) {
-      setIsEditing(true);
-      setIsVerified(false);
-    }
-  }, [isExpired, isEditing, isVerified]);
-
   const isReplaced = initialData?.status === 'REPLACED';
 
   const form = useForm<BankAccountFormValues>({
@@ -142,37 +137,15 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
     },
   });
 
-  // Efecto para resetear el formulario cuando se entra en modo edición
-  // (NO aplicar cuando es REPLACED — el form debe quedarse vacío)
-  useEffect(() => {
-    if (isEditing && initialData?.profile && initialData?.status !== 'REPLACED') {
-      const profile = initialData.profile;
-      form.reset({
-        bank_name: profile.bank_name || '',
-        account_type: profile.account_type || '',
-        cci: profile.cci || '',
-        account_number: profile.account_number || '',
-      });
-    }
-  }, [isEditing, initialData, form]);
-
   // ── Edit handlers ───────────────────────────────────────────────────────────
 
   const handleEdit = () => {
-    setWasVerified(true);
-    setIsVerified(false);
-    setIsEditing(true);
-    errorHandler.clear();
+    editControl.requestEdit();
     // Clear revealed data on edit
     setRevealedAccountNumber(null);
     setRevealedCCI(null);
     setShowAccountNumber(false);
     setShowCCI(false);
-  };
-
-  const confirmSubmit = () => {
-    setShowConfirmDialog(false);
-    form.handleSubmit(doSubmit)();
   };
 
   // ── Reveal handlers ─────────────────────────────────────────────────────────
@@ -204,10 +177,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const onSubmit = async (data: BankAccountFormValues) => {
-    if (wasVerified && !showConfirmDialog) {
-      setShowConfirmDialog(true);
-      return;
-    }
+    if (!editControl.requestSubmit()) return;
     await doSubmit(data);
   };
 
@@ -234,9 +204,8 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
       account_number: data.account_number,
       verified: true,
     });
-    setIsVerified(true);
-    setIsEditing(false);
     setLocalStatus('VERIFIED');
+    editControl.confirmSaved();
 
     // Clear revealed data
     setRevealedAccountNumber(null);
@@ -272,8 +241,8 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
     <div className="space-y-6">
       <VerifiedBanner
         title="Cuenta bancaria guardada"
-        description="Tu cuenta para el desembolso está registrada. Puedes editarla si algo cambió."
-        onEdit={handleEdit}
+        description="Tu cuenta para el desembolso está registrada."
+        {...(editControl.canEdit ? { onEdit: handleEdit } : {})}
       />
 
       {/* Info importante */}
@@ -474,8 +443,13 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
 
         {/* Botones */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
-          {isVerified ? (
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={dashboardMode && onClose ? onClose : () => { setIsEditing(false); errorHandler.clear(); }}>
+          {editControl.isVerified ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={dashboardMode && onClose ? onClose : () => { editControl.cancelEdit(); errorHandler.clear(); }}
+            >
               Cancelar
             </Button>
           ) : (
@@ -484,7 +458,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
             </Button>
           )}
           <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || errorHandler.state.blocked}>
-            {form.formState.isSubmitting ? 'Guardando...' : isVerified ? 'Guardar cambios' : 'Continuar'}
+            {form.formState.isSubmitting ? 'Guardando...' : editControl.isVerified ? 'Guardar cambios' : 'Continuar'}
           </Button>
         </div>
       </form>
@@ -492,6 +466,8 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
   );
 
   // ── Render ──────────────────────────────────────────────────────────────────
+
+  const content = editControl.isReadOnly ? summaryView : formView;
 
   return (
     <>
@@ -504,14 +480,14 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
                   icon={CreditCard}
                   title="Cuenta bancaria para desembolso"
                   description={
-                    isVerified && !isEditing
+                    editControl.isReadOnly
                       ? 'Tu cuenta está registrada'
                       : 'Ingresa la cuenta donde recibirás el dinero del préstamo'
                   }
                 />
               </CardHeader>
               <CardContent className="pt-0">
-                {isVerified && !isEditing ? summaryView : formView}
+                {content}
               </CardContent>
             </Card>
           </div>
@@ -523,26 +499,22 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
               icon={currentStep?.icon || CreditCard}
               title={currentStep?.title || "Cuenta bancaria para desembolso"}
               description={
-                isVerified && !isEditing
+                editControl.isReadOnly
                   ? 'Tu cuenta está registrada'
-                  : isExpired && !isEditing
+                  : isExpired
                   ? 'Tu verificación ha expirado, debes validar nuevamente'
                   : currentStep?.description || "Ingresa la cuenta donde recibirás el dinero del préstamo"
               }
             />
           </CardHeader>
           <CardContent className="pt-0">
-            {isVerified && !isEditing ? summaryView : formView}
+            {content}
           </CardContent>
         </Card>
       )}
 
-      {/* Modal de confirmación al editar */}
-      <ConfirmSaveDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}
-        onConfirm={confirmSubmit}
-      />
+      {/* Modal de confirmación según política de edición */}
+      <FormEditPolicyDialog {...editControl.dialogProps} />
     </>
   );
 }

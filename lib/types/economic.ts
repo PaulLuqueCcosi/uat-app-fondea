@@ -2,6 +2,8 @@ import type { LoanPurpose, EducationLevel } from './common';
 
 // ─── Economic ────────────────────────────────────────────────────────────────
 
+import type { FormEditMetadata } from './form-edit-policy';
+
 export type EconomicStatus = 'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING';
 
 export interface Debt {
@@ -42,4 +44,6 @@ export interface EconomicProfileStatus {
   overall_verified: boolean;
   /** Estado del backend (VERIFIED, EXPIRED, REPLACED, PENDING) */
   status?: EconomicStatus;
+  /** Metadatos de edición (permisos y políticas) */
+  editMetadata?: FormEditMetadata;
 }

@@ -18,8 +18,8 @@ interface VerifiedBannerProps {
   title: string;
   /** Descripción secundaria */
   description: string;
-  /** Callback al hacer click en "Editar" */
-  onEdit: () => void;
+  /** Callback al hacer click en "Editar" (si se omite, no muestra botón) */
+  onEdit?: () => void;
 }
 
 export function VerifiedBanner({ title, description, onEdit }: VerifiedBannerProps) {
@@ -30,16 +30,18 @@ export function VerifiedBanner({ title, description, onEdit }: VerifiedBannerPro
         <p className="text-sm font-semibold text-success-700">{title}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={onEdit}
-        className="shrink-0 gap-1.5"
-      >
-        <Pencil className="h-3.5 w-3.5" />
-        Editar
-      </Button>
+      {onEdit && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onEdit}
+          className="shrink-0 gap-1.5"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          Editar
+        </Button>
+      )}
     </div>
   );
 }

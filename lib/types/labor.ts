@@ -1,5 +1,7 @@
 // ─── Labor ───────────────────────────────────────────────────────────────────
 
+import type { FormEditMetadata } from './form-edit-policy';
+
 export type EmploymentStatus =
   | 'EMPLEADO_DEPENDIENTE'
   | 'INDEPENDIENTE'
@@ -96,6 +98,8 @@ export interface LaborProfileStatus {
   overall_verified: boolean;
   /** Estado del backend (VERIFIED, EXPIRED, REPLACED, PENDING) */
   status?: LaborStatus;
+  /** Metadatos de edición (permisos y políticas) */
+  editMetadata?: FormEditMetadata;
 }
 
 export interface LaborData {

@@ -4,6 +4,7 @@ import { ReferencesProfile, ReferencesProfileStatus } from '@/lib/types';
 import { requireValidSession } from './auth.actions';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
+import { getEditMetadata } from '@/lib/server/form-edit-policies';
 
 const backendFetch = (path: string, options?: RequestInit) =>
   _backendFetch(path, { ...options, context: 'REFERENCES' });
@@ -161,10 +162,14 @@ export async function getReferencesProfileStatus(): Promise<ReferencesProfileSta
     const status = json.status as import('@/lib/types').ReferencesStatus | undefined;
     const verified = status === 'VERIFIED';
 
+    // Calcular metadatos de edición
+    const editMetadata = getEditMetadata('references', verified);
+
     return {
       profile:          parsedData ? mapProfileFromBackend(parsedData) : null,
       overall_verified: verified,
       status,
+      editMetadata,
     };
   } catch (error) {
     console.error('[REFERENCES] Error de conexión al obtener estado:', error);
