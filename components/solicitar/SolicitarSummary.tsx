@@ -405,13 +405,15 @@ export function FunnelSummary({
                 <Badge variant={kycData?.verified ? "success" : "warning"}>
                   {kycData?.verified ? "Verificado" : "Pendiente"}
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => router.push('/solicitar/kyc-validation')}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
+                {kycData?.editMetadata?.editable && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => router.push('/solicitar/kyc-validation')}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                )}
                 <button
                   onClick={() => toggleSection('kyc')}
                   className="cursor-pointer"
@@ -493,13 +495,15 @@ export function FunnelSummary({
                   const badge = getStatusBadge(laborData.status);
                   return <Badge variant={badge.variant}>{badge.label}</Badge>;
                 })()}
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => router.push('/solicitar/labor')}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
+                {laborData.editMetadata?.editable && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => router.push('/solicitar/labor')}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                )}
                 <button
                   onClick={() => toggleSection('labor')}
                   className="cursor-pointer"
@@ -623,13 +627,15 @@ export function FunnelSummary({
                   const badge = getStatusBadge(economicData.status);
                   return <Badge variant={badge.variant}>{badge.label}</Badge>;
                 })()}
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => router.push('/solicitar/economic')}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
+                {economicData.editMetadata?.editable && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => router.push('/solicitar/economic')}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                )}
                 <button
                   onClick={() => toggleSection('economic')}
                   className="cursor-pointer"
@@ -751,13 +757,15 @@ export function FunnelSummary({
                   const badge = getStatusBadge(referencesData.status);
                   return <Badge variant={badge.variant}>{badge.label}</Badge>;
                 })()}
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => router.push('/solicitar/references')}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
+                {referencesData.editMetadata?.editable && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => router.push('/solicitar/references')}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                )}
                 <button
                   onClick={() => toggleSection('references')}
                   className="cursor-pointer"
@@ -832,13 +840,15 @@ export function FunnelSummary({
                   const badge = getStatusBadge(addressData.status);
                   return <Badge variant={badge.variant}>{badge.label}</Badge>;
                 })()}
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => router.push('/solicitar/additional')}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
+                {addressData.editMetadata?.editable && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => router.push('/solicitar/additional')}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                )}
                 <button
                   onClick={() => toggleSection('address')}
                   className="cursor-pointer"
@@ -917,13 +927,15 @@ export function FunnelSummary({
                   const badge = getStatusBadge(bankAccountData.status);
                   return <Badge variant={badge.variant}>{badge.label}</Badge>;
                 })()}
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => router.push('/solicitar/bank-account')}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
+                {bankAccountData.editMetadata?.editable && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => router.push('/solicitar/bank-account')}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                )}
                 <button
                   onClick={() => toggleSection('bankAccount')}
                   className="cursor-pointer"
