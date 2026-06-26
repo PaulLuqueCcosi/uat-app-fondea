@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { DashboardHomeClient } from '@/components/dashboard/DashboardHomeClient';
-import { Header } from '@/components/dashboard/sections/Header';
+import { HeaderWithContext } from '@/components/dashboard/sections/HeaderWithContext';
 import { ProgressBar } from '@/components/dashboard/sections/ProgressBar';
 import { Applications } from '@/components/dashboard/sections/Applications';
 import { NudgeAlert } from '@/components/dashboard/sections/NudgeAlert';
@@ -18,9 +18,7 @@ export default async function DashboardPage() {
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <DashboardHomeClient>
         {/* 1. Cabecera y Bienvenida */}
-        <Suspense fallback={<Header.Skeleton />}>
-          <Header />
-        </Suspense>
+        <HeaderWithContext />
 
         {/* 2. Alerta Estratégica (Nudge) */}
         <NudgeAlert />

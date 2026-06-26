@@ -5,6 +5,7 @@ import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
 import { NotificationSSEProvider } from '@/components/dashboard/NotificationSSEProvider';
 import { AppBackground } from '@/components/ui/app-background';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { DashboardProvider } from '@/lib/contexts/dashboard-context';
 
 export default async function DashboardLayout({
   children,
@@ -27,24 +28,26 @@ export default async function DashboardLayout({
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex flex-col w-full">
-        <AppBackground />
+    <DashboardProvider summary={summary}>
+      <SidebarProvider>
+        <div className="min-h-screen flex flex-col w-full">
+          <AppBackground />
 
-        {/* SSE para notificaciones en tiempo real */}
-        <NotificationSSEProvider />
+          {/* SSE para notificaciones en tiempo real */}
+          <NotificationSSEProvider />
 
-        {/* Navbar con SidebarTrigger + breadcrumb integrados */}
-        <DashboardNavbar user={user} onSignOut={performSignOut} />
+          {/* Navbar con SidebarTrigger + breadcrumb integrados */}
+          <DashboardNavbar user={user} onSignOut={performSignOut} />
 
-        {/* Sidebar + Contenido */}
-        <div className="flex flex-1 overflow-hidden">
-          <AppSidebar user={{ name: user.name, avatar: user.avatar }} />
-          <SidebarInset>
-            {children}
-          </SidebarInset>
+          {/* Sidebar + Contenido */}
+          <div className="flex flex-1 overflow-hidden">
+            <AppSidebar user={{ name: user.name, avatar: user.avatar }} />
+            <SidebarInset>
+              {children}
+            </SidebarInset>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </DashboardProvider>
   );
 }
