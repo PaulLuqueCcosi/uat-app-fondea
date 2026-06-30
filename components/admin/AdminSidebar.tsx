@@ -32,7 +32,7 @@ const mainNav = [
   { path: '/admin/users', label: 'Usuarios', icon: Users },
   { path: '/admin/applications', label: 'Solicitudes', icon: FileText },
   { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
-  { path: '/admin/analytics', label: 'Analítica', icon: BarChart3 },
+  { path: '/admin/calculator', label: 'Calculadora', icon: BarChart3 },
 ];
 
 const configNav = [
