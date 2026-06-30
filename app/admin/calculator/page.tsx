@@ -1,12 +1,12 @@
-import { getAllConfig } from '@/modules/admin/calculator-admin.service';
+import { getAllConfigSummary } from '@/modules/admin/calculator-admin.service';
 import { CalculatorAdminClient } from '@/components/admin/calculator/CalculatorAdminClient';
 import { Calculator } from 'lucide-react';
 
 export default async function AdminCalculatorPage() {
-  const config = await getAllConfig();
+  const summary = await getAllConfigSummary();
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-5xl">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
           <Calculator className="h-5 w-5 text-primary" />
@@ -19,7 +19,7 @@ export default async function AdminCalculatorPage() {
         </div>
       </div>
 
-      <CalculatorAdminClient initialConfig={config} />
+      <CalculatorAdminClient initialSummary={summary} />
     </div>
   );
 }

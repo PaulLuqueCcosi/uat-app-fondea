@@ -1,6 +1,8 @@
 /**
  * Service para administrar la configuración del motor de pricing.
  * Usa CALCULATOR_API_URL + JWT del admin.
+ *
+ * Flujo: DRAFT → Simular → Publicar (o Descartar)
  */
 
 import { getAccessTokenRSC } from '@logto/next/server-actions';
@@ -13,7 +15,7 @@ async function adminFetch(path: string, options: RequestInit = {}): Promise<Resp
   const token = await getAccessTokenRSC(logtoConfig, RESOURCE);
   const fullUrl = `${CALCULATOR_URL}${path}`;
 
-  const res = await fetch(fullUrl, {
+  return fetch(fullUrl, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -21,11 +23,35 @@ async function adminFetch(path: string, options: RequestInit = {}): Promise<Resp
       ...(options.headers as Record<string, string> ?? {}),
     },
   });
-
-  return res;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+export type ConfigType = 'PRICING_RULES' | 'FEE_GROUPS' | 'AVAILABILITY' | 'PRODUCTS';
+
+export interface ConfigVersion {
+  version: number;
+  updatedBy: string;
+  updatedAt: string;
+  data?: any;
+}
+
+export interface ConfigEntry {
+  config_type: ConfigType;
+  published: ConfigVersion;
+  draft: ConfigVersion | null;
+  hasPendingChanges: boolean;
+}
+
+/** Respuesta de GET /config (sin data, ligero) */
+export interface ConfigSummary {
+  PRICING_RULES: { published: ConfigVersion; draft: ConfigVersion | null; hasPendingChanges: boolean };
+  FEE_GROUPS: { published: ConfigVersion; draft: ConfigVersion | null; hasPendingChanges: boolean };
+  AVAILABILITY: { published: ConfigVersion; draft: ConfigVersion | null; hasPendingChanges: boolean };
+  PRODUCTS: { published: ConfigVersion; draft: ConfigVersion | null; hasPendingChanges: boolean };
+}
+
+// ── Availability types ────────────────────────────────────────────────────────
 
 export interface ScoreRange {
   code: string;
@@ -52,6 +78,8 @@ export interface AvailabilityConfig {
   availability: AvailabilityGroup[];
 }
 
+// ── Fee Groups types ──────────────────────────────────────────────────────────
+
 export interface FeeSplit {
   feeCode: string;
   percentage: number;
@@ -64,6 +92,8 @@ export interface FeeGroup {
   description: string;
   splits: FeeSplit[];
 }
+
+// ── Pricing Rules types ───────────────────────────────────────────────────────
 
 export interface Discount {
   code: string;
@@ -97,46 +127,26 @@ export interface PricingRulesConfig {
   rules: PricingRule[];
 }
 
-export interface ConfigEntry<T> {
-  version: number;
-  updatedBy: string;
-  updatedAt: string;
-  data: T;
-}
-
 // ── GET endpoints ─────────────────────────────────────────────────────────────
 
-export async function getAvailability(): Promise<ConfigEntry<AvailabilityConfig> | null> {
-  const res = await adminFetch('/api/admin/pricing/config/AVAILABILITY');
-  if (!res.ok) return null;
-  const json = await res.json();
-  return json.AVAILABILITY ?? json;
-}
-
-export async function getFeeGroups(): Promise<ConfigEntry<FeeGroup[]> | null> {
-  const res = await adminFetch('/api/admin/pricing/config/FEE_GROUPS');
-  if (!res.ok) return null;
-  const json = await res.json();
-  return json.FEE_GROUPS ?? json;
-}
-
-export async function getPricingRules(): Promise<ConfigEntry<PricingRulesConfig> | null> {
-  const res = await adminFetch('/api/admin/pricing/config/PRICING_RULES');
-  if (!res.ok) return null;
-  const json = await res.json();
-  return json.PRICING_RULES ?? json;
-}
-
-export async function getAllConfig() {
+/** Dashboard: todas las configs sin data (ligero) */
+export async function getAllConfigSummary(): Promise<ConfigSummary | null> {
   const res = await adminFetch('/api/admin/pricing/config');
   if (!res.ok) return null;
   return res.json();
 }
 
-// ── PUT endpoints ─────────────────────────────────────────────────────────────
+/** Config completa con data (published + draft) */
+export async function getConfigByType(type: ConfigType): Promise<ConfigEntry | null> {
+  const res = await adminFetch(`/api/admin/pricing/config/${type}`);
+  if (!res.ok) return null;
+  return res.json();
+}
 
-export async function updateAvailability(data: AvailabilityConfig): Promise<{ ok: boolean; error?: string }> {
-  const res = await adminFetch('/api/admin/pricing/config/AVAILABILITY', {
+// ── DRAFT endpoints ───────────────────────────────────────────────────────────
+
+export async function saveDraft(type: ConfigType, data: any): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch(`/api/admin/pricing/config/${type}/draft`, {
     method: 'PUT',
     body: JSON.stringify({ data }),
   });
@@ -147,10 +157,9 @@ export async function updateAvailability(data: AvailabilityConfig): Promise<{ ok
   return { ok: true };
 }
 
-export async function updateFeeGroups(data: FeeGroup[]): Promise<{ ok: boolean; error?: string }> {
-  const res = await adminFetch('/api/admin/pricing/config/FEE_GROUPS', {
-    method: 'PUT',
-    body: JSON.stringify({ data }),
+export async function publishDraft(type: ConfigType): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch(`/api/admin/pricing/config/${type}/publish`, {
+    method: 'POST',
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -159,14 +168,45 @@ export async function updateFeeGroups(data: FeeGroup[]): Promise<{ ok: boolean; 
   return { ok: true };
 }
 
-export async function updatePricingRules(data: PricingRulesConfig): Promise<{ ok: boolean; error?: string }> {
-  const res = await adminFetch('/api/admin/pricing/config/PRICING_RULES', {
-    method: 'PUT',
-    body: JSON.stringify({ data }),
+export async function discardDraft(type: ConfigType): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch(`/api/admin/pricing/config/${type}/draft`, {
+    method: 'DELETE',
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     return { ok: false, error: body.message ?? body.error ?? `Error ${res.status}` };
   }
   return { ok: true };
+}
+
+// ── Simulate with DRAFT ───────────────────────────────────────────────────────
+
+export interface SimulateDraftRequest {
+  productId: string;
+  amount: number;
+  termDays: number;
+  installmentCount: number;
+  isFirstLoan: boolean;
+  creditScore: number;
+}
+
+export async function simulateWithDraft(body: SimulateDraftRequest): Promise<{ ok: boolean; data?: any; error?: string }> {
+  const res = await adminFetch('/api/admin/pricing/simulate/draft', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return { ok: false, error: err.message ?? err.error ?? `Error ${res.status}` };
+  }
+  const data = await res.json();
+  return { ok: true, data };
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+
+export async function getHistory(type: ConfigType): Promise<any[] | null> {
+  const res = await adminFetch(`/api/admin/pricing/config/${type}/history`);
+  if (!res.ok) return null;
+  return res.json();
 }
