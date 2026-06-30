@@ -32,7 +32,11 @@ const mainNav = [
   { path: '/admin/users', label: 'Usuarios', icon: Users },
   { path: '/admin/applications', label: 'Solicitudes', icon: FileText },
   { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
-  { path: '/admin/calculator', label: 'Calculadora', icon: BarChart3 },
+  { path: '/admin/collections', label: 'Cobranza', icon: BarChart3 },
+  { path: '/admin/calculator', label: 'Calculadora', icon: Settings },
+  { path: '/admin/contracts', label: 'Contratos', icon: FileText },
+  { path: '/admin/notifications', label: 'Notificaciones', icon: Settings },
+  { path: '/admin/referrals', label: 'Referidos', icon: Users },
 ];
 
 const configNav = [
