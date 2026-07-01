@@ -9,14 +9,14 @@ export default async function AdminContractsPage() {
   const contracts = mockContracts;
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-5xl">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
           <FileText className="h-5 w-5 text-primary" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-foreground">Contratos</h1>
-          <p className="text-sm text-muted-foreground">{contracts.length} contratos registrados</p>
+          <p className="text-sm text-muted-foreground">{contracts.length} contratos</p>
         </div>
       </div>
 

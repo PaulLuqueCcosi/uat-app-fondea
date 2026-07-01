@@ -3,25 +3,170 @@
  * TODO: Reemplazar con llamadas al backend real.
  */
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type ApplicationStatus = 'SUBMITTED' | 'PROCESSING' | 'PRE_APPROVED' | 'APPROVED' | 'REJECTED' | 'BLOCKED' | 'FAILED' | 'EXPIRED';
+export type CreditStatus = 'ACTIVE' | 'IN_ARREARS' | 'DEFAULTED' | 'SETTLED';
+export type InstallmentStatus = 'PENDING' | 'ACTIVE' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
+export type DocumentStatus = 'verified' | 'pending' | 'failed' | 'not_uploaded';
+export type IntentionSource = 'external' | 'internal';
+
 // ── Usuarios ──────────────────────────────────────────────────────────────────
 
 export const mockUsers = [
-  { id: 'usr_001', name: 'María García López', dni: '71234567', email: 'maria@gmail.com', phone: '956123456', registeredAt: '2026-05-10T08:30:00Z', status: 'active', employment: 'Dependiente', monthlyIncome: 3500, points: 450, maxLoanAmount: 5000, kycStatus: 'VERIFIED', profileProgress: 100 },
-  { id: 'usr_002', name: 'Carlos Ruiz Mendoza', dni: '72345678', email: 'carlos@gmail.com', phone: '987654321', registeredAt: '2026-05-15T10:00:00Z', status: 'active', employment: 'Independiente', monthlyIncome: 5200, points: 320, maxLoanAmount: 3000, kycStatus: 'VERIFIED', profileProgress: 85 },
-  { id: 'usr_003', name: 'Ana Flores Quispe', dni: '73456789', email: 'ana@hotmail.com', phone: '912345678', registeredAt: '2026-06-01T14:20:00Z', status: 'active', employment: 'Freelance', monthlyIncome: 2800, points: 200, maxLoanAmount: 2000, kycStatus: 'VERIFIED', profileProgress: 70 },
-  { id: 'usr_004', name: 'Pedro Huamán Torres', dni: '74567890', email: 'pedro@yahoo.com', phone: '923456789', registeredAt: '2026-06-10T09:15:00Z', status: 'blocked', employment: 'Empresario', monthlyIncome: 8000, points: 100, maxLoanAmount: 1000, kycStatus: 'PENDING', profileProgress: 40 },
-  { id: 'usr_005', name: 'Lucía Mamani Ríos', dni: '75678901', email: 'lucia@gmail.com', phone: '934567890', registeredAt: '2026-06-20T16:45:00Z', status: 'active', employment: null, monthlyIncome: null, points: null, maxLoanAmount: null, kycStatus: 'PENDING', profileProgress: 15 },
-  { id: 'usr_006', name: 'Jorge Castillo Vega', dni: '76789012', email: 'jorge@outlook.com', phone: '945678901', registeredAt: '2026-06-25T11:00:00Z', status: 'active', employment: 'Dependiente', monthlyIncome: 4100, points: 380, maxLoanAmount: 4000, kycStatus: 'VERIFIED', profileProgress: 100 },
-  { id: 'usr_007', name: 'Rosa Espinoza Díaz', dni: '77890123', email: 'rosa@gmail.com', phone: '956789012', registeredAt: '2026-06-28T08:00:00Z', status: 'active', employment: 'Independiente', monthlyIncome: 3000, points: 150, maxLoanAmount: 1500, kycStatus: 'VERIFIED', profileProgress: 55 },
+  { id: 'usr_001', name: 'María García López', dni: '71234567', email: 'maria@gmail.com', phone: '956123456', registeredAt: '2026-05-10T08:30:00Z', maxLoanAmount: 5000 },
+  { id: 'usr_002', name: 'Carlos Ruiz Mendoza', dni: '72345678', email: 'carlos@gmail.com', phone: '987654321', registeredAt: '2026-05-15T10:00:00Z', maxLoanAmount: 3000 },
+  { id: 'usr_003', name: 'Ana Flores Quispe', dni: '73456789', email: 'ana@hotmail.com', phone: '912345678', registeredAt: '2026-06-01T14:20:00Z', maxLoanAmount: 2000 },
+  { id: 'usr_004', name: 'Pedro Huamán Torres', dni: '74567890', email: 'pedro@yahoo.com', phone: '923456789', registeredAt: '2026-06-10T09:15:00Z', maxLoanAmount: 1000 },
+  { id: 'usr_005', name: 'Lucía Mamani Ríos', dni: '75678901', email: 'lucia@gmail.com', phone: '934567890', registeredAt: '2026-06-20T16:45:00Z', maxLoanAmount: null },
+  { id: 'usr_006', name: 'Jorge Castillo Vega', dni: '76789012', email: 'jorge@outlook.com', phone: '945678901', registeredAt: '2026-06-25T11:00:00Z', maxLoanAmount: 4000 },
+  { id: 'usr_007', name: 'Rosa Espinoza Díaz', dni: '77890123', email: 'rosa@gmail.com', phone: '956789012', registeredAt: '2026-06-28T08:00:00Z', maxLoanAmount: 1500 },
+  { id: 'usr_008', name: 'Fernando Torres Rojas', dni: '78901234', email: 'fernando@gmail.com', phone: '967890123', registeredAt: '2026-06-29T10:30:00Z', maxLoanAmount: 3500 },
+  { id: 'usr_009', name: 'Carmen Salazar Huamán', dni: '79012345', email: 'carmen@hotmail.com', phone: '978901234', registeredAt: '2026-06-30T07:00:00Z', maxLoanAmount: 2500 },
+  { id: 'usr_010', name: 'Ricardo Mendoza Paz', dni: '70123456', email: 'ricardo@yahoo.com', phone: '989012345', registeredAt: '2026-06-30T14:00:00Z', maxLoanAmount: null },
 ];
 
+/**
+ * Simula respuesta paginada del backend con búsqueda.
+ * TODO: reemplazar con fetch real a GET /api/admin/users?page=X&size=Y&q=Z
+ */
+export function getMockUsersPaginated(page: number, pageSize: number, query?: string) {
+  let filtered = mockUsers;
+
+  if (query) {
+    const q = query.toLowerCase();
+    filtered = mockUsers.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.dni.includes(q) ||
+        u.phone.includes(q) ||
+        u.email.toLowerCase().includes(q)
+    );
+  }
+
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const start = (page - 1) * pageSize;
+  const data = filtered.slice(start, start + pageSize);
+
+  return {
+    data,
+    pagination: { page, pageSize, totalItems, totalPages },
+  };
+}
+
+// ── Expedientes (Forms + Submissions + Verifications) ─────────────────────────
+
+export interface FormSubmission {
+  id: string;
+  submittedAt: string;
+  verificationResult: 'APPROVED' | 'REJECTED';
+  submissionData: Record<string, any>;
+  rejectionReason?: string;
+}
+
+export interface FormVerification {
+  status: 'VERIFIED' | 'EXPIRED' | 'REPLACED';
+  verifiedAt: string;
+  expiresAt: string;
+  verificationData?: Record<string, any>;
+}
+
+export interface FormLock {
+  isBlocked: boolean;
+  failedAttempts: number;
+  maxAttempts: number;
+  blockedUntil: string | null;
+}
+
+export interface FormExpediente {
+  currentStatus: 'VERIFIED' | 'EXPIRED' | 'PENDING' | 'BLOCKED' | 'REPLACED';
+  verifiedAt: string | null;
+  expiresAt: string | null;
+  totalSubmissions: number;
+  lock: FormLock;
+  submissions: FormSubmission[];
+}
+
+export interface UserExpedientes {
+  kyc: FormExpediente;
+  labor: FormExpediente;
+  economic: FormExpediente;
+  references: FormExpediente;
+  address: FormExpediente;
+  bankAccount: FormExpediente;
+}
+
+export const mockUserForms: Record<string, UserExpedientes> = {
+  'usr_001': {
+    kyc: {
+      currentStatus: 'VERIFIED',
+      verifiedAt: '2026-05-12T10:00:00Z',
+      expiresAt: '2026-08-12T10:00:00Z',
+      totalSubmissions: 2,
+      lock: { isBlocked: false, failedAttempts: 1, maxAttempts: 3, blockedUntil: null },
+      submissions: [
+        { id: 'sub_kyc_002', submittedAt: '2026-05-12T10:00:00Z', verificationResult: 'APPROVED', submissionData: { dni: '71234567', firstName: 'María', secondName: 'Elena', firstLastName: 'García', secondLastName: 'López', verificationCode: '4', birth_date: '15/03/1990' } },
+        { id: 'sub_kyc_001', submittedAt: '2026-05-11T14:30:00Z', verificationResult: 'REJECTED', submissionData: { dni: '71234567', firstName: 'Maria', secondName: 'Elena', firstLastName: 'García', secondLastName: 'López', verificationCode: '3', birth_date: '15/03/1990' }, rejectionReason: 'Código de verificación incorrecto' },
+      ],
+    },
+    labor: {
+      currentStatus: 'VERIFIED',
+      verifiedAt: '2026-05-13T08:00:00Z',
+      expiresAt: '2026-08-13T08:00:00Z',
+      totalSubmissions: 1,
+      lock: { isBlocked: false, failedAttempts: 0, maxAttempts: 3, blockedUntil: null },
+      submissions: [
+        { id: 'sub_lab_001', submittedAt: '2026-05-13T08:00:00Z', verificationResult: 'APPROVED', submissionData: { employment_status: 'EMPLEADO_DEPENDIENTE', industry: 'TECNOLOGIA', years_of_activity: 3, monthly_income: 3500, income_receipt_method: 'CUENTA_BANCARIA' } },
+      ],
+    },
+    economic: {
+      currentStatus: 'VERIFIED',
+      verifiedAt: '2026-05-14T09:00:00Z',
+      expiresAt: '2026-08-14T09:00:00Z',
+      totalSubmissions: 1,
+      lock: { isBlocked: false, failedAttempts: 0, maxAttempts: 3, blockedUntil: null },
+      submissions: [
+        { id: 'sub_eco_001', submittedAt: '2026-05-14T09:00:00Z', verificationResult: 'APPROVED', submissionData: { loan_purpose: 'NEGOCIO', monthly_expenses: 1500, has_debts: false, has_property: true, has_vehicle: false, education_level: 'UNIVERSITARIA' } },
+      ],
+    },
+    references: {
+      currentStatus: 'VERIFIED',
+      verifiedAt: '2026-05-14T10:00:00Z',
+      expiresAt: '2026-08-14T10:00:00Z',
+      totalSubmissions: 1,
+      lock: { isBlocked: false, failedAttempts: 0, maxAttempts: 3, blockedUntil: null },
+      submissions: [
+        { id: 'sub_ref_001', submittedAt: '2026-05-14T10:00:00Z', verificationResult: 'APPROVED', submissionData: { family_name: 'Elena García', family_phone: '912345678', family_relation: 'MADRE', non_family_name: 'Carlos Ruiz', non_family_phone: '923456789', non_family_relation: 'COLEGA' } },
+      ],
+    },
+    address: {
+      currentStatus: 'VERIFIED',
+      verifiedAt: '2026-05-14T11:00:00Z',
+      expiresAt: '2026-08-14T11:00:00Z',
+      totalSubmissions: 1,
+      lock: { isBlocked: false, failedAttempts: 0, maxAttempts: 3, blockedUntil: null },
+      submissions: [
+        { id: 'sub_addr_001', submittedAt: '2026-05-14T11:00:00Z', verificationResult: 'APPROVED', submissionData: { street_address: 'Av. Javier Prado 1234', region: 'Lima', province: 'Lima', district: 'San Isidro', referral_source: 'GOOGLE' } },
+      ],
+    },
+    bankAccount: {
+      currentStatus: 'VERIFIED',
+      verifiedAt: '2026-05-15T08:00:00Z',
+      expiresAt: '2026-08-15T08:00:00Z',
+      totalSubmissions: 1,
+      lock: { isBlocked: false, failedAttempts: 0, maxAttempts: 3, blockedUntil: null },
+      submissions: [
+        { id: 'sub_bank_001', submittedAt: '2026-05-15T08:00:00Z', verificationResult: 'APPROVED', submissionData: { bank_name: 'BCP', account_type: 'AHORROS', account_number: '****4567', cci: '****8901' } },
+      ],
+    },
+  },
+};
+
+// ── User Detail ───────────────────────────────────────────────────────────────
+
 export const mockUserDetail = {
-  id: 'usr_001',
-  name: 'María García López',
-  dni: '71234567',
-  email: 'maria@gmail.com',
-  phone: '956123456',
-  registeredAt: '2026-05-10T08:30:00Z',
+  id: 'usr_001', name: 'María García López', dni: '71234567', email: 'maria@gmail.com', phone: '956123456', registeredAt: '2026-05-10T08:30:00Z', maxLoanAmount: 5000,
   score: { total: 720, level: 'BUENO', lastCalculated: '2026-06-25T10:00:00Z', dimensions: { capacidadPago: 85, estabilidadLaboral: 70, perfilPatrimonial: 60, comportamientoCrediticio: 80, coherenciaDatos: 90 } },
   gamification: { points: 450, rank: 'PLATA', maxLoanAmount: 5000, history: [{ date: '2026-06-20', concept: 'Pago puntual', points: 20 }, { date: '2026-06-15', concept: 'Perfil completado', points: 50 }, { date: '2026-06-01', concept: 'Registro', points: 100 }] },
   referrals: { code: 'MARIA2026', totalReferred: 3, pointsEarned: 150 },
@@ -29,21 +174,15 @@ export const mockUserDetail = {
 
 // ── Solicitudes ───────────────────────────────────────────────────────────────
 
-export type ApplicationStatus = 'SUBMITTED' | 'PROCESSING' | 'PRE_APPROVED' | 'APPROVED' | 'REJECTED' | 'BLOCKED' | 'FAILED' | 'EXPIRED';
-
 export const mockApplications = [
   { id: 'app_001', userId: 'usr_001', userName: 'María García López', status: 'APPROVED' as ApplicationStatus, amount: 3000, submittedAt: '2026-06-15T10:00:00Z', score: 720, updatedAt: '2026-06-16T14:00:00Z' },
   { id: 'app_002', userId: 'usr_002', userName: 'Carlos Ruiz Mendoza', status: 'PRE_APPROVED' as ApplicationStatus, amount: 5000, submittedAt: '2026-06-20T08:30:00Z', score: 650, updatedAt: '2026-06-20T09:00:00Z' },
   { id: 'app_003', userId: 'usr_003', userName: 'Ana Flores Quispe', status: 'PROCESSING' as ApplicationStatus, amount: 1500, submittedAt: '2026-06-25T11:00:00Z', score: 580, updatedAt: '2026-06-25T11:05:00Z' },
   { id: 'app_004', userId: 'usr_004', userName: 'Pedro Huamán Torres', status: 'REJECTED' as ApplicationStatus, amount: 10000, submittedAt: '2026-06-22T15:00:00Z', score: 320, updatedAt: '2026-06-22T15:30:00Z' },
   { id: 'app_005', userId: 'usr_005', userName: 'Lucía Mamani Ríos', status: 'BLOCKED' as ApplicationStatus, amount: 2000, submittedAt: '2026-06-28T09:00:00Z', score: 490, updatedAt: '2026-06-28T10:00:00Z' },
-  { id: 'app_006', userId: 'usr_001', userName: 'María García López', status: 'SUBMITTED' as ApplicationStatus, amount: 4000, submittedAt: '2026-06-30T08:00:00Z', score: 720, updatedAt: '2026-06-30T08:00:00Z' },
 ];
 
 // ── Créditos ──────────────────────────────────────────────────────────────────
-
-export type CreditStatus = 'ACTIVE' | 'IN_ARREARS' | 'DEFAULTED' | 'SETTLED';
-export type InstallmentStatus = 'PENDING' | 'ACTIVE' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
 
 export const mockCredits = [
   { id: 'crd_001', userId: 'usr_001', userName: 'María García López', status: 'ACTIVE' as CreditStatus, amount: 3000, totalToPay: 3450, installments: 6, disbursedAt: '2026-06-17T10:00:00Z', dueDate: '2026-12-17', pendingBalance: 2300, daysOverdue: 0 },
@@ -64,16 +203,10 @@ export const mockInstallments = [
 // ── Cobranza ──────────────────────────────────────────────────────────────────
 
 export const mockCollections = {
-  dueToday: [
-    { userId: 'usr_001', userName: 'María García López', phone: '956123456', creditId: 'crd_001', installmentNo: 3, amount: 575, mora: 0, partialPaid: 0 },
-  ],
-  mildArrears: [
-    { userId: 'usr_002', userName: 'Carlos Ruiz Mendoza', phone: '987654321', creditId: 'crd_002', installmentNo: 2, amount: 780, mora: 25, daysOverdue: 5 },
-  ],
-  severeArrears: [],
-  defaulted: [
-    { userId: 'usr_004', userName: 'Pedro Huamán Torres', phone: '923456789', creditId: 'crd_004', installmentNo: 4, amount: 4200, mora: 350, daysOverdue: 45 },
-  ],
+  dueToday: [{ userId: 'usr_001', userName: 'María García López', phone: '956123456', creditId: 'crd_001', installmentNo: 3, amount: 575, mora: 0, partialPaid: 0 }],
+  mildArrears: [{ userId: 'usr_002', userName: 'Carlos Ruiz Mendoza', phone: '987654321', creditId: 'crd_002', installmentNo: 2, amount: 780, mora: 25, daysOverdue: 5 }],
+  severeArrears: [] as any[],
+  defaulted: [{ userId: 'usr_004', userName: 'Pedro Huamán Torres', phone: '923456789', creditId: 'crd_004', installmentNo: 4, amount: 4200, mora: 350, daysOverdue: 45 }],
 };
 
 // ── Contratos ─────────────────────────────────────────────────────────────────
@@ -95,10 +228,7 @@ export const mockNotifications = [
 // ── Referidos ─────────────────────────────────────────────────────────────────
 
 export const mockReferrals = {
-  totalCodes: 45,
-  totalReferred: 18,
-  totalPointsGiven: 2700,
-  conversionRate: 40,
+  totalCodes: 45, totalReferred: 18, totalPointsGiven: 2700, conversionRate: 40,
   topReferrers: [
     { userId: 'usr_001', userName: 'María García López', code: 'MARIA2026', referred: 3, pointsEarned: 150 },
     { userId: 'usr_003', userName: 'Ana Flores Quispe', code: 'ANA2026', referred: 5, pointsEarned: 250 },
@@ -106,15 +236,9 @@ export const mockReferrals = {
   ],
 };
 
-// ── Dashboard Metrics ─────────────────────────────────────────────────────────
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export const mockDashboardMetrics = {
-  applicationsToday: 12,
-  applicationsProcessing: 3,
-  preApprovedPendingDocs: 8,
-  activeCredits: 47,
-  totalOverdue: 15200,
-  installmentsDueToday: 5,
-  newUsersToday: 7,
-  conversionRate: 34,
+  applicationsToday: 12, applicationsProcessing: 3, preApprovedPendingDocs: 8, activeCredits: 47,
+  totalOverdue: 15200, installmentsDueToday: 5, newUsersToday: 7, conversionRate: 34,
 };

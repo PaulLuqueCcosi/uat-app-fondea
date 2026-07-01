@@ -12,6 +12,7 @@ import {
   BarChart3,
   Shield,
   ArrowLeftRight,
+  Target,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -30,6 +31,7 @@ import {
 const mainNav = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/users', label: 'Usuarios', icon: Users },
+  { path: '/admin/intentions', label: 'Intenciones', icon: Target },
   { path: '/admin/applications', label: 'Solicitudes', icon: FileText },
   { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
   { path: '/admin/collections', label: 'Cobranza', icon: BarChart3 },

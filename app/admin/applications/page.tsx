@@ -20,14 +20,14 @@ export default async function AdminApplicationsPage() {
   const applications = mockApplications;
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-5xl">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
           <FileText className="h-5 w-5 text-primary" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-foreground">Solicitudes</h1>
-          <p className="text-sm text-muted-foreground">{applications.length} solicitudes totales</p>
+          <p className="text-sm text-muted-foreground">{applications.length} solicitudes</p>
         </div>
       </div>
 
@@ -51,9 +51,7 @@ export default async function AdminApplicationsPage() {
                   return (
                     <tr key={app.id} className="border-b hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3">
-                        <Link href={`/admin/applications/${app.id}`} className="font-mono text-xs text-primary hover:underline">
-                          {app.id}
-                        </Link>
+                        <Link href={`/admin/applications/${app.id}`} className="font-mono text-xs text-primary hover:underline">{app.id}</Link>
                       </td>
                       <td className="px-4 py-3 font-medium">{app.userName}</td>
                       <td className="px-4 py-3">
@@ -61,9 +59,7 @@ export default async function AdminApplicationsPage() {
                       </td>
                       <td className="px-4 py-3 text-right font-mono">S/ {app.amount.toLocaleString()}</td>
                       <td className="px-4 py-3 text-right font-mono">{app.score}</td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {new Date(app.submittedAt).toLocaleDateString('es-PE')}
-                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(app.submittedAt).toLocaleDateString('es-PE')}</td>
                     </tr>
                   );
                 })}

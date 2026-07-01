@@ -2,151 +2,158 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Shield, FileText, Users, Award } from 'lucide-react';
 import Link from 'next/link';
-import { mockUserDetail } from '@/modules/admin';
+import { mockUsers, mockUserDetail, mockUserForms, mockApplications } from '@/modules/admin';
+import type { FormExpediente } from '@/modules/admin';
+import { FormStatusCard } from '@/components/admin/users/FormStatusCard';
+import { FormLockCard } from '@/components/admin/users/FormLockCard';
+import { FormCurrentDataCard } from '@/components/admin/users/FormCurrentDataCard';
+import { FormSubmissionsHistory } from '@/components/admin/users/FormSubmissionsHistory';
+import { ScoreTab } from '@/components/admin/users/ScoreTab';
+import { PuntajeTab } from '@/components/admin/users/PuntajeTab';
+import { UserApplicationsTab } from '@/components/admin/users/UserApplicationsTab';
+import { UserReferralsTab } from '@/components/admin/users/UserReferralsTab';
+
+const FORM_LABELS: Record<string, string> = {
+  kyc: 'Identidad (KYC)',
+  labor: 'Perfil Laboral',
+  economic: 'Perfil Económico',
+  references: 'Referencias',
+  address: 'Dirección',
+  bankAccount: 'Cuenta Bancaria',
+};
+
+const STATUS_CONFIG: Record<string, { label: string; variant: string }> = {
+  VERIFIED: { label: 'Verificado', variant: 'success' },
+  EXPIRED: { label: 'Expirado', variant: 'warning' },
+  PENDING: { label: 'Pendiente', variant: 'secondary' },
+  BLOCKED: { label: 'Bloqueado', variant: 'error' },
+  REPLACED: { label: 'Reemplazado', variant: 'secondary' },
+};
 
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // TODO: fetch user by id from backend
-  const user = mockUserDetail;
+
+  const user = mockUsers.find((u) => u.id === id);
+  const forms = mockUserForms[id] || null;
+  const detail = mockUserDetail;
+
+  const displayUser = user || { id, name: detail.name, dni: detail.dni, email: detail.email, phone: detail.phone, registeredAt: detail.registeredAt };
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-5xl">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/admin/users" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> Usuarios
-        </Link>
-      </div>
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      {/* Back */}
+      <Link href="/admin/users" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground w-fit">
+        <ArrowLeft className="h-4 w-4" /> Usuarios
+      </Link>
 
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">{user.name}</h1>
-          <p className="text-sm text-muted-foreground">DNI: {user.dni} · {user.email} · {user.phone}</p>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-lg font-bold text-primary">
+            {displayUser.name.split(' ').slice(0, 2).map((n: string) => n[0]).join('')}
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">{displayUser.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              DNI: <span className="font-mono">{displayUser.dni}</span> · {displayUser.email} · {displayUser.phone}
+            </p>
+          </div>
         </div>
-        <Badge variant="success">Activo</Badge>
+        <p className="text-xs text-muted-foreground">
+          Registro: {new Date(displayUser.registeredAt).toLocaleDateString('es-PE')}
+        </p>
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="score" className="w-full">
-        <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="score">Score</TabsTrigger>
-          <TabsTrigger value="gamification">Puntos</TabsTrigger>
-          <TabsTrigger value="applications">Solicitudes</TabsTrigger>
-          <TabsTrigger value="referrals">Referidos</TabsTrigger>
+      <Tabs defaultValue="expedientes" className="w-full">
+        <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+          <TabsTrigger value="expedientes" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> Expedientes</TabsTrigger>
+          <TabsTrigger value="score" className="gap-1.5 text-xs"><Shield className="h-3.5 w-3.5" /> Score</TabsTrigger>
+          <TabsTrigger value="puntaje" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /> Puntaje</TabsTrigger>
+          <TabsTrigger value="solicitudes" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> Solicitudes</TabsTrigger>
+          <TabsTrigger value="referidos" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Referidos</TabsTrigger>
         </TabsList>
 
-        {/* Score Tab */}
-        <TabsContent value="score" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Score Crediticio</CardTitle>
-                <Button variant="outline" size="sm"><RefreshCw className="h-3.5 w-3.5 mr-1" /> Recalcular</Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="text-4xl font-bold text-primary">{user.score.total}</div>
-                <div>
-                  <Badge variant="success">{user.score.level}</Badge>
-                  <p className="text-xs text-muted-foreground mt-1">Último cálculo: {new Date(user.score.lastCalculated).toLocaleDateString('es-PE')}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {Object.entries(user.score.dimensions).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} />
-                      </div>
-                      <span className="text-xs font-mono w-8 text-right">{value}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        {/* ═══ EXPEDIENTES ═══ */}
+        <TabsContent value="expedientes" className="mt-6">
+          {forms ? (
+            <Tabs defaultValue="kyc" className="w-full">
+              <TabsList className="grid grid-cols-6 w-full">
+                <TabsTrigger value="kyc" className="text-xs">KYC</TabsTrigger>
+                <TabsTrigger value="labor" className="text-xs">Laboral</TabsTrigger>
+                <TabsTrigger value="economic" className="text-xs">Económico</TabsTrigger>
+                <TabsTrigger value="references" className="text-xs">Referencias</TabsTrigger>
+                <TabsTrigger value="address" className="text-xs">Dirección</TabsTrigger>
+                <TabsTrigger value="bankAccount" className="text-xs">Banco</TabsTrigger>
+              </TabsList>
+
+              {Object.entries(forms).map(([key, form]) => (
+                <TabsContent key={key} value={key} className="mt-4">
+                  <FormDetailPanel formKey={key} form={form as FormExpediente} />
+                </TabsContent>
+              ))}
+            </Tabs>
+          ) : (
+            <p className="text-sm text-muted-foreground">Este usuario no tiene expedientes registrados.</p>
+          )}
         </TabsContent>
 
-        {/* Gamification Tab */}
-        <TabsContent value="gamification" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Puntaje Gamificado</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{user.gamification.points}</p>
-                  <p className="text-xs text-muted-foreground">Puntos</p>
-                </div>
-                <div className="text-center">
-                  <Badge>{user.gamification.rank}</Badge>
-                  <p className="text-xs text-muted-foreground mt-1">Rango</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">S/ {user.gamification.maxLoanAmount.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Máx. préstamo</p>
-                </div>
-              </div>
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left px-3 py-2">Fecha</th>
-                      <th className="text-left px-3 py-2">Concepto</th>
-                      <th className="text-right px-3 py-2">Puntos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {user.gamification.history.map((h, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="px-3 py-2">{h.date}</td>
-                        <td className="px-3 py-2">{h.concept}</td>
-                        <td className="px-3 py-2 text-right font-mono text-success-600">+{h.points}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+        {/* ═══ SCORE ═══ */}
+        <TabsContent value="score" className="mt-6">
+          <ScoreTab score={detail.score} />
         </TabsContent>
 
-        {/* Applications Tab */}
-        <TabsContent value="applications" className="mt-4">
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Las solicitudes de este usuario se cargarán del backend.</p>
-            </CardContent>
-          </Card>
+        {/* ═══ PUNTAJE ═══ */}
+        {/* ═══ PUNTAJE ═══ */}
+        <TabsContent value="puntaje" className="mt-6">
+          <PuntajeTab gamification={detail.gamification} />
         </TabsContent>
 
-        {/* Referrals Tab */}
-        <TabsContent value="referrals" className="mt-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <p className="font-mono font-bold text-primary">{user.referrals.code}</p>
-                  <p className="text-xs text-muted-foreground">Código</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold">{user.referrals.totalReferred}</p>
-                  <p className="text-xs text-muted-foreground">Referidos</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-success-600">+{user.referrals.pointsEarned}</p>
-                  <p className="text-xs text-muted-foreground">Puntos ganados</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* ═══ SOLICITUDES ═══ */}
+        <TabsContent value="solicitudes" className="mt-6">
+          <UserApplicationsTab
+            applications={mockApplications.filter((a) => a.userId === id)}
+          />
+        </TabsContent>
+
+        {/* ═══ REFERIDOS ═══ */}
+        <TabsContent value="referidos" className="mt-6">
+          <UserReferralsTab
+            code={detail.referrals.code}
+            totalReferred={detail.referrals.totalReferred}
+            pointsEarned={detail.referrals.pointsEarned}
+            referrals={[
+              { id: 'ref_001', referredUserId: 'usr_006', registeredAt: '2026-06-10T08:00:00Z', completedAt: '2026-06-25T10:00:00Z', status: 'LOAN_COMPLETED', pointsAwarded: 15 },
+              { id: 'ref_002', referredUserId: 'usr_007', registeredAt: '2026-06-18T14:00:00Z', completedAt: null, status: 'ACTIVE', pointsAwarded: 0 },
+              { id: 'ref_003', referredUserId: 'usr_008', registeredAt: '2026-06-28T09:00:00Z', completedAt: null, status: 'REGISTERED', pointsAwarded: 0 },
+            ]}
+          />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ── FormDetailPanel — Vista detallada por formulario ──────────────────────────
+
+function FormDetailPanel({ formKey, form }: { formKey: string; form: FormExpediente }) {
+  const lastApproved = form.submissions.find((s) => s.verificationResult === 'APPROVED') ?? null;
+
+  return (
+    <div className="space-y-6">
+      {/* Estado + Lock */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <FormStatusCard form={form} />
+        <FormLockCard lock={form.lock} />
+      </div>
+
+      {/* Datos actuales */}
+      <FormCurrentDataCard submission={lastApproved} />
+
+      {/* Historial de envíos */}
+      <FormSubmissionsHistory submissions={form.submissions} />
     </div>
   );
 }

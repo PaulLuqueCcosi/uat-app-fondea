@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, Clock, Phone } from 'lucide-react';
+import { AlertTriangle, Clock, Phone, Construction, ExternalLink, User } from 'lucide-react';
 import Link from 'next/link';
 import { mockCollections } from '@/modules/admin';
 
@@ -16,6 +16,11 @@ function CollectionRow({ item, showDays = false }: { item: any; showDays?: boole
         <p className="text-sm font-mono font-medium">S/ {item.amount.toLocaleString()}</p>
         {item.mora > 0 && <p className="text-xs text-destructive">+ S/ {item.mora} mora</p>}
         {showDays && <p className="text-xs text-warning-600">{item.daysOverdue}d atraso</p>}
+      </div>
+      <div className="flex gap-2 ml-4">
+        <Link href={`/admin/users/${item.userId}`}>
+          <User className="h-4 w-4 text-muted-foreground hover:text-primary" />
+        </Link>
       </div>
     </div>
   );
@@ -35,6 +40,15 @@ export default async function AdminCollectionsPage() {
           <p className="text-sm text-muted-foreground">Gestión de cobros y morosidad</p>
         </div>
       </div>
+
+      <Card className="border-dashed border-warning-300 bg-warning-50/50">
+        <CardContent className="p-4 flex items-center gap-3">
+          <Construction className="h-5 w-5 text-warning-600 shrink-0" />
+          <p className="text-sm text-warning-700">
+            El módulo de cobranza está en desarrollo. Pronto podrás registrar pagos manuales y ver detalles de créditos.
+          </p>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="today" className="w-full">
         <TabsList className="grid grid-cols-4 w-full">
