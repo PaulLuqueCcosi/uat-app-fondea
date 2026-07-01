@@ -242,3 +242,63 @@ export const mockDashboardMetrics = {
   applicationsToday: 12, applicationsProcessing: 3, preApprovedPendingDocs: 8, activeCredits: 47,
   totalOverdue: 15200, installmentsDueToday: 5, newUsersToday: 7, conversionRate: 34,
 };
+
+/** Simula respuesta paginada de solicitudes */
+export function getMockApplicationsPaginated(page: number, pageSize: number, query?: string) {
+  let filtered = mockApplications;
+  if (query) {
+    const q = query.toLowerCase();
+    filtered = mockApplications.filter(
+      (a) => a.userName.toLowerCase().includes(q) || a.id.toLowerCase().includes(q)
+    );
+  }
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const start = (page - 1) * pageSize;
+  const data = filtered.slice(start, start + pageSize);
+  return { data, pagination: { page, pageSize, totalItems, totalPages } };
+}
+
+// ── Intenciones ───────────────────────────────────────────────────────────────
+
+export type IntentionStatus = 'ACTIVE' | 'LOCKED' | 'CANCELLED' | 'REPLACED';
+
+export interface MockIntention {
+  id: string;
+  userId: string;
+  userName: string;
+  productId: string;
+  amount: number;
+  termDays: number;
+  installmentCount: number;
+  isFirstLoan: boolean;
+  status: IntentionStatus;
+  createdAt: string;
+  updatedAt: string;
+  applicationId: string | null;
+}
+
+export const mockIntentions: MockIntention[] = [
+  { id: 'int_001', userId: 'usr_001', userName: 'María García López', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 3000, termDays: 30, installmentCount: 3, isFirstLoan: false, status: 'LOCKED', createdAt: '2026-06-15T09:00:00Z', updatedAt: '2026-06-15T10:00:00Z', applicationId: 'app_001' },
+  { id: 'int_002', userId: 'usr_002', userName: 'Carlos Ruiz Mendoza', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 5000, termDays: 60, installmentCount: 6, isFirstLoan: true, status: 'ACTIVE', createdAt: '2026-06-20T08:00:00Z', updatedAt: '2026-06-20T08:30:00Z', applicationId: null },
+  { id: 'int_003', userId: 'usr_003', userName: 'Ana Flores Quispe', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 1500, termDays: 30, installmentCount: 3, isFirstLoan: true, status: 'ACTIVE', createdAt: '2026-06-25T11:00:00Z', updatedAt: '2026-06-25T11:00:00Z', applicationId: null },
+  { id: 'int_004', userId: 'usr_004', userName: 'Pedro Huamán Torres', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 10000, termDays: 90, installmentCount: 12, isFirstLoan: false, status: 'CANCELLED', createdAt: '2026-06-22T14:00:00Z', updatedAt: '2026-06-22T15:00:00Z', applicationId: null },
+  { id: 'int_005', userId: 'usr_001', userName: 'María García López', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 2000, termDays: 30, installmentCount: 2, isFirstLoan: false, status: 'REPLACED', createdAt: '2026-06-10T10:00:00Z', updatedAt: '2026-06-15T09:00:00Z', applicationId: null },
+  { id: 'int_006', userId: 'usr_005', userName: 'Lucía Mamani Ríos', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 500, termDays: 7, installmentCount: 1, isFirstLoan: true, status: 'ACTIVE', createdAt: '2026-06-28T08:00:00Z', updatedAt: '2026-06-28T08:00:00Z', applicationId: null },
+];
+
+export function getMockIntentionsPaginated(page: number, pageSize: number, query?: string, status?: string) {
+  let filtered = mockIntentions;
+  if (query) {
+    const q = query.toLowerCase();
+    filtered = filtered.filter((i) => i.userName.toLowerCase().includes(q) || i.id.includes(q));
+  }
+  if (status) {
+    filtered = filtered.filter((i) => i.status === status);
+  }
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const start = (page - 1) * pageSize;
+  const data = filtered.slice(start, start + pageSize);
+  return { data, pagination: { page, pageSize, totalItems, totalPages } };
+}
