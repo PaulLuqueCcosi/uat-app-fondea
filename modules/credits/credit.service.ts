@@ -1,25 +1,33 @@
 /**
- * Service de Créditos — la ÚNICA puerta a los datos de este módulo.
+ * Service de Créditos — conectado al backend real.
  *
- * HOY: retorna mock data local.
- * MAÑANA: backendFetch a los endpoints reales.
+ * Única puerta a los datos. Usa backendFetch para obtener datos,
+ * mappers para transformarlos, y errors para los fallos.
  *
- * Retorna Result<T> con errores tipados.
  * Los componentes NUNCA importan de aquí — solo las pages y actions.
  */
 
 import type { Result } from '@/modules/shared/result';
 import type {
   Credit,
-  CreditsSummary,
-  InstallmentDetail,
-  PaymentRecord,
+  CreditSummary,
+  Installment,
+  NextPayment,
+  Transaction,
+  PaymentResult,
+  RegisterPaymentRequest,
 } from './credit.types';
 import type { CreditError } from './credit.errors';
 import { errors } from './credit.errors';
-import { mockCredits, mockInstallmentDetails, mockPayments } from './credit.data';
-// import { backendFetch } from '@/lib/backend-fetch';
-// import { mapCreditFromBackend, mapInstallmentDetailFromBackend, mapPaymentFromBackend } from './credit.mapper';
+import { backendFetch } from '@/lib/backend-fetch';
+import {
+  mapCreditFromBackend,
+  mapInstallmentFromBackend,
+  mapCreditSummaryFromBackend,
+  mapNextPaymentFromBackend,
+  mapTransactionFromBackend,
+  mapPaymentResultFromBackend,
+} from './credit.mapper';
 
 // Re-tipamos Result con nuestro error específico
 type CreditResult<T> = Result<T> & (
@@ -27,61 +35,66 @@ type CreditResult<T> = Result<T> & (
   | { ok: false; error: CreditError }
 );
 
+const CTX = 'CREDITS';
+
 // ─── Créditos ─────────────────────────────────────────────────────────────────
 
 /**
- * Obtiene todos los créditos del usuario autenticado.
- *
- * TODO: Reemplazar por:
- *   const res = await backendFetch('/api/v1/credits', { context: 'CREDITS' });
+ * Lista todos los créditos del usuario (activos + liquidados).
+ * GET /api/v1/credits
  */
 export async function getCredits(): Promise<CreditResult<Credit[]>> {
   try {
-    // TODO: backendFetch + mapCreditFromBackend
-    const data = mockCredits;
+    const res = await backendFetch('/api/v1/credits', { context: CTX });
 
-    if (data.length === 0) {
-      return { ok: true, data: [] };
-    }
+    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
+    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
+    if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
 
-    return { ok: true, data };
-  } catch (err) {
-    console.error('[CREDITS] getCredits → error:', err);
+    const raw = await res.json();
+    const credits = (raw.credits ?? []).map(mapCreditFromBackend);
+    return { ok: true, data: credits };
+  } catch {
+    return { ok: false, error: errors.networkError() };
+  }
+}
+
+/**
+ * Obtiene el crédito activo del usuario.
+ * GET /api/v1/credits/active
+ */
+export async function getActiveCredit(): Promise<CreditResult<Credit | null>> {
+  try {
+    const res = await backendFetch('/api/v1/credits/active', { context: CTX });
+
+    if (res.status === 404) return { ok: true, data: null };
+    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
+    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
+    if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
+
+    const raw = await res.json();
+    return { ok: true, data: mapCreditFromBackend(raw) };
+  } catch {
     return { ok: false, error: errors.networkError() };
   }
 }
 
 /**
  * Obtiene un crédito por ID.
- *
- * TODO: Reemplazar por:
- *   const res = await backendFetch(`/api/v1/credits/${id}`, { context: 'CREDITS' });
+ * GET /api/v1/credits/{id}
  */
 export async function getCreditById(id: string): Promise<CreditResult<Credit>> {
   try {
-    // TODO: backendFetch + mapCreditFromBackend
-    const found = mockCredits.find((c) => c.id === id);
+    const res = await backendFetch(`/api/v1/credits/${id}`, { context: CTX });
 
-    if (!found) {
-      return { ok: false, error: errors.creditNotFound(id) };
-    }
+    if (res.status === 404) return { ok: false, error: errors.creditNotFound(id) };
+    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
+    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
+    if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
 
-    return { ok: true, data: found };
-  } catch (err) {
-    console.error('[CREDITS] getCreditById → error:', err);
-    return { ok: false, error: errors.networkError() };
-  }
-}
-
-/**
- * Obtiene solo los créditos activos (para el dashboard).
- */
-export async function getActiveCredits(): Promise<CreditResult<Credit[]>> {
-  try {
-    const data = mockCredits.filter((c) => c.status === 'ACTIVE');
-    return { ok: true, data };
-  } catch (err) {
-    console.error('[CREDITS] getActiveCredits → error:', err);
+    const raw = await res.json();
+    return { ok: true, data: mapCreditFromBackend(raw) };
+  } catch {
     return { ok: false, error: errors.networkError() };
   }
 }
@@ -89,26 +102,21 @@ export async function getActiveCredits(): Promise<CreditResult<Credit[]>> {
 // ─── Resumen ──────────────────────────────────────────────────────────────────
 
 /**
- * Obtiene el resumen agregado de créditos del usuario.
- *
- * TODO: Reemplazar por:
- *   const res = await backendFetch('/api/v1/credits/summary', { context: 'CREDITS' });
+ * Resumen de balances de un crédito.
+ * GET /api/v1/credits/{id}/summary
  */
-export async function getCreditsSummary(): Promise<CreditResult<CreditsSummary>> {
+export async function getCreditSummary(creditId: string): Promise<CreditResult<CreditSummary>> {
   try {
-    // TODO: backendFetch + mapCreditsSummaryFromBackend
-    const credits = mockCredits;
-    const summary: CreditsSummary = {
-      activeCount: credits.filter((c) => c.status === 'ACTIVE').length,
-      completedCount: credits.filter((c) => c.status === 'COMPLETED').length,
-      overdueCount: credits.filter((c) => c.status === 'OVERDUE').length,
-      totalPendingBalance: credits.reduce((sum, c) => sum + c.pendingBalance, 0),
-      totalPaidAmount: credits.reduce((sum, c) => sum + c.paidAmount, 0),
-    };
+    const res = await backendFetch(`/api/v1/credits/${creditId}/summary`, { context: CTX });
 
-    return { ok: true, data: summary };
-  } catch (err) {
-    console.error('[CREDITS] getCreditsSummary → error:', err);
+    if (res.status === 404) return { ok: false, error: errors.creditNotFound(creditId) };
+    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
+    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
+    if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
+
+    const raw = await res.json();
+    return { ok: true, data: mapCreditSummaryFromBackend(raw) };
+  } catch {
     return { ok: false, error: errors.networkError() };
   }
 }
@@ -116,123 +124,134 @@ export async function getCreditsSummary(): Promise<CreditResult<CreditsSummary>>
 // ─── Cuotas ───────────────────────────────────────────────────────────────────
 
 /**
- * Obtiene el detalle de todas las cuotas de un crédito.
- *
- * TODO: Reemplazar por:
- *   const res = await backendFetch(`/api/v1/credits/${creditId}/installments`, { context: 'CREDITS' });
+ * Cronograma completo de cuotas de un crédito.
+ * GET /api/v1/credits/{id}/installments
  */
-export async function getInstallmentsByCreditId(
+export async function getInstallments(creditId: string): Promise<CreditResult<Installment[]>> {
+  try {
+    const res = await backendFetch(`/api/v1/credits/${creditId}/installments`, { context: CTX });
+
+    if (res.status === 404) return { ok: false, error: errors.creditNotFound(creditId) };
+    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
+    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
+    if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
+
+    const raw = await res.json();
+    const installments = (raw.installments ?? []).map(mapInstallmentFromBackend);
+    return { ok: true, data: installments };
+  } catch {
+    return { ok: false, error: errors.networkError() };
+  }
+}
+
+/**
+ * Detalle de una cuota específica.
+ * GET /api/v1/credits/{id}/installments/{installmentNo}
+ */
+export async function getInstallmentByNo(
   creditId: string,
-): Promise<CreditResult<InstallmentDetail[]>> {
+  installmentNo: number,
+): Promise<CreditResult<Installment>> {
   try {
-    // TODO: backendFetch + mapInstallmentDetailFromBackend
-    const details = mockInstallmentDetails.filter((d) => d.creditId === creditId);
-    return { ok: true, data: details };
-  } catch (err) {
-    console.error('[CREDITS] getInstallmentsByCreditId → error:', err);
+    const res = await backendFetch(
+      `/api/v1/credits/${creditId}/installments/${installmentNo}`,
+      { context: CTX },
+    );
+
+    if (res.status === 404) return { ok: false, error: errors.installmentNotFound(creditId, installmentNo) };
+    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
+    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
+    if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
+
+    const raw = await res.json();
+    return { ok: true, data: mapInstallmentFromBackend(raw) };
+  } catch {
     return { ok: false, error: errors.networkError() };
   }
 }
 
+// ─── Próximo pago ─────────────────────────────────────────────────────────────
+
 /**
- * Obtiene el detalle de una cuota específica.
- *
- * TODO: Reemplazar por:
- *   const res = await backendFetch(`/api/v1/installments/${installmentId}`, { context: 'CREDITS' });
+ * Próxima cuota a pagar.
+ * GET /api/v1/credits/{id}/next-payment
  */
-export async function getInstallmentDetail(
-  installmentId: string,
-): Promise<CreditResult<InstallmentDetail>> {
+export async function getNextPayment(creditId: string): Promise<CreditResult<NextPayment | null>> {
   try {
-    // TODO: backendFetch + mapInstallmentDetailFromBackend
-    const found = mockInstallmentDetails.find((d) => d.id === installmentId);
+    const res = await backendFetch(`/api/v1/credits/${creditId}/next-payment`, { context: CTX });
 
-    if (!found) {
-      return { ok: false, error: errors.installmentNotFound(installmentId) };
-    }
+    if (res.status === 404) return { ok: true, data: null };
+    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
+    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
+    if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
 
-    return { ok: true, data: found };
-  } catch (err) {
-    console.error('[CREDITS] getInstallmentDetail → error:', err);
+    const raw = await res.json();
+    return { ok: true, data: mapNextPaymentFromBackend(raw) };
+  } catch {
     return { ok: false, error: errors.networkError() };
   }
 }
 
-// ─── Pagos ────────────────────────────────────────────────────────────────────
+// ─── Transacciones ────────────────────────────────────────────────────────────
 
 /**
- * Obtiene el historial de pagos del usuario.
- *
- * TODO: Reemplazar por:
- *   const res = await backendFetch('/api/v1/payments', { context: 'CREDITS' });
+ * Historial de transacciones de un crédito.
+ * GET /api/v1/credits/{id}/transactions
  */
-export async function getPaymentHistory(): Promise<CreditResult<PaymentRecord[]>> {
+export async function getTransactions(creditId: string): Promise<CreditResult<Transaction[]>> {
   try {
-    // TODO: backendFetch + mapPaymentFromBackend
-    return { ok: true, data: mockPayments };
-  } catch (err) {
-    console.error('[CREDITS] getPaymentHistory → error:', err);
+    const res = await backendFetch(`/api/v1/credits/${creditId}/transactions`, { context: CTX });
+
+    if (res.status === 404) return { ok: false, error: errors.creditNotFound(creditId) };
+    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
+    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
+    if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
+
+    const raw = await res.json();
+    const transactions = (raw.transactions ?? []).map(mapTransactionFromBackend);
+    return { ok: true, data: transactions };
+  } catch {
     return { ok: false, error: errors.networkError() };
   }
 }
 
+// ─── Pagar cuota ──────────────────────────────────────────────────────────────
+
 /**
- * Obtiene pagos de un crédito específico.
+ * Registrar pago de una cuota específica.
+ * POST /api/v1/credits/{id}/installments/{installmentNo}/pay
  */
-export async function getPaymentsByCreditId(
+export async function payInstallment(
   creditId: string,
-): Promise<CreditResult<PaymentRecord[]>> {
+  installmentNo: number,
+  payment: RegisterPaymentRequest,
+): Promise<CreditResult<PaymentResult>> {
   try {
-    const payments = mockPayments.filter((p) => p.creditId === creditId);
-    return { ok: true, data: payments };
-  } catch (err) {
-    console.error('[CREDITS] getPaymentsByCreditId → error:', err);
-    return { ok: false, error: errors.networkError() };
-  }
-}
+    const res = await backendFetch(
+      `/api/v1/credits/${creditId}/installments/${installmentNo}/pay`,
+      {
+        context: CTX,
+        method: 'POST',
+        body: JSON.stringify(payment),
+      },
+    );
 
-// ─── Cuota a pagar (next due) ─────────────────────────────────────────────────
-
-/**
- * Obtiene la cuota que el usuario debe pagar ahora.
- *
- * Prioridad (definida por el backend):
- *   1. OVERDUE (vencida) — la más urgente
- *   2. PENDING (próxima a vencer)
- *   3. null — no hay cuotas pendientes
- *
- * TODO: Reemplazar por:
- *   const res = await backendFetch(`/api/v1/credits/${creditId}/next-installment`, { context: 'CREDITS' });
- *   El backend debe resolver esta lógica (no el frontend).
- */
-export async function getNextDueInstallment(
-  creditId: string,
-): Promise<CreditResult<InstallmentDetail | null>> {
-  try {
-    // TODO: backendFetch — un solo endpoint que devuelve la cuota que toca pagar
-    const details = mockInstallmentDetails.filter((d) => d.creditId === creditId);
-
-    // Prioridad: OVERDUE primero (la más antigua), luego PENDING (la más próxima)
-    const overdue = details
-      .filter((d) => d.status === 'OVERDUE')
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-
-    if (overdue.length > 0) {
-      return { ok: true, data: overdue[0] };
+    if (res.status === 400) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: errors.validationFailed(body.detail ?? body.message) };
     }
-
-    const pending = details
-      .filter((d) => d.status === 'PENDING')
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-
-    if (pending.length > 0) {
-      return { ok: true, data: pending[0] };
+    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
+    if (res.status === 404) return { ok: false, error: errors.installmentNotFound(creditId, installmentNo) };
+    if (res.status === 409) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: errors.conflict(body.detail ?? body.message) };
     }
+    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
+    if (!res.ok) return { ok: false, error: errors.paymentFailed() };
 
-    // No hay cuotas pendientes (crédito completado o todas futuras)
-    return { ok: true, data: null };
-  } catch (err) {
-    console.error('[CREDITS] getNextDueInstallment → error:', err);
+    const raw = await res.json();
+    return { ok: true, data: mapPaymentResultFromBackend(raw) };
+  } catch {
     return { ok: false, error: errors.networkError() };
   }
 }

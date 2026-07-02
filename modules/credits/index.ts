@@ -1,38 +1,47 @@
 // ── Service (lo que consumen las pages y actions) ────────────────────────────
 export {
   getCredits,
+  getActiveCredit,
   getCreditById,
-  getActiveCredits,
-  getCreditsSummary,
-  getInstallmentsByCreditId,
-  getInstallmentDetail,
-  getPaymentHistory,
-  getPaymentsByCreditId,
-  getNextDueInstallment,
+  getCreditSummary,
+  getInstallments,
+  getInstallmentByNo,
+  getNextPayment,
+  getTransactions,
+  payInstallment,
 } from './credit.service';
 
 // ── Types (para tipar props de componentes) ──────────────────────────────────
 export type {
   Credit,
   Installment,
-  InstallmentDetail,
-  CreditsSummary,
-  PaymentRecord,
+  CreditSummary,
+  NextPayment,
+  Transaction,
+  PaymentResult,
+  PaymentDistribution,
+  RegisterPaymentRequest,
   CreditStatus,
   InstallmentStatus,
+  TransactionType,
   PaymentMethod,
 } from './credit.types';
 
-export { creditStatusLabels, installmentStatusLabels } from './credit.types';
+export {
+  creditStatusLabels,
+  installmentStatusLabels,
+  transactionTypeLabels,
+} from './credit.types';
 
 // ── Errors (para pattern matching en error states) ───────────────────────────
 export type { CreditError, CreditErrorCode } from './credit.errors';
 
-// ── Mapper (para uso en actions si se necesita transformar respuestas) ────────
+// ── Mapper (para uso directo si se necesita) ─────────────────────────────────
 export {
   mapCreditFromBackend,
   mapInstallmentFromBackend,
-  mapInstallmentDetailFromBackend,
-  mapCreditsSummaryFromBackend,
-  mapPaymentFromBackend,
+  mapCreditSummaryFromBackend,
+  mapNextPaymentFromBackend,
+  mapTransactionFromBackend,
+  mapPaymentResultFromBackend,
 } from './credit.mapper';

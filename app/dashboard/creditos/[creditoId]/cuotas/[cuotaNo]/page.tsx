@@ -12,7 +12,6 @@ import {
   DollarSign,
   CreditCard,
   Smartphone,
-  Download,
   Shield,
   XCircle,
 } from 'lucide-react';
@@ -20,8 +19,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { getInstallmentDetailAction } from '@/app/actions/credit.actions';
-import type { InstallmentDetail, InstallmentStatus } from '@/modules/credits';
+import { getInstallmentByNoAction, getCreditByIdAction } from '@/app/actions/credit.actions';
+import type { Installment, InstallmentStatus, Credit } from '@/modules/credits';
 import { installmentStatusLabels } from '@/modules/credits';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -44,9 +43,10 @@ function formatDate(iso: string) {
 
 const badgeVariants: Record<InstallmentStatus, 'success' | 'warning' | 'error' | 'pending'> = {
   PAID: 'success',
-  PENDING: 'warning',
+  CURRENT: 'warning',
+  PARTIALLY_PAID: 'warning',
+  PENDING: 'pending',
   OVERDUE: 'error',
-  UPCOMING: 'pending',
 };
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -72,26 +72,33 @@ function CuotaDetailSkeleton() {
 
 export default function CuotaDetallePage() {
   const params = useParams();
-  const cuotaId = params.cuotaId as string;
+  const cuotaNo = Number(params.cuotaNo);
   const creditoId = params.creditoId as string;
 
-  const [cuota, setCuota] = useState<InstallmentDetail | null>(null);
+  const [cuota, setCuota] = useState<Installment | null>(null);
+  const [credit, setCredit] = useState<Credit | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchDetail() {
       setLoading(true);
-      const result = await getInstallmentDetailAction(cuotaId);
-      if (result.ok) {
-        setCuota(result.data);
+      const [cuotaRes, creditRes] = await Promise.all([
+        getInstallmentByNoAction(creditoId, cuotaNo),
+        getCreditByIdAction(creditoId),
+      ]);
+      if (cuotaRes.ok) {
+        setCuota(cuotaRes.data);
       } else {
-        setError(result.error.message);
+        setError(cuotaRes.error.message);
+      }
+      if (creditRes.ok) {
+        setCredit(creditRes.data);
       }
       setLoading(false);
     }
     fetchDetail();
-  }, [cuotaId]);
+  }, [creditoId, cuotaNo]);
 
   if (loading) return <CuotaDetailSkeleton />;
 
@@ -109,7 +116,11 @@ export default function CuotaDetallePage() {
 
   const isPaid = cuota.status === 'PAID';
   const isOverdue = cuota.status === 'OVERDUE';
-  const needsPayment = cuota.status === 'PENDING' || cuota.status === 'OVERDUE';
+  const needsPayment = cuota.status === 'CURRENT' || cuota.status === 'OVERDUE' || cuota.status === 'PARTIALLY_PAID';
+  const totalInstallments = credit?.installmentCount ?? 0;
+
+  // Total que debe pagar el usuario para esta cuota
+  const totalToPay = cuota.outstanding;
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -126,7 +137,7 @@ export default function CuotaDetallePage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-foreground">
-            Cuota {cuota.number} de {cuota.totalInstallments}
+            Cuota {cuota.installmentNo} de {totalInstallments}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">Crédito #{creditoId.slice(-6)}</p>
         </div>
@@ -135,7 +146,7 @@ export default function CuotaDetallePage() {
         </Badge>
       </div>
 
-      {/* ─── Banner de estado (ancho completo) ─── */}
+      {/* ─── Banner de estado ─── */}
       {isPaid && (
         <Card className="border-success-200 bg-success-50/50">
           <CardHeader>
@@ -144,12 +155,12 @@ export default function CuotaDetallePage() {
               Cuota pagada
             </CardTitle>
             <CardDescription className="text-success-700">
-              Pagada el {cuota.paidDate ? formatDate(cuota.paidDate) : '—'}
+              Pagada el {cuota.paidAt ? formatDate(cuota.paidAt) : '—'}
             </CardDescription>
           </CardHeader>
         </Card>
       )}
-      {cuota.status === 'PENDING' && (
+      {cuota.status === 'CURRENT' && (
         <Card className="border-warning-200 bg-warning-50/50">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2 text-warning-900">
@@ -162,12 +173,25 @@ export default function CuotaDetallePage() {
           </CardHeader>
         </Card>
       )}
+      {cuota.status === 'PARTIALLY_PAID' && (
+        <Card className="border-warning-200 bg-warning-50/50">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2 text-warning-900">
+              <Clock className="w-4 h-4 text-warning-700" />
+              Pago parcial — faltan {formatCurrency(cuota.outstanding)}
+            </CardTitle>
+            <CardDescription className="text-warning-700">
+              Vence el {formatDate(cuota.dueDate)} · Ya pagaste {formatCurrency(cuota.amountPaid)}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
       {isOverdue && (
         <Card className="border-error-200 bg-error-50/50">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2 text-error-900">
               <AlertCircle className="w-4 h-4 text-error-600" />
-              Cuota vencida — {cuota.daysLate} días de atraso
+              Cuota vencida — {cuota.daysOverdue} días de atraso
             </CardTitle>
             <CardDescription className="text-error-700">
               Venció el {formatDate(cuota.dueDate)}. Paga lo antes posible.
@@ -175,7 +199,7 @@ export default function CuotaDetallePage() {
           </CardHeader>
         </Card>
       )}
-      {cuota.status === 'UPCOMING' && (
+      {cuota.status === 'PENDING' && (
         <Card>
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
@@ -191,7 +215,7 @@ export default function CuotaDetallePage() {
 
       {/* ─── Layout 2 columnas ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ── Columna izquierda: Desglose + Info pago ── */}
+        {/* ── Columna izquierda: Desglose ── */}
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
@@ -202,26 +226,32 @@ export default function CuotaDetallePage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex items-center justify-between py-1.5">
-                <span className="text-sm text-muted-foreground">Capital</span>
-                <span className="text-sm font-medium text-foreground">{formatCurrency(cuota.principal)}</span>
+                <span className="text-sm text-muted-foreground">Monto de cuota</span>
+                <span className="text-sm font-medium text-foreground">{formatCurrency(cuota.amountDue)}</span>
               </div>
               <div className="flex items-center justify-between py-1.5">
-                <span className="text-sm text-muted-foreground">Interés</span>
-                <span className="text-sm font-medium text-foreground">{formatCurrency(cuota.interest)}</span>
+                <span className="text-sm text-muted-foreground">Ya pagado</span>
+                <span className="text-sm font-medium text-accent-700">{formatCurrency(cuota.amountPaid)}</span>
               </div>
-              {cuota.lateFee > 0 && (
+              {cuota.penaltyAccrued > 0 && (
                 <div className="flex items-center justify-between py-1.5">
                   <span className="text-sm text-error-600 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5" />
-                    Mora ({cuota.daysLate} días)
+                    Mora ({cuota.daysOverdue} días)
                   </span>
-                  <span className="text-sm font-medium text-error-600">{formatCurrency(cuota.lateFee)}</span>
+                  <span className="text-sm font-medium text-error-600">{formatCurrency(cuota.penaltyAccrued)}</span>
+                </div>
+              )}
+              {cuota.penaltyPaid > 0 && (
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-sm text-muted-foreground">Mora pagada</span>
+                  <span className="text-sm font-medium text-accent-700">{formatCurrency(cuota.penaltyPaid)}</span>
                 </div>
               )}
               <Separator />
               <div className="flex items-center justify-between py-2">
-                <span className="text-base font-semibold text-foreground">Total</span>
-                <span className="text-xl font-bold text-foreground">{formatCurrency(cuota.totalDue)}</span>
+                <span className="text-base font-semibold text-foreground">Pendiente</span>
+                <span className="text-xl font-bold text-foreground">{formatCurrency(cuota.outstanding)}</span>
               </div>
               <Separator />
               <div className="grid grid-cols-2 gap-4 pt-2">
@@ -234,54 +264,12 @@ export default function CuotaDetallePage() {
                     {isPaid ? 'Fecha de pago' : 'Estado'}
                   </p>
                   <p className={`text-sm font-medium mt-0.5 ${isPaid ? 'text-accent-700' : isOverdue ? 'text-error-600' : 'text-foreground'}`}>
-                    {isPaid && cuota.paidDate ? formatDate(cuota.paidDate) : isOverdue ? `${cuota.daysLate} días de atraso` : 'Sin pagar'}
+                    {isPaid && cuota.paidAt ? formatDate(cuota.paidAt) : isOverdue ? `${cuota.daysOverdue} días de atraso` : 'Sin pagar'}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Datos del pago (si pagada) */}
-          {isPaid && (cuota.method || cuota.transactionId || cuota.receiptUrl) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-accent-700" />
-                  Datos del pago
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {cuota.method && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Método</span>
-                    <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                      <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
-                      {cuota.method}
-                    </span>
-                  </div>
-                )}
-                {cuota.transactionId && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Transacción</span>
-                    <code className="text-xs font-mono text-muted-foreground bg-neutral-100 px-2 py-0.5 rounded">
-                      {cuota.transactionId}
-                    </code>
-                  </div>
-                )}
-                {cuota.receiptUrl && (
-                  <>
-                    <Separator />
-                    <a href={cuota.receiptUrl} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" className="w-full gap-2">
-                        <Download className="w-4 h-4" />
-                        Descargar comprobante
-                      </Button>
-                    </a>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
 
           {/* Advertencia si vencida */}
           {isOverdue && (
@@ -294,7 +282,7 @@ export default function CuotaDetallePage() {
               </CardHeader>
               <CardContent>
                 <ul className="text-xs text-error-700 space-y-1">
-                  <li>• Mora de {formatCurrency(cuota.lateFee)} por {cuota.daysLate} días</li>
+                  <li>• Mora de {formatCurrency(cuota.penaltyAccrued)} por {cuota.daysOverdue} días</li>
                   <li>• A los 5 días se reporta a centrales de riesgo</li>
                   <li>• A los 15 días se bloquea tu línea de crédito</li>
                 </ul>
@@ -356,7 +344,7 @@ export default function CuotaDetallePage() {
                   }`}
                 >
                   <DollarSign className="w-4 h-4" />
-                  Pagar {formatCurrency(cuota.totalDue)}
+                  Pagar {formatCurrency(totalToPay)}
                 </Button>
 
                 <div className="rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-50 p-4 text-center">
@@ -382,7 +370,7 @@ export default function CuotaDetallePage() {
             </Card>
           )}
 
-          {cuota.status === 'UPCOMING' && (
+          {cuota.status === 'PENDING' && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">

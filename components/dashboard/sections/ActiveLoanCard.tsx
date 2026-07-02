@@ -7,13 +7,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, 
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import {
-  InstallmentList,
   InstallmentCalendar,
   CalendarLegend,
   MonthSelector,
 } from '@/components/credits';
 import { getContractInfoAction, getContractPdfUrlAction } from '@/app/actions/contract.actions';
-import type { Credit, Installment, InstallmentDetail } from '@/modules/credits';
+import type { Credit, Installment, NextPayment } from '@/modules/credits';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,13 +39,20 @@ function formatDateLong(iso: string): string {
   });
 }
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface ActiveLoanCardProps {
   credit: Credit;
-  /** Cuota que toca pagar (resuelta por el backend). null si no hay cuotas pendientes. */
-  nextDueInstallment: InstallmentDetail | null;
-  /** ID de la solicitud asociada al crédito (para documentos). */
+  installments: Installment[];
+  nextPayment: NextPayment | null;
   applicationId?: string | null;
 }
 
@@ -54,12 +60,14 @@ interface ActiveLoanCardProps {
  * Card de "Tu Préstamo Actual" para el dashboard.
  * Usa Card anatomy (Header/Content/Footer) + Collapsible para cuotas y calendario.
  */
-export function ActiveLoanCard({ credit, nextDueInstallment, applicationId }: ActiveLoanCardProps) {
-  const progressPercent = Math.round((credit.paidAmount / credit.amount) * 100);
+export function ActiveLoanCard({ credit, installments, nextPayment, applicationId }: ActiveLoanCardProps) {
+  const progressPercent = credit.totalDue > 0
+    ? Math.round((credit.totalPaid / credit.totalDue) * 100)
+    : 0;
 
   const [expanded, setExpanded] = useState(true);
   const [selectedInstallment, setSelectedInstallment] = useState<Installment | null>(null);
-  const initialMonth = credit.installments.find((i) => i.status === 'OVERDUE' || i.status === 'PENDING');
+  const initialMonth = installments.find((i) => i.status === 'OVERDUE' || i.status === 'CURRENT' || i.status === 'PENDING');
   const [calendarMonth, setCalendarMonth] = useState<Date>(
     initialMonth ? new Date(initialMonth.dueDate) : new Date()
   );
@@ -124,7 +132,7 @@ export function ActiveLoanCard({ credit, nextDueInstallment, applicationId }: Ac
             </span>
           </CardTitle>
           <CardDescription>
-            {formatCurrencyShort(credit.amount)} · {credit.totalInstallments} cuotas
+            {formatCurrencyShort(credit.principal)} · {credit.installmentCount} cuotas
           </CardDescription>
           <CardAction>
             <CollapsibleTrigger className="p-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer">
@@ -136,38 +144,38 @@ export function ActiveLoanCard({ credit, nextDueInstallment, applicationId }: Ac
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* ─── Alerta cuota a pagar ─── */}
-          {nextDueInstallment && (
+          {/* ─── Alerta próximo pago ─── */}
+          {nextPayment && (
             <div className={`flex items-center gap-3 rounded-lg border p-3 ${
-              nextDueInstallment.status === 'OVERDUE'
+              nextPayment.isOverdue
                 ? 'border-error-200 bg-error-50'
                 : 'border-warning-200 bg-warning-50'
             }`}>
               <AlertCircle className={`w-5 h-5 shrink-0 ${
-                nextDueInstallment.status === 'OVERDUE' ? 'text-error-600' : 'text-warning-600'
+                nextPayment.isOverdue ? 'text-error-600' : 'text-warning-600'
               }`} />
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold ${
-                  nextDueInstallment.status === 'OVERDUE' ? 'text-error-900' : 'text-warning-900'
+                  nextPayment.isOverdue ? 'text-error-900' : 'text-warning-900'
                 }`}>
-                  Cuota {nextDueInstallment.number} {nextDueInstallment.status === 'OVERDUE' ? 'vencida' : 'pendiente'}
+                  Cuota {nextPayment.installmentNo} {nextPayment.isOverdue ? 'vencida' : 'pendiente'}
                 </p>
                 <p className={`text-xs ${
-                  nextDueInstallment.status === 'OVERDUE' ? 'text-error-700' : 'text-warning-700'
+                  nextPayment.isOverdue ? 'text-error-700' : 'text-warning-700'
                 }`}>
-                  {nextDueInstallment.status === 'OVERDUE'
-                    ? `Venció el ${formatDateLong(nextDueInstallment.dueDate)} · ${formatCurrency(nextDueInstallment.totalDue)} sin pagar`
-                    : `Vence el ${formatDateLong(nextDueInstallment.dueDate)} · ${formatCurrency(nextDueInstallment.totalDue)}`
+                  {nextPayment.isOverdue
+                    ? `Venció el ${formatDateLong(nextPayment.dueDate)} · ${formatCurrency(nextPayment.totalToPay)} sin pagar`
+                    : `Vence el ${formatDateLong(nextPayment.dueDate)} · ${formatCurrency(nextPayment.totalToPay)}`
                   }
                 </p>
               </div>
-              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextDueInstallment.id}`}>
+              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextPayment.installmentNo}`}>
                 <Button size="sm" className={`text-xs shrink-0 ${
-                  nextDueInstallment.status === 'OVERDUE'
+                  nextPayment.isOverdue
                     ? 'bg-error-600 text-white hover:bg-error-700'
                     : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
                 }`}>
-                  {nextDueInstallment.status === 'OVERDUE' ? 'Pagar ahora' : 'Pagar cuota'}
+                  {nextPayment.isOverdue ? 'Pagar ahora' : 'Pagar cuota'}
                 </Button>
               </Link>
             </div>
@@ -189,19 +197,19 @@ export function ActiveLoanCard({ credit, nextDueInstallment, applicationId }: Ac
               <div className="rounded-md border border-border bg-background p-2.5">
                 <p className="text-xs text-muted-foreground mb-0.5">Total</p>
                 <p className="text-base font-bold text-foreground">
-                  {formatCurrencyShort(credit.amount)}
+                  {formatCurrencyShort(credit.totalDue)}
                 </p>
               </div>
               <div className="rounded-md border border-accent-200 bg-accent-50 p-2.5">
                 <p className="text-xs text-accent-800 mb-0.5">Pagado</p>
                 <p className="text-base font-bold text-accent-700">
-                  {formatCurrencyShort(credit.paidAmount)}
+                  {formatCurrencyShort(credit.totalPaid)}
                 </p>
               </div>
               <div className="rounded-md border border-error-200 bg-error-50 p-2.5">
                 <p className="text-xs text-error-700 mb-0.5">Pendiente</p>
                 <p className="text-base font-bold text-error-700">
-                  {formatCurrencyShort(credit.pendingBalance)}
+                  {formatCurrencyShort(credit.totalOutstanding)}
                 </p>
               </div>
             </div>
@@ -209,39 +217,71 @@ export function ActiveLoanCard({ credit, nextDueInstallment, applicationId }: Ac
 
           {/* ─── Cuotas + Calendario (colapsable) ─── */}
           <CollapsibleContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch pt-2">
-              {/* Cuotas */}
-              <div className="rounded-lg border border-border p-3 flex flex-col gap-2">
-                <InstallmentList
-                  installments={credit.installments}
-                  selectedId={selectedInstallment?.id}
-                  onSelect={handleSelectInstallment}
-                  creditId={credit.id}
-                  maxVisible={6}
-                />
-              </div>
+            {installments.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch pt-2">
+                {/* Lista mini de cuotas */}
+                <div className="rounded-lg border border-border p-3 flex flex-col gap-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Cuotas ({installments.length})
+                  </p>
+                  <div className="space-y-1.5 overflow-y-auto pr-1" style={{ maxHeight: '336px' }}>
+                    {installments.map((inst) => (
+                      <button
+                        key={inst.id}
+                        onClick={() => handleSelectInstallment(inst)}
+                        className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 border text-left transition-all hover:ring-1 hover:ring-primary/20 ${
+                          inst.status === 'PAID' ? 'bg-accent-50/50 border-accent-200'
+                          : inst.status === 'OVERDUE' ? 'bg-error-50/50 border-error-200'
+                          : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-50/50 border-warning-200'
+                          : 'border-border hover:bg-neutral-50'
+                        } ${selectedInstallment?.id === inst.id ? 'ring-2 ring-primary' : ''}`}
+                      >
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[8px] font-bold text-white ${
+                          inst.status === 'PAID' ? 'bg-accent-500'
+                          : inst.status === 'OVERDUE' ? 'bg-error-500'
+                          : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-400'
+                          : 'bg-primary/20'
+                        }`}>
+                          {inst.installmentNo}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-foreground leading-tight">
+                            Cuota {inst.installmentNo}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground leading-tight">
+                            {formatDate(inst.dueDate)}
+                          </p>
+                        </div>
+                        <p className="text-xs font-bold text-foreground shrink-0">
+                          {formatCurrencyShort(inst.amountDue)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              {/* Calendario */}
-              <div className="rounded-lg border border-border p-3 flex flex-col gap-2 h-full">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Calendario de pagos
-                </p>
-                <div className="flex-1 flex items-center justify-center overflow-x-auto">
-                  <InstallmentCalendar
-                    installments={credit.installments}
-                    selectedInstallment={selectedInstallment}
-                    month={calendarMonth}
-                    onMonthChange={setCalendarMonth}
-                    onDayClick={handleSelectInstallment}
-                    numberOfMonths={visibleMonths}
-                  />
-                </div>
-                <div className="flex items-center justify-between w-full">
-                  <CalendarLegend />
-                  <MonthSelector value={visibleMonths} onChange={setVisibleMonths} options={[1, 2]} />
+                {/* Calendario */}
+                <div className="rounded-lg border border-border p-3 flex flex-col gap-2 h-full">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Calendario de pagos
+                  </p>
+                  <div className="flex-1 flex items-center justify-center overflow-x-auto">
+                    <InstallmentCalendar
+                      installments={installments}
+                      selectedInstallment={selectedInstallment}
+                      month={calendarMonth}
+                      onMonthChange={setCalendarMonth}
+                      onDayClick={handleSelectInstallment}
+                      numberOfMonths={visibleMonths}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between w-full">
+                    <CalendarLegend />
+                    <MonthSelector value={visibleMonths} onChange={setVisibleMonths} options={[1, 2]} />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* ─── Documentos legales ─── */}
             <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-border">

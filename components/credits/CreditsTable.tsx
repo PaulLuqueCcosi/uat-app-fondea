@@ -65,34 +65,34 @@ function formatDate(iso?: string | null): string {
 
 const statusVariants: Record<CreditStatus, 'success' | 'completed' | 'error' | 'default'> = {
   ACTIVE: 'success',
-  COMPLETED: 'completed',
+  PAID_OFF: 'completed',
   OVERDUE: 'error',
   DEFAULTED: 'error',
 };
 
 // ── Filtros de estado ─────────────────────────────────────────────────────────
 
-type StatusFilter = 'ALL' | 'ACTIVE' | 'COMPLETED' | 'OVERDUE';
+type StatusFilter = 'ALL' | 'ACTIVE' | 'PAID_OFF' | 'OVERDUE';
 
 const STATUS_FILTER_MAP: Record<StatusFilter, CreditStatus[] | null> = {
   ALL: null,
   ACTIVE: ['ACTIVE'],
-  COMPLETED: ['COMPLETED'],
+  PAID_OFF: ['PAID_OFF'],
   OVERDUE: ['OVERDUE', 'DEFAULTED'],
 };
 
 const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
   ALL: 'Todos',
   ACTIVE: 'Activos',
-  COMPLETED: 'Completados',
+  PAID_OFF: 'Liquidados',
   OVERDUE: 'Vencidos',
 };
 
-// ── Columnas (sin la columna "actions" — toda la fila es clickeable) ──────────
+// ── Columnas ──────────────────────────────────────────────────────────────────
 
 const columns: ColumnDef<Credit>[] = [
   {
-    accessorKey: 'amount',
+    accessorKey: 'principal',
     header: ({ column }) => (
       <Button
         variant="ghost"
@@ -105,12 +105,12 @@ const columns: ColumnDef<Credit>[] = [
     ),
     cell: ({ row }) => (
       <span className="text-sm font-semibold text-foreground">
-        {formatCurrency(row.original.amount)}
+        {formatCurrency(row.original.principal)}
       </span>
     ),
   },
   {
-    accessorKey: 'disbursedDate',
+    accessorKey: 'disbursedAt',
     header: ({ column }) => (
       <Button
         variant="ghost"
@@ -123,12 +123,12 @@ const columns: ColumnDef<Credit>[] = [
     ),
     cell: ({ row }) => (
       <span className="text-sm text-foreground">
-        {formatDate(row.original.disbursedDate)}
+        {formatDate(row.original.disbursedAt)}
       </span>
     ),
     sortingFn: (rowA, rowB) => {
-      const a = new Date(rowA.original.disbursedDate).getTime();
-      const b = new Date(rowB.original.disbursedDate).getTime();
+      const a = new Date(rowA.original.disbursedAt).getTime();
+      const b = new Date(rowB.original.disbursedAt).getTime();
       return a - b;
     },
   },
@@ -137,25 +137,25 @@ const columns: ColumnDef<Credit>[] = [
     header: 'Cuotas',
     cell: ({ row }) => (
       <span className="text-sm text-foreground">
-        {row.original.paidInstallments}/{row.original.totalInstallments}
+        {row.original.installmentsCompleted}/{row.original.installmentCount}
       </span>
     ),
   },
   {
-    accessorKey: 'pendingBalance',
+    accessorKey: 'totalOutstanding',
     header: 'Saldo',
     cell: ({ row }) => (
       <span className="text-sm text-foreground">
-        {formatCurrency(row.original.pendingBalance)}
+        {formatCurrency(row.original.totalOutstanding)}
       </span>
     ),
   },
   {
-    accessorKey: 'nextDueDate',
-    header: 'Próx. vencimiento',
+    accessorKey: 'maturityDate',
+    header: 'Vencimiento',
     cell: ({ row }) => (
       <span className="text-sm text-muted-foreground">
-        {formatDate(row.original.nextDueDate)}
+        {formatDate(row.original.maturityDate)}
       </span>
     ),
   },
@@ -184,23 +184,19 @@ const columns: ColumnDef<Credit>[] = [
   },
 ];
 
-// ── Card móvil para cada crédito ──────────────────────────────────────────────
+// ── Card móvil ────────────────────────────────────────────────────────────────
 
 function CreditMobileCard({ credit }: { credit: Credit }) {
-  const progress = credit.totalInstallments > 0
-    ? Math.round((credit.paidInstallments / credit.totalInstallments) * 100)
+  const progress = credit.installmentCount > 0
+    ? Math.round((credit.installmentsCompleted / credit.installmentCount) * 100)
     : 0;
 
   return (
-    <Link
-      href={`/dashboard/creditos/${credit.id}`}
-      className="block group"
-    >
+    <Link href={`/dashboard/creditos/${credit.id}`} className="block group">
       <div className="rounded-lg border border-border bg-card p-4 transition-all group-hover:border-primary/40 group-hover:shadow-sm group-active:scale-[0.98]">
-        {/* Header: monto + estado */}
         <div className="flex items-center justify-between mb-3">
           <span className="text-lg font-bold text-foreground">
-            {formatCurrency(credit.amount)}
+            {formatCurrency(credit.principal)}
           </span>
           <div className="flex items-center gap-2">
             <Badge variant={statusVariants[credit.status]}>
@@ -210,7 +206,6 @@ function CreditMobileCard({ credit }: { credit: Credit }) {
           </div>
         </div>
 
-        {/* Barra de progreso */}
         <div className="mb-3">
           <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
             <div
@@ -219,30 +214,28 @@ function CreditMobileCard({ credit }: { credit: Credit }) {
             />
           </div>
           <p className="text-[10px] text-muted-foreground mt-1">
-            {credit.paidInstallments} de {credit.totalInstallments} cuotas pagadas
+            {credit.installmentsCompleted} de {credit.installmentCount} cuotas pagadas
           </p>
         </div>
 
-        {/* Info row */}
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Calendar className="w-3 h-3" />
-            {formatDate(credit.disbursedDate)}
+            {formatDate(credit.disbursedAt)}
           </span>
-          {credit.nextDueDate && (
+          {credit.status !== 'PAID_OFF' && (
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              Vence {formatDate(credit.nextDueDate)}
+              Vence {formatDate(credit.maturityDate)}
             </span>
           )}
         </div>
 
-        {/* Saldo pendiente */}
-        {credit.pendingBalance > 0 && (
+        {credit.totalOutstanding > 0 && (
           <div className="mt-2 pt-2 border-t border-border/50">
             <span className="text-xs text-muted-foreground">Saldo pendiente: </span>
             <span className="text-xs font-semibold text-foreground">
-              {formatCurrency(credit.pendingBalance)}
+              {formatCurrency(credit.totalOutstanding)}
             </span>
           </div>
         )}
@@ -278,7 +271,7 @@ export function CreditsTable() {
   const [error, setError] = React.useState<string | null>(null);
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>('ALL');
   const [sorting, setSorting] = React.useState<SortingState>([
-    { id: 'disbursedDate', desc: true },
+    { id: 'disbursedAt', desc: true },
   ]);
   const [globalFilter, setGlobalFilter] = React.useState('');
 
@@ -298,7 +291,6 @@ export function CreditsTable() {
     fetchData();
   }, [fetchData]);
 
-  // Aplicar filtro de estado como column filter
   const columnFilters = React.useMemo<ColumnFiltersState>(() => {
     const statuses = STATUS_FILTER_MAP[statusFilter];
     if (!statuses) return [];
@@ -308,31 +300,24 @@ export function CreditsTable() {
   const table = useReactTable({
     data,
     columns,
-    state: {
-      sorting,
-      globalFilter,
-      columnFilters,
-    },
+    state: { sorting, globalFilter, columnFilters },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: { pageSize: 10 },
-    },
+    initialState: { pagination: { pageSize: 10 } },
     globalFilterFn: (row, _columnId, filterValue) => {
       const q = (filterValue as string).toLowerCase();
       return (
         row.original.id.toLowerCase().includes(q) ||
-        formatCurrency(row.original.amount).toLowerCase().includes(q) ||
+        formatCurrency(row.original.principal).toLowerCase().includes(q) ||
         (creditStatusLabels[row.original.status] ?? '').toLowerCase().includes(q)
       );
     },
   });
 
-  // Datos filtrados para la vista móvil
   const filteredData = React.useMemo(() => {
     return table.getFilteredRowModel().rows.map((row) => row.original);
   }, [table.getFilteredRowModel().rows]);
@@ -402,18 +387,12 @@ export function CreditsTable() {
           </div>
         )}
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            Vista MÓVIL — Cards apiladas (visible < md)
-        ═══════════════════════════════════════════════════════════════════ */}
+        {/* Vista MÓVIL */}
         <div className="md:hidden space-y-3">
           {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <CreditMobileCardSkeleton key={i} />
-            ))
+            Array.from({ length: 3 }).map((_, i) => <CreditMobileCardSkeleton key={i} />)
           ) : filteredData.length > 0 ? (
-            filteredData.map((credit) => (
-              <CreditMobileCard key={credit.id} credit={credit} />
-            ))
+            filteredData.map((credit) => <CreditMobileCard key={credit.id} credit={credit} />)
           ) : (
             <div className="flex flex-col items-center gap-2 py-8">
               <CreditCard className="w-10 h-10 text-muted-foreground/40" />
@@ -426,9 +405,7 @@ export function CreditsTable() {
           )}
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            Vista DESKTOP — Tabla con filas clickeables (visible >= md)
-        ═══════════════════════════════════════════════════════════════════ */}
+        {/* Vista DESKTOP */}
         <div className="hidden md:block overflow-hidden rounded-md border">
           <Table>
             <TableHeader>
@@ -495,27 +472,17 @@ export function CreditsTable() {
           </Table>
         </div>
 
-        {/* Paginación (solo en desktop) */}
+        {/* Paginación */}
         {table.getPageCount() > 1 && (
           <div className="hidden md:flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()} · {table.getFilteredRowModel().rows.length} resultado{table.getFilteredRowModel().rows.length !== 1 ? 's' : ''}
+              Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
             </p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
+              <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
                 Anterior
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
+              <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
                 Siguiente
               </Button>
             </div>

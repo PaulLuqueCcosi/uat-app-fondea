@@ -1,4 +1,4 @@
-import { getActiveCredits, getNextDueInstallment } from '@/modules/credits';
+import { getActiveCredit, getNextPayment, getInstallments } from '@/modules/credits';
 import { getActiveApplicationAction } from '@/app/actions/application.actions';
 import { ActiveLoanCard } from './ActiveLoanCard';
 
@@ -7,24 +7,27 @@ import { ActiveLoanCard } from './ActiveLoanCard';
  * Si no hay crédito activo o hay error, no renderiza nada.
  */
 export async function ActiveLoanCardServer() {
-  const result = await getActiveCredits();
+  const result = await getActiveCredit();
 
-  if (!result.ok) return null;
+  if (!result.ok || !result.data) return null;
 
-  const credit = result.data[0] ?? null;
-  if (!credit) return null;
+  const credit = result.data;
 
-  // Obtener la cuota que toca pagar (lógica del backend)
-  const nextDueResult = await getNextDueInstallment(credit.id);
-  const nextDueInstallment = nextDueResult.ok ? nextDueResult.data : null;
+  // Fetch en paralelo: próximo pago, cuotas, aplicación
+  const [nextPayRes, installmentsRes, activeApp] = await Promise.all([
+    getNextPayment(credit.id),
+    getInstallments(credit.id),
+    getActiveApplicationAction(),
+  ]);
 
-  // Obtener applicationId para los documentos legales
-  const activeApp = await getActiveApplicationAction();
+  const nextPayment = nextPayRes.ok ? nextPayRes.data : null;
+  const installments = installmentsRes.ok ? installmentsRes.data : [];
 
   return (
     <ActiveLoanCard
       credit={credit}
-      nextDueInstallment={nextDueInstallment}
+      installments={installments}
+      nextPayment={nextPayment}
       applicationId={activeApp?.id ?? null}
     />
   );

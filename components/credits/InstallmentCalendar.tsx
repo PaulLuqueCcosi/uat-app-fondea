@@ -40,11 +40,11 @@ export function InstallmentCalendar({
   const paidDates = installments
     .filter((i) => i.status === 'PAID')
     .map((i) => new Date(i.dueDate));
+  const currentDates = installments
+    .filter((i) => i.status === 'CURRENT' || i.status === 'PARTIALLY_PAID')
+    .map((i) => new Date(i.dueDate));
   const pendingDates = installments
     .filter((i) => i.status === 'PENDING')
-    .map((i) => new Date(i.dueDate));
-  const upcomingDates = installments
-    .filter((i) => i.status === 'UPCOMING')
     .map((i) => new Date(i.dueDate));
   const overdueDates = installments
     .filter((i) => i.status === 'OVERDUE')
@@ -66,15 +66,15 @@ export function InstallmentCalendar({
       onMonthChange={onMonthChange}
       modifiers={{
         paid: paidDates,
+        current: currentDates,
         pending: pendingDates,
-        upcoming: upcomingDates,
         overdue: overdueDates,
         active: selectedDate,
       }}
       modifiersClassNames={{
         paid: 'bg-accent-500 text-accent-900 hover:bg-accent-400 font-bold cursor-pointer',
-        pending: 'bg-warning-400 text-warning-900 hover:bg-warning-500 font-bold cursor-pointer',
-        upcoming: 'bg-primary-200 text-primary-900 hover:bg-primary-300 font-bold cursor-pointer',
+        current: 'bg-warning-400 text-warning-900 hover:bg-warning-500 font-bold cursor-pointer',
+        pending: 'bg-primary-200 text-primary-900 hover:bg-primary-300 font-bold cursor-pointer',
         overdue: 'bg-error-500 text-white hover:bg-error-600 font-bold cursor-pointer',
         active: 'ring-2 ring-offset-2 ring-primary scale-110',
       }}

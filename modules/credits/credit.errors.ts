@@ -8,13 +8,16 @@
  */
 
 export type CreditErrorCode =
-  | 'CREDITS_EMPTY'
+  | 'NO_CREDITS'
   | 'CREDIT_NOT_FOUND'
   | 'INSTALLMENT_NOT_FOUND'
+  | 'NO_ACTIVE_CREDIT'
+  | 'NO_PENDING_PAYMENT'
   | 'SESSION_EXPIRED'
   | 'NETWORK_ERROR'
   | 'SERVER_ERROR'
   | 'VALIDATION_FAILED'
+  | 'PAYMENT_FAILED'
   | 'CONFLICT';
 
 export interface CreditError {
@@ -24,8 +27,8 @@ export interface CreditError {
 }
 
 export const errors = {
-  empty: (): CreditError => ({
-    code: 'CREDITS_EMPTY',
+  noCredits: (): CreditError => ({
+    code: 'NO_CREDITS',
     message: 'Aún no tienes créditos desembolsados.',
   }),
 
@@ -35,10 +38,20 @@ export const errors = {
     cause: `Credit id="${id}" not found`,
   }),
 
-  installmentNotFound: (id: string): CreditError => ({
+  installmentNotFound: (creditId: string, no: number): CreditError => ({
     code: 'INSTALLMENT_NOT_FOUND',
     message: 'La cuota que buscas no existe.',
-    cause: `Installment id="${id}" not found`,
+    cause: `Installment #${no} of credit="${creditId}" not found`,
+  }),
+
+  noActiveCredit: (): CreditError => ({
+    code: 'NO_ACTIVE_CREDIT',
+    message: 'No tienes un crédito activo en este momento.',
+  }),
+
+  noPendingPayment: (): CreditError => ({
+    code: 'NO_PENDING_PAYMENT',
+    message: 'No tienes cuotas pendientes de pago. ¡Todo al día!',
   }),
 
   sessionExpired: (): CreditError => ({
@@ -60,6 +73,11 @@ export const errors = {
   validationFailed: (detail?: string): CreditError => ({
     code: 'VALIDATION_FAILED',
     message: detail ?? 'Datos inválidos.',
+  }),
+
+  paymentFailed: (detail?: string): CreditError => ({
+    code: 'PAYMENT_FAILED',
+    message: detail ?? 'No se pudo procesar el pago. Intenta de nuevo.',
   }),
 
   conflict: (detail?: string): CreditError => ({

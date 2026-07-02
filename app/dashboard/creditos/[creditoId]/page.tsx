@@ -17,13 +17,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  InstallmentList,
   InstallmentCalendar,
   CalendarLegend,
   MonthSelector,
 } from '@/components/credits';
-import { getCreditByIdAction, getNextDueInstallmentAction } from '@/app/actions/credit.actions';
-import type { Credit, Installment, InstallmentDetail } from '@/modules/credits';
+import {
+  getCreditByIdAction,
+  getCreditSummaryAction,
+  getInstallmentsAction,
+  getNextPaymentAction,
+} from '@/app/actions/credit.actions';
+import type { Credit, CreditSummary, Installment, NextPayment } from '@/modules/credits';
 import { creditStatusLabels } from '@/modules/credits';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -63,7 +67,7 @@ function formatDateLong(iso: string) {
 
 const statusVariants: Record<string, 'success' | 'completed' | 'error' | 'default'> = {
   ACTIVE: 'success',
-  COMPLETED: 'completed',
+  PAID_OFF: 'completed',
   OVERDUE: 'error',
   DEFAULTED: 'error',
 };
@@ -73,15 +77,12 @@ const statusVariants: Record<string, 'success' | 'completed' | 'error' | 'defaul
 function CreditDetailSkeleton() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 animate-pulse">
-      {/* Back */}
       <div className="h-4 w-28 bg-neutral-200 rounded" />
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="h-8 w-32 bg-neutral-200 rounded" />
         <div className="h-5 w-16 bg-neutral-200 rounded-full" />
       </div>
       <div className="h-3 w-48 bg-neutral-100 rounded" />
-      {/* Progress section */}
       <div className="rounded-lg border border-border p-4 space-y-3">
         <div className="h-4 w-full bg-neutral-100 rounded" />
         <div className="h-2.5 w-full bg-neutral-100 rounded-full" />
@@ -91,7 +92,6 @@ function CreditDetailSkeleton() {
           ))}
         </div>
       </div>
-      {/* Cuotas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="h-64 bg-neutral-50 rounded-lg border" />
         <div className="h-64 bg-neutral-50 rounded-lg border" />
@@ -107,7 +107,9 @@ export default function CreditoDetallePage() {
   const creditoId = params.creditoId as string;
 
   const [credit, setCredit] = useState<Credit | null>(null);
-  const [nextDueInstallment, setNextDueInstallment] = useState<InstallmentDetail | null>(null);
+  const [summary, setSummary] = useState<CreditSummary | null>(null);
+  const [installments, setInstallments] = useState<Installment[]>([]);
+  const [nextPayment, setNextPayment] = useState<NextPayment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,28 +118,35 @@ export default function CreditoDetallePage() {
   const [visibleMonths, setVisibleMonths] = useState(1);
 
   useEffect(() => {
-    async function fetchCredit() {
+    async function fetchAll() {
       setLoading(true);
-      const [creditResult, nextDueResult] = await Promise.all([
+      const [creditRes, summaryRes, installmentsRes, nextPayRes] = await Promise.all([
         getCreditByIdAction(creditoId),
-        getNextDueInstallmentAction(creditoId),
+        getCreditSummaryAction(creditoId),
+        getInstallmentsAction(creditoId),
+        getNextPaymentAction(creditoId),
       ]);
-      if (creditResult.ok) {
-        setCredit(creditResult.data);
+
+      if (creditRes.ok) {
+        setCredit(creditRes.data);
+      } else {
+        setError(creditRes.error.message);
+      }
+
+      if (summaryRes.ok) setSummary(summaryRes.data);
+      if (installmentsRes.ok) {
+        setInstallments(installmentsRes.data);
         // Auto-focus en la cuota que toca pagar
-        const focus = creditResult.data.installments.find(
-          (i) => i.status === 'OVERDUE' || i.status === 'PENDING',
+        const focus = installmentsRes.data.find(
+          (i) => i.status === 'OVERDUE' || i.status === 'CURRENT' || i.status === 'PENDING',
         );
         if (focus) setCalendarMonth(new Date(focus.dueDate));
-      } else {
-        setError(creditResult.error.message);
       }
-      if (nextDueResult.ok) {
-        setNextDueInstallment(nextDueResult.data);
-      }
+      if (nextPayRes.ok) setNextPayment(nextPayRes.data);
+
       setLoading(false);
     }
-    fetchCredit();
+    fetchAll();
   }, [creditoId]);
 
   if (loading) return <CreditDetailSkeleton />;
@@ -148,15 +157,13 @@ export default function CreditoDetallePage() {
         <CreditCard className="w-12 h-12 text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">{error ?? 'Crédito no encontrado'}</p>
         <Link href="/dashboard/creditos">
-          <Button variant="outline" size="sm">
-            Volver a Mis Créditos
-          </Button>
+          <Button variant="outline" size="sm">Volver a Mis Créditos</Button>
         </Link>
       </div>
     );
   }
 
-  const progressPercent = Math.round((credit.paidAmount / credit.amount) * 100);
+  const progressPercent = summary?.progressPercentage ?? 0;
 
   const handleSelectInstallment = (inst: Installment) => {
     if (selectedInstallment?.id === inst.id) {
@@ -164,7 +171,6 @@ export default function CreditoDetallePage() {
       return;
     }
     setSelectedInstallment(inst);
-    // Mover calendario si la cuota no está visible
     const instDate = new Date(inst.dueDate);
     const startMonth = calendarMonth.getMonth();
     const startYear = calendarMonth.getFullYear();
@@ -195,47 +201,47 @@ export default function CreditoDetallePage() {
       <div>
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-2xl font-bold text-foreground">
-            {formatCurrencyShort(credit.amount)}
+            {formatCurrencyShort(credit.principal)}
           </h1>
           <Badge variant={statusVariants[credit.status] ?? 'default'}>
             {creditStatusLabels[credit.status]}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          {credit.totalInstallments} cuotas · Desembolsado el {formatDate(credit.disbursedDate)}
+          {credit.installmentCount} cuotas · Desembolsado el {formatDate(credit.disbursedAt)}
         </p>
       </div>
 
-      {/* ─── Alerta cuota a pagar ─── */}
-      {nextDueInstallment && (
-        <Card className={nextDueInstallment.status === 'OVERDUE' ? 'border-error-200 bg-error-50' : ''}>
+      {/* ─── Alerta próximo pago ─── */}
+      {nextPayment && (
+        <Card className={nextPayment.isOverdue ? 'border-error-200 bg-error-50' : ''}>
           <CardContent>
             <div className="flex items-center gap-3">
               <AlertCircle className={`w-5 h-5 shrink-0 ${
-                nextDueInstallment.status === 'OVERDUE' ? 'text-error-600' : 'text-warning-600'
+                nextPayment.isOverdue ? 'text-error-600' : 'text-warning-600'
               }`} />
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold ${
-                  nextDueInstallment.status === 'OVERDUE' ? 'text-error-900' : 'text-foreground'
+                  nextPayment.isOverdue ? 'text-error-900' : 'text-foreground'
                 }`}>
-                  Cuota {nextDueInstallment.number} {nextDueInstallment.status === 'OVERDUE' ? 'vencida' : 'pendiente'}
+                  Cuota {nextPayment.installmentNo} {nextPayment.isOverdue ? 'vencida' : 'pendiente'}
                 </p>
                 <p className={`text-xs ${
-                  nextDueInstallment.status === 'OVERDUE' ? 'text-error-700' : 'text-muted-foreground'
+                  nextPayment.isOverdue ? 'text-error-700' : 'text-muted-foreground'
                 }`}>
-                  {nextDueInstallment.status === 'OVERDUE'
-                    ? `Venció el ${formatDateLong(nextDueInstallment.dueDate)} · ${formatCurrency(nextDueInstallment.totalDue)} sin pagar`
-                    : `Vence el ${formatDateLong(nextDueInstallment.dueDate)} · ${formatCurrency(nextDueInstallment.totalDue)}`
+                  {nextPayment.isOverdue
+                    ? `Venció el ${formatDateLong(nextPayment.dueDate)} · ${formatCurrency(nextPayment.totalToPay)} sin pagar`
+                    : `Vence el ${formatDateLong(nextPayment.dueDate)} · ${formatCurrency(nextPayment.totalToPay)}`
                   }
                 </p>
               </div>
-              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextDueInstallment.id}`}>
+              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextPayment.installmentNo}`}>
                 <Button size="sm" className={`text-xs shrink-0 ${
-                  nextDueInstallment.status === 'OVERDUE'
+                  nextPayment.isOverdue
                     ? 'bg-error-600 text-white hover:bg-error-700'
                     : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
                 }`}>
-                  {nextDueInstallment.status === 'OVERDUE' ? 'Pagar ahora' : 'Pagar cuota'}
+                  {nextPayment.isOverdue ? 'Pagar ahora' : 'Pagar cuota'}
                 </Button>
               </Link>
             </div>
@@ -248,7 +254,7 @@ export default function CreditoDetallePage() {
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-muted-foreground">Progreso del préstamo</p>
-            <p className="text-sm font-bold text-foreground">{progressPercent}% completado</p>
+            <p className="text-sm font-bold text-foreground">{Math.round(progressPercent)}% completado</p>
           </div>
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
             <div
@@ -260,50 +266,50 @@ export default function CreditoDetallePage() {
             <div className="rounded-md border border-border bg-background p-2.5">
               <p className="text-xs text-muted-foreground mb-0.5">Total</p>
               <p className="text-base font-bold text-foreground">
-                {formatCurrencyShort(credit.amount)}
+                {formatCurrencyShort(credit.totalDue)}
               </p>
             </div>
             <div className="rounded-md border border-accent-200 bg-accent-50 p-2.5">
               <p className="text-xs text-accent-800 mb-0.5">Pagado</p>
               <p className="text-base font-bold text-accent-700">
-                {formatCurrencyShort(credit.paidAmount)}
+                {formatCurrencyShort(credit.totalPaid)}
               </p>
             </div>
             <div className="rounded-md border border-error-200 bg-error-50 p-2.5">
               <p className="text-xs text-error-700 mb-0.5">Pendiente</p>
               <p className="text-base font-bold text-error-700">
-                {formatCurrencyShort(credit.pendingBalance)}
+                {formatCurrencyShort(credit.totalOutstanding)}
               </p>
             </div>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            {credit.paidInstallments} de {credit.totalInstallments} cuotas pagadas · Finaliza el {formatDate(credit.endDate)}
+            {credit.installmentsCompleted} de {credit.installmentCount} cuotas pagadas · Finaliza el {formatDate(credit.maturityDate)}
           </p>
         </CardContent>
       </Card>
 
       {/* ─── Cuota a pagar (CTA prominente) ─── */}
-      {nextDueInstallment && (
+      {nextPayment && (
         <Card>
           <CardContent>
             <div className="flex items-center gap-4">
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">
-                  {nextDueInstallment.status === 'OVERDUE' ? 'Cuota vencida' : 'Próxima cuota'}
+                  {nextPayment.isOverdue ? 'Cuota vencida' : 'Próxima cuota'}
                 </p>
                 <p className="text-xl font-bold text-foreground">
-                  {formatCurrency(nextDueInstallment.totalDue)}
+                  {formatCurrency(nextPayment.totalToPay)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {nextDueInstallment.status === 'OVERDUE'
-                    ? `Venció el ${formatDateLong(nextDueInstallment.dueDate)}`
-                    : `Vence el ${formatDateLong(nextDueInstallment.dueDate)}`
-                  } · Cuota {nextDueInstallment.number}/{credit.totalInstallments}
+                  {nextPayment.isOverdue
+                    ? `Venció el ${formatDateLong(nextPayment.dueDate)}`
+                    : `Vence el ${formatDateLong(nextPayment.dueDate)}`
+                  } · Cuota {nextPayment.installmentNo}/{credit.installmentCount}
                 </p>
               </div>
-              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextDueInstallment.id}`}>
+              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextPayment.installmentNo}`}>
                 <Button className={`gap-2 ${
-                  nextDueInstallment.status === 'OVERDUE'
+                  nextPayment.isOverdue
                     ? 'bg-error-600 text-white hover:bg-error-700'
                     : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
                 }`}>
@@ -316,70 +322,71 @@ export default function CreditoDetallePage() {
         </Card>
       )}
 
-      {/* ─── Cuotas + Calendario (mismo estilo que dashboard) ─── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4 text-primary" />
-            Cronograma de pagos
-          </CardTitle>
-          <CardDescription>
-            {credit.paidInstallments} de {credit.totalInstallments} pagadas — toca una cuota para ver en el calendario
-          </CardDescription>
-          <CardAction>
-            <Link href={`/dashboard/creditos/${credit.id}/cuotas`}>
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-                <FileText className="w-3.5 h-3.5" />
-                Ver cronograma completo
-              </Button>
-            </Link>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-            {/* Lista de cuotas */}
-            <div className="rounded-lg border border-border p-3 flex flex-col gap-2">
-              <InstallmentList
-                installments={credit.installments}
-                selectedId={selectedInstallment?.id}
-                onSelect={handleSelectInstallment}
-                creditId={credit.id}
-                maxVisible={8}
-              />
-            </div>
-
-            {/* Calendario */}
-            <div className="rounded-lg border border-border p-3 flex flex-col gap-2 h-full">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Calendario de pagos
-              </p>
-              <div className="flex-1 flex items-center justify-center overflow-x-auto">
-                <InstallmentCalendar
-                  installments={credit.installments}
-                  selectedInstallment={selectedInstallment}
-                  month={calendarMonth}
-                  onMonthChange={setCalendarMonth}
-                  onDayClick={handleSelectInstallment}
-                  numberOfMonths={visibleMonths}
+      {/* ─── Cuotas + Calendario ─── */}
+      {installments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4 text-primary" />
+              Cronograma de pagos
+            </CardTitle>
+            <CardDescription>
+              {credit.installmentsCompleted} de {credit.installmentCount} pagadas — toca una cuota para ver en el calendario
+            </CardDescription>
+            <CardAction>
+              <Link href={`/dashboard/creditos/${credit.id}/cuotas`}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                  <FileText className="w-3.5 h-3.5" />
+                  Ver cronograma completo
+                </Button>
+              </Link>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+              {/* Lista de cuotas */}
+              <div className="rounded-lg border border-border p-3 flex flex-col gap-2">
+                <InstallmentListMini
+                  installments={installments}
+                  selectedId={selectedInstallment?.id}
+                  onSelect={handleSelectInstallment}
+                  creditId={credit.id}
                 />
               </div>
-              <div className="flex items-center justify-between w-full">
-                <CalendarLegend />
-                <MonthSelector value={visibleMonths} onChange={setVisibleMonths} options={[1, 2]} />
+
+              {/* Calendario */}
+              <div className="rounded-lg border border-border p-3 flex flex-col gap-2 h-full">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Calendario de pagos
+                </p>
+                <div className="flex-1 flex items-center justify-center overflow-x-auto">
+                  <InstallmentCalendar
+                    installments={installments}
+                    selectedInstallment={selectedInstallment}
+                    month={calendarMonth}
+                    onMonthChange={setCalendarMonth}
+                    onDayClick={handleSelectInstallment}
+                    numberOfMonths={visibleMonths}
+                  />
+                </div>
+                <div className="flex items-center justify-between w-full">
+                  <CalendarLegend />
+                  <MonthSelector value={visibleMonths} onChange={setVisibleMonths} options={[1, 2]} />
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Link
-            href={`/dashboard/creditos/${credit.id}/cuotas`}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-          >
-            Ver detalle completo de cuotas
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
-        </CardFooter>
-      </Card>
+          </CardContent>
+          <CardFooter>
+            <Link
+              href={`/dashboard/creditos/${credit.id}/cuotas`}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              Ver detalle completo de cuotas
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </CardFooter>
+        </Card>
+      )}
 
       {/* ─── Información del crédito ─── */}
       <Card>
@@ -400,36 +407,100 @@ export default function CreditoDetallePage() {
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Fecha de desembolso</p>
               <p className="text-sm font-medium text-foreground">
-                {formatDate(credit.disbursedDate)}
+                {formatDate(credit.disbursedAt)}
               </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Fecha de vencimiento</p>
               <p className="text-sm font-medium text-foreground">
-                {formatDate(credit.endDate)}
+                {formatDate(credit.maturityDate)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Tasa mensual</p>
+              <p className="text-xs text-muted-foreground mb-0.5">Capital desembolsado</p>
               <p className="text-sm font-medium text-foreground">
-                {credit.interestRate}%
+                {formatCurrency(credit.principal)}
               </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Total de cuotas</p>
               <p className="text-sm font-medium text-foreground">
-                {credit.totalInstallments}
+                {credit.installmentCount}
               </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Cuotas pagadas</p>
               <p className="text-sm font-medium text-foreground">
-                {credit.paidInstallments} de {credit.totalInstallments}
+                {credit.installmentsCompleted} de {credit.installmentCount}
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ─── Mini lista de cuotas (inline en la página de detalle) ────────────────────
+
+function InstallmentListMini({
+  installments,
+  selectedId,
+  onSelect,
+  creditId,
+}: {
+  installments: Installment[];
+  selectedId?: string | null;
+  onSelect: (inst: Installment) => void;
+  creditId: string;
+}) {
+  const maxHeight = 4 * 56;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        Cuotas ({installments.length})
+      </p>
+      <div className="space-y-2 overflow-y-auto pr-1" style={{ maxHeight: `${maxHeight}px` }}>
+        {installments.map((inst) => {
+          const isSelected = selectedId === inst.id;
+          const statusColor =
+            inst.status === 'PAID' ? 'bg-accent-50/50 border-accent-200'
+            : inst.status === 'OVERDUE' ? 'bg-error-50/50 border-error-200'
+            : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-50/50 border-warning-200'
+            : 'border-border hover:bg-neutral-50';
+
+          return (
+            <button
+              key={inst.id}
+              onClick={() => onSelect(inst)}
+              className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 border text-left transition-all hover:ring-1 hover:ring-primary/20 ${statusColor} ${
+                isSelected ? 'ring-2 ring-primary' : ''
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                inst.status === 'PAID' ? 'bg-accent-500'
+                : inst.status === 'OVERDUE' ? 'bg-error-500'
+                : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-400'
+                : 'bg-primary/20'
+              }`}>
+                <span className="text-[9px] font-bold text-white">{inst.installmentNo}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground leading-tight">
+                  Cuota {inst.installmentNo}
+                </p>
+                <p className="text-xs text-muted-foreground leading-tight">
+                  {formatDate(inst.dueDate)}
+                </p>
+              </div>
+              <p className="text-sm font-bold text-foreground shrink-0">
+                {formatCurrencyShort(inst.amountDue)}
+              </p>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

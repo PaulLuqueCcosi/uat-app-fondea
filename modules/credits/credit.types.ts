@@ -1,146 +1,183 @@
 /**
- * Tipos del dominio Créditos — lo que usa el frontend.
+ * Tipos del dominio Créditos — alineados al backend real.
  *
- * Estos tipos representan la forma FINAL de los datos después del mapper.
- * El backend puede enviar snake_case, campos extra, etc. — el mapper se encarga.
- *
- * Si el backend cambia un campo, solo se toca el mapper.
- * Si el frontend necesita un campo nuevo, se agrega aquí y en el mapper.
+ * El backend devuelve snake_case con @JsonProperty.
+ * El mapper transforma a estos tipos camelCase.
  */
 
 // ─── Estados ──────────────────────────────────────────────────────────────────
 
-/** Estado de un crédito */
-export type CreditStatus = 'ACTIVE' | 'COMPLETED' | 'OVERDUE' | 'DEFAULTED';
+/** Estado de un crédito (backend enum) */
+export type CreditStatus = 'ACTIVE' | 'OVERDUE' | 'DEFAULTED' | 'PAID_OFF';
 
-/** Estado de una cuota */
-export type InstallmentStatus = 'PAID' | 'PENDING' | 'UPCOMING' | 'OVERDUE';
+/** Estado de una cuota (backend enum) */
+export type InstallmentStatus = 'PENDING' | 'CURRENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
 
-/** Método de pago utilizado */
-export type PaymentMethod = 'CARD' | 'YAPE' | 'PLIN' | 'TRANSFER' | 'OTHER';
+/** Tipo de transacción */
+export type TransactionType = 'DISBURSEMENT' | 'REPAYMENT' | 'PENALTY_ACCRUAL' | 'PENALTY_PAYMENT' | 'REVERSAL';
+
+/** Método de pago */
+export type PaymentMethod = 'BANK_TRANSFER' | 'YAPE' | 'PLIN' | 'CASH' | 'WALLET' | 'DEBIT_CARD' | 'OTHER';
 
 // ─── Crédito ──────────────────────────────────────────────────────────────────
 
-/** Crédito desembolsado — un préstamo activo o completado */
+/** Crédito del usuario — CreditDetailResponse del backend */
 export interface Credit {
   id: string;
-  /** Monto total desembolsado */
-  amount: number;
-  /** Fecha de desembolso (ISO) */
-  disbursedDate: string;
-  /** Fecha de vencimiento final (ISO) */
-  endDate: string;
-  /** Número total de cuotas */
-  totalInstallments: number;
-  /** Cuotas ya pagadas */
-  paidInstallments: number;
-  /** Monto ya pagado */
-  paidAmount: number;
-  /** Saldo pendiente */
-  pendingBalance: number;
-  /** Tasa de interés mensual (%) */
-  interestRate: number;
-  /** Fecha de próximo vencimiento (ISO) o null si completado */
-  nextDueDate: string | null;
-  /** Estado del crédito */
   status: CreditStatus;
-  /** Cuotas asociadas (resumen) */
-  installments: Installment[];
+  /** Monto desembolsado original */
+  principal: number;
+  /** Total a pagar (capital + intereses) */
+  totalDue: number;
+  /** Total ya pagado */
+  totalPaid: number;
+  /** Total de penalidades acumuladas */
+  totalPenalty: number;
+  /** Saldo pendiente */
+  totalOutstanding: number;
+  /** Número total de cuotas */
+  installmentCount: number;
+  /** Cuotas completadas */
+  installmentsCompleted: number;
+  /** Cuotas vencidas */
+  installmentsOverdue: number;
+  /** Fecha de desembolso (ISO) */
+  disbursedAt: string;
+  /** Primera fecha de vencimiento */
+  firstDueDate: string;
+  /** Fecha de vencimiento final */
+  maturityDate: string;
+  /** Fecha desde la que está en mora (null si al día) */
+  overdueSince: string | null;
+  /** Fecha en que se liquidó (null si activo) */
+  closedAt: string | null;
 }
 
-// ─── Cuota (resumen) ──────────────────────────────────────────────────────────
+// ─── Cuota ────────────────────────────────────────────────────────────────────
 
-/** Cuota de un crédito — vista resumen para listados y calendarios */
+/** Cuota de un crédito — InstallmentItem del backend */
 export interface Installment {
   id: string;
   /** Número de cuota (1-indexed) */
-  number: number;
-  /** Monto total de la cuota */
-  amount: number;
-  /** Fecha de vencimiento (ISO) */
+  installmentNo: number;
+  /** Fecha de vencimiento (ISO date) */
   dueDate: string;
-  /** Fecha en que se pagó (ISO) o null si no se ha pagado */
-  paidDate: string | null;
+  /** Monto de la cuota (sin mora) */
+  amountDue: number;
+  /** Monto ya pagado en esta cuota */
+  amountPaid: number;
+  /** Mora acumulada */
+  penaltyAccrued: number;
+  /** Mora ya pagada */
+  penaltyPaid: number;
+  /** Saldo pendiente total de esta cuota (cuota + mora - pagos) */
+  outstanding: number;
   /** Estado de la cuota */
   status: InstallmentStatus;
+  /** Días de atraso (0 si al día) */
+  daysOverdue: number;
+  /** Fecha/hora en que se pagó (null si no pagada) */
+  paidAt: string | null;
 }
 
-// ─── Cuota (detalle completo) ─────────────────────────────────────────────────
+// ─── Resumen ──────────────────────────────────────────────────────────────────
 
-/** Detalle completo de una cuota — incluye desglose y datos de pago */
-export interface InstallmentDetail extends Installment {
-  /** ID del crédito al que pertenece */
+/** Resumen de balances — CreditSummaryResponse del backend */
+export interface CreditSummary {
   creditId: string;
-  /** Total de cuotas del crédito */
-  totalInstallments: number;
-  /** Capital (parte del monto que reduce la deuda) */
-  principal: number;
-  /** Interés */
-  interest: number;
-  /** Penalidad por mora (0 si no hay atraso) */
-  lateFee: number;
-  /** Total a pagar (amount + lateFee) */
   totalDue: number;
-  /** Días de atraso (0 si no hay) */
-  daysLate: number;
-  /** Método de pago utilizado (null si no se ha pagado) */
-  method: string | null;
-  /** ID de transacción del pago (null si no se ha pagado) */
-  transactionId: string | null;
-  /** URL del comprobante PDF (null si no se ha pagado) */
-  receiptUrl: string | null;
+  totalPaid: number;
+  totalPenaltyAccrued: number;
+  totalPenaltyPaid: number;
+  totalOutstanding: number;
+  /** Porcentaje de progreso (0-100) */
+  progressPercentage: number;
 }
 
-// ─── Resumen para el dashboard ────────────────────────────────────────────────
+// ─── Próximo pago ─────────────────────────────────────────────────────────────
 
-/** Resumen agregado de los créditos del usuario */
-export interface CreditsSummary {
-  activeCount: number;
-  completedCount: number;
-  overdueCount: number;
-  totalPendingBalance: number;
-  totalPaidAmount: number;
-}
-
-// ─── Historial de pagos ───────────────────────────────────────────────────────
-
-/** Registro de un pago realizado */
-export interface PaymentRecord {
-  id: string;
-  /** ID de la cuota pagada */
-  installmentId: string;
-  /** ID del crédito */
+/** Próxima cuota a pagar — NextPaymentResponse del backend */
+export interface NextPayment {
   creditId: string;
-  /** Número de cuota */
-  installmentNumber: number;
-  /** Total de cuotas */
-  totalInstallments: number;
-  /** Monto pagado */
-  amount: number;
-  /** Fecha de vencimiento original */
+  installmentNo: number;
   dueDate: string;
-  /** Fecha efectiva de pago */
-  paidDate: string;
-  /** Estado de confirmación */
-  status: 'CONFIRMED' | 'PENDING' | 'FAILED';
-  /** Método de pago */
-  method: string | null;
-  /** URL del comprobante */
-  receiptUrl: string | null;
+  amountDue: number;
+  amountPaid: number;
+  penaltyAccrued: number;
+  /** Monto total que debe pagar el usuario */
+  totalToPay: number;
+  status: InstallmentStatus;
+  daysOverdue: number;
+  isOverdue: boolean;
+}
+
+// ─── Transacciones ────────────────────────────────────────────────────────────
+
+/** Movimiento/transacción — TransactionItem del backend */
+export interface Transaction {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  transactionDate: string;
+  processedAt: string;
+  installmentNo: number | null;
+  isReversed: boolean;
+  createdBy: string;
+}
+
+// ─── Resultado de pago ────────────────────────────────────────────────────────
+
+export interface PaymentDistribution {
+  installmentNo: number;
+  appliedToPenalty: number;
+  appliedToInstallment: number;
+  installmentStatus: string;
+}
+
+export interface PaymentResult {
+  creditId: string;
+  totalApplied: number;
+  remaining: number;
+  creditStatus: string;
+  distributions: PaymentDistribution[];
+}
+
+// ─── Request de pago (camelCase — tal cual el backend lo espera) ──────────────
+
+export interface RegisterPaymentRequest {
+  amount: number;
+  paymentMethod: PaymentMethod;
+  referenceNumber?: string;
+  bankName?: string;
+  accountOrigin?: string;
+  transactionDate?: string;
+  source?: string;
+  externalId?: string;
+  receiptUrl?: string;
+  rawPayload?: string;
 }
 
 // ─── Labels legibles ──────────────────────────────────────────────────────────
 
 export const creditStatusLabels: Record<CreditStatus, string> = {
   ACTIVE: 'Activo',
-  COMPLETED: 'Completado',
   OVERDUE: 'Vencido',
   DEFAULTED: 'En mora',
+  PAID_OFF: 'Liquidado',
 };
 
 export const installmentStatusLabels: Record<InstallmentStatus, string> = {
-  PAID: 'Pagada',
   PENDING: 'Pendiente',
-  UPCOMING: 'Próxima',
+  CURRENT: 'Próxima',
+  PARTIALLY_PAID: 'Pago parcial',
+  PAID: 'Pagada',
   OVERDUE: 'Vencida',
+};
+
+export const transactionTypeLabels: Record<TransactionType, string> = {
+  DISBURSEMENT: 'Desembolso',
+  REPAYMENT: 'Pago de cuota',
+  PENALTY_ACCRUAL: 'Mora generada',
+  PENALTY_PAYMENT: 'Pago de mora',
+  REVERSAL: 'Reversión',
 };
