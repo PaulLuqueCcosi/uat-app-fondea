@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Calendar,
@@ -14,13 +14,26 @@ import {
   Smartphone,
   Shield,
   XCircle,
+  Loader2,
+  PartyPopper,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { getInstallmentByNoAction, getCreditByIdAction } from '@/app/actions/credit.actions';
-import type { Installment, InstallmentStatus, Credit } from '@/modules/credits';
+import {
+  getInstallmentByNoAction,
+  getCreditByIdAction,
+  payInstallmentAction,
+} from '@/app/actions/credit.actions';
+import type {
+  Installment,
+  InstallmentStatus,
+  Credit,
+  PaymentMethod,
+  PaymentResult,
+} from '@/modules/credits';
 import { installmentStatusLabels } from '@/modules/credits';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,6 +62,58 @@ const badgeVariants: Record<InstallmentStatus, 'success' | 'warning' | 'error' |
   OVERDUE: 'error',
 };
 
+// ─── Payment method config ────────────────────────────────────────────────────
+
+interface PaymentMethodOption {
+  id: PaymentMethod;
+  label: string;
+  description: string;
+  icon: typeof CreditCard;
+  iconBg: string;
+  iconColor: string;
+  recommended?: boolean;
+}
+
+const PAYMENT_METHODS: PaymentMethodOption[] = [
+  {
+    id: 'YAPE',
+    label: 'Yape',
+    description: 'Billetera digital BCP',
+    icon: Smartphone,
+    iconBg: 'bg-purple-50',
+    iconColor: 'text-purple-600',
+    recommended: true,
+  },
+  {
+    id: 'PLIN',
+    label: 'Plin',
+    description: 'Billetera digital Interbank',
+    icon: Smartphone,
+    iconBg: 'bg-green-50',
+    iconColor: 'text-green-600',
+  },
+  {
+    id: 'BANK_TRANSFER',
+    label: 'Transferencia bancaria',
+    description: 'BCP, Interbank, BBVA, Scotiabank',
+    icon: DollarSign,
+    iconBg: 'bg-accent-50',
+    iconColor: 'text-accent-800',
+  },
+  {
+    id: 'DEBIT_CARD',
+    label: 'Tarjeta de débito',
+    description: 'Visa, Mastercard',
+    icon: CreditCard,
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
+  },
+];
+
+// ─── Payment flow steps ───────────────────────────────────────────────────────
+
+type PaymentStep = 'select-method' | 'confirm' | 'processing' | 'success' | 'error';
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function CuotaDetailSkeleton() {
@@ -72,6 +137,7 @@ function CuotaDetailSkeleton() {
 
 export default function CuotaDetallePage() {
   const params = useParams();
+  const router = useRouter();
   const cuotaNo = Number(params.cuotaNo);
   const creditoId = params.creditoId as string;
 
@@ -79,6 +145,13 @@ export default function CuotaDetallePage() {
   const [credit, setCredit] = useState<Credit | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Payment state
+  const [paymentStep, setPaymentStep] = useState<PaymentStep>('select-method');
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+  const [referenceNumber, setReferenceNumber] = useState('');
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchDetail() {
@@ -100,6 +173,30 @@ export default function CuotaDetallePage() {
     fetchDetail();
   }, [creditoId, cuotaNo]);
 
+  // ─── Payment handler ──────────────────────────────────────────────────────
+
+  async function handleConfirmPayment() {
+    if (!selectedMethod || !cuota) return;
+
+    setPaymentStep('processing');
+    setPaymentError(null);
+
+    const result = await payInstallmentAction(creditoId, cuotaNo, {
+      amount: cuota.outstanding,
+      paymentMethod: selectedMethod,
+      referenceNumber: referenceNumber || undefined,
+      source: 'manual',
+    });
+
+    if (result.ok) {
+      setPaymentResult(result.data);
+      setPaymentStep('success');
+    } else {
+      setPaymentError(result.error.message);
+      setPaymentStep('error');
+    }
+  }
+
   if (loading) return <CuotaDetailSkeleton />;
 
   if (error || !cuota) {
@@ -118,8 +215,6 @@ export default function CuotaDetallePage() {
   const isOverdue = cuota.status === 'OVERDUE';
   const needsPayment = cuota.status === 'CURRENT' || cuota.status === 'OVERDUE' || cuota.status === 'PARTIALLY_PAID';
   const totalInstallments = credit?.installmentCount ?? 0;
-
-  // Total que debe pagar el usuario para esta cuota
   const totalToPay = cuota.outstanding;
 
   return (
@@ -147,7 +242,7 @@ export default function CuotaDetallePage() {
       </div>
 
       {/* ─── Banner de estado ─── */}
-      {isPaid && (
+      {isPaid && paymentStep !== 'success' && (
         <Card className="border-success-200 bg-success-50/50">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2 text-success-900">
@@ -160,7 +255,7 @@ export default function CuotaDetallePage() {
           </CardHeader>
         </Card>
       )}
-      {cuota.status === 'CURRENT' && (
+      {cuota.status === 'CURRENT' && paymentStep === 'select-method' && (
         <Card className="border-warning-200 bg-warning-50/50">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2 text-warning-900">
@@ -173,7 +268,7 @@ export default function CuotaDetallePage() {
           </CardHeader>
         </Card>
       )}
-      {cuota.status === 'PARTIALLY_PAID' && (
+      {cuota.status === 'PARTIALLY_PAID' && paymentStep === 'select-method' && (
         <Card className="border-warning-200 bg-warning-50/50">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2 text-warning-900">
@@ -186,7 +281,7 @@ export default function CuotaDetallePage() {
           </CardHeader>
         </Card>
       )}
-      {isOverdue && (
+      {isOverdue && paymentStep === 'select-method' && (
         <Card className="border-error-200 bg-error-50/50">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2 text-error-900">
@@ -253,26 +348,11 @@ export default function CuotaDetallePage() {
                 <span className="text-base font-semibold text-foreground">Pendiente</span>
                 <span className="text-xl font-bold text-foreground">{formatCurrency(cuota.outstanding)}</span>
               </div>
-              <Separator />
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Vencimiento</p>
-                  <p className="text-sm font-medium text-foreground mt-0.5">{formatDate(cuota.dueDate)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {isPaid ? 'Fecha de pago' : 'Estado'}
-                  </p>
-                  <p className={`text-sm font-medium mt-0.5 ${isPaid ? 'text-accent-700' : isOverdue ? 'text-error-600' : 'text-foreground'}`}>
-                    {isPaid && cuota.paidAt ? formatDate(cuota.paidAt) : isOverdue ? `${cuota.daysOverdue} días de atraso` : 'Sin pagar'}
-                  </p>
-                </div>
-              </div>
             </CardContent>
           </Card>
 
           {/* Advertencia si vencida */}
-          {isOverdue && (
+          {isOverdue && paymentStep === 'select-method' && (
             <Card className="border-error-200">
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2 text-error-900">
@@ -291,72 +371,274 @@ export default function CuotaDetallePage() {
           )}
         </div>
 
-        {/* ── Columna derecha: Pago o estado ── */}
+        {/* ── Columna derecha: Flujo de pago ── */}
         <div className="flex flex-col gap-6">
-          {needsPayment && (
+          {/* STEP: Select method */}
+          {needsPayment && paymentStep === 'select-method' && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-primary" />
                   Pagar esta cuota
                 </CardTitle>
-                <CardDescription>Elige cómo pagar</CardDescription>
+                <CardDescription>Selecciona tu método de pago</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <button className="w-full flex items-center gap-3 rounded-lg border border-border p-3 hover:border-primary/30 hover:bg-primary/5 transition-all text-left">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <CreditCard className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">Tarjeta de débito o crédito</p>
-                    <p className="text-xs text-muted-foreground">Visa, Mastercard, Amex</p>
-                  </div>
-                  <Badge variant="outline" className="text-[9px] shrink-0">Recomendado</Badge>
-                </button>
+                {PAYMENT_METHODS.map((method) => {
+                  const Icon = method.icon;
+                  const isSelected = selectedMethod === method.id;
+                  return (
+                    <button
+                      key={method.id}
+                      onClick={() => setSelectedMethod(method.id)}
+                      className={`w-full flex items-center gap-3 rounded-lg border p-3 transition-all text-left ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'border-border hover:border-primary/30 hover:bg-primary/5'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${method.iconBg}`}>
+                        <Icon className={`w-5 h-5 ${method.iconColor}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground">{method.label}</p>
+                        <p className="text-xs text-muted-foreground">{method.description}</p>
+                      </div>
+                      {method.recommended && (
+                        <Badge variant="outline" className="text-[9px] shrink-0">Popular</Badge>
+                      )}
+                      {isSelected && (
+                        <CheckCircle className="w-5 h-5 text-primary shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
 
-                <button className="w-full flex items-center gap-3 rounded-lg border border-border p-3 hover:border-primary/30 hover:bg-primary/5 transition-all text-left">
-                  <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
-                    <Smartphone className="w-5 h-5 text-purple-600" />
+                {/* Reference number (optional) */}
+                {selectedMethod && (
+                  <div className="pt-2 space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Nº de operación (opcional)
+                    </label>
+                    <Input
+                      placeholder="Ej: OP-2026081500123"
+                      value={referenceNumber}
+                      onChange={(e) => setReferenceNumber(e.target.value)}
+                    />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">Yape / Plin</p>
-                    <p className="text-xs text-muted-foreground">Billetera digital</p>
-                  </div>
-                </button>
-
-                <button className="w-full flex items-center gap-3 rounded-lg border border-border p-3 hover:border-primary/30 hover:bg-primary/5 transition-all text-left">
-                  <div className="w-10 h-10 rounded-lg bg-accent-50 flex items-center justify-center shrink-0">
-                    <DollarSign className="w-5 h-5 text-accent-800" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">Transferencia bancaria</p>
-                    <p className="text-xs text-muted-foreground">BCP, Interbank, BBVA, Scotiabank</p>
-                  </div>
-                </button>
+                )}
 
                 <Separator />
 
                 <Button
+                  onClick={() => setPaymentStep('confirm')}
+                  disabled={!selectedMethod}
                   className={`w-full gap-2 h-11 font-semibold ${
                     isOverdue
-                      ? 'bg-error-600 text-white hover:bg-error-700'
-                      : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
+                      ? 'bg-error-600 text-white hover:bg-error-700 disabled:bg-error-300'
+                      : 'bg-accent-500 text-accent-900 hover:bg-accent-400 disabled:bg-accent-200'
                   }`}
                 >
                   <DollarSign className="w-4 h-4" />
-                  Pagar {formatCurrency(totalToPay)}
+                  Continuar · {formatCurrency(totalToPay)}
                 </Button>
+              </CardContent>
+            </Card>
+          )}
 
-                <div className="rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-50 p-4 text-center">
-                  <p className="text-xs text-muted-foreground">
-                    Aquí se integrará la pasarela de pagos
-                  </p>
+          {/* STEP: Confirm payment */}
+          {needsPayment && paymentStep === 'confirm' && selectedMethod && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-primary" />
+                  Confirmar pago
+                </CardTitle>
+                <CardDescription>Revisa los datos antes de confirmar</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border border-border bg-neutral-50 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Cuota</span>
+                    <span className="text-sm font-medium text-foreground">
+                      #{cuota.installmentNo} de {totalInstallments}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Método</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {PAYMENT_METHODS.find((m) => m.id === selectedMethod)?.label}
+                    </span>
+                  </div>
+                  {referenceNumber && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Referencia</span>
+                      <span className="text-sm font-mono text-foreground">{referenceNumber}</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="text-base font-semibold text-foreground">Total a pagar</span>
+                    <span className="text-xl font-bold text-foreground">{formatCurrency(totalToPay)}</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setPaymentStep('select-method')}
+                  >
+                    Volver
+                  </Button>
+                  <Button
+                    onClick={handleConfirmPayment}
+                    className={`flex-1 gap-2 font-semibold ${
+                      isOverdue
+                        ? 'bg-error-600 text-white hover:bg-error-700'
+                        : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
+                    }`}
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    Confirmar pago
+                  </Button>
+                </div>
+
+                <p className="text-[10px] text-center text-muted-foreground">
+                  Al confirmar, se registrará el pago en el sistema.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* STEP: Processing */}
+          {paymentStep === 'processing' && (
+            <Card>
+              <CardContent className="py-12">
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                  <p className="text-sm font-medium text-foreground">Procesando pago...</p>
+                  <p className="text-xs text-muted-foreground">No cierres esta página</p>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {isPaid && (
+          {/* STEP: Success */}
+          {paymentStep === 'success' && paymentResult && (
+            <Card className="border-success-200 bg-success-50/30">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2 text-success-900">
+                  <PartyPopper className="w-5 h-5 text-success-700" />
+                  ¡Pago registrado!
+                </CardTitle>
+                <CardDescription className="text-success-700">
+                  Tu pago se procesó correctamente
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border border-success-200 bg-white p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Monto aplicado</span>
+                    <span className="text-sm font-bold text-success-700">
+                      {formatCurrency(paymentResult.totalApplied)}
+                    </span>
+                  </div>
+                  {paymentResult.remaining > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Sobrante</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {formatCurrency(paymentResult.remaining)}
+                      </span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Estado del crédito</span>
+                    <Badge variant={paymentResult.creditStatus === 'PAID_OFF' ? 'completed' : 'success'}>
+                      {paymentResult.creditStatus === 'PAID_OFF' ? '¡Liquidado!' : 'Activo'}
+                    </Badge>
+                  </div>
+                  {paymentResult.distributions.length > 0 && (
+                    <>
+                      <Separator />
+                      <p className="text-xs font-medium text-muted-foreground">Distribución:</p>
+                      {paymentResult.distributions.map((d) => (
+                        <div key={d.installmentNo} className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            Cuota {d.installmentNo}
+                          </span>
+                          <span className="text-foreground">
+                            {formatCurrency(d.appliedToInstallment + d.appliedToPenalty)}
+                            {d.appliedToPenalty > 0 && (
+                              <span className="text-muted-foreground ml-1">
+                                (mora: {formatCurrency(d.appliedToPenalty)})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => router.push(`/dashboard/creditos/${creditoId}`)}
+                  >
+                    Ver crédito
+                  </Button>
+                  <Button
+                    className="flex-1 bg-accent-500 text-accent-900 hover:bg-accent-400"
+                    onClick={() => router.push('/dashboard/creditos')}
+                  >
+                    Mis créditos
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* STEP: Error */}
+          {paymentStep === 'error' && (
+            <Card className="border-error-200">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2 text-error-900">
+                  <XCircle className="w-4 h-4 text-error-600" />
+                  No se pudo procesar el pago
+                </CardTitle>
+                <CardDescription className="text-error-700">
+                  {paymentError ?? 'Ocurrió un error inesperado'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setPaymentStep('select-method');
+                      setPaymentError(null);
+                    }}
+                  >
+                    Intentar de nuevo
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => router.push(`/dashboard/creditos/${creditoId}`)}
+                  >
+                    Volver al crédito
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Already paid state */}
+          {isPaid && paymentStep !== 'success' && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -370,6 +652,7 @@ export default function CuotaDetallePage() {
             </Card>
           )}
 
+          {/* Future installment */}
           {cuota.status === 'PENDING' && (
             <Card>
               <CardHeader>
@@ -384,7 +667,7 @@ export default function CuotaDetallePage() {
             </Card>
           )}
 
-          {/* Seguridad */}
+          {/* Security badge */}
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <Shield className="w-4 h-4 text-success-600" />
             Pagos seguros y encriptados
