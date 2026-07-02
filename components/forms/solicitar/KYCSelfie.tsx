@@ -316,8 +316,11 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
           setDocumentUrl('selfie', null);
           if (fileInputRef.current) fileInputRef.current.value = '';
           const remaining = verifyResult.documentsStatus.selfie.remainingAttempts;
+          const reason = verifyResult.documentsStatus.selfie.rejectionReason;
           setError(
-            `No se pudo verificar tu selfie. Por favor, intenta con otra foto.${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
+            reason
+              ? `${reason}${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
+              : `No se pudo verificar tu selfie. Por favor, intenta con otra foto.${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
           );
         }
       } else {
@@ -400,8 +403,11 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
           setDocumentUrl('selfie', null);
           if (fileInputRef.current) fileInputRef.current.value = '';
           const remaining = result.documentsStatus.selfie.remainingAttempts;
+          const reason = result.documentsStatus.selfie.rejectionReason;
           setError(
-            `No se pudo verificar tu selfie. Por favor, intenta con otra foto.${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
+            reason
+              ? `${reason}${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
+              : `No se pudo verificar tu selfie. Por favor, intenta con otra foto.${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
           );
         }
       } else {

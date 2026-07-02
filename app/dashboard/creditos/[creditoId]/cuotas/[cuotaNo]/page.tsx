@@ -213,7 +213,8 @@ export default function CuotaDetallePage() {
 
   const isPaid = cuota.status === 'PAID';
   const isOverdue = cuota.status === 'OVERDUE';
-  const needsPayment = cuota.status === 'CURRENT' || cuota.status === 'OVERDUE' || cuota.status === 'PARTIALLY_PAID';
+  // Se puede pagar si tiene saldo pendiente (el backend valida el orden)
+  const needsPayment = cuota.outstanding > 0;
   const totalInstallments = credit?.installmentCount ?? 0;
   const totalToPay = cuota.outstanding;
 
@@ -294,7 +295,7 @@ export default function CuotaDetallePage() {
           </CardHeader>
         </Card>
       )}
-      {cuota.status === 'PENDING' && (
+      {cuota.status === 'PENDING' && paymentStep === 'select-method' && (
         <Card>
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
@@ -302,7 +303,7 @@ export default function CuotaDetallePage() {
               Cuota futura
             </CardTitle>
             <CardDescription>
-              Vence el {formatDate(cuota.dueDate)} — aún no habilitada para pago
+              Vence el {formatDate(cuota.dueDate)} — puedes adelantar el pago si la cuota anterior está al día
             </CardDescription>
           </CardHeader>
         </Card>
@@ -652,16 +653,16 @@ export default function CuotaDetallePage() {
             </Card>
           )}
 
-          {/* Future installment */}
-          {cuota.status === 'PENDING' && (
+          {/* Future installment — still shows payment */}
+          {cuota.status === 'PENDING' && paymentStep !== 'success' && paymentStep !== 'error' && paymentStep !== 'processing' && !needsPayment && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
-                  Cuota no disponible
+                  Sin saldo pendiente
                 </CardTitle>
                 <CardDescription>
-                  Podrás pagar cuando se acerque la fecha de vencimiento.
+                  Esta cuota no tiene saldo pendiente.
                 </CardDescription>
               </CardHeader>
             </Card>
