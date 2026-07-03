@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -14,10 +14,11 @@ import {
   BarChart3,
   Star,
   AlertTriangle,
-  Ban,
 } from 'lucide-react';
 import Link from 'next/link';
 import { mockApplications } from '@/modules/admin';
+import { DocumentDetailDialog } from '@/components/admin/DocumentDetailDialog';
+import { ApplicationLoanDetail } from '@/components/admin/applications/ApplicationLoanDetail';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -97,9 +98,9 @@ function getMockDetail(id: string) {
       { id: 'evt_005', event: 'PRE_APPROVED' as ApplicationEventType, createdAt: '2026-05-29T22:41:17Z', detail: null },
     ],
     documents: [
-      { name: 'DNI Frontal', status: 'verified' as DocumentStatus },
-      { name: 'DNI Reverso', status: 'pending' as DocumentStatus },
-      { name: 'Selfie', status: 'pending' as DocumentStatus },
+      { name: 'DNI Frontal', status: 'verified' as DocumentStatus, type: 'Documento de identidad', uploadedAt: '2026-05-28T14:20:00Z', fileSize: '1.2 MB' },
+      { name: 'DNI Reverso', status: 'pending' as DocumentStatus, type: 'Documento de identidad', uploadedAt: '2026-05-28T14:21:00Z', fileSize: '980 KB' },
+      { name: 'Selfie', status: 'pending' as DocumentStatus, type: 'Verificación biométrica', uploadedAt: '2026-05-28T14:25:00Z', fileSize: '2.1 MB' },
     ],
     forms: [
       { name: 'KYC (Identidad)', completed: true, date: '2026-05-28' },
@@ -109,6 +110,33 @@ function getMockDetail(id: string) {
       { name: 'Dirección', completed: true, date: '2026-05-29' },
       { name: 'Cuenta Bancaria', completed: true, date: '2026-05-29' },
     ],
+    loan: {
+      principal: app?.amount ?? 3000,
+      totalToPay: (app?.amount ?? 3000) * 1.008,
+      monthlyPayment: Math.round(((app?.amount ?? 3000) * 1.008 / 3) * 100) / 100,
+      installmentCount: 3,
+      termDays: 30,
+      isFirstLoan: true,
+      creditScoreUsed: app?.score ?? 720,
+      totalFeesOriginal: 20,
+      totalDiscounts: 15,
+      totalIgv: Math.round(((app?.amount ?? 3000) * 0.0012) * 100) / 100,
+      totalFeesResult: 5,
+      schedule: [
+        { installmentNo: 1, dueDate: '2026-07-13', amount: Math.round(((app?.amount ?? 3000) * 1.008 / 3) * 100) / 100 },
+        { installmentNo: 2, dueDate: '2026-07-23', amount: Math.round(((app?.amount ?? 3000) * 1.008 / 3) * 100) / 100 },
+        { installmentNo: 3, dueDate: '2026-08-02', amount: Math.round(((app?.amount ?? 3000) * 1.008 / 3) * 100) / 100 },
+      ],
+      fees: [
+        { label: 'Interés', originalAmount: 15, finalAmount: 13.5, discountAmount: 1.5 },
+        { label: 'Cargo tecnológico', originalAmount: 3, finalAmount: 2.7, discountAmount: 0.3 },
+        { label: 'Cargo administrativo', originalAmount: 2, finalAmount: 1.8, discountAmount: 0.2 },
+      ],
+      fixedDiscounts: [
+        { label: 'Descuento fijo primer préstamo', totalDiscountAmount: 10 },
+        { label: 'Descuento fijo extra', totalDiscountAmount: 5 },
+      ],
+    },
   };
 }
 
@@ -145,28 +173,21 @@ export default async function AdminApplicationDetailPage({ params }: { params: P
         <ArrowLeft className="h-4 w-4" /> Solicitudes
       </Link>
 
-      {/* Header + Action */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold font-mono">{app.id}</h1>
-            <Badge variant={statusCfg.variant as any}>{statusCfg.label}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            <Link href={`/admin/users/${app.userId}`} className="font-medium hover:text-primary">{app.userName}</Link>
-            {' · '}S/ {app.amount.toLocaleString()} · {app.termDays} días · {app.installments} cuotas
-            {app.score > 0 && ` · Score: ${app.score}`}
-          </p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Enviada: {new Date(app.submittedAt).toLocaleString('es-PE')}
-            {app.evaluatedAt && ` · Evaluada: ${new Date(app.evaluatedAt).toLocaleString('es-PE')}`}
-          </p>
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold font-mono">{app.id}</h1>
+          <Badge variant={statusCfg.variant as any}>{statusCfg.label}</Badge>
         </div>
-
-        {/* Acción principal */}
-        <Button variant="outline" size="sm" className="text-destructive border-destructive/30">
-          <Ban className="h-3.5 w-3.5 mr-1.5" /> Rechazar solicitud
-        </Button>
+        <p className="text-sm text-muted-foreground mt-1">
+          <Link href={`/admin/users/${app.userId}`} className="font-medium hover:text-primary">{app.userName}</Link>
+          {' · '}S/ {app.amount.toLocaleString()} · {app.termDays} días · {app.installments} cuotas
+          {app.score > 0 && ` · Score: ${app.score}`}
+        </p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Enviada: {new Date(app.submittedAt).toLocaleString('es-PE')}
+          {app.evaluatedAt && ` · Evaluada: ${new Date(app.evaluatedAt).toLocaleString('es-PE')}`}
+        </p>
       </div>
 
       {/* Rejection info */}
@@ -184,131 +205,142 @@ export default async function AdminApplicationDetailPage({ params }: { params: P
 
       <Separator />
 
-      {/* ═══ TIMELINE ═══ */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" /> Pipeline de Evaluación
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="relative pl-6">
-            <div className="absolute left-[11px] top-1 bottom-1 w-px bg-border" />
-            <div className="space-y-4">
-              {app.events.map((event, i) => {
-                const Icon = EVENT_ICONS[event.event] ?? Clock;
-                const isLast = i === app.events.length - 1;
-                const isError = event.event.includes('FAILED');
-                return (
-                  <div key={event.id} className="relative flex gap-3">
-                    <div className={`absolute -left-6 w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 ${
-                      isError ? 'bg-destructive text-white' :
-                      isLast ? 'bg-primary text-primary-foreground' :
-                      'bg-muted text-muted-foreground'
-                    }`}>
-                      <Icon className="h-3 w-3" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{EVENT_LABELS[event.event]}</span>
-                        <Badge variant="outline" className="text-[9px] font-mono">{event.event}</Badge>
+      {/* ═══ TABS ═══ */}
+      <Tabs defaultValue="solicitud" className="w-full">
+        <TabsList>
+          <TabsTrigger value="solicitud">Solicitud</TabsTrigger>
+          <TabsTrigger value="prestamo">Detalle del préstamo</TabsTrigger>
+        </TabsList>
+
+        {/* Tab: Solicitud */}
+        <TabsContent value="solicitud" className="space-y-6 mt-4">
+          {/* ═══ TIMELINE ═══ */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" /> Pipeline de Evaluación
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="relative pl-6">
+                <div className="absolute left-[11px] top-1 bottom-1 w-px bg-border" />
+                <div className="space-y-4">
+                  {app.events.map((event, i) => {
+                    const Icon = EVENT_ICONS[event.event] ?? Clock;
+                    const isLast = i === app.events.length - 1;
+                    const isError = event.event.includes('FAILED');
+                    return (
+                      <div key={event.id} className="relative flex gap-3">
+                        <div className={`absolute -left-6 w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 ${
+                          isError ? 'bg-destructive text-white' :
+                          isLast ? 'bg-primary text-primary-foreground' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          <Icon className="h-3 w-3" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{EVENT_LABELS[event.event]}</span>
+                            <Badge variant="outline" className="text-[9px] font-mono">{event.event}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {new Date(event.createdAt).toLocaleString('es-PE')}
+                          </p>
+                          {event.detail && (
+                            <pre className="mt-1.5 p-2 rounded bg-muted/50 text-[10px] font-mono text-muted-foreground overflow-x-auto">
+                              {JSON.stringify(event.detail, null, 2)}
+                            </pre>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(event.createdAt).toLocaleString('es-PE')}
-                      </p>
-                      {event.detail && (
-                        <pre className="mt-1.5 p-2 rounded bg-muted/50 text-[10px] font-mono text-muted-foreground overflow-x-auto">
-                          {JSON.stringify(event.detail, null, 2)}
-                        </pre>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ═══ DOCUMENTS ═══ */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <FileImage className="h-4 w-4 text-muted-foreground" /> Documentos
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {app.documents.map((doc) => {
-              const docCfg = DOC_BADGE[doc.status];
-              return (
-                <div key={doc.name} className="border rounded-lg p-4 space-y-3">
-                  <div className="w-full h-24 bg-muted rounded flex items-center justify-center">
-                    <FileImage className="h-8 w-8 text-muted-foreground/50" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{doc.name}</span>
-                    <Badge variant={docCfg.variant as any} className="text-[10px]">{docCfg.label}</Badge>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 text-xs h-7">
-                      <CheckCircle2 className="h-3 w-3 mr-1" /> Aprobar
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1 text-xs h-7 text-destructive border-destructive/30">
-                      <XCircle className="h-3 w-3 mr-1" /> Rechazar
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ═══ FORMS ═══ */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground" /> Formularios del expediente
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {app.forms.map((form) => (
-              <div key={form.name} className="flex items-center justify-between py-1.5">
-                <span className="text-sm">{form.name}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">{form.date}</span>
-                  {form.completed ? <CheckCircle2 className="h-4 w-4 text-success-600" /> : <Clock className="h-4 w-4 text-warning-500" />}
+                    );
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* ═══ PEP Declarations ═══ */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Declaraciones PEP</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-1.5 text-sm">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-success-600" />
-              <span>No es persona políticamente expuesta</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-success-600" />
-              <span>No es familiar de persona políticamente expuesta</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-success-600" />
-              <span>Acepta términos y condiciones</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          {/* ═══ DOCUMENTS ═══ */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <FileImage className="h-4 w-4 text-muted-foreground" /> Documentos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {app.documents.map((doc) => {
+                  const docCfg = DOC_BADGE[doc.status];
+                  return (
+                    <div key={doc.name} className="border rounded-lg p-4 space-y-3">
+                      <div className="w-full h-24 bg-muted rounded flex items-center justify-center">
+                        <FileImage className="h-8 w-8 text-muted-foreground/50" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{doc.name}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={docCfg.variant as any} className="text-[10px]">{docCfg.label}</Badge>
+                          <DocumentDetailDialog doc={doc} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ═══ FORMS ═══ */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" /> Formularios del expediente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {app.forms.map((form) => (
+                  <div key={form.name} className="flex items-center justify-between py-1.5">
+                    <span className="text-sm">{form.name}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground">{form.date}</span>
+                      {form.completed ? <CheckCircle2 className="h-4 w-4 text-success-600" /> : <Clock className="h-4 w-4 text-warning-500" />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ═══ PEP Declarations ═══ */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Declaraciones PEP</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1.5 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-success-600" />
+                  <span>No es persona políticamente expuesta</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-success-600" />
+                  <span>No es familiar de persona políticamente expuesta</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-success-600" />
+                  <span>Acepta términos y condiciones</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Detalle del préstamo */}
+        <TabsContent value="prestamo" className="mt-4">
+          <ApplicationLoanDetail loan={app.loan} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

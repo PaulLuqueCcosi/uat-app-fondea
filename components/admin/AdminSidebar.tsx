@@ -10,7 +10,6 @@ import {
   CreditCard,
   Settings,
   BarChart3,
-  Shield,
   ArrowLeftRight,
   Target,
 } from 'lucide-react';
@@ -36,13 +35,9 @@ const mainNav = [
   { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
   { path: '/admin/collections', label: 'Cobranza', icon: BarChart3 },
   { path: '/admin/calculator', label: 'Calculadora', icon: Settings },
-  { path: '/admin/contracts', label: 'Contratos', icon: FileText },
-  { path: '/admin/notifications', label: 'Notificaciones', icon: Settings },
-  { path: '/admin/referrals', label: 'Referidos', icon: Users },
 ];
 
 const configNav = [
-  { path: '/admin/roles', label: 'Roles y Permisos', icon: Shield },
   { path: '/admin/settings', label: 'Configuración', icon: Settings },
 ];
 

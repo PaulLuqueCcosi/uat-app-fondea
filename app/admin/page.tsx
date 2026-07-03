@@ -1,18 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
-  Users, FileText, CreditCard, TrendingUp, AlertTriangle, Clock, UserPlus, Target,
-  ArrowUpRight, ArrowDownRight, Bell, CheckCircle2, XCircle
+  FileText, CreditCard, AlertTriangle, Clock, UserPlus, Target,
+  ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
-import Link from 'next/link';
 import {
-  mockDashboardMetrics,
   mockApplications,
   mockCredits,
   mockUsers,
   mockCollections,
-  mockContracts,
-  mockNotifications,
 } from '@/modules/admin';
 import { AdminDashboardCharts } from '@/components/admin/AdminDashboardCharts';
 
@@ -89,12 +84,7 @@ export default async function AdminDashboardPage() {
     { name: 'Liquidados', value: credits.filter((c) => c.status === 'SETTLED').length },
   ];
 
-  // Acciones pendientes reales
-  const pendingDocsReview = applications.filter((a) =>
-    a.status === 'PRE_APPROVED' || a.status === 'BLOCKED'
-  ).length;
-  const blockedApps = applications.filter((a) => a.status === 'BLOCKED').length;
-  const unsignedContracts = mockContracts.filter((c) => c.status === 'PENDING').length;
+
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -121,75 +111,7 @@ export default async function AdminDashboardPage() {
       {/* Gráficos */}
       <AdminDashboardCharts appByStatus={appByStatus} creditByStatus={creditByStatus} />
 
-      {/* Widgets inferiores */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Acciones pendientes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Documentos por revisar</span>
-              <Badge variant="warning">{pendingDocsReview}</Badge>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Solicitudes bloqueadas</span>
-              <Badge variant="error">{blockedApps}</Badge>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Contratos sin firmar</span>
-              <Badge variant="secondary">{unsignedContracts}</Badge>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Últimas solicitudes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {applications.slice(-3).reverse().map((app) => {
-              const cfg: Record<string, { label: string; color: string }> = {
-                SUBMITTED: { label: 'ENVIADA', color: 'bg-secondary text-secondary-foreground' },
-                PROCESSING: { label: 'EVALUANDO', color: 'bg-primary text-primary-foreground' },
-                PRE_APPROVED: { label: 'PRE-APROBADA', color: 'bg-warning-50 text-warning-700' },
-                APPROVED: { label: 'APROBADA', color: 'bg-success-50 text-success-700' },
-                REJECTED: { label: 'RECHAZADA', color: 'bg-destructive/10 text-destructive' },
-                BLOCKED: { label: 'BLOQUEADA', color: 'bg-destructive/10 text-destructive' },
-              };
-              const statusCfg = cfg[app.status] || cfg.SUBMITTED;
-              return (
-                <div key={app.id} className="flex items-center justify-between">
-                  <span className="truncate">{app.userName}</span>
-                  <Badge variant="outline" className={`text-[9px] ${statusCfg.color}`}>
-                    {statusCfg.label}
-                  </Badge>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Cobranza del día</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Vencen hoy</span>
-              <span className="font-medium">{mockCollections.dueToday.length} cuotas</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">En mora leve (1-15d)</span>
-              <span className="font-medium text-warning-600">{mockCollections.mildArrears.length}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">En default</span>
-              <span className="font-medium text-destructive">{mockCollections.defaulted.length}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

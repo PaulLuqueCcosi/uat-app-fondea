@@ -203,10 +203,26 @@ export const mockInstallments = [
 // ── Cobranza ──────────────────────────────────────────────────────────────────
 
 export const mockCollections = {
-  dueToday: [{ userId: 'usr_001', userName: 'María García López', phone: '956123456', creditId: 'crd_001', installmentNo: 3, amount: 575, mora: 0, partialPaid: 0 }],
-  mildArrears: [{ userId: 'usr_002', userName: 'Carlos Ruiz Mendoza', phone: '987654321', creditId: 'crd_002', installmentNo: 2, amount: 780, mora: 25, daysOverdue: 5 }],
-  severeArrears: [] as any[],
-  defaulted: [{ userId: 'usr_004', userName: 'Pedro Huamán Torres', phone: '923456789', creditId: 'crd_004', installmentNo: 4, amount: 4200, mora: 350, daysOverdue: 45 }],
+  dueToday: [
+    { userId: 'usr_001', userName: 'María García López', phone: '956123456', creditId: 'crd_001', installmentNo: 3, amount: 575, mora: 0, partialPaid: 0, dueDate: '2026-06-30', daysOverdue: 0 },
+    { userId: 'usr_005', userName: 'Lucía Mamani Ríos', phone: '912345678', creditId: 'crd_005', installmentNo: 1, amount: 320, mora: 0, partialPaid: 0, dueDate: '2026-06-30', daysOverdue: 0 },
+  ],
+  dueNext7Days: [
+    { userId: 'usr_003', userName: 'Ana Flores Quispe', phone: '934567890', creditId: 'crd_003', installmentNo: 2, amount: 450, mora: 0, partialPaid: 0, dueDate: '2026-07-02', daysOverdue: 0 },
+    { userId: 'usr_006', userName: 'Roberto Sánchez Díaz', phone: '945678123', creditId: 'crd_006', installmentNo: 1, amount: 680, mora: 0, partialPaid: 0, dueDate: '2026-07-04', daysOverdue: 0 },
+    { userId: 'usr_007', userName: 'Carmen Quispe Huamán', phone: '967891234', creditId: 'crd_007', installmentNo: 3, amount: 290, mora: 0, partialPaid: 0, dueDate: '2026-07-06', daysOverdue: 0 },
+  ],
+  mildArrears: [
+    { userId: 'usr_002', userName: 'Carlos Ruiz Mendoza', phone: '987654321', creditId: 'crd_002', installmentNo: 2, amount: 780, mora: 15, daysOverdue: 3, dueDate: '2026-06-27' },
+    { userId: 'usr_008', userName: 'Jorge Vargas Poma', phone: '978123456', creditId: 'crd_008', installmentNo: 4, amount: 520, mora: 5, daysOverdue: 1, dueDate: '2026-06-29' },
+  ],
+  severeArrears: [
+    { userId: 'usr_009', userName: 'Elena Torres Mendoza', phone: '956789012', creditId: 'crd_009', installmentNo: 3, amount: 1200, mora: 56, daysOverdue: 8, dueDate: '2026-06-22' },
+    { userId: 'usr_010', userName: 'Miguel Paredes Cruz', phone: '934561234', creditId: 'crd_010', installmentNo: 2, amount: 890, mora: 98, daysOverdue: 14, dueDate: '2026-06-16' },
+  ],
+  defaulted: [
+    { userId: 'usr_004', userName: 'Pedro Huamán Torres', phone: '923456789', creditId: 'crd_004', installmentNo: 4, amount: 4200, mora: 350, daysOverdue: 45, dueDate: '2026-05-16' },
+  ],
 };
 
 // ── Contratos ─────────────────────────────────────────────────────────────────

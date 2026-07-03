@@ -6,7 +6,15 @@ import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/admin/DataTable';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Search, Eye } from 'lucide-react';
 import Link from 'next/link';
 import type { ApplicationStatus } from '@/modules/admin';
 
@@ -86,6 +94,69 @@ const columns: ColumnDef<ApplicationRow, any>[] = [
     cell: ({ row }) => (
       <span className="text-xs text-muted-foreground">{new Date(row.original.updatedAt).toLocaleDateString('es-PE')}</span>
     ),
+  },
+  {
+    id: 'actions',
+    header: '',
+    cell: ({ row }) => {
+      const app = row.original;
+      const cfg = statusConfig[app.status];
+      return (
+        <Dialog>
+          <DialogTrigger className="rounded p-1.5 hover:bg-muted transition-colors" aria-label={`Ver resumen de solicitud ${app.id}`}>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Resumen de solicitud</DialogTitle>
+              <DialogDescription className="font-mono text-xs">{app.id}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Cliente</span>
+                <span className="text-sm font-medium">{app.userName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Estado</span>
+                <Badge variant={cfg.variant as any}>{cfg.label}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Monto</span>
+                <span className="text-sm font-bold">S/ {app.amount.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Score</span>
+                <span className="text-sm font-mono font-medium">{app.score || '—'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Fecha de envío</span>
+                <span className="text-sm">
+                  {new Date(app.submittedAt).toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Última actualización</span>
+                <span className="text-sm">
+                  {new Date(app.updatedAt).toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+    },
   },
 ];
 

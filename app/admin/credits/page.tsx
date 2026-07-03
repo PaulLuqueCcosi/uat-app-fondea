@@ -15,7 +15,7 @@ export default async function AdminCreditsPage() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-foreground">Créditos</h1>
-          <p className="text-sm text-muted-foreground">{credits.length} créditos registrados</p>
+          {/* <p className="text-sm text-muted-foreground">{credits.length} créditos registrados</p> */}
         </div>
       </div>
 
@@ -31,7 +31,7 @@ export default async function AdminCreditsPage() {
       </Card>
 
       {/* Vista previa básica */}
-      <Card>
+      {/* <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -79,7 +79,7 @@ export default async function AdminCreditsPage() {
             </table>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 }
