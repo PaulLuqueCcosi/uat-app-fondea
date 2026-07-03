@@ -6,6 +6,7 @@ import { logtoConfig } from '@/app/logto';
 import { backendFetch } from '@/lib/backend-fetch';
 
 const INTENCION_COOKIE = 'fondea_intencion_id';
+const REFERRAL_COOKIE = 'fondea_referral_code';
 
 /**
  * GET /api/logto/callback
@@ -56,11 +57,24 @@ export async function GET(request: NextRequest) {
 /**
  * Sincroniza el usuario con el backend.
  * Solo se llama una vez por login (en el callback).
+ * Si hay un código de referido en cookie, lo envía como query param.
  */
 async function syncUserOnLogin(): Promise<void> {
   try {
-    console.log('[AUTH:sync] → POST /api/v1/users/sync');
-    const res = await backendFetch('/api/v1/users/sync', {
+    // Leer código de referido de la cookie (si existe)
+    const cookieStore = await cookies();
+    const referralCode = cookieStore.get(REFERRAL_COOKIE)?.value;
+
+    const path = referralCode
+      ? `/api/v1/users/sync?referralCode=${encodeURIComponent(referralCode)}`
+      : '/api/v1/users/sync';
+
+    console.log('[AUTH:sync] → POST', path);
+    if (referralCode) {
+      console.log(`[REFERRAL:sync] código de referido encontrado en cookie: ${referralCode}`);
+    }
+
+    const res = await backendFetch(path, {
       method: 'POST',
       context: 'AUTH_SYNC',
     });
@@ -68,9 +82,21 @@ async function syncUserOnLogin(): Promise<void> {
     if (res.ok) {
       const status = res.status === 201 ? 'CREADO' : 'EXISTENTE';
       console.log(`[AUTH:sync] ✅ usuario sincronizado (${status})`);
+      // Si se usó un código de referido y el usuario fue creado, limpiar la cookie
+      if (referralCode && res.status === 201) {
+        cookieStore.delete(REFERRAL_COOKIE);
+        console.log(`[REFERRAL:sync] ✅ código ${referralCode} aplicado a usuario NUEVO → cookie eliminada`);
+      } else if (referralCode && res.status === 200) {
+        // Usuario ya existía — el backend intenta aplicar silenciosamente
+        cookieStore.delete(REFERRAL_COOKIE);
+        console.log(`[REFERRAL:sync] ℹ️ usuario ya existía, backend intentó aplicar código ${referralCode} → cookie eliminada`);
+      }
     } else if (res.status === 409) {
-      // 409 = el usuario ya existe en el backend — es éxito
       console.log('[AUTH:sync] ✅ usuario ya existe en el backend');
+      if (referralCode) {
+        cookieStore.delete(REFERRAL_COOKIE);
+        console.log(`[REFERRAL:sync] ℹ️ 409 — cookie de referido eliminada`);
+      }
     } else {
       const body = await res.text().catch(() => '');
       console.error(`[AUTH:sync] ❌ error ${res.status} — body: ${body.slice(0, 200)}`);

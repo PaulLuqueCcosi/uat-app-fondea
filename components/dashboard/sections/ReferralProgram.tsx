@@ -41,7 +41,7 @@ export function ReferralProgram({ summary }: ReferralProgramProps) {
           </span>
         </CardTitle>
         <CardDescription>
-          Gana <span className="font-semibold text-accent-700">{summary.pointsPerReferral} puntos</span> por cada amigo
+          Invita amigos y ambos ganan puntos
         </CardDescription>
       </CardHeader>
 
@@ -65,9 +65,9 @@ export function ReferralProgram({ summary }: ReferralProgramProps) {
 
         {/* Stats */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span><span className="font-semibold text-foreground">{summary.totalReferrals}</span> amigos</span>
+          <span><span className="font-semibold text-foreground">{summary.totalReferred}</span> referidos</span>
           <span>·</span>
-          <span><span className="font-semibold text-accent-700">{summary.totalPointsEarned}</span> puntos</span>
+          <span><span className="font-semibold text-accent-700">{summary.totalCompleted}</span> completados</span>
         </div>
 
         {/* WhatsApp */}

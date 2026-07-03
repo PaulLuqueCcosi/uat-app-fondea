@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 const INTENCION_COOKIE = 'fondea_intencion_id';
+const REFERRAL_COOKIE = 'fondea_referral_code';
 
 /**
  * Middleware global.
@@ -31,6 +32,12 @@ export function middleware(request: NextRequest) {
   }
 
   const intencionFromUrl = searchParams.get('intencion');
+  const referralFromUrl = searchParams.get('ref');
+
+  // Log de referral si viene
+  if (referralFromUrl) {
+    console.log(`[REFERRAL:middleware] ?ref=${referralFromUrl} detectado en ${pathname}`);
+  }
 
   // Verificar presencia de cookie de sesión Logto
   const hasSession = request.cookies.getAll().some(
@@ -38,19 +45,26 @@ export function middleware(request: NextRequest) {
   );
 
   if (hasSession) {
-    // Hay sesión (o al menos cookie de sesión — puede estar expirada).
-    // Si viene ?intencion= en la URL, seteamos la cookie como safety net:
-    // si el token expiró, el layout redirigirá a sign-in y el sign-in
-    // necesita poder recuperar el intencionId de la cookie.
     const response = NextResponse.next();
     if (intencionFromUrl) {
       response.cookies.set(INTENCION_COOKIE, intencionFromUrl, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 5 * 60, // 5 minutos — solo para sobrevivir un posible re-auth
+        maxAge: 5 * 60,
         path: '/',
       });
+    }
+    // Guardar código de referido si viene en URL (solo si no tiene uno ya)
+    if (referralFromUrl && !request.cookies.get(REFERRAL_COOKIE)?.value) {
+      response.cookies.set(REFERRAL_COOKIE, referralFromUrl, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60, // 7 días
+        path: '/',
+      });
+      console.log(`[REFERRAL:middleware] cookie guardada: ${referralFromUrl} (con sesión)`);
     }
     return response;
   }
@@ -89,6 +103,18 @@ export function middleware(request: NextRequest) {
       path: '/',
     });
     console.log('[AUTH:middleware] intencionId guardado en cookie →', intencionFromUrl);
+  }
+
+  // Guardar referral code para que sobreviva el ciclo OIDC
+  if (referralFromUrl && !request.cookies.get(REFERRAL_COOKIE)?.value) {
+    response.cookies.set(REFERRAL_COOKIE, referralFromUrl, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60, // 7 días
+      path: '/',
+    });
+    console.log(`[REFERRAL:middleware] cookie guardada: ${referralFromUrl} (sin sesión, pre-login)`);
   }
 
   return response;

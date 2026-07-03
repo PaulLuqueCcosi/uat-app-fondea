@@ -2,7 +2,10 @@ export type ReferralErrorCode =
   | 'REFERRALS_UNAVAILABLE'
   | 'SESSION_EXPIRED'
   | 'NETWORK_ERROR'
-  | 'SERVER_ERROR';
+  | 'SERVER_ERROR'
+  | 'CODE_NOT_FOUND'
+  | 'OWN_CODE'
+  | 'ALREADY_APPLIED';
 
 export interface ReferralError {
   code: ReferralErrorCode;
@@ -30,5 +33,17 @@ export const errors = {
     code: 'SERVER_ERROR',
     message: 'Error en el servidor. Intenta en unos minutos.',
     cause: `HTTP ${status ?? 'unknown'}`,
+  }),
+  codeNotFound: (): ReferralError => ({
+    code: 'CODE_NOT_FOUND',
+    message: 'El código de referido no existe. Verifica que esté bien escrito.',
+  }),
+  ownCode: (): ReferralError => ({
+    code: 'OWN_CODE',
+    message: 'No puedes usar tu propio código de referido.',
+  }),
+  alreadyApplied: (): ReferralError => ({
+    code: 'ALREADY_APPLIED',
+    message: 'Ya tienes un código de referido aplicado en tu cuenta.',
   }),
 };

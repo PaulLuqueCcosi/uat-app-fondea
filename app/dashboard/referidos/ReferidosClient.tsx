@@ -36,22 +36,20 @@ function formatDate(iso: string): string {
 
 const statusVariants: Record<ReferralStatus, 'success' | 'warning' | 'pending'> = {
   LOAN_COMPLETED: 'success',
-  ACTIVE: 'warning',
   REGISTERED: 'pending',
 };
 
 const statusDescriptions: Record<ReferralStatus, string> = {
   REGISTERED: 'Tu amigo se registró en la plataforma',
-  ACTIVE: 'Tu amigo tiene un crédito en curso',
   LOAN_COMPLETED: 'Tu amigo completó su primer crédito',
 };
 
 const columns: ColumnDef<Referral>[] = [
   {
-    accessorKey: 'registeredAt',
+    accessorKey: 'createdAt',
     header: 'Fecha',
     cell: ({ row }) => (
-      <span className="text-sm text-muted-foreground">{formatDate(row.original.registeredAt)}</span>
+      <span className="text-sm text-muted-foreground">{formatDate(row.original.createdAt)}</span>
     ),
   },
   {
@@ -76,11 +74,11 @@ const columns: ColumnDef<Referral>[] = [
     ),
   },
   {
-    accessorKey: 'pointsAwarded',
-    header: () => <div className="text-right">Puntos</div>,
+    accessorKey: 'completedAt',
+    header: () => <div className="text-right">Completado</div>,
     cell: ({ row }) => (
-      <div className={`text-right text-sm font-bold ${row.original.pointsAwarded > 0 ? 'text-accent-600' : 'text-muted-foreground'}`}>
-        {row.original.pointsAwarded > 0 ? `+${row.original.pointsAwarded}` : '—'}
+      <div className="text-right text-sm text-muted-foreground">
+        {row.original.completedAt ? formatDate(row.original.completedAt) : '—'}
       </div>
     ),
   },
@@ -230,7 +228,7 @@ export function ReferidosClient() {
               </li>
               <li className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-primary-50 text-primary text-xs font-bold flex items-center justify-center shrink-0">3</span>
-                <span>Ambos ganan <strong>{summary.pointsPerReferral} puntos</strong> para el Pasaporte Financiero</span>
+                <span>Ambos ganan <strong>puntos</strong> para el Pasaporte Financiero</span>
               </li>
             </ol>
           </CardContent>
@@ -277,18 +275,14 @@ export function ReferidosClient() {
             </Button>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-2 pt-2">
+            <div className="grid grid-cols-2 gap-2 pt-2">
               <div className="text-center rounded-md border border-border p-2">
-                <p className="text-lg font-bold text-foreground">{summary.totalReferrals}</p>
+                <p className="text-lg font-bold text-foreground">{summary.totalReferred}</p>
                 <p className="text-[10px] text-muted-foreground">Referidos</p>
               </div>
               <div className="text-center rounded-md border border-accent-200 bg-accent-50 p-2">
-                <p className="text-lg font-bold text-accent-700">{summary.completedReferrals}</p>
+                <p className="text-lg font-bold text-accent-700">{summary.totalCompleted}</p>
                 <p className="text-[10px] text-accent-800">Completados</p>
-              </div>
-              <div className="text-center rounded-md border border-primary-200 bg-primary-50 p-2">
-                <p className="text-lg font-bold text-primary">{summary.totalPointsEarned}</p>
-                <p className="text-[10px] text-primary-700">Puntos</p>
               </div>
             </div>
           </CardContent>

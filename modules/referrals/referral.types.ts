@@ -1,29 +1,32 @@
 /**
- * Tipos del módulo Referidos.
+ * Tipos del módulo Referidos — alineados al backend real.
  */
 
-export type ReferralStatus = 'REGISTERED' | 'ACTIVE' | 'LOAN_COMPLETED';
+export type ReferralStatus = 'REGISTERED' | 'LOAN_COMPLETED';
 
 export interface Referral {
   id: string;
   referredUserId: string;
-  registeredAt: string;
-  completedAt: string | null;
   status: ReferralStatus;
-  pointsAwarded: number;
+  createdAt: string;
+  completedAt: string | null;
 }
 
 export interface ReferralSummary {
   code: string;
   link: string;
-  totalReferrals: number;
-  completedReferrals: number;
-  totalPointsEarned: number;
-  pointsPerReferral: number;
+  totalReferred: number;
+  totalCompleted: number;
+}
+
+/** Información de quién me refirió */
+export interface MyReferrer {
+  referrerUserId: string;
+  status: ReferralStatus;
+  appliedAt: string;
 }
 
 export const referralStatusLabels: Record<ReferralStatus, string> = {
   REGISTERED: 'Registrado',
-  ACTIVE: 'Activo',
-  LOAN_COMPLETED: 'Completado',
+  LOAN_COMPLETED: 'Crédito completado',
 };
