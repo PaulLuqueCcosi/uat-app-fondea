@@ -23,6 +23,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { uploadDocumentAction, deleteDocumentAction, verifyDocumentAction } from '@/app/actions/document.actions';
+import { toast } from 'sonner';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
@@ -322,6 +323,9 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
               ? `${reason}${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
               : `No se pudo verificar tu selfie. Por favor, intenta con otra foto.${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
           );
+          if (remaining === 1) {
+            toast.warning('⚠️ Este es tu último intento. Si falla, tu cuenta se bloqueará por 24 horas.', { duration: 8000 });
+          }
         }
       } else {
         // Error de red o HTTP error
@@ -409,6 +413,9 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
               ? `${reason}${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
               : `No se pudo verificar tu selfie. Por favor, intenta con otra foto.${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
           );
+          if (remaining === 1) {
+            toast.warning('⚠️ Este es tu último intento. Si falla, tu cuenta se bloqueará por 24 horas.', { duration: 8000 });
+          }
         }
       } else {
         console.log('[KYCSelfie] Retry verify failed:', result.error);

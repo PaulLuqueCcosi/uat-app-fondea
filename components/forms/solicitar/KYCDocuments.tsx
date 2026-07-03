@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { uploadDocumentAction, deleteDocumentAction, verifyDocumentAction } from '@/app/actions/document.actions';
 import type { DocumentType, DocumentsVerificationStatus, DocumentItemStatus } from '@/lib/types/document';
+import { toast } from 'sonner';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
@@ -215,6 +216,10 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
             side,
             message: itemStatus.rejectionReason || 'El documento no pasó la verificación automática.',
           });
+          // Toast de último intento
+          if (itemStatus.remainingAttempts === 1) {
+            toast.warning('⚠️ Este es tu último intento. Si falla, tu cuenta se bloqueará por 24 horas.', { duration: 8000 });
+          }
         }
       } else {
         setVerifyError({
@@ -252,6 +257,9 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
             side,
             message: itemStatus.rejectionReason || 'El documento no pasó la verificación.',
           });
+          if (itemStatus.remainingAttempts === 1) {
+            toast.warning('⚠️ Este es tu último intento. Si falla, tu cuenta se bloqueará por 24 horas.', { duration: 8000 });
+          }
         }
       } else {
         setVerifyError({

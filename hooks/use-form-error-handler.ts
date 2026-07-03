@@ -176,6 +176,14 @@ export function useFormErrorHandler(
             toast.dismiss(toastId);
           }
 
+          // Toast warning de último intento
+          if (errorResult.attemptsLeft === 1) {
+            toast.warning(
+              'Este es tu último intento. Si falla, tu cuenta se bloqueará por 24 horas.',
+              { duration: 8000 },
+            );
+          }
+
           // Actualizar estado
           setState((prev) => ({
             ...prev,
