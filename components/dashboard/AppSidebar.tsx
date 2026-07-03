@@ -32,6 +32,7 @@ import {
 
 const mainNav = [
   { path: '/dashboard', label: 'Inicio', icon: Home },
+  { path: '/dashboard/creditos', label: 'Mis Créditos', icon: CreditCard },
   { path: '/dashboard/educacion', label: 'Fondea Aprende', icon: GraduationCap },
   { path: '/dashboard/profile', label: 'Mi Perfil', icon: User },
   { path: '/dashboard/pasaporte', label: 'Pasaporte Financiero', icon: Award },
@@ -41,10 +42,8 @@ const mainNav = [
 ];
 
 const devNav = [
-  { path: '/dashboard/creditos', label: 'Mis Créditos', icon: CreditCard },
   { path: '/dashboard/dev-tools', label: 'Dev Tools', icon: Terminal },
   { path: '/dashboard/dev-tools/lambda-tester', label: 'Lambda Tester', icon: Zap },
-  // { path: '/dashboard/settings', label: 'Configuración', icon: Settings },
 ];
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
