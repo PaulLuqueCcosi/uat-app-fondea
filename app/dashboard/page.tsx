@@ -3,7 +3,6 @@ import { DashboardHomeClient } from '@/components/dashboard/DashboardHomeClient'
 import { HeaderWithContext } from '@/components/dashboard/sections/HeaderWithContext';
 import { ProgressBar } from '@/components/dashboard/sections/ProgressBar';
 import { Applications } from '@/components/dashboard/sections/Applications';
-import { NudgeAlert } from '@/components/dashboard/sections/NudgeAlert';
 import { ActiveLoanCardServer } from '@/components/dashboard/sections/ActiveLoanCardServer';
 import { FinancialPassport } from '@/components/dashboard/sections/FinancialPassport';
 import { DashboardCalculator } from '@/components/dashboard/sections/DashboardCalculator';
@@ -19,9 +18,6 @@ export default async function DashboardPage() {
       <DashboardHomeClient>
         {/* 1. Cabecera y Bienvenida */}
         <HeaderWithContext />
-
-        {/* 2. Alerta Estratégica (Nudge) */}
-        <NudgeAlert />
 
         {/* 3. Tu Préstamo Actual — El Núcleo (ancho completo, destaca) */}
         <Suspense fallback={null}>

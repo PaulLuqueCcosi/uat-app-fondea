@@ -6,10 +6,9 @@ import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/admin/DataTable';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { Search, Eye, Unlock, XCircle, ExternalLink } from 'lucide-react';
+import { Search, Eye, ExternalLink } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -224,24 +223,6 @@ export function IntentionsTableClient({ data, pagination, currentStatus }: Inten
                     </div>
                   </>
                 )}
-
-                {/* Acciones */}
-                <Separator />
-                <div className="flex gap-2">
-                  {viewing.status === 'LOCKED' && (
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Unlock className="h-3.5 w-3.5 mr-1" /> Desbloquear
-                    </Button>
-                  )}
-                  {viewing.status === 'ACTIVE' && (
-                    <Button variant="outline" size="sm" className="flex-1 text-destructive border-destructive/30">
-                      <XCircle className="h-3.5 w-3.5 mr-1" /> Cancelar
-                    </Button>
-                  )}
-                  {(viewing.status === 'CANCELLED' || viewing.status === 'REPLACED') && (
-                    <p className="text-xs text-muted-foreground w-full text-center">No hay acciones disponibles para este estado.</p>
-                  )}
-                </div>
               </div>
             </>
           )}
