@@ -11,21 +11,37 @@ import { proxyResponse } from '@/lib/backend-fetch';
 
 export async function GET() {
   const productId = process.env.NEXT_PUBLIC_PRODUCT_ID;
+  const calculatorUrl = process.env.CALCULATOR_API_URL ?? 'http://localhost:8080';
+
   if (!productId) {
-    console.error('[API] GET /api/calculadora/options → NEXT_PUBLIC_PRODUCT_ID no configurado');
+    console.error('[CALC-OPTIONS] ❌ NEXT_PUBLIC_PRODUCT_ID no configurado');
     return NextResponse.json(
       { error: 'Product ID not configured' },
       { status: 500 },
     );
   }
-  console.log("Ingresa para pedir las opciones")
+
+  const path = `/api/products/${productId}/options`;
+  console.log('[CALC-OPTIONS] → Full URL:', `${calculatorUrl}${path}`);
+
   try {
-    const res = await calculatorFetch(`/api/products/${productId}/options`, {
-      context: 'CALCULADORA',
+    const res = await calculatorFetch(path, {
+      context: 'CALC-OPTIONS',
     });
+
+    console.log('[CALC-OPTIONS] ← Status:', res.status, res.statusText);
+
+    if (!res.ok) {
+      const clone = res.clone();
+      try {
+        const errorBody = await clone.text();
+        console.error('[CALC-OPTIONS] ❌ Response body:', errorBody.slice(0, 1000));
+      } catch { /* ignorar */ }
+    }
+
     return proxyResponse(res);
   } catch (error) {
-    console.error('[API] GET /api/calculadora/options → error:', error);
+    console.error('[CALC-OPTIONS] ❌ Exception:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
