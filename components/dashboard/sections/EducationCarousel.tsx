@@ -40,7 +40,7 @@ export function EducationCarousel({ modules }: EducationCarouselProps) {
             Fondea Aprende
           </span>
         </CardTitle>
-        <CardDescription>Educación financiera en formato snack</CardDescription>
+        {/* <CardDescription>Educación financiera en formato snack</CardDescription> */}
       </CardHeader>
 
       <CardContent className="relative">

@@ -12,13 +12,34 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { FormSubmission } from '@/modules/admin';
+import { AdminFormDataView } from './AdminFormDataView';
 
 interface FormSubmissionsHistoryProps {
   submissions: FormSubmission[];
+  formKey?: string;
 }
 
-export function FormSubmissionsHistory({ submissions }: FormSubmissionsHistoryProps) {
+const RESULT_LABELS: Record<string, string> = {
+  APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado',
+  PENDING: 'Pendiente',
+};
+
+export function FormSubmissionsHistory({ submissions, formKey = '' }: FormSubmissionsHistoryProps) {
   const [viewingSubmission, setViewingSubmission] = useState<FormSubmission | null>(null);
+
+  if (submissions.length === 0) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Historial de envíos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Sin envíos registrados.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -45,7 +66,7 @@ export function FormSubmissionsHistory({ submissions }: FormSubmissionsHistoryPr
                     </td>
                     <td className="px-4 py-2.5">
                       <Badge variant={sub.verificationResult === 'APPROVED' ? 'success' : 'error'} className="text-[9px]">
-                        {sub.verificationResult}
+                        {RESULT_LABELS[sub.verificationResult] ?? sub.verificationResult}
                       </Badge>
                     </td>
                     <td className="px-4 py-2.5 text-muted-foreground max-w-xs truncate">
@@ -71,7 +92,7 @@ export function FormSubmissionsHistory({ submissions }: FormSubmissionsHistoryPr
 
       {/* Modal de detalle */}
       <Dialog open={!!viewingSubmission} onOpenChange={() => setViewingSubmission(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">
               Datos del envío
@@ -81,7 +102,7 @@ export function FormSubmissionsHistory({ submissions }: FormSubmissionsHistoryPr
                     variant={viewingSubmission.verificationResult === 'APPROVED' ? 'success' : 'error'}
                     className="text-[10px]"
                   >
-                    {viewingSubmission.verificationResult}
+                    {RESULT_LABELS[viewingSubmission.verificationResult] ?? viewingSubmission.verificationResult}
                   </Badge>
                 </span>
               )}
@@ -93,7 +114,6 @@ export function FormSubmissionsHistory({ submissions }: FormSubmissionsHistoryPr
               {/* Meta */}
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <span>Enviado: {new Date(viewingSubmission.submittedAt).toLocaleString('es-PE')}</span>
-                <span>ID: {viewingSubmission.id}</span>
               </div>
 
               {/* Motivo de rechazo */}
@@ -104,17 +124,8 @@ export function FormSubmissionsHistory({ submissions }: FormSubmissionsHistoryPr
                 </div>
               )}
 
-              {/* Datos */}
-              <div className="rounded-lg border p-4 space-y-3">
-                {Object.entries(viewingSubmission.submissionData).map(([key, value]) => (
-                  <div key={key} className="flex items-start justify-between gap-4">
-                    <span className="text-xs text-muted-foreground shrink-0 min-w-[120px]">
-                      {key.replace(/_/g, ' ')}
-                    </span>
-                    <span className="text-sm font-medium text-right">{String(value)}</span>
-                  </div>
-                ))}
-              </div>
+              {/* Datos con el mismo formato que la vista principal */}
+              <AdminFormDataView formKey={formKey} data={viewingSubmission.submissionData} bare />
             </div>
           )}
         </DialogContent>

@@ -191,6 +191,7 @@ export function LocationMapPicker({ value, onChange, height = 250, readOnly = fa
         style={{ height: isFullscreen ? '100%' : `${height}px`, width: '100%' }}
         className="rounded-lg border border-border overflow-hidden"
       />
+      {/* Controles de edición — solo cuando no es readonly */}
       {!readOnly && (
         <div className="absolute top-2 right-2 flex gap-1.5 z-[1000]">
           {/* Botón limpiar marcador */}
@@ -232,6 +233,19 @@ export function LocationMapPicker({ value, onChange, height = 250, readOnly = fa
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="flex items-center gap-1.5 bg-background/90 backdrop-blur-sm border border-border rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground shadow-sm cursor-pointer"
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+          >
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      )}
+      {/* Botón fullscreen — siempre visible (incluso en readonly) */}
+      {readOnly && (
+        <div className="absolute top-2 right-2 flex gap-1.5 z-[1000]">
           <button
             type="button"
             onClick={toggleFullscreen}

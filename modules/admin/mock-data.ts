@@ -57,44 +57,15 @@ export function getMockUsersPaginated(page: number, pageSize: number, query?: st
 
 // ── Expedientes (Forms + Submissions + Verifications) ─────────────────────────
 
-export interface FormSubmission {
-  id: string;
-  submittedAt: string;
-  verificationResult: 'APPROVED' | 'REJECTED';
-  submissionData: Record<string, any>;
-  rejectionReason?: string;
-}
+import type { FormSubmission, FormLock, FormExpediente, UserExpedientes } from './admin-user-detail.types';
+
+export type { FormSubmission, FormLock, FormExpediente, UserExpedientes };
 
 export interface FormVerification {
   status: 'VERIFIED' | 'EXPIRED' | 'REPLACED';
   verifiedAt: string;
   expiresAt: string;
   verificationData?: Record<string, any>;
-}
-
-export interface FormLock {
-  isBlocked: boolean;
-  failedAttempts: number;
-  maxAttempts: number;
-  blockedUntil: string | null;
-}
-
-export interface FormExpediente {
-  currentStatus: 'VERIFIED' | 'EXPIRED' | 'PENDING' | 'BLOCKED' | 'REPLACED';
-  verifiedAt: string | null;
-  expiresAt: string | null;
-  totalSubmissions: number;
-  lock: FormLock;
-  submissions: FormSubmission[];
-}
-
-export interface UserExpedientes {
-  kyc: FormExpediente;
-  labor: FormExpediente;
-  economic: FormExpediente;
-  references: FormExpediente;
-  address: FormExpediente;
-  bankAccount: FormExpediente;
 }
 
 export const mockUserForms: Record<string, UserExpedientes> = {

@@ -1,45 +1,33 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Shield, FileText, Users, Award } from 'lucide-react';
 import Link from 'next/link';
-import { mockUsers, mockUserDetail, mockUserForms, mockApplications } from '@/modules/admin';
-import type { FormExpediente } from '@/modules/admin';
+import { getAdminUserDetail, getAdminUserForms, getAdminBankAccountFullData } from '@/modules/admin';
+import { mockUserDetail, mockApplications } from '@/modules/admin';
+import type { FormExpediente, BankAccountFullData } from '@/modules/admin';
 import { FormStatusCard } from '@/components/admin/users/FormStatusCard';
 import { FormLockCard } from '@/components/admin/users/FormLockCard';
-import { FormCurrentDataCard } from '@/components/admin/users/FormCurrentDataCard';
+import { AdminFormDataView } from '@/components/admin/users/AdminFormDataView';
 import { FormSubmissionsHistory } from '@/components/admin/users/FormSubmissionsHistory';
 import { ScoreTab } from '@/components/admin/users/ScoreTab';
 import { PuntajeTab } from '@/components/admin/users/PuntajeTab';
 import { UserApplicationsTab } from '@/components/admin/users/UserApplicationsTab';
 import { UserReferralsTab } from '@/components/admin/users/UserReferralsTab';
 
-const FORM_LABELS: Record<string, string> = {
-  kyc: 'Identidad (KYC)',
-  labor: 'Perfil Laboral',
-  economic: 'Perfil Económico',
-  references: 'Referencias',
-  address: 'Dirección',
-  bankAccount: 'Cuenta Bancaria',
-};
-
-const STATUS_CONFIG: Record<string, { label: string; variant: string }> = {
-  VERIFIED: { label: 'Verificado', variant: 'success' },
-  EXPIRED: { label: 'Expirado', variant: 'warning' },
-  PENDING: { label: 'Pendiente', variant: 'secondary' },
-  BLOCKED: { label: 'Bloqueado', variant: 'error' },
-  REPLACED: { label: 'Reemplazado', variant: 'secondary' },
-};
-
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const user = mockUsers.find((u) => u.id === id);
-  const forms = mockUserForms[id] || null;
-  const detail = mockUserDetail;
+  // Datos reales del backend
+  const [user, forms, bankFullData] = await Promise.all([
+    getAdminUserDetail(id),
+    getAdminUserForms(id),
+    getAdminBankAccountFullData(id),
+  ]);
 
-  const displayUser = user || { id, name: detail.name, dni: detail.dni, email: detail.email, phone: detail.phone, registeredAt: detail.registeredAt };
+  // Fallback si el usuario no existe
+  const displayUser = user || { id, name: '(Usuario no encontrado)', documentType: null, documentNumber: null, registeredAt: '' };
+
+  // TODO: Estos tabs aún usan mock — conectar cuando el backend tenga endpoints
+  const detail = mockUserDetail;
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -57,13 +45,16 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <div>
             <h1 className="text-xl font-bold text-foreground">{displayUser.name}</h1>
             <p className="text-sm text-muted-foreground">
-              DNI: <span className="font-mono">{displayUser.dni}</span> · {displayUser.email} · {displayUser.phone}
+              {displayUser.documentType && <><span className="font-mono">{displayUser.documentType}: {displayUser.documentNumber}</span> · </>}
+              ID: <span className="font-mono text-xs">{displayUser.id}</span>
             </p>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Registro: {new Date(displayUser.registeredAt).toLocaleDateString('es-PE')}
-        </p>
+        {displayUser.registeredAt && (
+          <p className="text-xs text-muted-foreground">
+            Registro: {new Date(displayUser.registeredAt).toLocaleDateString('es-PE')}
+          </p>
+        )}
       </div>
 
       {/* Tabs */}
@@ -76,7 +67,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <TabsTrigger value="referidos" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Referidos</TabsTrigger>
         </TabsList>
 
-        {/* ═══ EXPEDIENTES ═══ */}
+        {/* ═══ EXPEDIENTES (datos reales) ═══ */}
         <TabsContent value="expedientes" className="mt-6">
           {forms ? (
             <Tabs defaultValue="kyc" className="w-full">
@@ -91,7 +82,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
               {Object.entries(forms).map(([key, form]) => (
                 <TabsContent key={key} value={key} className="mt-4">
-                  <FormDetailPanel formKey={key} form={form as FormExpediente} />
+                  <FormDetailPanel formKey={key} form={form as FormExpediente} userId={id} bankFullData={key === 'bankAccount' ? bankFullData : null} />
                 </TabsContent>
               ))}
             </Tabs>
@@ -100,25 +91,24 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           )}
         </TabsContent>
 
-        {/* ═══ SCORE ═══ */}
+        {/* ═══ SCORE (mock — TODO: conectar al backend) ═══ */}
         <TabsContent value="score" className="mt-6">
           <ScoreTab score={detail.score} />
         </TabsContent>
 
-        {/* ═══ PUNTAJE ═══ */}
-        {/* ═══ PUNTAJE ═══ */}
+        {/* ═══ PUNTAJE (mock — TODO: conectar al backend) ═══ */}
         <TabsContent value="puntaje" className="mt-6">
           <PuntajeTab gamification={detail.gamification} />
         </TabsContent>
 
-        {/* ═══ SOLICITUDES ═══ */}
+        {/* ═══ SOLICITUDES (mock — TODO: conectar al backend) ═══ */}
         <TabsContent value="solicitudes" className="mt-6">
           <UserApplicationsTab
             applications={mockApplications.filter((a) => a.userId === id)}
           />
         </TabsContent>
 
-        {/* ═══ REFERIDOS ═══ */}
+        {/* ═══ REFERIDOS (mock — TODO: conectar al backend) ═══ */}
         <TabsContent value="referidos" className="mt-6">
           <UserReferralsTab
             code={detail.referrals.code}
@@ -138,22 +128,27 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
 // ── FormDetailPanel — Vista detallada por formulario ──────────────────────────
 
-function FormDetailPanel({ formKey, form }: { formKey: string; form: FormExpediente }) {
+function FormDetailPanel({ formKey, form, userId, bankFullData }: { formKey: string; form: FormExpediente; userId: string; bankFullData?: BankAccountFullData | null }) {
   const lastApproved = form.submissions.find((s) => s.verificationResult === 'APPROVED') ?? null;
+
+  // Para bank account, si tenemos datos completos del backend, usarlos
+  const dataToShow = formKey === 'bankAccount' && bankFullData
+    ? { bank_name: bankFullData.bankName, account_type: bankFullData.accountType, cci: bankFullData.cci, account_number: bankFullData.accountNumber }
+    : lastApproved?.submissionData ?? {};
 
   return (
     <div className="space-y-6">
       {/* Estado + Lock */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <FormStatusCard form={form} />
-        <FormLockCard lock={form.lock} />
+        <FormLockCard lock={form.lock} userId={userId} formType={formKey} />
       </div>
 
       {/* Datos actuales */}
-      <FormCurrentDataCard submission={lastApproved} />
+      <AdminFormDataView formKey={formKey} data={dataToShow} />
 
       {/* Historial de envíos */}
-      <FormSubmissionsHistory submissions={form.submissions} />
+      <FormSubmissionsHistory submissions={form.submissions} formKey={formKey} />
     </div>
   );
 }
