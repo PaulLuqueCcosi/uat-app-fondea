@@ -1,27 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/admin/DataTable';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, RefreshCw, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import type { AdminUserRow } from '@/modules/admin';
 
-interface UserRow {
-  id: string;
-  name: string;
-  dni: string;
-  email: string;
-  phone: string;
-  maxLoanAmount: number | null;
-  registeredAt: string;
-}
-
-const columns: ColumnDef<UserRow, any>[] = [
+const columns: ColumnDef<AdminUserRow, any>[] = [
   {
     accessorKey: 'name',
-    header: 'Nombre',
+    header: 'Nombre completo',
     cell: ({ row }) => (
       <Link href={`/admin/users/${row.original.id}`} className="flex items-center gap-2.5 group">
         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
@@ -34,26 +26,20 @@ const columns: ColumnDef<UserRow, any>[] = [
     ),
   },
   {
-    accessorKey: 'dni',
-    header: 'DNI',
-    cell: ({ row }) => <span className="font-mono text-xs">{row.original.dni}</span>,
-  },
-  {
-    accessorKey: 'phone',
-    header: 'Celular',
-    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.phone}</span>,
-  },
-  {
-    accessorKey: 'email',
-    header: 'Email',
-    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.email}</span>,
-  },
-  {
-    accessorKey: 'maxLoanAmount',
-    header: () => <span className="text-right block">Máx. Préstamo</span>,
+    accessorKey: 'documentType',
+    header: 'Tipo Doc.',
     cell: ({ row }) => (
-      <span className="text-right block font-mono text-xs">
-        {row.original.maxLoanAmount ? `S/ ${row.original.maxLoanAmount.toLocaleString()}` : '—'}
+      <span className="text-xs text-muted-foreground">
+        {row.original.documentType ?? '—'}
+      </span>
+    ),
+  },
+  {
+    accessorKey: 'documentNumber',
+    header: 'Nro. Documento',
+    cell: ({ row }) => (
+      <span className="font-mono text-xs">
+        {row.original.documentNumber ?? '—'}
       </span>
     ),
   },
@@ -69,7 +55,7 @@ const columns: ColumnDef<UserRow, any>[] = [
 ];
 
 interface UsersTableClientProps {
-  data: UserRow[];
+  data: AdminUserRow[];
   pagination: {
     page: number;
     pageSize: number;
@@ -82,16 +68,18 @@ export function UsersTableClient({ data, pagination }: UsersTableClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('q') ?? '');
+  const [isPending, startTransition] = useTransition();
 
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', String(newPage));
-    router.push(`/admin/users?${params.toString()}`);
+    startTransition(() => {
+      router.push(`/admin/users?${params.toString()}`);
+    });
   };
 
   const handleSearch = (value: string) => {
     setSearch(value);
-    // Debounce: navega después de 400ms sin escribir
     clearTimeout((window as any).__adminSearchTimeout);
     (window as any).__adminSearchTimeout = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
@@ -101,21 +89,45 @@ export function UsersTableClient({ data, pagination }: UsersTableClientProps) {
       } else {
         params.delete('q');
       }
-      router.push(`/admin/users?${params.toString()}`);
+      startTransition(() => {
+        router.push(`/admin/users?${params.toString()}`);
+      });
     }, 400);
+  };
+
+  const handleRefresh = () => {
+    startTransition(() => {
+      router.refresh();
+    });
   };
 
   return (
     <div className="space-y-4">
-      {/* Buscador */}
-      <div className="relative w-full max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nombre, DNI, celular o email..."
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="pl-9 h-9"
-        />
+      {/* Buscador + Refresh */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre o documento..."
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isPending}
+          className="h-9 gap-2"
+        >
+          {isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+          Actualizar
+        </Button>
       </div>
 
       {/* Tabla */}
@@ -124,6 +136,7 @@ export function UsersTableClient({ data, pagination }: UsersTableClientProps) {
         data={data}
         pagination={pagination}
         onPageChange={handlePageChange}
+        isLoading={isPending}
       />
     </div>
   );

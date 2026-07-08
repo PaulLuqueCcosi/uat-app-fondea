@@ -1,8 +1,8 @@
 /**
  * Admin module — barrel exports.
- *
- * TODO: Cuando el backend tenga endpoints reales, cambiar las funciones
- * para que hagan fetch en vez de devolver mock data.
  */
 
 export * from './mock-data';
+export * from './admin-users.service';
+export * from './admin-users.types';
+export * from './admin-users.mapper';

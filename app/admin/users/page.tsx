@@ -1,5 +1,5 @@
 import { Users } from 'lucide-react';
-import { getMockUsersPaginated } from '@/modules/admin';
+import { getAdminUsers } from '@/modules/admin';
 import { UsersTableClient } from '@/components/admin/users/UsersTableClient';
 
 interface Props {
@@ -12,8 +12,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   const pageSize = Number(params.size) || 10;
   const query = params.q || undefined;
 
-  // TODO: reemplazar con fetch al backend GET /api/admin/users?page=X&size=Y&q=Z
-  const { data, pagination } = getMockUsersPaginated(page, pageSize, query);
+  const { data, pagination } = await getAdminUsers(page, pageSize, query);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
