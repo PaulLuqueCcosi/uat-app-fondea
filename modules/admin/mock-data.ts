@@ -252,12 +252,66 @@ export const mockReferrals = {
   ],
 };
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// ── Dashboard KPIs ────────────────────────────────────────────────────────────
 
 export const mockDashboardMetrics = {
   applicationsToday: 12, applicationsProcessing: 3, preApprovedPendingDocs: 8, activeCredits: 47,
   totalOverdue: 15200, installmentsDueToday: 5, newUsersToday: 7, conversionRate: 34,
 };
+
+export interface DashboardKPI {
+  id: string;
+  label: string;
+  value: number;
+  format: 'number' | 'currency' | 'percentage';
+  description: string;
+  trend?: { value: number; direction: 'up' | 'down' };
+  variant: 'default' | 'success' | 'warning' | 'error' | 'info';
+}
+
+export const mockKPIsToday: DashboardKPI[] = [
+  { id: 'active_loans', label: 'Préstamos activos hoy', value: 47, format: 'number', description: 'Préstamos vigentes en cartera', trend: { value: 3, direction: 'up' }, variant: 'success' },
+  { id: 'new_applications', label: 'Nuevas solicitudes hoy', value: 8, format: 'number', description: 'Solicitudes recibidas hoy', trend: { value: 2, direction: 'up' }, variant: 'default' },
+  { id: 'approval_rate', label: 'Tasa de aprobación del día', value: 62.5, format: 'percentage', description: '5 de 8 solicitudes aprobadas', trend: { value: 5, direction: 'up' }, variant: 'success' },
+  { id: 'disbursements', label: 'Desembolsos del día', value: 12500, format: 'currency', description: 'Monto total desembolsado hoy', trend: { value: 8, direction: 'up' }, variant: 'info' },
+  { id: 'payments_received', label: 'Pagos recibidos hoy', value: 8750, format: 'currency', description: 'Pagos de clientes hoy', trend: { value: 12, direction: 'up' }, variant: 'success' },
+  { id: 'loans_due_today', label: 'Préstamos con vencimiento HOY', value: 5, format: 'number', description: '3 ya pagaron, 2 pendientes', variant: 'warning' },
+  { id: 'delinquency_rate', label: 'Tasa de mora al día', value: 8.5, format: 'percentage', description: 'Cartera activa en mora', trend: { value: 1.2, direction: 'down' }, variant: 'warning' },
+  { id: 'arrears_1_7', label: 'Mora 1-7 días', value: 4, format: 'number', description: 'Recordatorio proactivo', variant: 'warning' },
+  { id: 'arrears_8_30', label: 'Mora 8-30 días', value: 2, format: 'number', description: 'Gestión activa de cobranza', variant: 'error' },
+  { id: 'arrears_30_plus', label: 'Mora +30 días', value: 1, format: 'number', description: 'Gestión prolongada', variant: 'error' },
+  { id: 'new_users', label: 'Nuevos clientes registrados hoy', value: 11, format: 'number', description: 'Registros en fondea.pe', trend: { value: 4, direction: 'up' }, variant: 'default' },
+  { id: 'funnel_conversion', label: 'Tasa de conversión del embudo', value: 3.2, format: 'percentage', description: 'Visita → préstamo aprobado', trend: { value: 0.5, direction: 'up' }, variant: 'info' },
+  { id: 'pending_complaints', label: 'Reclamos pendientes', value: 2, format: 'number', description: 'Plazo de 15 días hábiles corriendo', variant: 'warning' },
+  { id: 'runway', label: 'Runway disponible', value: 8, format: 'number', description: 'Meses de operación sin fondeo adicional (rev. mensual)', variant: 'info' },
+];
+
+export interface DashboardKPIHistory {
+  date: string;
+  activeLoans: number;
+  newApplications: number;
+  approvalRate: number;
+  disbursements: number;
+  paymentsReceived: number;
+  loansDueToday: number;
+  delinquencyRate: number;
+  arrears1_7: number;
+  arrears8_30: number;
+  arrears30Plus: number;
+  newUsers: number;
+  funnelConversion: number;
+  pendingComplaints: number;
+}
+
+export const mockKPIHistory: DashboardKPIHistory[] = [
+  { date: '2026-07-02', activeLoans: 42, newApplications: 5, approvalRate: 60, disbursements: 8000, paymentsReceived: 6200, loansDueToday: 3, delinquencyRate: 9.5, arrears1_7: 5, arrears8_30: 3, arrears30Plus: 1, newUsers: 8, funnelConversion: 2.8, pendingComplaints: 3 },
+  { date: '2026-07-03', activeLoans: 43, newApplications: 7, approvalRate: 57, disbursements: 10500, paymentsReceived: 7100, loansDueToday: 4, delinquencyRate: 9.2, arrears1_7: 5, arrears8_30: 3, arrears30Plus: 1, newUsers: 6, funnelConversion: 2.9, pendingComplaints: 3 },
+  { date: '2026-07-04', activeLoans: 44, newApplications: 4, approvalRate: 50, disbursements: 6000, paymentsReceived: 9200, loansDueToday: 6, delinquencyRate: 9.0, arrears1_7: 4, arrears8_30: 3, arrears30Plus: 1, newUsers: 5, funnelConversion: 2.6, pendingComplaints: 2 },
+  { date: '2026-07-05', activeLoans: 44, newApplications: 3, approvalRate: 66, disbursements: 4500, paymentsReceived: 5800, loansDueToday: 2, delinquencyRate: 8.8, arrears1_7: 4, arrears8_30: 2, arrears30Plus: 1, newUsers: 4, funnelConversion: 2.5, pendingComplaints: 2 },
+  { date: '2026-07-06', activeLoans: 45, newApplications: 9, approvalRate: 55, disbursements: 14000, paymentsReceived: 7500, loansDueToday: 7, delinquencyRate: 8.7, arrears1_7: 4, arrears8_30: 2, arrears30Plus: 1, newUsers: 12, funnelConversion: 3.0, pendingComplaints: 2 },
+  { date: '2026-07-07', activeLoans: 46, newApplications: 6, approvalRate: 66, disbursements: 9000, paymentsReceived: 8100, loansDueToday: 4, delinquencyRate: 8.6, arrears1_7: 4, arrears8_30: 2, arrears30Plus: 1, newUsers: 9, funnelConversion: 3.1, pendingComplaints: 2 },
+  { date: '2026-07-08', activeLoans: 47, newApplications: 8, approvalRate: 62.5, disbursements: 12500, paymentsReceived: 8750, loansDueToday: 5, delinquencyRate: 8.5, arrears1_7: 4, arrears8_30: 2, arrears30Plus: 1, newUsers: 11, funnelConversion: 3.2, pendingComplaints: 2 },
+];
 
 /** Simula respuesta paginada de solicitudes */
 export function getMockApplicationsPaginated(page: number, pageSize: number, query?: string) {

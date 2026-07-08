@@ -1,73 +1,92 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  FileText, CreditCard, AlertTriangle, Clock, UserPlus, Target,
+  CreditCard, FileText, CheckCircle, Banknote, Wallet, CalendarClock,
+  AlertTriangle, Clock, Users, TrendingUp, BookOpen, Hourglass,
   ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 import {
+  mockKPIsToday,
+  mockKPIHistory,
   mockApplications,
   mockCredits,
-  mockUsers,
-  mockCollections,
 } from '@/modules/admin';
+import { AdminKPIHistory } from '@/components/admin/AdminKPIHistory';
 import { AdminDashboardCharts } from '@/components/admin/AdminDashboardCharts';
+import type { DashboardKPI } from '@/modules/admin';
 
-function StatCard({ title, value, description, icon: Icon, variant = 'default', trend }: {
-  title: string; value: string | number; description: string; icon: React.ElementType;
-  variant?: 'default' | 'warning' | 'success' | 'error';
-  trend?: 'up' | 'down';
-}) {
-  const iconColors = {
+// Mapeo de icono por KPI id
+const KPI_ICONS: Record<string, React.ElementType> = {
+  active_loans: CreditCard,
+  new_applications: FileText,
+  approval_rate: CheckCircle,
+  disbursements: Banknote,
+  payments_received: Wallet,
+  loans_due_today: CalendarClock,
+  delinquency_rate: AlertTriangle,
+  arrears_1_7: Clock,
+  arrears_8_30: AlertTriangle,
+  arrears_30_plus: AlertTriangle,
+  new_users: Users,
+  funnel_conversion: TrendingUp,
+  pending_complaints: BookOpen,
+  runway: Hourglass,
+};
+
+function formatKPIValue(kpi: DashboardKPI): string {
+  if (kpi.format === 'currency') return `S/ ${kpi.value.toLocaleString()}`;
+  if (kpi.format === 'percentage') return `${kpi.value}%`;
+  return kpi.value.toString();
+}
+
+function KPICard({ kpi }: { kpi: DashboardKPI }) {
+  const Icon = KPI_ICONS[kpi.id] ?? FileText;
+
+  const variantColors = {
     default: 'text-primary',
-    warning: 'text-warning-600',
     success: 'text-success-600',
+    warning: 'text-warning-600',
     error: 'text-destructive',
+    info: 'text-primary-600',
   };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
-        <Icon className={`h-4 w-4 ${iconColors[variant]}`} />
+        <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">
+          {kpi.label}
+        </CardTitle>
+        <Icon className={`h-4 w-4 shrink-0 ${variantColors[kpi.variant]}`} />
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-2">
-          <div className="text-2xl font-bold">{value}</div>
-          {trend && (
-            <span className={`text-xs ${trend === 'up' ? 'text-success-600' : 'text-destructive'}`}>
-              {trend === 'up' ? <ArrowUpRight className="h-3 w-3 inline" /> : <ArrowDownRight className="h-3 w-3 inline" />}
+          <div className="text-2xl font-bold">{formatKPIValue(kpi)}</div>
+          {kpi.trend && (
+            <span className={`flex items-center text-xs font-medium ${
+              kpi.trend.direction === 'up' ? 'text-success-600' : 'text-destructive'
+            }`}>
+              {kpi.trend.direction === 'up' ? (
+                <ArrowUpRight className="h-3 w-3" />
+              ) : (
+                <ArrowDownRight className="h-3 w-3" />
+              )}
+              {kpi.trend.value}%
             </span>
           )}
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{kpi.description}</p>
       </CardContent>
     </Card>
   );
 }
 
 export default async function AdminDashboardPage() {
-  // Calcular métricas reales del mock
+  const kpis = mockKPIsToday;
+  const history = mockKPIHistory;
+
+  // Datos para gráficos existentes
   const applications = mockApplications;
   const credits = mockCredits;
-  const users = mockUsers;
 
-  const applicationsToday = applications.filter((a) => {
-    const date = new Date(a.submittedAt);
-    const today = new Date('2026-06-30');
-    return date.toDateString() === today.toDateString();
-  }).length;
-
-  const processingCount = applications.filter((a) => a.status === 'PROCESSING').length;
-  const preApprovedCount = applications.filter((a) => a.status === 'PRE_APPROVED').length;
-  const activeCreditsCount = credits.filter((c) => c.status === 'ACTIVE').length;
-  const totalOverdue = credits.reduce((sum, c) => sum + (c.daysOverdue > 0 ? c.pendingBalance * 0.05 : 0), 0);
-  const installmentsDueToday = mockCollections.dueToday.length;
-  const newUsersToday = users.filter((u) => {
-    const date = new Date(u.registeredAt);
-    const today = new Date('2026-06-30');
-    return date.toDateString() === today.toDateString();
-  }).length;
-  const conversionRate = Math.round((applications.length / (applications.length + 6)) * 100); // 6 intenciones pendientes
-
-  // Datos para gráficos
   const appByStatus = [
     { name: 'Enviadas', value: applications.filter((a) => a.status === 'SUBMITTED').length, fill: '#94a3b8' },
     { name: 'Evaluando', value: applications.filter((a) => a.status === 'PROCESSING').length, fill: '#3b82f6' },
@@ -84,34 +103,63 @@ export default async function AdminDashboardPage() {
     { name: 'Liquidados', value: credits.filter((c) => c.status === 'SETTLED').length },
   ];
 
-
+  // Agrupamos KPIs por categoría visual
+  const operacionesDia = kpis.slice(0, 5);   // #1-5
+  const moraCobranza = kpis.slice(5, 10);    // #6-10
+  const crecimiento = kpis.slice(10);        // #11-14
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <div>
         <h1 className="text-xl font-bold text-foreground">Panel de Administración</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Resumen operativo del día</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Resumen operativo — {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
       </div>
 
-      {/* Métricas principales */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Solicitudes hoy" value={applicationsToday} description="Nuevas solicitudes" icon={FileText} />
-        <StatCard title="En evaluación" value={processingCount} description="Procesando ahora" icon={Clock} />
-        <StatCard title="Pre-aprobadas sin docs" value={preApprovedCount} description="Esperando documentos" icon={AlertTriangle} variant="warning" />
-        <StatCard title="Créditos activos" value={activeCreditsCount} description="Préstamos vigentes" icon={CreditCard} variant="success" />
-      </div>
+      {/* ─── Operaciones del día (#1-5) ─── */}
+      <section>
+        <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+          Operaciones del día
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {operacionesDia.map((kpi) => (
+            <KPICard key={kpi.id} kpi={kpi} />
+          ))}
+        </div>
+      </section>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total en mora" value={`S/ ${Math.round(totalOverdue).toLocaleString()}`} description="Mora acumulada" icon={AlertTriangle} variant="warning" />
-        <StatCard title="Cuotas vencen hoy" value={installmentsDueToday} description="Para cobrar hoy" icon={Clock} />
-        <StatCard title="Nuevos usuarios" value={newUsersToday} description="Registrados hoy" icon={UserPlus} />
-        <StatCard title="Conversión" value={`${conversionRate}%`} description="Intención → solicitud" icon={Target} variant="success" />
-      </div>
+      {/* ─── Mora y Cobranza (#6-10) ─── */}
+      <section>
+        <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+          Mora y Cobranza
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {moraCobranza.map((kpi) => (
+            <KPICard key={kpi.id} kpi={kpi} />
+          ))}
+        </div>
+      </section>
 
-      {/* Gráficos */}
+      {/* ─── Crecimiento y Gobierno (#11-14) ─── */}
+      <section>
+        <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+          Crecimiento y Gobierno
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {crecimiento.map((kpi) => (
+            <KPICard key={kpi.id} kpi={kpi} />
+          ))}
+        </div>
+      </section>
+
+      {/* ─── Historial (gráfico interactivo) ─── */}
+      <section>
+        <AdminKPIHistory history={history} />
+      </section>
+
+      {/* ─── Gráficos de distribución ─── */}
       <AdminDashboardCharts appByStatus={appByStatus} creditByStatus={creditByStatus} />
-
-
     </div>
   );
 }
