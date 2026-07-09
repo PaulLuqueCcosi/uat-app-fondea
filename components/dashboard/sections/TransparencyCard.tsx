@@ -116,13 +116,10 @@ export function TransparencyCard() {
 
       <CardContent className="space-y-3">
         {/* Grid de escenarios — responsive según cantidad */}
-        <div className={`grid gap-3 ${
-          config.scenarios.length <= 4
-            ? 'grid-cols-2 sm:grid-cols-4'
-            : config.scenarios.length <= 6
-              ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
-              : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
-        }`}>
+        <div
+          className="grid gap-3"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
+        >
           {config.scenarios.map((scenario) => {
             const style = severityStyles[scenario.severity] ?? severityStyles.low;
 
