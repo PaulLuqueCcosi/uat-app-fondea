@@ -17,6 +17,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { CircleDollarSign, FileText, Shield, Bell, Pencil } from 'lucide-react';
+import { PenaltyConfigCard } from './PenaltyConfigCard';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,8 @@ interface MoraRange {
   minDays: number;
   maxDays: number | null;
   penaltyPerDay: number;
+  type: 'PERCENTAGE' | 'FIXED';
+  base: 'INSTALLMENT' | 'PRINCIPAL' | null;
 }
 
 interface FormAttemptConfig {
@@ -88,8 +91,8 @@ export function AdminSettingsClient() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* ═══ MORA ═══ */}
-      <MoraCard config={config} onSave={(mora) => setConfig((p) => ({ ...p, mora }))} />
+      {/* ═══ MORA (conectado al backend) ═══ */}
+      <PenaltyConfigCard />
 
       {/* ═══ INTENTOS DE FORMULARIOS ═══ */}
       <FormAttemptsCard config={config} onSave={(formAttempts) => setConfig((p) => ({ ...p, formAttempts }))} />

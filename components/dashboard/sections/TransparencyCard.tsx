@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CheckCircle, AlertTriangle, ShieldAlert, Ban, Lightbulb } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getTransparencyConfig } from '@/app/actions/passport.actions';
@@ -114,26 +115,57 @@ export function TransparencyCard() {
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {/* Grid de escenarios */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Grid de escenarios — responsive según cantidad */}
+        <div className={`grid gap-3 ${
+          config.scenarios.length <= 4
+            ? 'grid-cols-2 sm:grid-cols-4'
+            : config.scenarios.length <= 6
+              ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
+              : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+        }`}>
           {config.scenarios.map((scenario) => {
             const style = severityStyles[scenario.severity] ?? severityStyles.low;
-            const Icon = style.icon;
+
+            // Si el backend envió un icono específico, usarlo
+            const backendIcon = (scenario as any).icon;
+            const backendColor = (scenario as any).color;
+            let Icon = style.icon;
+            if (backendIcon) {
+              const iconPascal = backendIcon.split('-').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join('');
+              const LucideIcon = (LucideIcons as any)[iconPascal];
+              if (LucideIcon) Icon = LucideIcon;
+            }
+
+            // Si el backend envió color, usar como override del icono
+            const iconColorStyle = backendColor ? { color: backendColor } : {};
+
             const penaltyLabel = scenario.penaltyPerDay
               ? `${formatPenalty(scenario.penaltyPerDay, config.currency)}/día`
               : null;
 
+            // Para rangos con type=PERCENTAGE, mostrar la descripción
+            const displayLabel = penaltyLabel ?? (scenario as any).description ?? scenario.description;
+
             return (
               <div
                 key={scenario.id}
-                className={`rounded-lg border p-3 flex flex-col items-center text-center gap-2 ${style.bgColor} ${style.borderColor}`}
+                className={`rounded-lg border p-3 flex flex-col items-center text-center gap-1.5 ${style.bgColor} ${style.borderColor}`}
               >
-                <Icon className={`w-6 h-6 ${style.iconColor}`} />
+                <Icon className={`w-6 h-6 ${backendColor ? '' : style.iconColor}`} style={iconColorStyle} />
                 <p className={`text-sm font-bold ${style.titleColor}`}>
                   {scenario.title}
                 </p>
+                {scenario.fromDay > 0 && (
+                  <p className="text-xs text-muted-foreground font-semibold">
+                    {scenario.toDay === null
+                      ? `Día ${scenario.fromDay}+`
+                      : scenario.fromDay === scenario.toDay
+                        ? `Día ${scenario.fromDay}`
+                        : `Día ${scenario.fromDay} al ${scenario.toDay}`}
+                  </p>
+                )}
                 <p className="text-xs font-medium text-foreground">
-                  {penaltyLabel ?? scenario.description}
+                  {displayLabel}
                 </p>
               </div>
             );
