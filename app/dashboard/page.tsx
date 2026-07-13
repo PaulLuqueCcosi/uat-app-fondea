@@ -11,6 +11,7 @@ import { EducationCarousel } from '@/components/dashboard/sections/EducationCaro
 import { TransparencyCard } from '@/components/dashboard/sections/TransparencyCard';
 import { ReferralProgramSection } from '@/components/dashboard/sections/ReferralProgramServer';
 import { getModuleSummaries } from '@/modules/education';
+import { NpsSurveyPrompt } from '@/components/nps/NpsSurveyPrompt';
 
 export default async function DashboardPage() {
   return (
@@ -65,6 +66,9 @@ export default async function DashboardPage() {
           </div>
         </div>
       </DashboardHomeClient>
+
+      {/* Encuesta NPS flotante */}
+      <NpsSurveyPrompt />
     </div>
   );
 }

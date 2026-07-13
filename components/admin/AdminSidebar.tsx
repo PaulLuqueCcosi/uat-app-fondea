@@ -12,6 +12,8 @@ import {
   BarChart3,
   ArrowLeftRight,
   Target,
+  Wallet,
+  TrendingUp,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -29,6 +31,7 @@ import {
 
 const mainNav = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/admin/analytics', label: 'KPIs Globales', icon: TrendingUp },
   { path: '/admin/users', label: 'Usuarios', icon: Users },
   { path: '/admin/intentions', label: 'Intenciones', icon: Target },
   { path: '/admin/applications', label: 'Solicitudes', icon: FileText },
@@ -38,7 +41,8 @@ const mainNav = [
 ];
 
 const configNav = [
-  { path: '/admin/settings', label: 'Configuración', icon: Settings },
+  { path: '/admin/settings', label: 'Configuración', icon: Settings, exact: true },
+  { path: '/admin/settings/capital', label: 'Capital Base', icon: Wallet },
 ];
 
 interface AdminSidebarProps extends React.ComponentProps<typeof Sidebar> {
@@ -108,9 +112,9 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
           <SidebarMenu>
             {configNav.map((item) => {
               const Icon = item.icon;
-              const isActive =
-                pathname === item.path ||
-                pathname?.startsWith(item.path);
+              const isActive = item.exact
+                ? pathname === item.path
+                : pathname === item.path || pathname?.startsWith(item.path);
 
               return (
                 <SidebarMenuItem key={item.path}>

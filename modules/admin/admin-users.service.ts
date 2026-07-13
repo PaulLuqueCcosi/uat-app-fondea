@@ -48,13 +48,18 @@ export async function getAdminUsers(
 
   const body: SpringPage<AdminUserSummaryBackend> = await res.json();
 
+  // Normalizar paginación: soporta PagedModel (VIA_DTO) y legacy Page
+  const responsePageSize = body.page?.size ?? body.size ?? 20;
+  const totalItems = body.page?.totalElements ?? body.totalElements ?? 0;
+  const totalPages = body.page?.totalPages ?? body.totalPages ?? 0;
+
   return {
     data: body.content.map(mapUserFromBackend),
     pagination: {
       page,
-      pageSize: body.size,
-      totalItems: body.totalElements,
-      totalPages: body.totalPages,
+      pageSize: responsePageSize,
+      totalItems,
+      totalPages,
     },
   };
 }

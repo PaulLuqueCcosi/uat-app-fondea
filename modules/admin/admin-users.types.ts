@@ -25,13 +25,21 @@ export interface AdminUserRow {
   registeredAt: string;
 }
 
-/** Respuesta paginada del backend (Spring Page). */
+/** Respuesta paginada del backend (Spring PagedModel con VIA_DTO). */
 export interface SpringPage<T> {
   content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number; // page index (0-based)
-  size: number;
+  /** Nuevo formato Spring Data Web PagedModel */
+  page?: {
+    size: number;
+    number: number;
+    totalElements: number;
+    totalPages: number;
+  };
+  /** Legacy format (sin VIA_DTO) — mantenido para compatibilidad */
+  totalElements?: number;
+  totalPages?: number;
+  number?: number;
+  size?: number;
 }
 
 /** Paginación normalizada para el frontend. */

@@ -81,14 +81,18 @@ export async function getAdminIntentions(
 
   const body = await res.json();
 
-  // Spring Page format
+  // Normalizar paginación: soporta PagedModel (VIA_DTO) y legacy Page
+  const responsePageSize = body.page?.size ?? body.size ?? pageSize;
+  const totalItems = body.page?.totalElements ?? body.totalElements ?? 0;
+  const totalPages = body.page?.totalPages ?? body.totalPages ?? 0;
+
   return {
-    data: body.content ?? [],
+    data: (body.content ?? []) as AdminIntentionResponse[],
     pagination: {
       page,
-      pageSize: body.size ?? pageSize,
-      totalItems: body.totalElements ?? 0,
-      totalPages: body.totalPages ?? 0,
+      pageSize: responsePageSize,
+      totalItems,
+      totalPages,
     },
   };
 }

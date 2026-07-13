@@ -14,7 +14,6 @@ import { AdminKPIHistory } from '@/components/admin/AdminKPIHistory';
 import { AdminDashboardCharts } from '@/components/admin/AdminDashboardCharts';
 import type { DashboardKPI } from '@/modules/admin';
 
-// Mapeo de icono por KPI id
 const KPI_ICONS: Record<string, React.ElementType> = {
   active_loans: CreditCard,
   new_applications: FileText,
@@ -117,7 +116,7 @@ export default async function AdminDashboardPage() {
         </p>
       </div>
 
-      {/* ─── Operaciones del día (#1-5) ─── */}
+      {/* Operaciones del día (#1-5) */}
       <section>
         <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
           Operaciones del día
@@ -129,7 +128,7 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* ─── Mora y Cobranza (#6-10) ─── */}
+      {/* Mora y Cobranza (#6-10) */}
       <section>
         <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
           Mora y Cobranza
@@ -141,7 +140,7 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* ─── Crecimiento y Gobierno (#11-14) ─── */}
+      {/* Crecimiento y Gobierno (#11-14) */}
       <section>
         <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
           Crecimiento y Gobierno
@@ -153,12 +152,12 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* ─── Historial (gráfico interactivo) ─── */}
+      {/* Historial (gráfico interactivo) */}
       <section>
         <AdminKPIHistory history={history} />
       </section>
 
-      {/* ─── Gráficos de distribución ─── */}
+      {/* Gráficos de distribución */}
       <AdminDashboardCharts appByStatus={appByStatus} creditByStatus={creditByStatus} />
     </div>
   );

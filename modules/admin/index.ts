@@ -9,3 +9,4 @@ export * from './admin-users.mapper';
 export * from './admin-user-detail.service';
 export * from './admin-user-detail.types';
 export * from './admin-form-labels';
+export * from './admin-dashboard.service';

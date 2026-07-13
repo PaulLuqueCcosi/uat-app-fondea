@@ -16,7 +16,8 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
-import { CircleDollarSign, FileText, Shield, Bell, Pencil } from 'lucide-react';
+import { CircleDollarSign, FileText, Shield, Bell, Pencil, Wallet, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { PenaltyConfigCard } from './PenaltyConfigCard';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -91,6 +92,33 @@ export function AdminSettingsClient() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ═══ CAPITAL BASE ═══ */}
+      <Link href="/admin/settings/capital" className="block">
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-primary" /> Capital Base
+              </CardTitle>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <CardDescription className="text-xs">
+              Capital total disponible para préstamos
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between py-1.5">
+              <span className="text-sm text-foreground">Moneda</span>
+              <Badge variant="outline" className="font-mono">PEN</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1.5">
+              <span className="text-sm text-foreground">Ajuste manual</span>
+              <span className="text-xs text-muted-foreground">Activo</span>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+
       {/* ═══ MORA (conectado al backend) ═══ */}
       <PenaltyConfigCard />
 
