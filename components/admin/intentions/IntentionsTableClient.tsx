@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, type SortingState } from '@tanstack/react-table';
 import { DataTable } from '@/components/admin/DataTable';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Label } from '@/components/ui/label';
 import {
   Eye, RefreshCw, Loader2, Unlock, XCircle,
-  Filter, X, ChevronDown, ChevronUp,
+  Filter, X, ChevronDown, ChevronUp, Search,
 } from 'lucide-react';
 import {
   Dialog,
@@ -47,6 +47,8 @@ export interface IntentionFilters {
   termDays?: string;
   installmentCount?: string;
   isFirstLoan?: string;
+  sort?: string;
+  search?: string;
 }
 
 interface IntentionsTableClientProps {
@@ -61,31 +63,38 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
   const [isPending, startTransition] = useTransition();
   const [viewing, setViewing] = useState<AdminIntentionResponse | null>(null);
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Parsear sorting inicial desde URL (formato Spring: sort=amount,asc)
+  const getInitialSorting = (): SortingState => {
+    const sortParam = currentFilters.sort;
+    if (!sortParam) return [];
+    const [field, dir] = sortParam.split(',');
+    if (!field) return [];
+    return [{ id: field, desc: dir === 'desc' }];
+  };
+  const [sorting, setSorting] = useState<SortingState>(getInitialSorting);
+
+  // Estado local para búsqueda global (nombre o DNI de usuario)
+  const [searchInput, setSearchInput] = useState(currentFilters.search ?? '');
+
   const [filtersOpen, setFiltersOpen] = useState(() => {
-    // Abrir filtros si hay alguno activo (aparte de status)
-    const { status, ...rest } = currentFilters;
+    // Abrir filtros si hay alguno activo (aparte de status, sort y search)
+    const { status, sort, search, ...rest } = currentFilters;
     return Object.values(rest).some(v => v != null && v !== '');
   });
 
-  // Contar filtros activos
-  const activeFilterCount = Object.values(currentFilters).filter(v => v != null && v !== '').length;
+  // Contar filtros activos (excluir sort — no es un filtro visual)
+  const { sort: _sortField, ...restFilters } = currentFilters;
+  const activeFilterCount = Object.values(restFilters).filter(v => v != null && v !== '').length;
 
   const columns: ColumnDef<AdminIntentionResponse, any>[] = [
     {
-      accessorKey: 'id',
-      header: 'ID',
-      cell: ({ row }) => (
-        <button onClick={() => setViewing(row.original)} className="font-mono text-[10px] text-primary hover:underline cursor-pointer truncate max-w-[80px] block">
-          {row.original.id.slice(0, 8)}…
-        </button>
-      ),
-    },
-    {
-      accessorKey: 'userId',
+      accessorKey: 'userName',
       header: 'Usuario',
+      enableSorting: false,
       cell: ({ row }) => (
-        <Link href={`/admin/users/${row.original.userId}`} className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors truncate max-w-[80px] block">
-          {row.original.userId.slice(0, 8)}…
+        <Link href={`/admin/users/${row.original.userId}`} className="text-xs font-medium truncate max-w-[160px] hover:text-primary transition-colors">
+          {row.original.userName ?? '—'}
         </Link>
       ),
     },
@@ -100,16 +109,19 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
     {
       accessorKey: 'amount',
       header: () => <span className="text-right block">Monto</span>,
+      enableSorting: true,
       cell: ({ row }) => <span className="text-right block font-mono text-xs">S/ {Number(row.original.amount).toLocaleString()}</span>,
     },
     {
       accessorKey: 'termDays',
       header: 'Plazo',
+      enableSorting: true,
       cell: ({ row }) => <span className="text-xs">{row.original.termDays} días</span>,
     },
     {
       accessorKey: 'installmentCount',
       header: 'Cuotas',
+      enableSorting: true,
       cell: ({ row }) => <span className="text-xs">{row.original.installmentCount}</span>,
     },
     {
@@ -145,7 +157,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
     const merged = { ...currentFilters, ...newFilters };
     // Setear o eliminar cada filtro
     const filterKeys: (keyof IntentionFilters)[] = [
-      'status', 'from', 'to', 'amountMin', 'amountMax', 'termDays', 'installmentCount', 'isFirstLoan',
+      'status', 'from', 'to', 'amountMin', 'amountMax', 'termDays', 'installmentCount', 'isFirstLoan', 'search',
     ];
     for (const key of filterKeys) {
       const val = merged[key];
@@ -159,7 +171,16 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
     startTransition(() => { router.push(`/admin/intentions?${params.toString()}`); });
   };
 
+  const handleSearch = (value: string) => {
+    setSearchInput(value);
+    clearTimeout((window as any).__intentionSearchTimeout);
+    (window as any).__intentionSearchTimeout = setTimeout(() => {
+      applyFilters({ search: value.trim() || undefined });
+    }, 400);
+  };
+
   const clearAllFilters = () => {
+    setSearchInput('');
     const params = new URLSearchParams();
     params.set('tab', 'users');
     params.set('page', '1');
@@ -172,8 +193,63 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
     startTransition(() => { router.push(`/admin/intentions?${params.toString()}`); });
   };
 
+  const handlePageSizeChange = (newSize: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('size', String(newSize));
+    params.set('page', '1');
+    startTransition(() => { router.push(`/admin/intentions?${params.toString()}`); });
+  };
+
+  const handleSortingChange = useCallback(
+    (newSorting: SortingState) => {
+      setSorting(newSorting);
+      const params = new URLSearchParams(searchParams.toString());
+      if (newSorting.length > 0) {
+        const s = newSorting[0];
+        params.set('sort', `${s.id},${s.desc ? 'desc' : 'asc'}`);
+      } else {
+        params.delete('sort');
+      }
+      startTransition(() => {
+        router.push(`/admin/intentions?${params.toString()}`);
+      });
+    },
+    [router, searchParams]
+  );
+
   const handleRefresh = () => {
     startTransition(() => { router.refresh(); });
+  };
+
+  // ── Export label con filtros activos ────────────────────────────────────────
+  const buildExportFilterLabel = (): string | undefined => {
+    const parts: string[] = [];
+    if (currentFilters.search) {
+      parts.push(`Búsqueda: ${currentFilters.search}`);
+    }
+    if (currentFilters.status) {
+      parts.push(`Estado: ${statusConfig[currentFilters.status as IntentionStatus]?.label ?? currentFilters.status}`);
+    }
+    if (currentFilters.amountMin || currentFilters.amountMax) {
+      const min = currentFilters.amountMin ? `S/ ${currentFilters.amountMin}` : '';
+      const max = currentFilters.amountMax ? `S/ ${currentFilters.amountMax}` : '';
+      parts.push(`Monto: ${min}${min && max ? ' - ' : ''}${max}`);
+    }
+    if (currentFilters.termDays) {
+      parts.push(`Plazo: ${currentFilters.termDays} días`);
+    }
+    if (currentFilters.installmentCount) {
+      parts.push(`Cuotas: ${currentFilters.installmentCount}`);
+    }
+    if (currentFilters.isFirstLoan) {
+      parts.push(`Tipo: ${currentFilters.isFirstLoan === 'true' ? 'Primer préstamo' : 'Recurrente'}`);
+    }
+    if (currentFilters.from || currentFilters.to) {
+      const from = currentFilters.from ? new Date(currentFilters.from).toLocaleDateString('es-PE') : '';
+      const to = currentFilters.to ? new Date(currentFilters.to).toLocaleDateString('es-PE') : '';
+      parts.push(`Fecha: ${from}${from && to ? ' - ' : ''}${to}`);
+    }
+    return parts.length > 0 ? parts.join(', ') : undefined;
   };
 
   // ── Acciones ──────────────────────────────────────────────────────────────
@@ -209,6 +285,30 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
   return (
     <>
       <div className="space-y-4">
+        {/* ── Buscador global ── */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nombre o DNI del usuario..."
+              value={searchInput}
+              onChange={(e) => handleSearch(e.target.value)}
+              disabled={isPending}
+              className="pl-9 h-9"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isPending}
+            className="h-9 gap-2"
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Actualizar
+          </Button>
+        </div>
+
         {/* ── Barra superior: estado + filtros + refresh ── */}
         <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
           <div className="flex items-center gap-3 flex-wrap">
@@ -216,6 +316,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
               value={currentFilters.status ?? ''}
               onChange={(e) => applyFilters({ status: e.target.value || undefined })}
               className="h-9 w-40"
+              disabled={isPending}
             >
               <NativeSelectOption value="">Todos los estados</NativeSelectOption>
               <NativeSelectOption value="ACTIVE">Activa</NativeSelectOption>
@@ -225,7 +326,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
             </NativeSelect>
 
             <CollapsibleTrigger>
-              <Button variant="outline" size="sm" className="h-9 gap-2" type="button">
+              <Button variant="outline" size="sm" className="h-9 gap-2" type="button" disabled={isPending}>
                 <Filter className="h-4 w-4" />
                 Filtros
                 {activeFilterCount > 0 && (
@@ -235,18 +336,12 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
               </Button>
             </CollapsibleTrigger>
 
-            {activeFilterCount > 0 && (
-              <Button variant="ghost" size="sm" className="h-9 gap-1 text-xs text-muted-foreground" onClick={clearAllFilters}>
+              {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" className="h-9 gap-1 text-xs text-muted-foreground" onClick={clearAllFilters} disabled={isPending}>
                 <X className="h-3.5 w-3.5" /> Limpiar filtros
               </Button>
             )}
 
-            <div className="ml-auto">
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isPending} className="h-9 gap-2">
-                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                Actualizar
-              </Button>
-            </div>
           </div>
 
           {/* ── Panel de filtros avanzados ── */}
@@ -261,6 +356,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                     placeholder="Ej: 1000"
                     defaultValue={currentFilters.amountMin ?? ''}
                     className="h-8 text-sm"
+                    disabled={isPending}
                     onBlur={(e) => applyFilters({ amountMin: e.target.value || undefined })}
                     onKeyDown={(e) => { if (e.key === 'Enter') applyFilters({ amountMin: (e.target as HTMLInputElement).value || undefined }); }}
                   />
@@ -272,6 +368,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                     placeholder="Ej: 10000"
                     defaultValue={currentFilters.amountMax ?? ''}
                     className="h-8 text-sm"
+                    disabled={isPending}
                     onBlur={(e) => applyFilters({ amountMax: e.target.value || undefined })}
                     onKeyDown={(e) => { if (e.key === 'Enter') applyFilters({ amountMax: (e.target as HTMLInputElement).value || undefined }); }}
                   />
@@ -284,6 +381,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                     value={currentFilters.termDays ?? ''}
                     onChange={(e) => applyFilters({ termDays: e.target.value || undefined })}
                     className="h-8 text-sm"
+                    disabled={isPending}
                   >
                     <NativeSelectOption value="">Todos</NativeSelectOption>
                     <NativeSelectOption value="15">15 días</NativeSelectOption>
@@ -301,6 +399,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                     value={currentFilters.installmentCount ?? ''}
                     onChange={(e) => applyFilters({ installmentCount: e.target.value || undefined })}
                     className="h-8 text-sm"
+                    disabled={isPending}
                   >
                     <NativeSelectOption value="">Todas</NativeSelectOption>
                     <NativeSelectOption value="1">1 cuota</NativeSelectOption>
@@ -320,6 +419,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                     value={currentFilters.isFirstLoan ?? ''}
                     onChange={(e) => applyFilters({ isFirstLoan: e.target.value || undefined })}
                     className="h-8 text-sm"
+                    disabled={isPending}
                   >
                     <NativeSelectOption value="">Todos</NativeSelectOption>
                     <NativeSelectOption value="true">Primer préstamo</NativeSelectOption>
@@ -334,6 +434,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                     type="date"
                     defaultValue={currentFilters.from?.split('T')[0] ?? ''}
                     className="h-8 text-sm"
+                    disabled={isPending}
                     onChange={(e) => {
                       const val = e.target.value;
                       applyFilters({ from: val ? `${val}T00:00:00` : undefined });
@@ -348,6 +449,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                     type="date"
                     defaultValue={currentFilters.to?.split('T')[0] ?? ''}
                     className="h-8 text-sm"
+                    disabled={isPending}
                     onChange={(e) => {
                       const val = e.target.value;
                       applyFilters({ to: val ? `${val}T23:59:59` : undefined });
@@ -365,6 +467,14 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
           data={data}
           pagination={pagination}
           onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          enableSorting={true}
+          sorting={sorting}
+          onSortingChange={handleSortingChange}
+          enableExport={true}
+          exportFileName="intenciones.xlsx"
+          getExportData={() => data}
+          exportFilterLabel={buildExportFilterLabel()}
           isLoading={isPending}
         />
       </div>
@@ -402,11 +512,16 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                 <Separator />
 
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-start">
                     <span className="text-muted-foreground">Usuario</span>
-                    <Link href={`/admin/users/${viewing.userId}`} className="font-mono text-xs text-primary hover:underline">
-                      {viewing.userId.slice(0, 12)}…
-                    </Link>
+                    <div className="text-right">
+                      <Link href={`/admin/users/${viewing.userId}`} className="block text-xs font-medium text-primary hover:underline">
+                        {viewing.userName ?? '—'}
+                      </Link>
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {viewing.userId.slice(0, 12)}…
+                      </span>
+                    </div>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Primer préstamo</span>

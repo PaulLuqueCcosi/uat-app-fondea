@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { SortingState } from '@tanstack/react-table';
 import { DataTable } from '@/components/admin/DataTable';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -70,7 +69,6 @@ export function UsersTableClient({ data, pagination }: UsersTableClientProps) {
   const searchParams = useSearchParams();
 
   const [search, setSearch] = useState(searchParams.get('q') ?? '');
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [isPending, startTransition] = useTransition();
 
   /** Actualiza la URL con los parámetros actuales */
@@ -100,14 +98,6 @@ export function UsersTableClient({ data, pagination }: UsersTableClientProps) {
       updateUrl(params);
     },
     [searchParams, updateUrl]
-  );
-
-  const handleSortingChange = useCallback(
-    (newSorting: SortingState) => {
-      setSorting(newSorting);
-      // TODO: sincronizar con URL cuando el backend soporte sorting
-    },
-    []
   );
 
   const handleSearch = (value: string) => {
@@ -141,6 +131,7 @@ export function UsersTableClient({ data, pagination }: UsersTableClientProps) {
             placeholder="Buscar por nombre o documento..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
+            disabled={isPending}
             className="pl-9 h-9"
           />
         </div>
@@ -167,9 +158,6 @@ export function UsersTableClient({ data, pagination }: UsersTableClientProps) {
         pagination={pagination}
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
-        enableSorting={true}
-        sorting={sorting}
-        onSortingChange={handleSortingChange}
         exportFileName="usuarios.xlsx"
         getExportData={() => data}
         enableExport={true}

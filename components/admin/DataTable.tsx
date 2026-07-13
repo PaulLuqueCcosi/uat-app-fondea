@@ -42,6 +42,7 @@ import {
   RotateCcw,
   Loader2,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import * as XLSX from 'xlsx';
 
 /** ─── Tipos ──────────────────────────────────────────────────────────────── */
@@ -364,16 +365,18 @@ export function DataTable<TData>({
 
       {/* ── Tabla ────────────────────────────────────────────────────────── */}
       <div className="rounded-lg border bg-white overflow-hidden relative">
-        {isLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Cargando...
+        {/* Loading overlay: patrón estándar de TanStack Table para server-side.
+           Cuando ya hay datos, muestra un indicador sutil sin bloquear la UI. */}
+        {isLoading && data.length > 0 && (
+          <div className="absolute inset-0 z-10 bg-background/40 pointer-events-none flex items-start justify-center pt-6">
+            <div className="flex items-center gap-2 rounded-full bg-background border px-3 py-1.5 shadow-sm text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Actualizando...
             </div>
           </div>
         )}
 
-        <Table>
+        <Table className={isLoading && data.length > 0 ? 'opacity-60' : ''}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="bg-muted/50 hover:bg-muted/50">
@@ -423,7 +426,18 @@ export function DataTable<TData>({
           </TableHeader>
 
           <TableBody>
-            {table.getRowModel().rows.length > 0 ? (
+            {isLoading && table.getRowModel().rows.length === 0 ? (
+              // Skeleton rows: estándar de TanStack Table para server-side loading
+              Array.from({ length: Math.min(pagination.pageSize, 5) }).map((_, i) => (
+                <TableRow key={`skeleton-${i}`} className="hover:bg-transparent">
+                  {columns.map((_, j) => (
+                    <TableCell key={j} className="py-3">
+                      <Skeleton className="h-4 w-[80%]" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : table.getRowModel().rows.length > 0 ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
@@ -443,7 +457,7 @@ export function DataTable<TData>({
                   colSpan={columns.length}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  {isLoading ? 'Cargando...' : 'Sin resultados.'}
+                  Sin resultados.
                 </TableCell>
               </TableRow>
             )}

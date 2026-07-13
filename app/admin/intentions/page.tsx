@@ -18,6 +18,8 @@ interface Props {
     termDays?: string;
     installmentCount?: string;
     isFirstLoan?: string;
+    sort?: string;
+    search?: string;
   }>;
 }
 
@@ -37,6 +39,8 @@ export default async function AdminIntentionsPage({ searchParams }: Props) {
     termDays: params.termDays,
     installmentCount: params.installmentCount,
     isFirstLoan: params.isFirstLoan,
+    sort: params.sort,
+    search: params.search,
   };
 
   // Cargar datos en paralelo

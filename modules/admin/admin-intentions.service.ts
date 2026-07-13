@@ -13,6 +13,7 @@ import { backendFetch } from '@/lib/backend-fetch';
 export interface AdminIntentionResponse {
   id: string;
   userId: string;
+  userName: string | null;
   productId: string;
   amount: number;
   termDays: number;
@@ -52,6 +53,8 @@ export async function getAdminIntentions(
     termDays?: string;
     installmentCount?: string;
     isFirstLoan?: string;
+    sort?: string; // ej: amount,asc
+    search?: string;
   },
 ): Promise<AdminIntentionsResult> {
   const backendPage = Math.max(0, page - 1);
@@ -69,6 +72,8 @@ export async function getAdminIntentions(
   if (options?.termDays) params.set('termDays', options.termDays);
   if (options?.installmentCount) params.set('installmentCount', options.installmentCount);
   if (options?.isFirstLoan) params.set('isFirstLoan', options.isFirstLoan);
+  if (options?.sort) params.set('sort', options.sort);
+  if (options?.search) params.set('search', options.search);
 
   const res = await backendFetch(`/api/v1/admin/intentions?${params.toString()}`, {
     context: 'ADMIN_INTENTIONS',
