@@ -30,8 +30,17 @@ export async function unlockIntentionAction(id: string) {
 export async function getAnonymousIntentionsAction(
   page: number,
   pageSize: number,
+  options?: {
+    from?: string;
+    to?: string;
+    amountMin?: string;
+    amountMax?: string;
+    termDays?: string;
+    installmentCount?: string;
+    clientIp?: string;
+  },
 ): Promise<AnonymousIntentionsResult> {
-  return getAdminAnonymousIntentions(page, pageSize);
+  return getAdminAnonymousIntentions(page, pageSize, options);
 }
 
 export async function getFunnelMetricsAction(): Promise<FunnelMetrics | null> {

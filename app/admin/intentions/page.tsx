@@ -9,6 +9,8 @@ interface Props {
   searchParams: Promise<{
     page?: string;
     size?: string;
+    lpage?: string;
+    lsize?: string;
     status?: string;
     tab?: string;
     from?: string;
@@ -19,16 +21,19 @@ interface Props {
     installmentCount?: string;
     isFirstLoan?: string;
     sort?: string;
+    clientIp?: string;
     search?: string;
   }>;
 }
 
 export default async function AdminIntentionsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const page = Number(params.page) || 1;
-  const pageSize = Number(params.size) || 10;
-  const status = params.status || undefined;
   const tab = params.tab || 'users';
+
+  // Users tab pagination & filters
+  const userPage = Number(params.page) || 1;
+  const userPageSize = Number(params.size) || 10;
+  const status = params.status || undefined;
 
   const filters = {
     status,
@@ -43,10 +48,23 @@ export default async function AdminIntentionsPage({ searchParams }: Props) {
     search: params.search,
   };
 
+  // Landing tab pagination & filters (parámetros independientes para no cruzarse con usuarios)
+  const landingPage = Number(params.lpage) || 1;
+  const landingPageSize = Number(params.lsize) || 10;
+  const landingFilters = {
+    from: params.from,
+    to: params.to,
+    amountMin: params.amountMin,
+    amountMax: params.amountMax,
+    termDays: params.termDays,
+    installmentCount: params.installmentCount,
+    clientIp: params.clientIp ?? params.search,
+  };
+
   // Cargar datos en paralelo
   const [intentionsResult, anonymousResult, funnelMetrics] = await Promise.all([
-    getAdminIntentions(page, pageSize, filters),
-    getAdminAnonymousIntentions(1, 10),
+    getAdminIntentions(userPage, userPageSize, filters),
+    getAdminAnonymousIntentions(landingPage, landingPageSize, landingFilters),
     getAdminFunnelMetrics(),
   ]);
 
@@ -67,7 +85,7 @@ export default async function AdminIntentionsPage({ searchParams }: Props) {
       <Tabs defaultValue={tab} className="w-full">
         <TabsList className="grid grid-cols-3 w-full max-w-lg">
           <TabsTrigger value="users">Usuarios ({intentionsResult.pagination.totalItems})</TabsTrigger>
-          <TabsTrigger value="landing">Landing ({anonymousResult.pagination.total})</TabsTrigger>
+          <TabsTrigger value="landing">Landing ({anonymousResult.pagination.totalItems})</TabsTrigger>
           <TabsTrigger value="funnel">Embudo</TabsTrigger>
         </TabsList>
 
@@ -76,7 +94,7 @@ export default async function AdminIntentionsPage({ searchParams }: Props) {
         </TabsContent>
 
         <TabsContent value="landing" className="mt-6">
-          <AnonymousIntentionsTab initialData={anonymousResult} />
+          <AnonymousIntentionsTab data={anonymousResult.data} pagination={anonymousResult.pagination} currentFilters={landingFilters} />
         </TabsContent>
 
         <TabsContent value="funnel" className="mt-6">
