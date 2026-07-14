@@ -391,6 +391,9 @@ export function AnonymousIntentionsTab({ data, pagination, currentFilters }: Ano
         getExportData={() => data}
         exportFilterLabel={buildExportFilterLabel()}
         isLoading={isPending}
+        onRowClick={(row) => {
+          router.push(`/admin/lifecycle/${row.id}`);
+        }}
       />
     </div>
   );

@@ -28,6 +28,7 @@ import {
 import Link from 'next/link';
 import { cancelIntentionAction, unlockIntentionAction } from '@/app/actions/admin-intentions.actions';
 import type { AdminIntentionResponse } from '@/modules/admin/admin-intentions.service';
+import { toast } from 'sonner';
 
 type IntentionStatus = AdminIntentionResponse['status'];
 
@@ -462,21 +463,24 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
         </Collapsible>
 
         {/* ── Tabla ── */}
-        <DataTable
-          columns={columns}
-          data={data}
-          pagination={pagination}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-          enableSorting={true}
-          sorting={sorting}
-          onSortingChange={handleSortingChange}
-          enableExport={true}
-          exportFileName="intenciones.xlsx"
-          getExportData={() => data}
-          exportFilterLabel={buildExportFilterLabel()}
-          isLoading={isPending}
-        />
+      <DataTable
+        columns={columns}
+        data={data}
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        enableSorting={true}
+        sorting={sorting}
+        onSortingChange={handleSortingChange}
+        enableExport={true}
+        exportFileName="intenciones.xlsx"
+        getExportData={() => data}
+        exportFilterLabel={buildExportFilterLabel()}
+        isLoading={isPending}
+        onRowClick={(row) => {
+          router.push(`/admin/lifecycle/${row.id}`);
+        }}
+      />
       </div>
 
       {/* ── Modal de detalle ── */}
@@ -544,7 +548,7 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                 </div>
 
                 <Separator />
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {viewing.status === 'LOCKED' && (
                     <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => handleUnlock(viewing.id)} disabled={isPending}>
                       <Unlock className="h-3.5 w-3.5" /> Desbloquear

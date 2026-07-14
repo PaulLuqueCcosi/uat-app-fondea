@@ -91,6 +91,9 @@ export interface DataTableProps<TData> {
   // ── Loading / Empty ─────────────────────────────────────────────────────
   isLoading?: boolean;
   pageSizeOptions?: number[];
+
+  // ── Row click ─────────────────────────────────────────────────────────────
+  onRowClick?: (row: TData) => void;
 }
 
 /** ─── Componente ─────────────────────────────────────────────────────────── */
@@ -113,6 +116,7 @@ export function DataTable<TData>({
   exportFilterLabel,
   isLoading,
   pageSizeOptions = [10, 20, 50, 100],
+  onRowClick,
 }: DataTableProps<TData>) {
   // TanStack Table internamente trabaja con pageIndex 0-based
   const pageIndex = Math.max(0, pagination.page - 1);
@@ -441,8 +445,9 @@ export function DataTable<TData>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="hover:bg-muted/30 transition-colors"
+                  className={`transition-colors ${onRowClick ? 'cursor-pointer hover:bg-muted/50' : 'hover:bg-muted/30'}`}
                   data-state={row.getIsSelected() && 'selected'}
+                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
