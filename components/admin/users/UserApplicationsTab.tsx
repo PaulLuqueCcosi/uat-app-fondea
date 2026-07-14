@@ -24,6 +24,7 @@ const statusConfig: Record<ApplicationStatus, { label: string; variant: string }
   PRE_APPROVED: { label: 'Pre-aprobada', variant: 'warning' },
   APPROVED: { label: 'Aprobada', variant: 'success' },
   REJECTED: { label: 'Rechazada', variant: 'error' },
+  REJECTED_BY_USER: { label: 'Rechazada (usr)', variant: 'secondary' },
   BLOCKED: { label: 'Bloqueada', variant: 'error' },
   FAILED: { label: 'Fallida', variant: 'error' },
   EXPIRED: { label: 'Expirada', variant: 'secondary' },

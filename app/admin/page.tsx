@@ -97,9 +97,9 @@ export default async function AdminDashboardPage() {
 
   const creditByStatus = [
     { name: 'Activos', value: credits.filter((c) => c.status === 'ACTIVE').length },
-    { name: 'En mora', value: credits.filter((c) => c.status === 'IN_ARREARS').length },
+    { name: 'En mora', value: credits.filter((c) => c.status === 'OVERDUE').length },
     { name: 'Default', value: credits.filter((c) => c.status === 'DEFAULTED').length },
-    { name: 'Liquidados', value: credits.filter((c) => c.status === 'SETTLED').length },
+    { name: 'Liquidados', value: credits.filter((c) => c.status === 'PAID_OFF').length },
   ];
 
   // Agrupamos KPIs por categoría visual

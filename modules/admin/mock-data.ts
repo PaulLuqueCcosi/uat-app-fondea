@@ -5,8 +5,8 @@
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type ApplicationStatus = 'SUBMITTED' | 'PROCESSING' | 'PRE_APPROVED' | 'APPROVED' | 'REJECTED' | 'BLOCKED' | 'FAILED' | 'EXPIRED';
-export type CreditStatus = 'ACTIVE' | 'IN_ARREARS' | 'DEFAULTED' | 'SETTLED';
+export type ApplicationStatus = 'SUBMITTED' | 'PROCESSING' | 'PRE_APPROVED' | 'APPROVED' | 'REJECTED' | 'REJECTED_BY_USER' | 'BLOCKED' | 'FAILED' | 'EXPIRED';
+export type CreditStatus = 'ACTIVE' | 'OVERDUE' | 'DEFAULTED' | 'PAID_OFF';
 export type InstallmentStatus = 'PENDING' | 'ACTIVE' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
 export type DocumentStatus = 'verified' | 'pending' | 'failed' | 'not_uploaded';
 export type IntentionSource = 'external' | 'internal';

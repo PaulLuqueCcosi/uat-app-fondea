@@ -94,6 +94,7 @@ export interface LoanDetail {
   term_days: number;
   installment_count: number;
   is_first_loan: boolean;
+  credit_score_used: number | null;
   total_fees_original: number;
   total_discounts: number;
   total_igv: number;
@@ -175,7 +176,8 @@ export interface CreditSummary {
   statusChanges: StatusChangeItem[];
 }
 
-export type CreditStatus = 'ACTIVE' | 'OVERDUE' | 'DEFAULTED' | 'PAID_OFF';
+import type { CreditStatus } from './mock-data';
+export type { CreditStatus } from './mock-data';
 
 export interface InstallmentItem {
   id: string;
