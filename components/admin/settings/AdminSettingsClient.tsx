@@ -61,9 +61,9 @@ interface SystemConfig {
 
 const defaultConfig: SystemConfig = {
   mora: [
-    { label: '1 a 3 días', minDays: 1, maxDays: 3, penaltyPerDay: 5 },
-    { label: '4 a 14 días', minDays: 4, maxDays: 14, penaltyPerDay: 7 },
-    { label: '15+ días', minDays: 15, maxDays: null, penaltyPerDay: 10 },
+    { label: '1 a 3 días', minDays: 1, maxDays: 3, penaltyPerDay: 5, type: 'FIXED', base: null },
+    { label: '4 a 14 días', minDays: 4, maxDays: 14, penaltyPerDay: 7, type: 'FIXED', base: null },
+    { label: '15+ días', minDays: 15, maxDays: null, penaltyPerDay: 10, type: 'FIXED', base: null },
   ],
   formAttempts: [
     { label: 'KYC (Identidad)', key: 'kyc', maxAttempts: 3, blockHours: 24 },

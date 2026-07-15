@@ -51,6 +51,27 @@ export interface Credit {
   overdueSince: string | null;
   /** Fecha en que se liquidó (null si activo) */
   closedAt: string | null;
+  /** Configuración de mora aplicada a este crédito */
+  penaltyConfig?: PenaltyConfigInfo;
+}
+
+/** Configuración de mora — PenaltyConfigInfo del backend */
+export interface PenaltyConfigInfo {
+  id: string;
+  name: string;
+  isActive: boolean;
+  ranges: PenaltyRangeInfo[];
+}
+
+/** Rango de mora — PenaltyRangeInfo del backend */
+export interface PenaltyRangeInfo {
+  fromDay: number;
+  toDay: number | null;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
+  base: 'INSTALLMENT' | 'PRINCIPAL' | null;
+  label: string | null;
+  color: string | null;
 }
 
 // ─── Cuota ────────────────────────────────────────────────────────────────────

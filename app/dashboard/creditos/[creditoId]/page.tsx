@@ -12,6 +12,7 @@ import {
   Info,
   FileText,
   ChevronRight,
+  ShieldAlert,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -385,6 +386,64 @@ export default function CreditoDetallePage() {
               <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </CardFooter>
+        </Card>
+      )}
+
+      {/* ─── Configuración de mora aplicada ─── */}
+      {credit.penaltyConfig && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-warning-500" />
+              Sistema de mora aplicado
+            </CardTitle>
+            <CardDescription>
+              Este crédito usa la configuración "{credit.penaltyConfig.name}". La mora se calcula según los días de atraso.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-2 text-xs text-muted-foreground font-medium">Días de atraso</th>
+                    <th className="text-left py-2 px-2 text-xs text-muted-foreground font-medium">Tipo</th>
+                    <th className="text-right py-2 px-2 text-xs text-muted-foreground font-medium">Valor</th>
+                    <th className="text-left py-2 px-2 text-xs text-muted-foreground font-medium">Sobre</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {credit.penaltyConfig.ranges.map((range, idx) => (
+                    <tr key={idx} className="border-b border-border/50">
+                      <td className="py-2 px-2 text-xs">
+                        {range.toDay
+                          ? `Del ${range.fromDay} al ${range.toDay}`
+                          : `Desde el ${range.fromDay} en adelante`}
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className="text-[10px]">
+                          {range.type === 'PERCENTAGE' ? 'Porcentaje' : 'Monto fijo'}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2 text-right text-xs font-medium">
+                        {range.type === 'PERCENTAGE'
+                          ? `${range.value}%`
+                          : `S/ ${range.value.toFixed(2)}`}
+                      </td>
+                      <td className="py-2 px-2 text-xs text-muted-foreground">
+                        {range.type === 'PERCENTAGE'
+                          ? range.base === 'PRINCIPAL' ? 'Monto total del préstamo' : 'Monto de la cuota'
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-3">
+              La mora se aplica desde el primer día de atraso (sin período de gracia).
+            </p>
+          </CardContent>
         </Card>
       )}
 
