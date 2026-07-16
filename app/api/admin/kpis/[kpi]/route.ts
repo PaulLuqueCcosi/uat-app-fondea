@@ -15,6 +15,7 @@ const RESOURCE = process.env.LOGTO_API_RESOURCE;
 const VALID_KPIS = [
   'active-loans', 'capital', 'npl', 'income', 'cashflow', 'nps',
   'funnel', 'active-clients', 'repurchase-rate', 'city-distribution',
+  'geo-distribution',
 ];
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ kpi: string }> }) {
