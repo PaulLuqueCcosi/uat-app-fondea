@@ -234,6 +234,16 @@ export async function getUserSubtitle(): Promise<string | null> {
 }
 
 /**
+ * Indica si el usuario ya tiene al menos un préstamo desembolsado.
+ * Dato que viene del backend — se usa para que la calculadora muestre tasas correctas.
+ * false = primer préstamo, true = recurrente.
+ */
+export async function getHasDisbursedLoan(): Promise<boolean> {
+  const userData = await fetchUserData();
+  return userData?.hasDisbursedLoan ?? false;
+}
+
+/**
  * Obtiene solo los datos de seguridad (password, cuentas vinculadas).
  * USA ACCOUNT API → datos frescos.
  * Usado por la página de settings.

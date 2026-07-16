@@ -16,6 +16,11 @@ export async function getProfileSummary() {
   return profileService.getProfileSummary();
 }
 
+export async function getHasDisbursedLoan() {
+  await requireValidSession();
+  return profileService.getHasDisbursedLoan();
+}
+
 // ── Verificación de identidad ────────────────────────────────────────────────
 
 export async function verifyIdentity(password: string) {

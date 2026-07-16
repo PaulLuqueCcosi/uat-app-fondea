@@ -11,15 +11,16 @@
  * No necesita callbacks — cualquier componente suscrito al store se actualiza.
  */
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { LoanCalculatorProvider } from './core';
 import { LoanCalculator } from './ui';
-import { fondeaPortalApi, updateIntention } from './adapters/fondeaPortalApi';
+import { fondeaPortalApi, updateIntention, setPortalIsFirstLoan } from './adapters/fondeaPortalApi';
 import { useIntencionStore } from '@/lib/stores/intencion-store';
 import { useScoreStore } from '@/lib/stores/score-store';
 import { mapIntencionFromBackend } from '@/lib/mappers/intencion.mapper';
+import { getHasDisbursedLoan } from '@/app/actions/profile.actions';
 import type { LoanCalculatorApi, LoanCalculatorProps, IntentionRequest, IntentionResponse, LoanCalculatorTheme } from './core';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -68,10 +69,16 @@ export default function LoanCalculatorPortal({
   const score = useScoreStore(s => s.puntaje);
   const fetchScore = useScoreStore(s => s.fetchPuntaje);
   const isEditing = !!initialValues?.intencionId;
+  const [isFirstLoan, setIsFirstLoan] = useState(true);
 
-  // Cargar score al montar (si no se cargó antes)
+  // Cargar score y estado de primer préstamo al montar
   useEffect(() => {
     fetchScore();
+    getHasDisbursedLoan().then(hasDisbursed => {
+      const first = !hasDisbursed;
+      setIsFirstLoan(first);
+      setPortalIsFirstLoan(first);
+    });
   }, [fetchScore]);
 
   const portalApi: LoanCalculatorApi = useMemo(() => ({
@@ -118,7 +125,7 @@ export default function LoanCalculatorPortal({
       return result;
     },
     portalUrl: "__handled_internally__",
-  }), [isEditing, initialValues, setIntencion, onDone, router, score]);
+  }), [isEditing, initialValues, setIntencion, onDone, router, score, isFirstLoan]);
 
   return (
     <LoanCalculatorProvider api={portalApi} theme={DEFAULT_PORTAL_THEME}>

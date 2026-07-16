@@ -88,6 +88,15 @@ async function fetchConfig(): Promise<LoanConfig> {
   };
 }
 
+// ── Estado configurable por el portal ─────────────────────────────────────────
+
+let _isFirstLoan = true;
+
+/** Permite al portal configurar si el usuario es nuevo o recurrente */
+export function setPortalIsFirstLoan(value: boolean) {
+  _isFirstLoan = value;
+}
+
 // ── fetchCalculation (autenticado, via API route del portal) ──────────────────
 
 async function fetchCalculation(
@@ -105,7 +114,7 @@ async function fetchCalculation(
       amount,
       termDays,
       installmentCount: installments,
-      isFirstLoan: true,
+      isFirstLoan: _isFirstLoan,
     }),
     signal,
   });

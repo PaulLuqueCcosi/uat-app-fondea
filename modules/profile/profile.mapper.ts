@@ -132,6 +132,7 @@ export interface BackendUserData {
   fullName: string | null;
   documentType: string | null;
   documentNumber: string | null;
+  hasDisbursedLoan: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -144,6 +145,7 @@ export function mapUserDataFromBackend(raw: any): BackendUserData {
     fullName: raw.fullName ?? raw.full_name ?? null,
     documentType: raw.documentType ?? raw.document_type ?? null,
     documentNumber: raw.documentNumber ?? raw.document_number ?? null,
+    hasDisbursedLoan: raw.hasDisbursedLoan ?? raw.has_disbursed_loan ?? false,
   };
 }
 
