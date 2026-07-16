@@ -14,10 +14,11 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
-  Search, RefreshCw, Loader2, Filter, X, ChevronDown, ChevronUp,
+  Search, RefreshCw, Loader2, Filter, X, ChevronDown, ChevronUp, Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { AdminCreditRow, CreditStatus } from '@/modules/admin/admin-credits.service';
+import { deleteCreditAction } from '@/app/actions/admin-credits.actions';
 
 // ── Status labels ──────────────────────────────────────────────────────────
 
@@ -131,7 +132,54 @@ const columns = [
       </span>
     ),
   },
+  {
+    id: 'actions',
+    header: '',
+    cell: ({ row }: { row: { original: AdminCreditRow } }) => (
+      <DeleteCreditButton creditId={row.original.id} />
+    ),
+  },
 ];
+
+// ── Delete button (DEV) ─────────────────────────────────────────────────────
+
+function DeleteCreditButton({ creditId }: { creditId: string }) {
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // evitar que se abra el detalle
+    if (!confirm(`¿Eliminar crédito ${creditId.slice(0, 8)}… y TODOS sus datos? Esta acción es irreversible.`)) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await deleteCreditAction(creditId);
+      if (result.ok) {
+        router.refresh();
+      } else {
+        alert(result.message);
+      }
+    } catch (err) {
+      alert('Error al eliminar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleDelete}
+      disabled={loading}
+      className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+      title="Eliminar crédito (DEV)"
+    >
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+    </Button>
+  );
+}
 
 // ── Componente ─────────────────────────────────────────────────────────────
 
