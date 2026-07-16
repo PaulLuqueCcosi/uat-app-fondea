@@ -7,10 +7,12 @@ import { backendFetch } from '@/lib/backend-fetch';
 export interface FundStatus {
   fund_id: string;
   name: string;
-  total_capital: number;
+  capital_base: number;
+  bank_balance: number;
   total_deployed: number;
   available_capital: number;
   utilization_rate: number;
+  accumulated_interest: number;
   last_sync_at: string | null;
   last_updated_by: string | null;
 }
@@ -88,24 +90,17 @@ export async function getActivePortfolioConfigAction() {
   const status = await getFundStatusAction();
   if (!status) return null;
   return {
-    capitalBase: status.total_capital,
+    capitalBase: status.capital_base,
     currency: 'PEN',
   };
 }
 
 /** @deprecated Usa registerFundMovementAction(). Mantiene retrocompatibilidad. */
 export async function updateCapitalBaseAction(capitalBase: number) {
-  // Para "setear" el capital, calculamos la diferencia como MANUAL_ADJUSTMENT
-  const current = await getFundStatusAction();
-  const currentCapital = current?.total_capital ?? 0;
-  const diff = capitalBase - currentCapital;
-
-  if (diff === 0) return current;
-
-  const type: FundMovementType = diff > 0 ? 'CAPITAL_INJECTION' : 'PROFIT_WITHDRAWAL';
+  // Ajuste manual: setea capitalBase directamente
   return registerFundMovementAction(
-    type,
-    diff,
-    `Ajuste de capital desde admin: ${currentCapital} → ${capitalBase}`
+    'MANUAL_ADJUSTMENT',
+    capitalBase,
+    `Ajuste manual de capital base desde admin`
   );
 }

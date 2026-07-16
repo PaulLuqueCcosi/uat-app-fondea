@@ -46,7 +46,7 @@ function fmtDate(iso: string) {
   });
 }
 
-type ActionType = 'adjust' | 'deposit' | 'withdraw' | null;
+type ActionType = 'adjust' | 'deposit' | 'withdraw' | 'sync' | null;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -116,7 +116,8 @@ export function FundManagement() {
       return;
     }
 
-    const currentCapital = status?.total_capital ?? 0;
+    const currentCapitalBase = status?.capital_base ?? 0;
+    const currentBankBalance = status?.bank_balance ?? 0;
     let movementType: FundMovementType;
     let effectiveAmount: number;
     let resultCapital: number;
@@ -124,27 +125,35 @@ export function FundManagement() {
 
     switch (activeAction) {
       case 'adjust':
-        // Ajuste manual: setea el capital al valor ingresado
-        effectiveAmount = value - currentCapital;
+        // Ajuste manual: setea el capital base al valor ingresado
+        effectiveAmount = value;
         resultCapital = value;
         movementType = 'MANUAL_ADJUSTMENT';
-        label = 'Ajuste manual';
+        label = 'Ajuste de capital base';
+        break;
+
+      case 'sync':
+        // Sincronización: setea bankBalance al valor ingresado
+        effectiveAmount = value;
+        resultCapital = value;
+        movementType = 'BANK_SYNC';
+        label = 'Sincronización saldo banco';
         break;
 
       case 'deposit':
         effectiveAmount = value;
-        resultCapital = currentCapital + value;
+        resultCapital = currentBankBalance + value;
         movementType = 'CAPITAL_INJECTION';
         label = 'Depósito';
         break;
 
       case 'withdraw':
-        if (value > currentCapital) {
-          setActionError(`No puedes retirar más de lo que tiene el fondo (${fmt(currentCapital)})`);
+        if (value > currentBankBalance) {
+          setActionError(`No puedes retirar más de lo que hay en banco (${fmt(currentBankBalance)})`);
           return;
         }
-        effectiveAmount = -value;
-        resultCapital = currentCapital - value;
+        effectiveAmount = value;
+        resultCapital = currentBankBalance - value;
         movementType = 'PROFIT_WITHDRAWAL';
         label = 'Retiro';
         break;
@@ -208,7 +217,8 @@ export function FundManagement() {
     );
   }
 
-  const currentCapital = status?.total_capital ?? 0;
+  const currentCapitalBase = status?.capital_base ?? 0;
+  const currentBankBalance = status?.bank_balance ?? 0;
 
   return (
     <div className="space-y-6">
@@ -227,22 +237,48 @@ export function FundManagement() {
         </CardHeader>
         <CardContent>
           {status ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Capital total</p>
-                <p className="text-xl font-bold">{fmt(status.total_capital)}</p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Capital base</p>
+                  <p className="text-xl font-bold">{fmt(status.capital_base)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Saldo banco</p>
+                  <p className="text-xl font-bold text-primary">{fmt(status.bank_balance)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Colocado</p>
+                  <p className="text-xl font-bold">{fmt(status.total_deployed)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Utilización</p>
+                  <p className="text-xl font-bold">{status.utilization_rate}%</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Intereses ganados</p>
+                  <p className="text-xl font-bold text-success-600">{fmt(status.accumulated_interest)}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Disponible</p>
-                <p className="text-xl font-bold text-success-600">{fmt(status.available_capital)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Colocado</p>
-                <p className="text-sm font-medium">{fmt(status.total_deployed)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Utilización</p>
-                <p className="text-sm font-medium">{status.utilization_rate}%</p>
+              {/*
+                TODO — Sincronización automática con banco:
+                Cuando se implemente la integración con API bancaria, agregar aquí:
+                1. Toggle para activar/desactivar sync automático
+                2. Selector de frecuencia (cada hora, cada 6h, diario a las X)
+                3. Indicador de estado: último sync exitoso/fallido con fecha
+                4. Botón "Sincronizar ahora" que fuerza un sync inmediato
+                5. Si sync está activo: dot verde + "Sync cada día a las 6:00am"
+                6. Si sync falló: dot rojo + "Último sync falló: [error]"
+                Ver FundService.java para el plan completo del backend.
+              */}
+              <div className="flex items-center justify-between pt-3 border-t text-xs text-muted-foreground">
+                <span>
+                  Última sincronización: {status.last_sync_at ? fmtDate(status.last_sync_at) : 'Nunca'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-2 h-2 rounded-full bg-warning-400" />
+                  Sync automático no disponible (solo manual)
+                </span>
               </div>
             </div>
           ) : (
@@ -261,14 +297,22 @@ export function FundManagement() {
           <CardContent>
           {/* Botones de acción */}
           {!activeAction && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Button
                 variant="outline"
                 className="h-20 flex-col gap-2"
                 onClick={() => setActiveAction('adjust')}
               >
                 <Wrench className="h-5 w-5 text-warning-600" />
-                <span className="text-xs">Ajuste manual</span>
+                <span className="text-xs">Capital base</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-20 flex-col gap-2"
+                onClick={() => setActiveAction('sync')}
+              >
+                <RefreshCw className="h-5 w-5 text-primary" />
+                <span className="text-xs">Sync banco (manual)</span>
               </Button>
               <Button
                 variant="outline"
@@ -294,9 +338,10 @@ export function FundManagement() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">
-                  {activeAction === 'adjust' && '🔧 Ajuste manual — establece el capital total'}
-                  {activeAction === 'deposit' && '💰 Depositar — se suma al capital actual'}
-                  {activeAction === 'withdraw' && '📤 Retirar — se resta del capital actual'}
+                  {activeAction === 'adjust' && '🔧 Capital base — establece la inversión total'}
+                  {activeAction === 'sync' && '🔄 Saldo banco — sincroniza con el banco real'}
+                  {activeAction === 'deposit' && '💰 Depositar — entra dinero (sube capital + banco)'}
+                  {activeAction === 'withdraw' && '📤 Retirar — sale dinero (baja capital + banco)'}
                 </p>
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={resetForm}>
                   Cancelar
@@ -305,7 +350,9 @@ export function FundManagement() {
 
               <div className="space-y-1.5">
                 <Label className="text-sm">
-                  {activeAction === 'adjust' ? 'Nuevo capital total (S/)' : 'Monto (S/)'}
+                  {activeAction === 'adjust' && 'Nuevo capital base (S/)'}
+                  {activeAction === 'sync' && 'Saldo actual en banco (S/)'}
+                  {(activeAction === 'deposit' || activeAction === 'withdraw') && 'Monto (S/)'}
                 </Label>
                 <Input
                   type="number"
@@ -313,19 +360,28 @@ export function FundManagement() {
                   min={0}
                   value={amount}
                   onChange={(e) => { setAmount(e.target.value); setActionError(null); }}
-                  placeholder={activeAction === 'adjust' ? `Actual: ${fmt(currentCapital)}` : 'Ej: 50000'}
+                  placeholder={
+                    activeAction === 'adjust' ? `Actual: ${fmt(currentCapitalBase)}`
+                    : activeAction === 'sync' ? `Actual en sistema: ${fmt(currentBankBalance)}`
+                    : 'Ej: 50000'
+                  }
                   className="h-10 font-mono text-lg"
                   disabled={submitting}
                   autoFocus
                 />
                 {activeAction === 'adjust' && (
                   <p className="text-xs text-muted-foreground">
-                    Capital actual: {fmt(currentCapital)}. El nuevo valor reemplaza el actual.
+                    Capital base actual: {fmt(currentCapitalBase)}. El nuevo valor reemplaza el actual.
+                  </p>
+                )}
+                {activeAction === 'sync' && (
+                  <p className="text-xs text-muted-foreground">
+                    Saldo en sistema: {fmt(currentBankBalance)}. Ingresa lo que realmente hay en el banco.
                   </p>
                 )}
                 {activeAction === 'withdraw' && (
                   <p className="text-xs text-muted-foreground">
-                    Máximo retirable: {fmt(currentCapital)}
+                    Máximo retirable (saldo banco): {fmt(currentBankBalance)}
                   </p>
                 )}
               </div>
@@ -445,33 +501,42 @@ export function FundManagement() {
                 <span className="font-medium">{pendingAction.label}</span>
               </div>
 
-              {activeAction === 'adjust' ? (
+              {activeAction === 'adjust' && (
                 <>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Capital actual:</span>
-                    <span className="font-mono">{fmt(currentCapital)}</span>
+                    <span className="text-muted-foreground">Capital base actual:</span>
+                    <span className="font-mono">{fmt(currentCapitalBase)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Nuevo capital:</span>
+                    <span className="text-muted-foreground">Nuevo capital base:</span>
                     <span className="font-mono font-bold">{fmt(pendingAction.resultCapital)}</span>
                   </div>
+                </>
+              )}
+
+              {activeAction === 'sync' && (
+                <>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Diferencia:</span>
-                    <span className={`font-mono font-bold ${pendingAction.amount >= 0 ? 'text-success-600' : 'text-error-600'}`}>
-                      {pendingAction.amount >= 0 ? '+' : ''}{fmt(pendingAction.amount)}
-                    </span>
+                    <span className="text-muted-foreground">Saldo banco en sistema:</span>
+                    <span className="font-mono">{fmt(currentBankBalance)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Nuevo saldo banco:</span>
+                    <span className="font-mono font-bold">{fmt(pendingAction.resultCapital)}</span>
                   </div>
                 </>
-              ) : (
+              )}
+
+              {(activeAction === 'deposit' || activeAction === 'withdraw') && (
                 <>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Monto:</span>
-                    <span className={`font-mono font-bold ${pendingAction.amount >= 0 ? 'text-success-600' : 'text-error-600'}`}>
-                      {pendingAction.amount >= 0 ? '+' : ''}{fmt(pendingAction.amount)}
+                    <span className={`font-mono font-bold ${activeAction === 'deposit' ? 'text-success-600' : 'text-error-600'}`}>
+                      {activeAction === 'deposit' ? '+' : '-'}{fmt(pendingAction.amount)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Capital resultante:</span>
+                    <span className="text-muted-foreground">Saldo banco resultante:</span>
                     <span className="font-mono font-bold">{fmt(pendingAction.resultCapital)}</span>
                   </div>
                 </>
