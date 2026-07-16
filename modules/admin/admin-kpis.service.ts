@@ -57,10 +57,8 @@ export interface NpsKpi {
 }
 
 export interface FunnelKpi {
-  anonymous_intentions: number;
-  user_intentions: number;
   applications_submitted: number;
-  applications_approved: number;
+  applications_pre_approved: number;
   credits_disbursed: number;
   overall_conversion_rate: number;
 }
