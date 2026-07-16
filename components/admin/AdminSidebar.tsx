@@ -41,8 +41,8 @@ const mainNav = [
 ];
 
 const configNav = [
+  { path: '/admin/fund', label: 'Fondo de Capital', icon: Wallet },
   { path: '/admin/settings', label: 'Configuración', icon: Settings, exact: true },
-  { path: '/admin/settings/capital', label: 'Capital Base', icon: Wallet },
 ];
 
 interface AdminSidebarProps extends React.ComponentProps<typeof Sidebar> {

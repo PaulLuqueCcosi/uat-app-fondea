@@ -2,37 +2,110 @@
 
 import { backendFetch } from '@/lib/backend-fetch';
 
-export interface PortfolioConfigResponse {
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export interface FundStatus {
+  fund_id: string;
+  name: string;
+  total_capital: number;
+  total_deployed: number;
+  available_capital: number;
+  utilization_rate: number;
+  last_sync_at: string | null;
+  last_updated_by: string | null;
+}
+
+export interface FundMovement {
   id: string;
-  capitalBase: number;
-  currency: string;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
+  type: string;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  description: string | null;
+  external_reference: string | null;
+  created_by: string;
+  created_at: string;
 }
 
-export async function getActivePortfolioConfigAction(): Promise<PortfolioConfigResponse | null> {
-  const res = await backendFetch('/api/v1/admin/portfolio', {
+export type FundMovementType =
+  | 'CAPITAL_INJECTION'
+  | 'PROFIT_WITHDRAWAL'
+  | 'BANK_SYNC'
+  | 'MANUAL_ADJUSTMENT';
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+
+/** Obtiene el estado actual del fondo (capital, disponible, utilización). */
+export async function getFundStatusAction(): Promise<FundStatus | null> {
+  const res = await backendFetch('/api/v1/admin/fund', {
     method: 'GET',
-    context: 'PORTFOLIO',
+    context: 'FUND',
   });
-  if (res.status === 204) return null;
+  if (res.status === 204 || res.status === 500) return null;
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(`Error obteniendo capital base: ${error}`);
+    throw new Error(`Error obteniendo estado del fondo: ${error}`);
   }
   return res.json();
 }
 
-export async function updateCapitalBaseAction(capitalBase: number) {
-  const res = await backendFetch('/api/v1/admin/portfolio', {
-    method: 'PUT',
-    body: JSON.stringify({ capitalBase, currency: 'PEN' }),
-    context: 'PORTFOLIO',
+/** Registra un movimiento admin sobre el fondo. Queda en auditoría. */
+export async function registerFundMovementAction(
+  type: FundMovementType,
+  amount: number,
+  description: string,
+  reference?: string
+): Promise<FundMovement> {
+  const res = await backendFetch('/api/v1/admin/fund/movements', {
+    method: 'POST',
+    body: JSON.stringify({ type, amount, description, reference: reference ?? null }),
+    context: 'FUND',
   });
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(`Error actualizando capital: ${error}`);
+    throw new Error(`Error registrando movimiento: ${error}`);
   }
   return res.json();
+}
+
+/** Obtiene los últimos movimientos del fondo. */
+export async function getFundMovementsAction(limit: number = 20): Promise<FundMovement[]> {
+  const res = await backendFetch(`/api/v1/admin/fund/movements?limit=${limit}`, {
+    method: 'GET',
+    context: 'FUND',
+  });
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Error obteniendo movimientos: ${error}`);
+  }
+  return res.json();
+}
+
+// ── Legacy compatibility ──────────────────────────────────────────────────────
+
+/** @deprecated Usa getFundStatusAction(). Mantiene retrocompatibilidad con la page. */
+export async function getActivePortfolioConfigAction() {
+  const status = await getFundStatusAction();
+  if (!status) return null;
+  return {
+    capitalBase: status.total_capital,
+    currency: 'PEN',
+  };
+}
+
+/** @deprecated Usa registerFundMovementAction(). Mantiene retrocompatibilidad. */
+export async function updateCapitalBaseAction(capitalBase: number) {
+  // Para "setear" el capital, calculamos la diferencia como MANUAL_ADJUSTMENT
+  const current = await getFundStatusAction();
+  const currentCapital = current?.total_capital ?? 0;
+  const diff = capitalBase - currentCapital;
+
+  if (diff === 0) return current;
+
+  const type: FundMovementType = diff > 0 ? 'CAPITAL_INJECTION' : 'PROFIT_WITHDRAWAL';
+  return registerFundMovementAction(
+    type,
+    diff,
+    `Ajuste de capital desde admin: ${currentCapital} → ${capitalBase}`
+  );
 }
