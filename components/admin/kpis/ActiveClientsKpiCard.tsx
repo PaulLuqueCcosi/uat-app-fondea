@@ -70,6 +70,8 @@ export function ActiveClientsKpiCard({ days: initialDays = 30 }: { days?: number
                 <SelectItem value="14">14 días</SelectItem>
                 <SelectItem value="20">20 días</SelectItem>
                 <SelectItem value="30">30 días</SelectItem>
+                <SelectItem value="60">60 días</SelectItem>
+                <SelectItem value="90">90 días</SelectItem>
               </SelectContent>
             </Select>
           </div>
