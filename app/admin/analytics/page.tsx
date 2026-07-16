@@ -3,6 +3,7 @@ import { ActiveLoansKpiCard } from '@/components/admin/kpis/ActiveLoansKpiCard';
 import { CapitalDisponibleKpiCard } from '@/components/admin/kpis/CapitalDisponibleKpiCard';
 import { UtilizacionKpiCard } from '@/components/admin/kpis/UtilizacionKpiCard';
 import { IncomeKpiCard } from '@/components/admin/kpis/IncomeKpiCard';
+import { CashflowKpiCard } from '@/components/admin/kpis/CashflowKpiCard';
 import { NpsKpiCard } from '@/components/admin/kpis/NpsKpiCard';
 import { NplKpiCard } from '@/components/admin/kpis/NplKpiCard';
 import { FunnelKpiCard } from '@/components/admin/kpis/FunnelKpiCard';
@@ -40,9 +41,10 @@ export default function AdminAnalyticsPage() {
       {/* Fila 2: NPL (ancho) */}
       <NplKpiCard />
 
-      {/* Fila 3: Ingresos + NPS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Fila 3: Ingresos brutos + Ingresos a caja + NPS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <IncomeKpiCard days={30} />
+        <CashflowKpiCard days={30} />
         <NpsKpiCard days={30} />
       </div>
 

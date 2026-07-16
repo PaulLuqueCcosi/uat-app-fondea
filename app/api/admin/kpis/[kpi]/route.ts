@@ -13,7 +13,7 @@ const BACKEND_URL = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
 const RESOURCE = process.env.LOGTO_API_RESOURCE;
 
 const VALID_KPIS = [
-  'active-loans', 'capital', 'npl', 'income', 'nps',
+  'active-loans', 'capital', 'npl', 'income', 'cashflow', 'nps',
   'funnel', 'active-clients', 'repurchase-rate', 'city-distribution',
 ];
 
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     // Build backend URL with days param for KPIs that need it
-    const needsDays = ['income', 'nps', 'funnel', 'active-clients', 'repurchase-rate'];
+    const needsDays = ['income', 'cashflow', 'nps', 'funnel', 'active-clients', 'repurchase-rate'];
     const queryStr = needsDays.includes(kpi) ? `?days=${days}` : '';
 
     const res = await fetch(`${BACKEND_URL}/api/v1/admin/dashboard-kpis/${kpi}${queryStr}`, {
