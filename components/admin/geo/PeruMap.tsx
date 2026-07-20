@@ -332,7 +332,7 @@ export function PeruMap({ data, maxLoanCount, onRegionClick, onLevelChange }: Pe
           </Button>
         )}
         <div className="bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-md border text-xs font-medium">
-          📍 {breadcrumb}
+          {breadcrumb}
         </div>
       </div>
 

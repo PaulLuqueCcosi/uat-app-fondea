@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
-import { ArrowLeft, CreditCard, History, Receipt, Calendar, AlertTriangle, Clock, DollarSign } from 'lucide-react';
+import { ArrowLeft, CreditCard, History, Receipt, Calendar, AlertTriangle, Clock, User, MapPin, Award, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAdminCreditDetail } from '@/modules/admin/admin-credit-detail.service';
+import { getDepartments, getProvinces, getDistricts } from 'ubigeo-fns';
 import type { CreditStatus, InstallmentStatus, InstallmentItem } from '@/modules/admin/admin-credit-detail.service';
 
 // ── Status labels ────────────────────────────────────────────────────────────
@@ -37,12 +38,14 @@ export default async function AdminCreditDetailPage({ params }: Props) {
     notFound();
   }
 
-  const { credit, installments, creditAudit, installmentAudit } = data;
+  const { credit, installments, creditAudit, installmentAudit, portfolioDetail } = data;
   const progress = credit.total_due > 0
     ? Math.round((credit.total_paid / (credit.total_due + credit.total_penalty)) * 100)
     : 0;
 
   const statusCfg = CREDIT_STATUS[credit.status];
+  const client = portfolioDetail?.client;
+  const timeline = portfolioDetail?.timeline ?? [];
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -66,6 +69,65 @@ export default async function AdminCreditDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Datos del cliente */}
+      {client && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">{client.full_name ?? 'Sin nombre'}</span>
+                {client.document_number && (
+                  <span className="text-xs font-mono text-muted-foreground">DNI {client.document_number}</span>
+                )}
+              </div>
+              {(client.ubigeo_region || client.ubigeo_district) && (
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {(() => {
+                      const parts: string[] = [];
+                      try {
+                        if (client.ubigeo_district) {
+                          const provCode = client.ubigeo_district.substring(0, 4);
+                          const dists = getDistricts(provCode);
+                          const distName = dists.find(d => d.code === client.ubigeo_district)?.name;
+                          if (distName) parts.push(distName);
+                        }
+                        if (client.ubigeo_province) {
+                          const regCode = client.ubigeo_province.substring(0, 2);
+                          const provs = getProvinces(regCode);
+                          const provName = provs.find(p => p.code === client.ubigeo_province)?.name;
+                          if (provName) parts.push(provName);
+                        }
+                        if (client.ubigeo_region) {
+                          const deps = getDepartments();
+                          const depName = deps.find(d => d.code === client.ubigeo_region)?.name;
+                          if (depName) parts.push(depName);
+                        }
+                      } catch { /* fallback */ }
+                      return parts.length > 0 ? parts.join(', ') : (client.ubigeo_district ?? '—');
+                    })()}
+                  </span>
+                </div>
+              )}
+              {client.fondea_score != null && (
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs">Score: <span className="font-mono font-medium">{client.fondea_score}</span></span>
+                </div>
+              )}
+              {client.passport_points != null && (
+                <div className="flex items-center gap-1.5">
+                  <Award className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs">Pasaporte: <span className="font-mono font-medium">{client.passport_points} pts</span></span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary cards - full width */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -147,6 +209,34 @@ export default async function AdminCreditDetailPage({ params }: Props) {
           ))}
         </div>
       </div>
+
+      {/* Timeline del crédito */}
+      {timeline.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Timeline del Crédito
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="relative pl-6 space-y-4">
+              <div className="absolute left-2 top-2 bottom-2 w-px bg-border" />
+              {timeline.map((event, idx) => (
+                <div key={idx} className="relative flex gap-3">
+                  <div className="absolute -left-4 top-1 w-3 h-3 rounded-full border-2 border-primary bg-background" />
+                  <div className="flex-1">
+                    <p className="text-xs font-medium">{event.description}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {new Date(event.timestamp).toLocaleString('es-PE')}
+                      <span className="ml-2 px-1.5 py-0.5 rounded bg-muted text-[9px] font-mono">{event.type}</span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Audit - 2 columns on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

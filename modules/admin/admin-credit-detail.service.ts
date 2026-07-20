@@ -76,16 +76,46 @@ export interface AdminCreditFullDetail {
   installments: InstallmentItem[];
   creditAudit: CreditAuditEvent[];
   installmentAudit: InstallmentAuditEvent[];
+  portfolioDetail: PortfolioDetail | null;
+}
+
+export interface PortfolioDetail {
+  id: string;
+  status: CreditStatus;
+  principal: number;
+  total_due: number;
+  pending_balance: number;
+  total_paid: number;
+  term_days: number;
+  installment_count: number;
+  interest_rate: number;
+  disbursed_at: string | null;
+  maturity_date: string | null;
+  overdue_since: string | null;
+  days_remaining: number;
+  client: {
+    user_id: string;
+    full_name: string | null;
+    document_number: string | null;
+    ubigeo_region: string | null;
+    ubigeo_province: string | null;
+    ubigeo_district: string | null;
+    fondea_score: number | null;
+    passport_points: number | null;
+  } | null;
+  installments: any[];
+  timeline: { timestamp: string; type: string; description: string }[];
 }
 
 // ── Service ─────────────────────────────────────────────────────────────────
 
 export async function getAdminCreditDetail(creditId: string): Promise<AdminCreditFullDetail | null> {
-  const [creditRes, installmentsRes, creditAuditRes, installmentAuditRes] = await Promise.all([
+  const [creditRes, installmentsRes, creditAuditRes, installmentAuditRes, portfolioRes] = await Promise.all([
     backendFetch(`/api/v1/admin/credits/${creditId}/detail`, { context: 'ADMIN_CREDIT_DETAIL' }),
     backendFetch(`/api/v1/admin/credits/${creditId}/installments`, { context: 'ADMIN_CREDIT_INSTALLMENTS' }),
     backendFetch(`/api/v1/admin/credits/${creditId}/audit`, { context: 'ADMIN_CREDIT_AUDIT' }),
     backendFetch(`/api/v1/admin/credits/${creditId}/installments/audit`, { context: 'ADMIN_INSTALLMENT_AUDIT' }),
+    backendFetch(`/api/v1/admin/portfolio/credits/${creditId}`, { context: 'PORTFOLIO_CREDIT_DETAIL' }),
   ]);
 
   if (!creditRes.ok) {
@@ -98,10 +128,17 @@ export async function getAdminCreditDetail(creditId: string): Promise<AdminCredi
   const creditAudit: CreditAuditEvent[] = creditAuditRes.ok ? await creditAuditRes.json() : [];
   const installmentAudit: InstallmentAuditEvent[] = installmentAuditRes.ok ? await installmentAuditRes.json() : [];
 
+  // Datos extendidos del portfolio (cliente, timeline, score)
+  let portfolioDetail: PortfolioDetail | null = null;
+  if (portfolioRes.ok) {
+    portfolioDetail = await portfolioRes.json();
+  }
+
   return {
     credit,
     installments: installmentsBody.installments ?? [],
     creditAudit,
     installmentAudit,
+    portfolioDetail,
   };
 }

@@ -14,6 +14,7 @@ import {
   Target,
   Wallet,
   TrendingUp,
+  PieChart,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -36,6 +37,7 @@ const mainNav = [
   { path: '/admin/intentions', label: 'Intenciones', icon: Target },
   { path: '/admin/applications', label: 'Solicitudes', icon: FileText },
   { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
+  { path: '/admin/portfolio', label: 'Cartera', icon: PieChart },
   { path: '/admin/collections', label: 'Cobranza', icon: BarChart3 },
   { path: '/admin/calculator', label: 'Calculadora', icon: Settings },
 ];
