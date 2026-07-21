@@ -15,6 +15,7 @@ import {
   Wallet,
   TrendingUp,
   PieChart,
+  Shield,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -43,6 +44,7 @@ const mainNav = [
 ];
 
 const configNav = [
+  { path: '/admin/evaluation-rules', label: 'Reglas Motor', icon: Shield },
   { path: '/admin/fund', label: 'Fondo de Capital', icon: Wallet },
   { path: '/admin/settings', label: 'Configuración', icon: Settings, exact: true },
 ];
