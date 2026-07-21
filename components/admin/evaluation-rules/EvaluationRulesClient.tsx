@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Loader2, ShieldCheck, Target } from 'lucide-react';
+import { AlertCircle, Gauge, Loader2, ShieldCheck, Target } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { toast } from 'sonner';
 
 import { VersionsTable } from './VersionsTable';
 import { VersionDetail } from './VersionDetail';
 import { SimulationPanel } from './SimulationPanel';
+import { ThresholdsPanel } from './ThresholdsPanel';
 
 import {
   listVersionsAction,
@@ -21,7 +23,7 @@ import type { RuleSetVersionResponse, RuleSetType } from '@/modules/admin/admin-
 
 export function EvaluationRulesClient() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<RuleSetType>('eliminatory');
+  const [activeTab, setActiveTab] = useState<RuleSetType | 'thresholds'>('eliminatory');
   const [versions, setVersions] = useState<Record<RuleSetType, RuleSetVersionResponse[]>>({
     eliminatory: [],
     scoring: [],
@@ -132,7 +134,7 @@ export function EvaluationRulesClient() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as RuleSetType); setSelectedVersion(null); }}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as RuleSetType | 'thresholds'); setSelectedVersion(null); }}>
         <TabsList className="h-9 p-1">
           <TabsTrigger value="eliminatory" className="gap-1.5 text-xs px-3">
             <ShieldCheck className="h-3.5 w-3.5" />
@@ -143,6 +145,10 @@ export function EvaluationRulesClient() {
             <Target className="h-3.5 w-3.5" />
             Scoring
             <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1">{versions.scoring.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="thresholds" className="gap-1.5 text-xs px-3">
+            <Gauge className="h-3.5 w-3.5" />
+            Umbrales
           </TabsTrigger>
         </TabsList>
 
@@ -168,6 +174,10 @@ export function EvaluationRulesClient() {
             onCreateNew={() => handleCreateNew('scoring')}
             onDuplicate={handleDuplicate}
           />
+        </TabsContent>
+
+        <TabsContent value="thresholds" className="mt-4">
+          <ThresholdsPanel />
         </TabsContent>
       </Tabs>
 

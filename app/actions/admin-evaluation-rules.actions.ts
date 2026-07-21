@@ -42,3 +42,19 @@ export async function getAvailableFieldsAction() {
   await requireAdminRole();
   return service.getAvailableFields();
 }
+
+
+export async function listThresholdsAction() {
+  await requireAdminRole();
+  return service.listThresholds();
+}
+
+export async function createThresholdsAction(request: service.CreateScoringThresholdsRequest) {
+  await requireAdminRole();
+  return service.createThresholds(request);
+}
+
+export async function activateThresholdsAction(id: string) {
+  await requireAdminRole();
+  return service.activateThresholds(id);
+}

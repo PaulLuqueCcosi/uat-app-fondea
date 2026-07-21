@@ -7,8 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Code, Eye, GripVertical, Plus, Trash2 } from 'lucide-react';
 import { RuleQueryBuilder } from './RuleQueryBuilder';
 import type { FieldGroup } from '@/modules/admin/admin-evaluation-rules.service';
@@ -20,14 +29,17 @@ interface RuleEditorProps {
   type: 'eliminatory' | 'scoring';
 }
 
-/**
- * Editor completo de módulos y reglas.
- * Permite editar cada regla con el QueryBuilder visual o con JSON.
- */
 export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorProps) {
   const [expandedModule, setExpandedModule] = useState<number | null>(0);
   const [expandedRule, setExpandedRule] = useState<string | null>(null);
   const [editMode, setEditMode] = useState<'visual' | 'json'>('visual');
+
+  // Confirmación de eliminación
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: 'module' | 'rule';
+    label: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const updateModule = (moduleIdx: number, updated: any) => {
     const newModules = [...modules];
@@ -46,8 +58,8 @@ export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorP
   const addRule = (moduleIdx: number) => {
     const newModules = [...modules];
     const newRule = type === 'scoring'
-      ? { id: `rule-${Date.now()}`, label: 'Nueva regla', description: '', category: 'profile', points: 0, logic: {} }
-      : { id: `rule-${Date.now()}`, label: 'Nueva regla', description: '', logic: {} };
+      ? { id: `rule-${Date.now()}`, label: '', description: '', points: 0, logic: {} }
+      : { id: `rule-${Date.now()}`, label: '', description: '', logic: {} };
     newModules[moduleIdx] = {
       ...newModules[moduleIdx],
       rules: [...newModules[moduleIdx].rules, newRule],
@@ -56,20 +68,40 @@ export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorP
     setExpandedRule(`${moduleIdx}-${newModules[moduleIdx].rules.length - 1}`);
   };
 
-  const removeRule = (moduleIdx: number, ruleIdx: number) => {
-    const newModules = [...modules];
-    newModules[moduleIdx] = {
-      ...newModules[moduleIdx],
-      rules: newModules[moduleIdx].rules.filter((_: any, i: number) => i !== ruleIdx),
-    };
-    onChange(newModules);
-    setExpandedRule(null);
+  const confirmRemoveRule = (moduleIdx: number, ruleIdx: number, label: string) => {
+    setDeleteConfirm({
+      type: 'rule',
+      label: label || 'esta regla',
+      onConfirm: () => {
+        const newModules = [...modules];
+        newModules[moduleIdx] = {
+          ...newModules[moduleIdx],
+          rules: newModules[moduleIdx].rules.filter((_: any, i: number) => i !== ruleIdx),
+        };
+        onChange(newModules);
+        setExpandedRule(null);
+        setDeleteConfirm(null);
+      },
+    });
+  };
+
+  const confirmRemoveModule = (moduleIdx: number, label: string) => {
+    setDeleteConfirm({
+      type: 'module',
+      label: label || 'este módulo',
+      onConfirm: () => {
+        const newModules = modules.filter((_, i) => i !== moduleIdx);
+        onChange(newModules);
+        if (expandedModule === moduleIdx) setExpandedModule(null);
+        setDeleteConfirm(null);
+      },
+    });
   };
 
   const addModule = () => {
     const newModule = {
-      module: `new-module-${Date.now()}`,
-      label: 'Nuevo módulo',
+      module: '',
+      label: '',
       productId: '550e8400-e29b-41d4-a716-446655440000',
       version: '1.0.0',
       rules: [],
@@ -115,7 +147,7 @@ export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorP
                 <CardTitle className="text-xs flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="font-medium">{mod.label || mod.module}</span>
+                    <span className="font-medium">{mod.label || mod.module || 'Módulo sin nombre'}</span>
                     <Badge variant="secondary" className="text-[10px]">
                       {mod.rules?.length ?? 0} regla{(mod.rules?.length ?? 0) !== 1 ? 's' : ''}
                     </Badge>
@@ -128,9 +160,7 @@ export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorP
                       className="h-6 w-6 text-destructive/60 hover:text-destructive"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const newModules = modules.filter((_, i) => i !== moduleIdx);
-                        onChange(newModules);
-                        if (expandedModule === moduleIdx) setExpandedModule(null);
+                        confirmRemoveModule(moduleIdx, mod.label || mod.module);
                       }}
                       title="Eliminar módulo"
                     >
@@ -145,19 +175,21 @@ export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorP
                   {/* Module metadata */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Nombre interno</Label>
+                      <Label className="text-[10px]">Nombre interno *</Label>
                       <Input
                         value={mod.module}
                         onChange={(e) => updateModule(moduleIdx, { ...mod, module: e.target.value })}
-                        className="h-7 text-xs font-mono"
+                        className={`h-7 text-xs font-mono ${!mod.module?.trim() ? 'border-destructive' : ''}`}
+                        placeholder="ej: kyc, labor, economic"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Etiqueta</Label>
+                      <Label className="text-[10px]">Etiqueta *</Label>
                       <Input
                         value={mod.label}
                         onChange={(e) => updateModule(moduleIdx, { ...mod, label: e.target.value })}
-                        className="h-7 text-xs"
+                        className={`h-7 text-xs ${!mod.label?.trim() ? 'border-destructive' : ''}`}
+                        placeholder="ej: Identidad (KYC)"
                       />
                     </div>
                   </div>
@@ -167,16 +199,19 @@ export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorP
                     {(mod.rules ?? []).map((rule: any, ruleIdx: number) => {
                       const ruleKey = `${moduleIdx}-${ruleIdx}`;
                       const isExpanded = expandedRule === ruleKey;
+                      const hasError = !rule.label?.trim();
 
                       return (
-                        <div key={rule.id ?? ruleIdx} className="border rounded-md bg-muted/10">
+                        <div key={rule.id ?? ruleIdx} className={`border rounded-md ${hasError ? 'border-destructive/50 bg-destructive/5' : 'bg-muted/10'}`}>
                           {/* Rule header */}
                           <div
                             className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-muted/20 transition-colors"
                             onClick={() => setExpandedRule(isExpanded ? null : ruleKey)}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-xs font-medium truncate">{rule.label || rule.id}</span>
+                              <span className={`text-xs font-medium truncate ${hasError ? 'text-destructive' : ''}`}>
+                                {rule.label || '⚠ Sin nombre'}
+                              </span>
                               {type === 'scoring' && rule.points !== undefined && (
                                 <Badge
                                   variant={rule.points >= 0 ? 'default' : 'destructive'}
@@ -190,7 +225,10 @@ export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorP
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6 text-destructive/60 hover:text-destructive"
-                              onClick={(e) => { e.stopPropagation(); removeRule(moduleIdx, ruleIdx); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmRemoveRule(moduleIdx, ruleIdx, rule.label);
+                              }}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -200,13 +238,16 @@ export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorP
                           {isExpanded && (
                             <div className="px-3 pb-3 space-y-3 border-t bg-background">
                               <div className="space-y-1 pt-2">
-                                <Label className="text-[10px]">Nombre de la regla</Label>
+                                <Label className="text-[10px]">Nombre de la regla *</Label>
                                 <Input
                                   value={rule.label}
                                   onChange={(e) => updateRule(moduleIdx, ruleIdx, { ...rule, label: e.target.value })}
-                                  className="h-7 text-xs"
+                                  className={`h-7 text-xs ${!rule.label?.trim() ? 'border-destructive' : ''}`}
                                   placeholder="Ej: Edad mínima 18 años"
                                 />
+                                {!rule.label?.trim() && (
+                                  <p className="text-[10px] text-destructive">El nombre es obligatorio</p>
+                                )}
                               </div>
 
                               <div className="space-y-1">
@@ -219,40 +260,22 @@ export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorP
                                 />
                               </div>
 
-                              {/* Scoring-specific: points + category */}
+                              {/* Scoring-specific: points */}
                               {type === 'scoring' && (
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="space-y-1">
-                                    <Label className="text-[10px]">Puntos</Label>
-                                    <Input
-                                      type="number"
-                                      value={rule.points ?? 0}
-                                      onChange={(e) => updateRule(moduleIdx, ruleIdx, { ...rule, points: Number(e.target.value) })}
-                                      className="h-7 text-xs"
-                                    />
-                                  </div>
-                                  <div className="space-y-1">
-                                    <Label className="text-[10px]">Categoría</Label>
-                                    <Select
-                                      value={rule.category ?? 'profile'}
-                                      onValueChange={(v) => updateRule(moduleIdx, ruleIdx, { ...rule, category: v })}
-                                    >
-                                      <SelectTrigger className="h-7 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="profile">Perfil</SelectItem>
-                                        <SelectItem value="cross">Cruzada</SelectItem>
-                                        <SelectItem value="antifraud">Antifraude</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+                                <div className="w-32 space-y-1">
+                                  <Label className="text-[10px]">Puntos *</Label>
+                                  <Input
+                                    type="number"
+                                    value={rule.points ?? 0}
+                                    onChange={(e) => updateRule(moduleIdx, ruleIdx, { ...rule, points: Number(e.target.value) })}
+                                    className="h-7 text-xs"
+                                  />
                                 </div>
                               )}
 
                               {/* JsonLogic editor */}
                               <div className="space-y-1">
-                                <Label className="text-[10px]">Lógica (JsonLogic)</Label>
+                                <Label className="text-[10px]">Lógica (JsonLogic) *</Label>
                                 <RuleQueryBuilder
                                   logic={rule.logic}
                                   onChange={(newLogic) => updateRule(moduleIdx, ruleIdx, { ...rule, logic: newLogic })}
@@ -281,6 +304,31 @@ export function RuleEditor({ modules, onChange, fieldGroups, type }: RuleEditorP
           </Button>
         </>
       )}
+
+      {/* Confirmación de eliminación */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              ¿Eliminar {deleteConfirm?.type === 'module' ? 'módulo' : 'regla'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a eliminar <strong>"{deleteConfirm?.label}"</strong>.
+              {deleteConfirm?.type === 'module' && ' Todas las reglas dentro de este módulo se perderán.'}
+              {' '}Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteConfirm?.onConfirm}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

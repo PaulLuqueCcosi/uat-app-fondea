@@ -121,10 +121,33 @@ export function RuleEditorPage({ duplicateFromId }: RuleEditorPageProps) {
       setError('Agrega al menos un módulo con reglas.');
       return;
     }
-    const emptyModule = modules.find(m => !m.rules || m.rules.length === 0);
-    if (emptyModule) {
-      setError(`El módulo "${emptyModule.label || emptyModule.module}" no tiene reglas.`);
-      return;
+
+    // Validar módulos
+    for (const mod of modules) {
+      if (!mod.module?.trim()) {
+        setError(`Hay un módulo sin nombre interno. Todos los módulos deben tener un nombre.`);
+        return;
+      }
+      if (!mod.label?.trim()) {
+        setError(`El módulo "${mod.module}" no tiene etiqueta.`);
+        return;
+      }
+      if (!mod.rules || mod.rules.length === 0) {
+        setError(`El módulo "${mod.label}" no tiene reglas. Agrega al menos una.`);
+        return;
+      }
+
+      // Validar reglas
+      for (const rule of mod.rules) {
+        if (!rule.label?.trim()) {
+          setError(`Hay una regla sin nombre en el módulo "${mod.label}". Todas las reglas deben tener nombre.`);
+          return;
+        }
+        if (!rule.logic || (typeof rule.logic === 'object' && Object.keys(rule.logic).length === 0)) {
+          setError(`La regla "${rule.label}" en "${mod.label}" no tiene lógica configurada.`);
+          return;
+        }
+      }
     }
 
     setSaving(true);
@@ -166,7 +189,7 @@ export function RuleEditorPage({ duplicateFromId }: RuleEditorPageProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 md:p-6 max-w-6xl">
+    <div className="flex flex-1 flex-col gap-4 p-4 md:p-6 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -200,8 +223,8 @@ export function RuleEditorPage({ duplicateFromId }: RuleEditorPageProps) {
         <CardContent className="space-y-3">
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Tipo *</Label>
-              <Select value={type} onValueChange={(v) => setType(v as RuleSetType)} disabled={!!baseVersion}>
+              <Label className="text-xs">Tipo</Label>
+              <Select value={type} disabled>
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue />
                 </SelectTrigger>

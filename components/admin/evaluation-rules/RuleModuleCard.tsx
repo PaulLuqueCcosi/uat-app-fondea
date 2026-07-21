@@ -102,11 +102,6 @@ export function RuleModuleCard({ module, type }: RuleModuleCardProps) {
                         {rule.points > 0 ? '+' : ''}{rule.points} pts
                       </Badge>
                     )}
-                    {rule.category && (
-                      <Badge variant="outline" className="text-[10px]">
-                        {rule.category === 'profile' ? 'Perfil' : rule.category === 'cross' ? 'Cruzada' : rule.category === 'antifraud' ? 'Antifraude' : rule.category}
-                      </Badge>
-                    )}
                   </div>
                 </div>
                 {rule.description && (

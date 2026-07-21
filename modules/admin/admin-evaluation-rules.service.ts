@@ -67,13 +67,11 @@ export interface AppliedFactor {
   ruleId: string;
   label: string;
   points: number;
-  category: string;
 }
 
 export interface EvaluationResponse {
   passed: boolean;
-  requiresManualReview: boolean;
-  decision: 'APPROVED' | 'MANUAL_REVIEW' | 'REJECTED';
+  decision: 'APPROVED' | 'REJECTED';
   detail: string;
   errors: EvaluationError[];
   baseScore: number | null;
@@ -220,5 +218,70 @@ export async function getAvailableFields(): Promise<{ ok: boolean; data?: Availa
     return { ok: true, data };
   } catch {
     return { ok: false, error: 'No se pudo obtener campos disponibles.' };
+  }
+}
+
+
+// ── Scoring Thresholds ────────────────────────────────────────────────────────
+
+export interface ScoringThresholdsResponse {
+  id: string;
+  baseScore: number;
+  approvedMin: number;
+  active: boolean;
+  description: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface CreateScoringThresholdsRequest {
+  baseScore: number;
+  approvedMin: number;
+  description?: string;
+}
+
+export async function listThresholds(): Promise<{ ok: boolean; data?: ScoringThresholdsResponse[]; error?: string }> {
+  try {
+    const res = await adminFetch('/api/v1/admin/evaluation-rules/thresholds');
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: body.message ?? body.error ?? `Error ${res.status}` };
+    }
+    return { ok: true, data: await res.json() };
+  } catch {
+    return { ok: false, error: 'No se pudo cargar los umbrales.' };
+  }
+}
+
+export async function createThresholds(
+  request: CreateScoringThresholdsRequest
+): Promise<{ ok: boolean; data?: ScoringThresholdsResponse; error?: string }> {
+  try {
+    const res = await adminFetch('/api/v1/admin/evaluation-rules/thresholds', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: body.message ?? body.error ?? `Error ${res.status}` };
+    }
+    return { ok: true, data: await res.json() };
+  } catch {
+    return { ok: false, error: 'No se pudo crear los umbrales.' };
+  }
+}
+
+export async function activateThresholds(id: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await adminFetch(`/api/v1/admin/evaluation-rules/thresholds/${id}/activate`, {
+      method: 'PATCH',
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: body.message ?? body.error ?? `Error ${res.status}` };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'No se pudo activar los umbrales.' };
   }
 }
