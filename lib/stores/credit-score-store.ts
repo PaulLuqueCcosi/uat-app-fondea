@@ -6,8 +6,11 @@ import type { ScoreRange } from '@/lib/types';
 export type StoreStatus = 'idle' | 'pending' | 'success' | 'error';
 
 export interface CreditScoreData {
-  score: number; // 0 a 1000
-  updatedAt: string; // ISO datetime
+  score: number;        // Score del buró (300-999)
+  updatedAt: string;    // ISO datetime de la última consulta
+  classification: string | null;  // NORMAL, CPP, DEFICIENTE, etc.
+  isValid: boolean;     // Si el reporte no está expirado
+  provider: string;     // SENTINEL, EXPERIAN, MOCK
 }
 
 // ── Store ──────────────────────────────────────────────────────────────────────
@@ -45,9 +48,10 @@ export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
 
     set({ status: 'pending', error: null });
     try {
-      const res = await window.fetch('/api/credit-score', { cache: 'no-store' });
+      const res = await window.fetch('/api/buro/me', { cache: 'no-store' });
 
       if (res.status === 404) {
+        // Sin reporte del buró aún
         set({ status: 'success', creditScore: null });
         return;
       }
@@ -58,7 +62,17 @@ export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
       }
 
       const data = await res.json();
-      set({ status: 'success', creditScore: data });
+      // Mapear respuesta del buró al formato del store
+      set({
+        status: 'success',
+        creditScore: {
+          score: data.buro_score ?? 0,
+          updatedAt: data.consulted_at ?? new Date().toISOString(),
+          classification: data.worst_classification ?? null,
+          isValid: data.is_valid ?? false,
+          provider: data.provider ?? 'MOCK',
+        },
+      });
     } catch (err) {
       console.error('[CreditScore] Network error:', err);
       set({ status: 'error', error: 'Network error' });
@@ -68,7 +82,7 @@ export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
   refetch: async () => {
     set({ status: 'pending', error: null });
     try {
-      const res = await window.fetch('/api/credit-score', { cache: 'no-store' });
+      const res = await window.fetch('/api/buro/me', { cache: 'no-store' });
 
       if (res.status === 404) {
         set({ status: 'success', creditScore: null });
@@ -81,7 +95,16 @@ export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
       }
 
       const data = await res.json();
-      set({ status: 'success', creditScore: data });
+      set({
+        status: 'success',
+        creditScore: {
+          score: data.buro_score ?? 0,
+          updatedAt: data.consulted_at ?? new Date().toISOString(),
+          classification: data.worst_classification ?? null,
+          isValid: data.is_valid ?? false,
+          provider: data.provider ?? 'MOCK',
+        },
+      });
     } catch (err) {
       console.error('[CreditScore] Network error:', err);
       set({ status: 'error', error: 'Network error' });
@@ -98,7 +121,6 @@ export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
 
   fetchScoreRanges: async () => {
     const { rangesStatus } = get();
-    // Cachear 1 vez por sesión (configuración del producto no cambia)
     if (rangesStatus === 'pending' || rangesStatus === 'success') return;
 
     set({ rangesStatus: 'pending', rangesError: null });
