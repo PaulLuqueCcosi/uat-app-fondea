@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ListChecks, Pencil, FlaskConical } from 'lucide-react';
 import type { ScorecardConfig, ScorecardMetadata } from '@/modules/admin/scoring';
 import { fetchConfigs, fetchMetadata } from '@/app/admin/scoring/actions';
 import { ConfigsListTab } from './ConfigsListTab';
@@ -31,6 +31,18 @@ export function ScorecardClient() {
     setActiveTab('editor');
   };
 
+  const handleDuplicate = (config: ScorecardConfig) => {
+    // Crear copia sin ID para que sea un nuevo borrador
+    setEditingConfig({
+      ...config,
+      id: '',
+      name: `${config.name} (copia)`,
+      status: 'DRAFT',
+      version: 0, // se asigna en backend
+    });
+    setActiveTab('editor');
+  };
+
   const handleCreateNew = () => {
     setEditingConfig(null);
     setActiveTab('editor');
@@ -54,15 +66,25 @@ export function ScorecardClient() {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList>
-        <TabsTrigger value="configs">Versiones</TabsTrigger>
-        <TabsTrigger value="editor">Editor</TabsTrigger>
-        <TabsTrigger value="simulate">Simular</TabsTrigger>
+        <TabsTrigger value="configs" className="gap-1.5">
+          <ListChecks className="h-4 w-4" />
+          Versiones
+        </TabsTrigger>
+        <TabsTrigger value="editor" className="gap-1.5">
+          <Pencil className="h-4 w-4" />
+          Editor
+        </TabsTrigger>
+        <TabsTrigger value="simulate" className="gap-1.5">
+          <FlaskConical className="h-4 w-4" />
+          Simular
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="configs" className="mt-4">
         <ConfigsListTab
           configs={configs}
           onEdit={handleEdit}
+          onDuplicate={handleDuplicate}
           onCreateNew={handleCreateNew}
           onRefresh={loadData}
         />

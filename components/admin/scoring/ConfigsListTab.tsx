@@ -3,135 +3,197 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Play, Archive, RefreshCw, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Plus, Play, Copy, Eye, FileEdit, Loader2 } from 'lucide-react';
 import type { ScorecardConfig } from '@/modules/admin/scoring';
 import { activateExistingConfig } from '@/app/admin/scoring/actions';
 
 interface Props {
   configs: ScorecardConfig[];
   onEdit: (config: ScorecardConfig) => void;
+  onDuplicate: (config: ScorecardConfig) => void;
   onCreateNew: () => void;
   onRefresh: () => void;
 }
 
-export function ConfigsListTab({ configs, onEdit, onCreateNew, onRefresh }: Props) {
+export function ConfigsListTab({ configs, onEdit, onDuplicate, onCreateNew, onRefresh }: Props) {
   const [activating, setActivating] = useState<string | null>(null);
 
   const handleActivate = async (id: string) => {
+    if (!confirm('¿Activar esta versión? La versión activa actual será archivada.')) return;
     setActivating(id);
     await activateExistingConfig(id);
     setActivating(null);
     onRefresh();
   };
 
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Activa</Badge>;
-      case 'DRAFT':
-        return <Badge variant="outline" className="border-amber-300 text-amber-700">Borrador</Badge>;
-      case 'ARCHIVED':
-        return <Badge variant="secondary">Archivada</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
+  const activeConfig = configs.find(c => c.status === 'ACTIVE');
+
+  if (configs.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <p className="text-sm text-muted-foreground mb-4">
+            No hay configuraciones. El sistema creará una por defecto al iniciar.
+          </p>
+          <Button onClick={onCreateNew} size="sm">
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nueva configuración
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
+    <div className="space-y-3">
+      {/* Header con acciones */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {configs.length} versión{configs.length !== 1 ? 'es' : ''} de configuración
-        </p>
+        <div className="text-xs text-muted-foreground">
+          {activeConfig && (
+            <span>
+              Versión activa: <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px] ml-1">v{activeConfig.version}</Badge>
+            </span>
+          )}
+        </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onRefresh}>
-            <RefreshCw className="h-4 w-4 mr-1" /> Refrescar
-          </Button>
+          {activeConfig && (
+            <Button variant="outline" size="sm" onClick={() => onDuplicate(activeConfig)}>
+              <Copy className="h-3.5 w-3.5 mr-1.5" />
+              Duplicar activa
+            </Button>
+          )}
           <Button size="sm" onClick={onCreateNew}>
-            <Plus className="h-4 w-4 mr-1" /> Nueva versión
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Nueva versión
           </Button>
         </div>
       </div>
 
-      {/* Lista de configs */}
-      {configs.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            No hay configuraciones. Crea la primera versión.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-3">
-          {configs.map((config) => (
-            <Card key={config.id} className={config.status === 'ACTIVE' ? 'border-green-300 bg-green-50/30' : ''}>
-              <CardHeader className="py-3 px-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CardTitle className="text-base font-medium">
-                      v{config.version} — {config.name}
-                    </CardTitle>
-                    {statusBadge(config.status)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {config.status === 'DRAFT' && (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => onEdit(config)}>
-                          Editar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleActivate(config.id)}
-                          disabled={activating === config.id}
-                        >
-                          {activating === config.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                          ) : (
-                            <Play className="h-4 w-4 mr-1" />
-                          )}
-                          Activar
-                        </Button>
-                      </>
-                    )}
+      {/* Tabla de versiones */}
+      <div className="rounded-xl border border-border/60 overflow-hidden shadow-sm">
+        <table className="w-full text-sm">
+          <thead className="bg-primary/5 border-b border-border/60">
+            <tr>
+              <th className="text-left px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Versión</th>
+              <th className="text-left px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Nombre</th>
+              <th className="text-left px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Estado</th>
+              <th className="text-left px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Dimensiones</th>
+              <th className="text-left px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Reglas</th>
+              <th className="text-left px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Fecha</th>
+              <th className="text-right px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/40">
+            {configs.map((config) => {
+              const totalRules = config.dimensions.reduce((sum, d) => sum + d.rules.length, 0);
+
+              return (
+                <tr
+                  key={config.id}
+                  className={`transition-colors ${
+                    config.status === 'ACTIVE'
+                      ? 'bg-green-50/40 hover:bg-green-50/70'
+                      : 'bg-white hover:bg-muted/30'
+                  }`}
+                >
+                  <td className="px-4 py-3">
+                    <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
+                      v{config.version}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div>
+                      <span className="text-sm font-medium">{config.name}</span>
+                      {config.description && (
+                        <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{config.description}</p>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
                     {config.status === 'ACTIVE' && (
-                      <Button variant="outline" size="sm" onClick={() => onEdit(config)}>
-                        Ver detalle
-                      </Button>
+                      <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">Activa</Badge>
+                    )}
+                    {config.status === 'DRAFT' && (
+                      <Badge variant="outline" className="border-amber-300 text-amber-700 text-[10px]">Borrador</Badge>
                     )}
                     {config.status === 'ARCHIVED' && (
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(config)}>
-                        <Archive className="h-4 w-4 mr-1" /> Ver
-                      </Button>
+                      <Badge variant="secondary" className="text-[10px]">Archivada</Badge>
                     )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-3 pt-0">
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span>{config.dimensions.length} dimensiones</span>
-                  <span>•</span>
-                  <span>Max score: {config.maxScore}</span>
-                  <span>•</span>
-                  <span>
-                    {config.dimensions.reduce((sum, d) => sum + d.rules.length, 0)} reglas
-                  </span>
-                  {config.activatedAt && (
-                    <>
-                      <span>•</span>
-                      <span>Activada: {new Date(config.activatedAt).toLocaleDateString()}</span>
-                    </>
-                  )}
-                </div>
-                {config.description && (
-                  <p className="text-xs text-muted-foreground mt-1">{config.description}</p>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {config.dimensions.length}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {totalRules}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {config.activatedAt ? formatDate(config.activatedAt) : formatDate(config.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-0.5">
+                      {config.status === 'DRAFT' && (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(config)} title="Editar">
+                            <FileEdit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDuplicate(config)} title="Duplicar">
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-green-600 hover:text-green-700"
+                            onClick={() => handleActivate(config.id)}
+                            disabled={activating === config.id}
+                            title="Activar"
+                          >
+                            {activating === config.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Play className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </>
+                      )}
+                      {config.status === 'ACTIVE' && (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(config)} title="Ver detalle">
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDuplicate(config)} title="Duplicar para editar">
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                      {config.status === 'ARCHIVED' && (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(config)} title="Ver">
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDuplicate(config)} title="Duplicar">
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat('es-PE', {
+      day: '2-digit', month: 'short', year: 'numeric',
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
 }

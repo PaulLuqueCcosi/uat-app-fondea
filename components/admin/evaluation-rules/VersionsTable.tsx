@@ -50,23 +50,25 @@ export function VersionsTable({
         </Button>
       </div>
 
-      <div className="rounded-lg border overflow-hidden">
+      <div className="rounded-xl border border-border/60 overflow-hidden shadow-sm">
         <table className="w-full text-sm">
-          <thead className="bg-muted/50 border-b">
+          <thead className="bg-primary/5 border-b border-border/60">
             <tr>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Versión</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Descripción</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Estado</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Fecha</th>
-              <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Acciones</th>
+              <th className="text-left px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Versión</th>
+              <th className="text-left px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Descripción</th>
+              <th className="text-left px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Estado</th>
+              <th className="text-left px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Fecha</th>
+              <th className="text-right px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wide">Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-border/40">
             {versions.map((v) => (
               <tr
                 key={v.id}
-                className={`hover:bg-muted/30 transition-colors cursor-pointer ${
-                  selectedId === v.id ? 'bg-primary/5 border-l-2 border-l-primary' : ''
+                className={`transition-colors cursor-pointer ${
+                  selectedId === v.id ? 'bg-primary/5 border-l-2 border-l-primary' : 
+                  v.active ? 'bg-green-50/40 hover:bg-green-50/70' :
+                  'bg-white hover:bg-muted/30'
                 }`}
                 onClick={() => onSelect(v)}
               >

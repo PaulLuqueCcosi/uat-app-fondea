@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Trash2, GripVertical } from 'lucide-react';
 import type { DimensionConfig, RuleConfig, ScorecardMetadata } from '@/modules/admin/scoring';
 import { RuleEditor } from './RuleEditor';
 
@@ -23,6 +23,7 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
   const [open, setOpen] = useState(true);
 
   const totalRulePoints = dimension.rules.reduce((s, r) => s + r.maxPoints, 0);
+  const percentage = dimension.maxPoints > 0 ? Math.round((dimension.maxPoints / 1000) * 100) : 0;
 
   const updateField = (field: keyof DimensionConfig, value: any) => {
     onChange({ ...dimension, [field]: value });
@@ -30,7 +31,7 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
 
   const addRule = () => {
     const newRule: RuleConfig = {
-      code: `RULE_${dimension.rules.length + 1}`,
+      code: `REGLA_${dimension.rules.length + 1}`,
       name: '',
       inputField: '',
       type: 'RANGES',
@@ -55,43 +56,45 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
   };
 
   return (
-    <Card>
+    <Card className="border-l-4 border-l-primary/30">
       <Collapsible open={open} onOpenChange={setOpen}>
-        <CardHeader className="py-2 px-4">
+        <CardHeader className="py-2.5 px-4">
           <div className="flex items-center justify-between">
-            <CollapsibleTrigger className="flex items-center gap-2 hover:text-primary transition-colors">
-              {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              <span className="font-medium text-sm">
-                {dimension.name || `Dimensión ${index + 1}`}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                ({dimension.rules.length} reglas, máx {dimension.maxPoints} pts)
-              </span>
+            <CollapsibleTrigger className="flex items-center gap-2 hover:text-primary transition-colors flex-1 text-left">
+              {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <span className="font-semibold text-sm truncate">
+                  {dimension.name || `Dimensión ${index + 1}`}
+                </span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {dimension.maxPoints} pts ({percentage}%) · {dimension.rules.length} regla{dimension.rules.length !== 1 ? 's' : ''}
+                </span>
+              </div>
             </CollapsibleTrigger>
             {!readonly && (
-              <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500 hover:text-red-700">
-                <Trash2 className="h-4 w-4" />
+              <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 px-2">
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
         </CardHeader>
 
         <CollapsibleContent>
-          <CardContent className="pt-0 px-4 pb-3 space-y-3">
+          <CardContent className="pt-0 px-4 pb-4 space-y-4">
             {/* Campos de la dimensión */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div>
-                <Label className="text-xs">Código</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-muted/40 rounded-lg p-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Identificador</Label>
                 <Input
                   value={dimension.code}
                   onChange={(e) => updateField('code', e.target.value.toUpperCase().replace(/\s/g, '_'))}
                   placeholder="CAPACIDAD_PAGO"
                   disabled={readonly}
-                  className="h-8 text-sm"
+                  className="h-8 text-sm font-mono"
                 />
               </div>
-              <div>
-                <Label className="text-xs">Nombre</Label>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Nombre visible</Label>
                 <Input
                   value={dimension.name}
                   onChange={(e) => updateField('name', e.target.value)}
@@ -100,8 +103,8 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
                   className="h-8 text-sm"
                 />
               </div>
-              <div>
-                <Label className="text-xs">Max puntos (peso)</Label>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Peso (puntos máximos)</Label>
                 <Input
                   type="number"
                   value={dimension.maxPoints}
@@ -109,16 +112,31 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
                   disabled={readonly}
                   className="h-8 text-sm"
                 />
+                <p className="text-[10px] text-muted-foreground">
+                  Suma reglas: {totalRulePoints} pts {totalRulePoints > dimension.maxPoints && '(se capea)'}
+                </p>
               </div>
             </div>
 
-            {/* Indicador de puntos */}
-            <div className="text-xs text-muted-foreground">
-              Suma de reglas: <strong className={totalRulePoints > dimension.maxPoints ? 'text-amber-600' : ''}>{totalRulePoints}</strong> / {dimension.maxPoints} (se capea al máximo)
-            </div>
-
             {/* Reglas */}
-            <div className="space-y-2 pl-2 border-l-2 border-muted">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Reglas de puntuación
+                </p>
+                {!readonly && dimension.rules.length > 0 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    Cada regla evalúa una variable del perfil del usuario
+                  </span>
+                )}
+              </div>
+
+              {dimension.rules.length === 0 && (
+                <p className="text-xs text-muted-foreground italic py-2">
+                  Sin reglas. Agrega reglas para definir cómo se puntúa esta dimensión.
+                </p>
+              )}
+
               {dimension.rules.map((rule, ruleIdx) => (
                 <RuleEditor
                   key={`${rule.code}-${ruleIdx}`}
@@ -133,7 +151,7 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
 
             {/* Agregar regla */}
             {!readonly && (
-              <Button variant="ghost" size="sm" onClick={addRule} className="w-full text-xs">
+              <Button variant="ghost" size="sm" onClick={addRule} className="w-full text-xs border border-dashed border-muted-foreground/30 hover:border-primary/50">
                 <Plus className="h-3 w-3 mr-1" /> Agregar regla
               </Button>
             )}
