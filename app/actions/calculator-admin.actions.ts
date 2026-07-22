@@ -2,29 +2,50 @@
 
 import { requireAdminRole } from './auth.actions';
 import * as service from '@/modules/admin/calculator-admin.service';
-import type { ConfigType, SimulateDraftRequest } from '@/modules/admin/calculator-admin.service';
+import type { ConfigType, SimulateRequest } from '@/modules/admin/calculator-admin.service';
 
-export async function saveDraftAction(type: ConfigType, data: any) {
+// ── Queries ───────────────────────────────────────────────────────────────────
+
+export async function getActiveSummaryAction() {
   await requireAdminRole();
-  return service.saveDraft(type, data);
+  return service.getActiveSummary();
 }
 
-export async function publishDraftAction(type: ConfigType) {
+export async function getVersionsAction(type: ConfigType, limit?: number) {
   await requireAdminRole();
-  return service.publishDraft(type);
+  return service.getVersions(type, limit);
 }
 
-export async function discardDraftAction(type: ConfigType) {
+export async function getVersionByIdAction(type: ConfigType, id: string) {
   await requireAdminRole();
-  return service.discardDraft(type);
+  return service.getVersionById(type, id);
 }
 
-export async function simulateWithDraftAction(body: SimulateDraftRequest) {
+// ── Mutations ─────────────────────────────────────────────────────────────────
+
+export async function createVersionAction(type: ConfigType, data: any, name: string, description?: string) {
   await requireAdminRole();
-  return service.simulateWithDraft(body);
+  return service.createVersion(type, data, name, description);
 }
 
-export async function getConfigByTypeAction(type: ConfigType) {
+export async function updateVersionAction(type: ConfigType, id: string, data: any, name?: string, description?: string) {
   await requireAdminRole();
-  return service.getConfigByType(type);
+  return service.updateVersion(type, id, data, name, description);
+}
+
+export async function activateVersionAction(type: ConfigType, id: string) {
+  await requireAdminRole();
+  return service.activateVersion(type, id);
+}
+
+export async function duplicateVersionAction(type: ConfigType, id: string, newName?: string) {
+  await requireAdminRole();
+  return service.duplicateVersion(type, id, newName);
+}
+
+// ── Simulate ──────────────────────────────────────────────────────────────────
+
+export async function simulateWithVersionsAction(body: SimulateRequest) {
+  await requireAdminRole();
+  return service.simulateWithVersions(body);
 }

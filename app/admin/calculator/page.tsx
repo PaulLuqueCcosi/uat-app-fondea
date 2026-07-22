@@ -1,9 +1,9 @@
-import { getAllConfigSummary } from '@/modules/admin/calculator-admin.service';
+import { getActiveSummary } from '@/modules/admin/calculator-admin.service';
 import { CalculatorAdminClient } from '@/components/admin/calculator/CalculatorAdminClient';
 import { Calculator } from 'lucide-react';
 
 export default async function AdminCalculatorPage() {
-  const summary = await getAllConfigSummary();
+  const summary = await getActiveSummary();
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
