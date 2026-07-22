@@ -16,6 +16,8 @@ import {
   TrendingUp,
   PieChart,
   Shield,
+  Calculator,
+  Sliders,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -40,12 +42,15 @@ const mainNav = [
   { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
   { path: '/admin/portfolio', label: 'Cartera', icon: PieChart },
   { path: '/admin/collections', label: 'Cobranza', icon: BarChart3 },
-  { path: '/admin/calculator', label: 'Calculadora', icon: Settings },
+];
+
+const businessRulesNav = [
+  { path: '/admin/calculator', label: 'Calculadora', icon: Calculator },
+  { path: '/admin/evaluation-rules', label: 'Reglas Motor', icon: Shield },
+  { path: '/admin/scoring', label: 'Scorecard', icon: Sliders },
 ];
 
 const configNav = [
-  { path: '/admin/evaluation-rules', label: 'Reglas Motor', icon: Shield },
-  { path: '/admin/scoring', label: 'Scorecard', icon: ArrowLeftRight },
   { path: '/admin/fund', label: 'Fondo de Capital', icon: Wallet },
   { path: '/admin/settings', label: 'Configuración', icon: Settings, exact: true },
 ];
@@ -93,6 +98,33 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
               const isActive =
                 pathname === item.path ||
                 (item.path !== '/admin' && pathname?.startsWith(item.path));
+
+              return (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    tooltip={item.label}
+                    render={<Link href={item.path} />}
+                  >
+                    <Icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Reglas de Negocio</SidebarGroupLabel>
+          <SidebarMenu>
+            {businessRulesNav.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.path ||
+                pathname?.startsWith(item.path);
 
               return (
                 <SidebarMenuItem key={item.path}>

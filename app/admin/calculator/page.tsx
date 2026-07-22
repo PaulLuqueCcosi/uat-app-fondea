@@ -1,10 +1,7 @@
-import { getActiveSummary } from '@/modules/admin/calculator-admin.service';
 import { CalculatorAdminClient } from '@/components/admin/calculator/CalculatorAdminClient';
 import { Calculator } from 'lucide-react';
 
-export default async function AdminCalculatorPage() {
-  const summary = await getActiveSummary();
-
+export default function AdminCalculatorPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <div className="flex items-center gap-3">
@@ -19,7 +16,7 @@ export default async function AdminCalculatorPage() {
         </div>
       </div>
 
-      <CalculatorAdminClient initialSummary={summary} />
+      <CalculatorAdminClient />
     </div>
   );
 }

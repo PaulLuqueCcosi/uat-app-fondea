@@ -1,57 +1,47 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, ListChecks, Pencil, FlaskConical } from 'lucide-react';
-import type { ScorecardConfig, ScorecardMetadata } from '@/modules/admin/scoring';
-import { fetchConfigs, fetchMetadata } from '@/app/admin/scoring/actions';
-import { ConfigsListTab } from './ConfigsListTab';
-import { ConfigEditorTab } from './ConfigEditorTab';
+import { Loader2, ListChecks, FlaskConical } from 'lucide-react';
+import type { ScorecardConfig } from '@/modules/admin/scoring';
+import { fetchConfigs } from '@/app/admin/scoring/actions';
+import { activateExistingConfig } from '@/app/admin/scoring/actions';
+import { ConfigVersionsTable, type ConfigVersionItem } from '@/components/admin/shared/ConfigVersionsTable';
 import { SimulateTab } from './SimulateTab';
+import { toast } from 'sonner';
 
 export function ScorecardClient() {
+  const router = useRouter();
   const [configs, setConfigs] = useState<ScorecardConfig[]>([]);
-  const [metadata, setMetadata] = useState<ScorecardMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('configs');
-  const [editingConfig, setEditingConfig] = useState<ScorecardConfig | null>(null);
 
   const loadData = async () => {
     setLoading(true);
-    const [cfgs, meta] = await Promise.all([fetchConfigs(), fetchMetadata()]);
+    const cfgs = await fetchConfigs();
     setConfigs(cfgs || []);
-    setMetadata(meta);
     setLoading(false);
   };
 
   useEffect(() => { loadData(); }, []);
 
-  const handleEdit = (config: ScorecardConfig) => {
-    setEditingConfig(config);
-    setActiveTab('editor');
+  const handleActivate = async (id: string) => {
+    await activateExistingConfig(id);
+    toast.success('Versión activada');
+    loadData();
   };
 
-  const handleDuplicate = (config: ScorecardConfig) => {
-    // Crear copia sin ID para que sea un nuevo borrador
-    setEditingConfig({
-      ...config,
-      id: '',
-      name: `${config.name} (copia)`,
-      status: 'DRAFT',
-      version: 0, // se asigna en backend
-    });
-    setActiveTab('editor');
+  const handleDuplicate = (id: string) => {
+    router.push(`/admin/scoring/new?from=${id}`);
+  };
+
+  const handleView = (id: string) => {
+    router.push(`/admin/scoring/${id}`);
   };
 
   const handleCreateNew = () => {
-    setEditingConfig(null);
-    setActiveTab('editor');
-  };
-
-  const handleSaved = () => {
-    loadData();
-    setActiveTab('configs');
-    setEditingConfig(null);
+    router.push('/admin/scoring/new');
   };
 
   if (loading) {
@@ -63,42 +53,40 @@ export function ScorecardClient() {
     );
   }
 
+  // Map to shared component format
+  const items: ConfigVersionItem[] = configs.map((c) => ({
+    id: c.id,
+    version: c.version,
+    name: c.name,
+    description: c.description,
+    isActive: c.status === 'ACTIVE',
+    createdAt: c.createdAt,
+    activatedAt: c.activatedAt,
+    meta: `${c.dimensions.length} dimensiones, ${c.dimensions.reduce((sum, d) => sum + d.rules.length, 0)} reglas`,
+  }));
+
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList>
-        <TabsTrigger value="configs" className="gap-1.5">
-          <ListChecks className="h-4 w-4" />
+      <TabsList className="h-9 p-1">
+        <TabsTrigger value="configs" className="gap-1.5 text-xs px-4">
+          <ListChecks className="h-3.5 w-3.5" />
           Versiones
         </TabsTrigger>
-        <TabsTrigger value="editor" className="gap-1.5">
-          <Pencil className="h-4 w-4" />
-          Editor
-        </TabsTrigger>
-        <TabsTrigger value="simulate" className="gap-1.5">
-          <FlaskConical className="h-4 w-4" />
+        <TabsTrigger value="simulate" className="gap-1.5 text-xs px-4">
+          <FlaskConical className="h-3.5 w-3.5" />
           Simular
         </TabsTrigger>
       </TabsList>
 
       <TabsContent value="configs" className="mt-4">
-        <ConfigsListTab
-          configs={configs}
-          onEdit={handleEdit}
+        <ConfigVersionsTable
+          versions={items}
+          onView={handleView}
           onDuplicate={handleDuplicate}
-          onCreateNew={handleCreateNew}
-          onRefresh={loadData}
+          onActivate={handleActivate}
+          onCreate={handleCreateNew}
+          label="Scorecard"
         />
-      </TabsContent>
-
-      <TabsContent value="editor" className="mt-4">
-        {metadata && (
-          <ConfigEditorTab
-            config={editingConfig}
-            metadata={metadata}
-            onSaved={handleSaved}
-            onCancel={() => setActiveTab('configs')}
-          />
-        )}
       </TabsContent>
 
       <TabsContent value="simulate" className="mt-4">

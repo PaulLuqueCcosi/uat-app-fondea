@@ -29,7 +29,6 @@ async function adminFetch(path: string, options: RequestInit = {}): Promise<Resp
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ConfigType = 'PRICING_RULES' | 'FEE_GROUPS' | 'AVAILABILITY';
-export type ConfigStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 
 export interface ConfigVersion {
   id: string;
@@ -37,7 +36,7 @@ export interface ConfigVersion {
   version: number;
   name: string | null;
   description: string | null;
-  status: ConfigStatus;
+  isActive: boolean;
   data?: any;
   createdBy: string | null;
   createdAt: string;

@@ -89,14 +89,10 @@ export function VersionEditorModal({ configType, version, mode, onClose, onSaved
             </h2>
             {version && (
               <Badge
-                className={
-                  version.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-200 text-[10px]' :
-                  version.status === 'DRAFT' ? 'border-amber-300 text-amber-700 text-[10px]' :
-                  'text-[10px]'
-                }
-                variant={version.status === 'ARCHIVED' ? 'secondary' : 'outline'}
+                className={version.isActive ? 'bg-green-50 text-green-700 border-green-200 text-[10px]' : 'text-[10px]'}
+                variant={version.isActive ? 'outline' : 'secondary'}
               >
-                {version.status}
+                {version.isActive ? 'Activa' : `v${version.version}`}
               </Badge>
             )}
           </div>
@@ -187,7 +183,7 @@ function getDefaultData(type: ConfigType): any {
       scoreRanges: [
         { code: 'BAJO', label: 'Bajo', color: '#EF4444', minScore: 0, maxScore: 300, displayOrder: 1 },
         { code: 'MEDIO', label: 'Medio', color: '#F59E0B', minScore: 301, maxScore: 600, displayOrder: 2 },
-        { code: 'ALTO', label: 'Alto', color: '#10B981', minScore: 601, maxScore: 999, displayOrder: 3 },
+        { code: 'ALTO', label: 'Alto', color: '#10B981', minScore: 601, maxScore: 1000, displayOrder: 3 },
       ],
       availability: [{ amounts: [100], terms: [{ terms: [7], installments: [1] }] }],
     };

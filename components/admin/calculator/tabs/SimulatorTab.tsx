@@ -78,15 +78,15 @@ export function SimulatorTab() {
         getVersionsAction('PRICING_RULES'),
       ]);
       const map = (list: ConfigVersion[]): VersionOption[] =>
-        list.map((v) => ({ id: v.id, version: v.version, label: `v${v.version} — ${v.name ?? 'Sin nombre'} (${v.status})`, status: v.status }));
+        list.map((v) => ({ id: v.id, version: v.version, label: `v${v.version} — ${v.name ?? 'Sin nombre'}${v.isActive ? ' ✓' : ''}`, status: v.isActive ? 'active' : 'inactive' }));
 
       setAvailabilityVersions(map(avail));
       setFeeGroupsVersions(map(fees));
       setPricingRulesVersions(map(rules));
 
-      const activeA = avail.find((v) => v.status === 'ACTIVE');
-      const activeF = fees.find((v) => v.status === 'ACTIVE');
-      const activeR = rules.find((v) => v.status === 'ACTIVE');
+      const activeA = avail.find((v) => v.isActive);
+      const activeF = fees.find((v) => v.isActive);
+      const activeR = rules.find((v) => v.isActive);
       if (activeA) setSelectedAvailability(activeA.id);
       if (activeF) setSelectedFeeGroups(activeF.id);
       if (activeR) setSelectedPricingRules(activeR.id);
@@ -286,9 +286,8 @@ export function SimulatorTab() {
   const getStatusBadge = (versions: VersionOption[], selectedId: string) => {
     const v = versions.find((x) => x.id === selectedId);
     if (!v) return null;
-    if (v.status === 'ACTIVE') return <Badge className="bg-green-50 text-green-700 border-green-200 text-[9px]">ACTIVE</Badge>;
-    if (v.status === 'DRAFT') return <Badge variant="outline" className="border-amber-300 text-amber-700 text-[9px]">DRAFT</Badge>;
-    return <Badge variant="secondary" className="text-[9px]">ARCHIVED</Badge>;
+    if (v.status === 'active') return <Badge className="bg-green-50 text-green-700 border-green-200 text-[9px]">Activa</Badge>;
+    return null;
   };
 
   if (loadingVersions) {
