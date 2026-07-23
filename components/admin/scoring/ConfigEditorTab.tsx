@@ -92,7 +92,7 @@ export function ConfigEditorTab({ config, metadata, onSaved, onCancel }: Props) 
           </CardTitle>
           {isReadonly && (
             <CardDescription className="text-amber-600">
-              Esta versión está {config?.status === 'ACTIVE' ? 'activa' : 'archivada'} y no se puede editar. Usa "Duplicar" para crear una copia editable.
+              Esta versión está {config?.status === 'ACTIVE' ? 'activa' : 'archivada'} y no se puede editar. Usa &quot;Duplicar&quot; para crear una copia editable.
             </CardDescription>
           )}
         </CardHeader>
@@ -166,7 +166,7 @@ export function ConfigEditorTab({ config, metadata, onSaved, onCancel }: Props) 
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription className="text-xs">
-            Cada dimensión agrupa variables relacionadas. Por ejemplo: "Capacidad de Pago" puede contener reglas sobre ingreso, gastos y deudas. El peso de cada dimensión (puntos máximos) determina su importancia relativa en el score total.
+            Cada dimensión agrupa variables relacionadas. Por ejemplo: &quot;Capacidad de Pago&quot; puede contener reglas sobre ingreso, gastos y deudas. El peso de cada dimensión (puntos máximos) determina su importancia relativa en el score total.
           </AlertDescription>
         </Alert>
       )}
@@ -188,7 +188,7 @@ export function ConfigEditorTab({ config, metadata, onSaved, onCancel }: Props) 
 
       {/* Agregar dimensión */}
       {!isReadonly && (
-        <Button variant="dashed" onClick={addDimension} className="w-full border-dashed">
+        <Button variant="outline" onClick={addDimension} className="w-full border-dashed">
           <Plus className="h-4 w-4 mr-1.5" /> Agregar dimensión
         </Button>
       )}

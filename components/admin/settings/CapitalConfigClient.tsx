@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
@@ -18,7 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Wallet, Plus, Minus, RotateCcw, Loader2, ArrowUpCircle, ArrowDownCircle,
+  Wallet, Plus, RotateCcw, Loader2, ArrowUpCircle, ArrowDownCircle,
   RefreshCw, Wrench, History,
 } from 'lucide-react';
 import {
@@ -49,11 +48,7 @@ function formatDate(iso: string) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-interface CapitalConfigClientProps {
-  initialCapitalBase: number;
-}
-
-export function CapitalConfigClient({ initialCapitalBase }: CapitalConfigClientProps) {
+export function CapitalConfigClient() {
   const [status, setStatus] = useState<FundStatus | null>(null);
   const [movements, setMovements] = useState<FundMovement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +83,7 @@ export function CapitalConfigClient({ initialCapitalBase }: CapitalConfigClientP
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
   useEffect(() => { fetchData(); }, [fetchData]);
 
   function handleSubmitClick(e: React.FormEvent) {
@@ -132,7 +128,6 @@ export function CapitalConfigClient({ initialCapitalBase }: CapitalConfigClientP
 
   const amountNum = Number(amount) || 0;
   const isNegativeOp = type === 'PROFIT_WITHDRAWAL';
-  const effectiveAmount = isNegativeOp ? -Math.abs(amountNum) : amountNum;
 
   if (loading && !status) {
     return <div className="h-64 bg-muted animate-pulse rounded-lg" />;
@@ -173,7 +168,7 @@ export function CapitalConfigClient({ initialCapitalBase }: CapitalConfigClientP
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-muted-foreground">Capital total</p>
-                <p className="text-lg font-bold">{formatCurrency(status.total_capital)}</p>
+                <p className="text-lg font-bold">{formatCurrency(status.capital_base)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Capital disponible</p>
@@ -357,7 +352,7 @@ export function CapitalConfigClient({ initialCapitalBase }: CapitalConfigClientP
               <div className="flex justify-between pt-2 border-t">
                 <span className="text-muted-foreground">Capital resultante:</span>
                 <span className="font-mono font-bold">
-                  {formatCurrency(status.total_capital + (isNegativeOp ? -Math.abs(amountNum) : amountNum))}
+                  {formatCurrency(status.available_capital + (isNegativeOp ? -Math.abs(amountNum) : amountNum))}
                 </span>
               </div>
             )}

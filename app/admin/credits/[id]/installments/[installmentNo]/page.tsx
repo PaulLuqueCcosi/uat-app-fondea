@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Receipt, History, Clock, DollarSign, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getAdminCreditDetail } from '@/modules/admin/admin-credit-detail.service';
+import { getAdminCreditFullDetail } from '@/modules/admin/admin-credit-detail.service';
 import type { InstallmentStatus } from '@/modules/admin/admin-credit-detail.service';
 
 const INSTALLMENT_STATUS: Record<InstallmentStatus, { label: string; bg: string; text: string }> = {
@@ -20,7 +20,7 @@ interface Props {
 
 export default async function AdminInstallmentDetailPage({ params }: Props) {
   const { id, installmentNo } = await params;
-  const data = await getAdminCreditDetail(id);
+  const data = await getAdminCreditFullDetail(id);
 
   if (!data) {
     notFound();
@@ -31,9 +31,8 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
     notFound();
   }
 
-  // Filter audit events for this specific installment
-  const auditEvents = data.installmentAudit.filter(
-    e => e.installmentNo === Number(installmentNo)
+  const auditEvents = data.installment_audit_events.filter(
+    e => e.installment_no === Number(installmentNo)
   );
 
   const stCfg = INSTALLMENT_STATUS[inst.status];
@@ -42,12 +41,10 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      {/* Back */}
       <Link href={`/admin/credits/${id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground w-fit">
         <ArrowLeft className="h-4 w-4" /> Crédito {id.slice(0, 8)}…
       </Link>
 
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
           <Receipt className="h-5 w-5 text-amber-600" />
@@ -65,7 +62,6 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Main info - full width cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -116,9 +112,7 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
         </Card>
       </div>
 
-      {/* Details grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Desglose */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Desglose</CardTitle>
@@ -149,7 +143,6 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
           </CardContent>
         </Card>
 
-        {/* Estado y fechas */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Estado y Fechas</CardTitle>
@@ -187,7 +180,6 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
         </Card>
       </div>
 
-      {/* Audit for this installment */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
@@ -206,12 +198,12 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
                     <p className="text-sm font-medium">{event.description}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[10px] text-muted-foreground">
-                        {new Date(event.createdAt).toLocaleString('es-PE')}
+                        {new Date(event.created_at).toLocaleString('es-PE')}
                       </span>
                       <span className="text-[10px] text-muted-foreground">·</span>
-                      <span className="text-[10px] text-muted-foreground font-mono">{event.triggeredBy}</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">{event.triggered_by}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
-                        {event.eventType}
+                        {event.event_type}
                       </span>
                     </div>
                   </div>
