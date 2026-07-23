@@ -29,26 +29,23 @@ const CALCULATOR_URL = '/api/admin/fee-catalog';
  * Modal para crear un nuevo cargo en el catálogo.
  */
 export function CreateFeeModal({ open, onOpenChange, onCreated }: Props) {
-  const [code, setCode] = useState('');
   const [label, setLabel] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Auto-formatear código: mayúsculas, espacios→_, solo A-Z0-9_
-  const handleCodeChange = (val: string) => {
-    setCode(val.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, ''));
-  };
+  // Auto-generar código a partir del nombre
+  const code = label.trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
 
   const handleSave = async () => {
-    if (!code.trim()) { toast.error('El código es requerido'); return; }
     if (!label.trim()) { toast.error('El nombre es requerido'); return; }
+    if (!description.trim()) { toast.error('La descripción pública es requerida'); return; }
 
     setSaving(true);
     try {
       const res = await fetch(CALCULATOR_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code.trim(), label: label.trim(), description: description.trim() || undefined }),
+        body: JSON.stringify({ code, label: label.trim(), description: description.trim() }),
       });
 
       if (!res.ok) {
@@ -63,7 +60,6 @@ export function CreateFeeModal({ open, onOpenChange, onCreated }: Props) {
       onCreated(created);
 
       // Reset
-      setCode('');
       setLabel('');
       setDescription('');
     } catch {
@@ -84,38 +80,29 @@ export function CreateFeeModal({ open, onOpenChange, onCreated }: Props) {
 
         <div className="space-y-3 py-2">
           <div className="space-y-1.5">
-            <Label className="text-xs">Código *</Label>
-            <Input
-              value={code}
-              onChange={(e) => handleCodeChange(e.target.value)}
-              placeholder="Ej: LATE_FEE"
-              className="h-8 text-sm font-mono"
-            />
-            <p className="text-[10px] text-muted-foreground">Identificador interno. Solo mayúsculas, números y _</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Nombre *</Label>
+            <Label className="text-xs">Nombre del cargo *</Label>
             <Input
               value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              onChange={(e) => setLabel(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''))}
               placeholder="Ej: Cargo por mora"
               className="h-8 text-sm"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Descripción pública</Label>
+            <Label className="text-xs">Descripción pública *</Label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Lo que el cliente verá en el detalle del préstamo"
               className="h-8 text-sm"
             />
+            <p className="text-[10px] text-muted-foreground">Texto visible para el usuario final</p>
           </div>
         </div>
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
+          <Button size="sm" onClick={handleSave} disabled={saving || !label.trim() || !description.trim()}>
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
             Crear cargo
           </Button>

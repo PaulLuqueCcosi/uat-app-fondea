@@ -29,6 +29,11 @@ interface Props {
   disabled?: boolean;
 }
 
+/** Build display text: "Label (description)" or just "Label" */
+function displayText(item: FeeCatalogItem): string {
+  return item.description ? `${item.label} (${item.description})` : item.label;
+}
+
 /**
  * Selector de cargo del catálogo usando Select de shadcn + botón crear nuevo.
  */
@@ -58,7 +63,7 @@ export function FeeCodeSelector({ value, onChange, catalog, onCatalogUpdate, dis
               <SelectLabel>Catálogo de cargos</SelectLabel>
               {catalog.map((item) => (
                 <SelectItem key={item.code} value={item.code}>
-                  {item.label}
+                  {displayText(item)}
                 </SelectItem>
               ))}
             </SelectGroup>

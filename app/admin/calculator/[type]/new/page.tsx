@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { createVersionAction, getVersionByIdAction } from '@/app/actions/calculator-admin.actions';
 import type { ConfigType, AvailabilityConfig } from '@/modules/admin/calculator-admin.service';
 import { AvailabilityEditor } from '@/components/admin/calculator/editors/AvailabilityEditor';
-import { FeeGroupsEditor } from '@/components/admin/calculator/editors/FeeGroupsEditor';
+import { FeeGroupsEditor, validateFeeGroups } from '@/components/admin/calculator/editors/FeeGroupsEditor';
 import { PricingRulesEditor } from '@/components/admin/calculator/editors/PricingRulesEditor';
 import { validateAvailabilityGroups } from '@/components/admin/calculator/editors/AmountsTermsEditor';
 import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
@@ -96,6 +96,15 @@ export default function CalculatorNewVersionPage() {
     // Validar disponibilidad si es ese tipo
     if (configType === 'AVAILABILITY' && data?.availability) {
       const validationErrors = validateAvailabilityGroups(data.availability);
+      if (validationErrors.length > 0) {
+        toast.error(`Hay ${validationErrors.length} errores de validación. Corrígelos antes de guardar.`);
+        return;
+      }
+    }
+
+    // Validar fee_groups
+    if (configType === 'FEE_GROUPS' && Array.isArray(data)) {
+      const validationErrors = validateFeeGroups(data);
       if (validationErrors.length > 0) {
         toast.error(`Hay ${validationErrors.length} errores de validación. Corrígelos antes de guardar.`);
         return;

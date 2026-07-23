@@ -18,7 +18,7 @@ interface Props {
 
 // ── Validación ────────────────────────────────────────────────────────────────
 
-function validate(groups: FeeGroup[]): string[] {
+export function validateFeeGroups(groups: FeeGroup[]): string[] {
   const errors: string[] = [];
   const allCodes = new Set<string>();
 
@@ -49,7 +49,7 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
   const [catalog, setCatalog] = useState<FeeCatalogItem[]>([]);
   const [openGroups, setOpenGroups] = useState<Set<number>>(new Set([0]));
   const feeGroups = data ?? [];
-  const errors = !readonly ? validate(feeGroups) : [];
+  const errors = !readonly ? validateFeeGroups(feeGroups) : [];
 
   // Load fee catalog from backend
   useEffect(() => {
@@ -96,6 +96,15 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
       gi === groupIdx ? {
         ...g,
         splits: g.splits.map((s, si) => si === splitIdx ? { ...s, [field]: field === 'percentage' ? Number(value) : value } : s),
+      } : g
+    ));
+  };
+
+  const updateSplitMultiple = (groupIdx: number, splitIdx: number, updates: Partial<FeeSplit>) => {
+    onChange(feeGroups.map((g, gi) =>
+      gi === groupIdx ? {
+        ...g,
+        splits: g.splits.map((s, si) => si === splitIdx ? { ...s, ...updates } : s),
       } : g
     ));
   };
@@ -175,7 +184,7 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
                         <Label className="text-[11px] text-muted-foreground">Nombre del grupo</Label>
                         <Input
                           value={group.name}
-                          onChange={(e) => updateGroup(gi, 'name', e.target.value)}
+                          onChange={(e) => updateGroup(gi, 'name', e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]/g, ''))}
                           className="h-8 text-sm"
                           placeholder="Ej: Paquete estándar"
                         />
@@ -203,15 +212,16 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
                       )}
                     </div>
 
-                    {group.splits.map((split, si) => (
-                      <div key={si} className="flex items-center gap-2 p-2 rounded border bg-muted/20">
+                    {group.splits.map((split, si) => {
+                      const isDuplicate = group.splits.some((s, i) => i !== si && s.feeCode === split.feeCode && split.feeCode !== '');
+                      return (
+                      <div key={si} className={`flex items-center gap-2 p-2 rounded border ${isDuplicate ? 'border-destructive bg-destructive/5' : 'bg-muted/20'}`}>
                         {!readonly ? (
                           <>
                             <FeeCodeSelector
                               value={split.feeCode}
                               onChange={(code, label) => {
-                                updateSplit(gi, si, 'feeCode', code);
-                                updateSplit(gi, si, 'label', label);
+                                updateSplitMultiple(gi, si, { feeCode: code, label });
                               }}
                               catalog={catalog}
                               onCatalogUpdate={handleCatalogUpdate}
@@ -228,6 +238,9 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
                             <Button variant="ghost" size="sm" onClick={() => removeSplit(gi, si)} className="h-5 w-5 p-0 text-destructive">
                               <Trash2 className="h-3 w-3" />
                             </Button>
+                            {isDuplicate && (
+                              <span className="text-[10px] text-destructive whitespace-nowrap">Duplicado</span>
+                            )}
                           </>
                         ) : (
                           <>
@@ -241,7 +254,8 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
                           </>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Total */}
                     <div className="flex items-center justify-between pt-2 border-t">
