@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DiscountCodeSelector, type DiscountCatalogItem } from './DiscountCodeSelector';
 import { Plus, Trash2, X, ChevronDown, ChevronRight, AlertCircle, Info } from 'lucide-react';
 import type { PricingRulesConfig, PricingRule, Discount } from '@/modules/admin/calculator-admin.service';
 
@@ -129,6 +130,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
   const rules = data.rules ?? [];
   const [availCtx, setAvailCtx] = useState<AvailabilityContext | null>(null);
   const [feeGroupOptions, setFeeGroupOptions] = useState<FeeGroupOption[]>([]);
+  const [discountCatalog, setDiscountCatalog] = useState<DiscountCatalogItem[]>([]);
   const [openRules, setOpenRules] = useState<Set<number>>(new Set([0]));
   const errors = !readonly ? validatePricingRules(rules) : [];
 
@@ -174,6 +176,14 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
           })));
         }
       })
+      .catch(() => {});
+  }, []);
+
+  // Load discount catalog
+  useEffect(() => {
+    fetch('/api/admin/discount-catalog')
+      .then((r) => r.json())
+      .then((items) => { if (Array.isArray(items)) setDiscountCatalog(items); })
       .catch(() => {});
   }, []);
 
@@ -557,11 +567,24 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                           .sort((a, b) => a.order - b.order)
                           .map((d, dIdx) => (
                             <div key={dIdx} className="flex items-center gap-2 p-2 rounded border bg-muted/20">
-                              <Input
-                                value={d.label}
-                                onChange={(e) => updateDiscount(actualIdx, dIdx, 'label', e.target.value)}
-                                className="h-6 text-[11px] flex-1"
-                                placeholder="Nombre del descuento"
+                              <DiscountCodeSelector
+                                value={d.code}
+                                onChange={(code, label) => {
+                                  const updated = rules.map((r, i) =>
+                                    i === actualIdx ? {
+                                      ...r,
+                                      package: {
+                                        ...r.package,
+                                        discounts: r.package.discounts.map((disc, di) =>
+                                          di === dIdx ? { ...disc, code, label } : disc
+                                        ),
+                                      },
+                                    } : r
+                                  );
+                                  updateRules(updated);
+                                }}
+                                catalog={discountCatalog}
+                                onCatalogUpdate={(item) => setDiscountCatalog((prev) => [...prev, item])}
                               />
                               <select
                                 value={d.calculationType}
