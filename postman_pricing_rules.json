@@ -1,0 +1,118 @@
+{
+  "info": {
+    "name": "FONDEA - Pricing Rules Editor Endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url_next", "value": "http://localhost:3000" },
+    { "key": "base_url_calc", "value": "http://localhost:3002" },
+    { "key": "product_id", "value": "550e8400-e29b-41d4-a716-446655440000" }
+  ],
+  "item": [
+    {
+      "name": "1. Calculator Options (montos, plazos, cuotas, score ranges)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url_next}}/api/admin/calculator-options",
+        "description": "Devuelve las opciones de la availability activa: score ranges + montos con sus plazos y cuotas disponibles.\nUsado por el PricingRulesEditor para poblar los ChipSelectors."
+      }
+    },
+    {
+      "name": "2. Fee Groups Active (grupos de tarifas activos)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url_next}}/api/admin/fee-groups-active",
+        "description": "Devuelve el array de fee groups de la version ACTIVA de FEE_GROUPS.\nUsado por el PricingRulesEditor para el selector de grupos."
+      }
+    },
+    {
+      "name": "3. Active Summary (resumen de versiones activas)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url_calc}}/api/admin/pricing/versions",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+        ],
+        "description": "Resumen de la version activa de cada tipo (AVAILABILITY, FEE_GROUPS, PRICING_RULES) + validation status."
+      }
+    },
+    {
+      "name": "4. FEE_GROUPS version detail (con data)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url_calc}}/api/admin/pricing/versions/FEE_GROUPS/{{fee_groups_version_id}}",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+        ],
+        "description": "Detalle completo de una version de FEE_GROUPS incluyendo el campo 'data' con el array de grupos.\nReemplaza {{fee_groups_version_id}} con el id de la version activa (del endpoint 3)."
+      }
+    },
+    {
+      "name": "5. AVAILABILITY version detail (con data)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url_calc}}/api/admin/pricing/versions/AVAILABILITY/{{availability_version_id}}",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+        ],
+        "description": "Detalle completo de la version activa de AVAILABILITY.\nVerifica los scoreRanges y el array de availability (amounts + terms + installments)."
+      }
+    },
+    {
+      "name": "6. Product Options (publico, sin auth)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url_calc}}/api/products/{{product_id}}/options",
+        "description": "Endpoint publico que devuelve las opciones del producto.\nEs lo mismo que calculator-options pero sin auth (usa la version activa directamente)."
+      }
+    },
+    {
+      "name": "7. Validate Pricing Rules (preview)",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url_calc}}/api/admin/pricing/versions/PRICING_RULES/{{pricing_rules_version_id}}/validate",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+        ],
+        "description": "Valida una version de PRICING_RULES contra la availability y fee_groups activas.\nDevuelve { valid, errors[], context }."
+      }
+    },
+    {
+      "name": "8. Create PRICING_RULES version",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url_calc}}/api/admin/pricing/versions/PRICING_RULES",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test rules\",\n  \"description\": \"Testing\",\n  \"data\": {\n    \"productId\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"rules\": [\n      {\n        \"ruleId\": \"RULE-TEST\",\n        \"priority\": 100,\n        \"selectors\": { \"amounts\": [], \"terms\": [], \"installments\": [], \"scoreRanges\": [\"ALTO\"] },\n        \"conditions\": {},\n        \"package\": {\n          \"feeGroups\": [{ \"groupCode\": \"FG-DEFAULT\", \"calculationType\": \"PERCENTAGE\", \"value\": 30 }],\n          \"discounts\": []\n        }\n      }\n    ]\n  }\n}"
+        },
+        "description": "Crea una nueva version DRAFT de pricing rules."
+      }
+    },
+    {
+      "name": "9. Activate version",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url_calc}}/api/admin/pricing/versions/PRICING_RULES/{{pricing_rules_version_id}}/activate",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{}" },
+        "description": "Activa una version. Si es PRICING_RULES valida cruzado antes.\nSi es AVAILABILITY o FEE_GROUPS y pricing_rules se invalida, la desactiva y devuelve warning."
+      }
+    },
+    {
+      "name": "10. Fee Catalog (catalogo de cargos)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url_calc}}/api/fee-catalog",
+        "description": "Catalogo publico de cargos disponibles (INTEREST, RISK_FEE, TECH_FEE, ADMIN_FEE, etc).\nUsado por el FeeCodeSelector en FeeGroupsEditor."
+      }
+    }
+  ]
+}

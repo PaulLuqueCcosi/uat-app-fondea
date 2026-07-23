@@ -12,7 +12,7 @@ import { createVersionAction, getVersionByIdAction } from '@/app/actions/calcula
 import type { ConfigType, AvailabilityConfig } from '@/modules/admin/calculator-admin.service';
 import { AvailabilityEditor } from '@/components/admin/calculator/editors/AvailabilityEditor';
 import { FeeGroupsEditor, validateFeeGroups } from '@/components/admin/calculator/editors/FeeGroupsEditor';
-import { PricingRulesEditor } from '@/components/admin/calculator/editors/PricingRulesEditor';
+import { PricingRulesEditor, validatePricingRules } from '@/components/admin/calculator/editors/PricingRulesEditor';
 import { validateAvailabilityGroups } from '@/components/admin/calculator/editors/AmountsTermsEditor';
 import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
 
@@ -105,6 +105,15 @@ export default function CalculatorNewVersionPage() {
     // Validar fee_groups
     if (configType === 'FEE_GROUPS' && Array.isArray(data)) {
       const validationErrors = validateFeeGroups(data);
+      if (validationErrors.length > 0) {
+        toast.error(`Hay ${validationErrors.length} errores de validación. Corrígelos antes de guardar.`);
+        return;
+      }
+    }
+
+    // Validar pricing_rules
+    if (configType === 'PRICING_RULES' && data?.rules) {
+      const validationErrors = validatePricingRules(data.rules);
       if (validationErrors.length > 0) {
         toast.error(`Hay ${validationErrors.length} errores de validación. Corrígelos antes de guardar.`);
         return;

@@ -110,7 +110,9 @@ export interface PricingRulePackage {
 
 export interface PricingRule {
   ruleId: string;
+  name?: string;
   priority: number;
+  isDefault?: boolean;
   selectors: {
     amounts: number[];
     terms: number[];
