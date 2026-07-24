@@ -34,6 +34,11 @@ export type NonFamilyRelationship =
   | 'CONOCIDO'
   | 'OTRO';
 
+export type YearsKnownRange =
+  | 'MENOS_DE_1_ANIO'
+  | 'DE_1_A_3_ANIOS'
+  | 'MAS_DE_3_ANIOS';
+
 export interface ReferencesProfile {
   family_reference: {
     name: string;
@@ -46,7 +51,7 @@ export interface ReferencesProfile {
     phone: string;
     relationship: NonFamilyRelationship;
     relationship_other?: string;
-    years_known: number;
+    years_known: YearsKnownRange;
   };
   verified?: boolean;
 }

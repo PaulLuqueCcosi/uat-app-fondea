@@ -208,8 +208,8 @@ export async function getLaborProfileStatus(): Promise<LaborProfileStatus> {
 
 export async function saveLaborProfile(
   situation: EmploymentStatus,
-  details: Omit<LaborDetails, 'verified'>,
-  income: Omit<LaborIncome, 'verified'>
+  details: Omit<LaborDetails, 'verified'> | null,
+  income: Omit<LaborIncome, 'verified'> | null
 ): Promise<LaborSaveResult> {
   await requireValidSession();
 
@@ -218,22 +218,22 @@ export async function saveLaborProfile(
       method: 'PUT',
       body: JSON.stringify({
         situation: situation,
-        details: {
-          industry:        details.industry,
-          yearsOfActivity: details.years_of_activity,
+        details: details ? {
+          industry:        details.industry ?? null,
+          yearsOfActivity: details.years_of_activity ?? null,  // Ya es string (enum)
           businessRuc:     details.business_ruc ?? null,
-        },
-        income: {
-          monthlyIncome:       income.monthly_income,
-          incomeReceiptMethod: income.income_receipt_method,
-          hasAdditionalIncome: income.has_additional_income,
+        } : null,
+        income: income ? {
+          monthlyIncome:       income.monthly_income ?? null,
+          incomeReceiptMethod: income.income_receipt_method ?? null,
+          hasAdditionalIncome: income.has_additional_income ?? false,
           additionalIncomes: (income.has_additional_income ? income.additional_incomes : []).map(i => ({
             type:        i.type,
             customType:  i.type === 'OTRO' ? i.custom_type : undefined,
             amount:      i.amount,
             description: i.description ?? undefined,
           })),
-        },
+        } : null,
       }),
     });
     return parseLaborResponse(res);

@@ -821,7 +821,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
               <CardHeader className="pb-4">
                 <FormHeader
                   icon={MapPin}
-                  title="Información de dirección"
+                  title="Dirección"
                   description={
                     editControl.isReadOnly
                       ? 'Tu dirección está registrada'
@@ -840,7 +840,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
           <CardHeader className="pb-4">
             <FormHeader
               icon={currentStep?.icon || MapPin}
-              title="Información de dirección"
+              title={currentStep?.title || "Dirección"}
               description={
                 editControl.isReadOnly
                   ? 'Tu dirección está registrada'

@@ -478,7 +478,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
               <CardHeader className="pb-4">
                 <FormHeader
                   icon={CreditCard}
-                  title="Cuenta bancaria para desembolso"
+                  title="Cuenta Bancaria"
                   description={
                     editControl.isReadOnly
                       ? 'Tu cuenta está registrada'
@@ -497,7 +497,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
           <CardHeader className="pb-4">
             <FormHeader
               icon={currentStep?.icon || CreditCard}
-              title={currentStep?.title || "Cuenta bancaria para desembolso"}
+              title={currentStep?.title || "Cuenta Bancaria"}
               description={
                 editControl.isReadOnly
                   ? 'Tu cuenta está registrada'

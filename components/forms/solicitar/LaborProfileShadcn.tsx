@@ -6,13 +6,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus, Trash2, Briefcase, CheckCircle2 } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
-import type { LaborProfileStatus, EmploymentStatus, AdditionalIncomeType, LaborIndustry, IncomeReceiptMethod } from '@/lib/types';
+import type { LaborProfileStatus, EmploymentStatus, AdditionalIncomeType, LaborIndustry, IncomeReceiptMethod, YearsOfActivityRange } from '@/lib/types';
 import {
   EMPLOYMENT_OPTIONS,
   INDUSTRY_OPTIONS,
+  YEARS_OF_ACTIVITY_OPTIONS,
   ADDITIONAL_INCOME_TYPE_OPTIONS,
   INCOME_RECEIPT_OPTIONS,
   LABOR_CONFIG,
+  getYearsOfActivityLabel,
 } from '@/lib/constants';
 import { saveLaborProfile } from '@/app/actions/labor.actions';
 import { useState } from 'react';
@@ -50,13 +52,8 @@ const laborFormSchema = z.object({
   industry: z.string().optional(),
   years_of_activity: z.string().optional(),
   business_ruc: z.string().optional(),
-  monthly_income: z
-    .string()
-    .min(1, 'Ingresa tu ingreso mensual')
-    .refine((val) => Number(val) >= 100, {
-      message: 'El ingreso mínimo es S/ 100',
-    }),
-  income_receipt_method: z.string().min(1, 'Selecciona cómo recibes tus ingresos'),
+  monthly_income: z.string().optional(),
+  income_receipt_method: z.string().optional(),
   has_additional_income: z.boolean(),
   additional_incomes: z.array(z.object({
     id: z.string(),
@@ -66,12 +63,17 @@ const laborFormSchema = z.object({
     description: z.string().optional(),
   })).optional(),
 }).superRefine((data, ctx) => {
-  // Sector requerido para todos los tipos de empleo
+  // Si es DESEMPLEADO, no validar nada más
+  if (data.employment_status === 'DESEMPLEADO') {
+    return;
+  }
+
+  // Sector requerido para todos los tipos de empleo EXCEPTO desempleado
   if (data.employment_status && !data.industry) {
     ctx.addIssue({ code: 'custom', message: 'Selecciona el sector', path: ['industry'] });
   }
 
-  // years_of_activity requerido para todos los tipos (>= 0)
+  // years_of_activity requerido para todos los tipos (>= 0) EXCEPTO desempleado
   if (['EMPLEADO_DEPENDIENTE', 'INDEPENDIENTE', 'FREELANCE', 'EMPRESARIO'].includes(data.employment_status)) {
     if (data.years_of_activity === undefined || data.years_of_activity === '') {
       const msg = data.employment_status === 'EMPLEADO_DEPENDIENTE'
@@ -92,6 +94,18 @@ const laborFormSchema = z.object({
     } else if (data.business_ruc && data.business_ruc.length !== LABOR_CONFIG.RUC_LENGTH) {
       ctx.addIssue({ code: 'custom', message: `El RUC debe tener ${LABOR_CONFIG.RUC_LENGTH} dígitos`, path: ['business_ruc'] });
     }
+  }
+
+  // Ingreso mensual requerido (excepto DESEMPLEADO)
+  if (!data.monthly_income || data.monthly_income.trim() === '') {
+    ctx.addIssue({ code: 'custom', message: 'Ingresa tu ingreso mensual', path: ['monthly_income'] });
+  } else if (Number(data.monthly_income) < 100) {
+    ctx.addIssue({ code: 'custom', message: 'El ingreso mínimo es S/ 100', path: ['monthly_income'] });
+  }
+
+  // Método de recepción requerido (excepto DESEMPLEADO)
+  if (!data.income_receipt_method) {
+    ctx.addIssue({ code: 'custom', message: 'Selecciona cómo recibes tus ingresos', path: ['income_receipt_method'] });
   }
 
   // Al menos un ingreso adicional si el switch está activo
@@ -183,7 +197,7 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
     defaultValues: {
       employment_status: isReplaced ? '' : (prevSituation?.employment_status ?? ''),
       industry: isReplaced ? '' : (prevDetails?.industry ?? ''),
-      years_of_activity: isReplaced ? '' : (prevDetails?.years_of_activity ? String(prevDetails.years_of_activity) : ''),
+      years_of_activity: isReplaced ? '' : (prevDetails?.years_of_activity ?? ''),
       business_ruc: isReplaced ? '' : (prevDetails?.business_ruc ?? ''),
       monthly_income: isReplaced ? '' : (prevIncome?.monthly_income ? String(prevIncome.monthly_income) : ''),
       income_receipt_method: isReplaced ? '' : (prevIncome?.income_receipt_method ?? ''),
@@ -226,15 +240,18 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
   const doSubmit = async (data: LaborFormValues) => {
     errorHandler.clear();
 
+    // Si es DESEMPLEADO, enviar solo situation, sin details ni income
+    const isDesempleado = data.employment_status === 'DESEMPLEADO';
+
     const result = await errorHandler.execute(
       () => saveLaborProfile(
         data.employment_status as EmploymentStatus,
-        {
+        isDesempleado ? null : {
           industry: data.industry as LaborIndustry,
-          years_of_activity: data.years_of_activity ? Number(data.years_of_activity) : undefined,
+          years_of_activity: data.years_of_activity as YearsOfActivityRange | undefined,
           business_ruc: data.business_ruc || undefined,
         },
-        {
+        isDesempleado ? null : {
           monthly_income: Number(data.monthly_income),
           income_receipt_method: data.income_receipt_method as IncomeReceiptMethod,
           has_additional_income: data.has_additional_income,
@@ -257,25 +274,31 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
       employment_status: data.employment_status as EmploymentStatus,
       verified: true,
     });
-    setSavedDetails({
-      industry: data.industry as LaborIndustry,
-      years_of_activity: data.years_of_activity ? Number(data.years_of_activity) : undefined,
-      business_ruc: data.business_ruc || undefined,
-      verified: true,
-    });
-    setSavedIncome({
-      monthly_income: Number(data.monthly_income),
-      income_receipt_method: data.income_receipt_method as IncomeReceiptMethod,
-      has_additional_income: data.has_additional_income,
-      additional_incomes: (data.has_additional_income ? data.additional_incomes ?? [] : []).map(i => ({
-        id: i.id,
-        type: i.type as AdditionalIncomeType,
-        custom_type: i.type === 'OTRO' ? i.custom_type : undefined,
-        amount: Number(i.amount),
-        description: i.description || undefined,
-      })),
-      verified: true,
-    });
+
+    if (!isDesempleado) {
+      setSavedDetails({
+        industry: data.industry as LaborIndustry,
+        years_of_activity: data.years_of_activity as YearsOfActivityRange,
+        business_ruc: data.business_ruc || undefined,
+        verified: true,
+      });
+      setSavedIncome({
+        monthly_income: Number(data.monthly_income),
+        income_receipt_method: data.income_receipt_method as IncomeReceiptMethod,
+        has_additional_income: data.has_additional_income,
+        additional_incomes: (data.has_additional_income ? data.additional_incomes ?? [] : []).map(i => ({
+          id: i.id,
+          type: i.type as AdditionalIncomeType,
+          custom_type: i.type === 'OTRO' ? i.custom_type : undefined,
+          amount: Number(i.amount),
+          description: i.description || undefined,
+        })),
+        verified: true,
+      });
+    } else {
+      setSavedDetails(null);
+      setSavedIncome(null);
+    }
 
     setLocalStatus('VERIFIED');
     editControl.confirmSaved();
@@ -313,16 +336,16 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
         <div>
           <h3 className="text-sm font-semibold text-primary mb-3">Detalles Laborales</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {savedDetails?.years_of_activity !== undefined && (
+            {savedDetails?.years_of_activity && (
               <DataRow
                 label={
                   savedSituation?.employment_status === 'EMPLEADO_DEPENDIENTE'
                     ? 'Tiempo en la empresa'
                     : savedSituation?.employment_status === 'EMPRESARIO'
-                      ? 'Años con el negocio'
-                      : 'Años de actividad'
+                      ? 'Tiempo con el negocio'
+                      : 'Tiempo de actividad'
                 }
-                value={`${savedDetails.years_of_activity} ${savedDetails.years_of_activity === 1 ? 'año' : 'años'}`}
+                value={getYearsOfActivityLabel(savedDetails.years_of_activity)}
               />
             )}
             {savedDetails?.business_ruc && (
@@ -455,8 +478,8 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
           </div>
         </div>
 
-        {/* Detalles laborales — condicional según tipo */}
-        {employmentStatus && (
+        {/* Detalles laborales — condicional según tipo (SKIP si es DESEMPLEADO) */}
+        {employmentStatus && employmentStatus !== 'DESEMPLEADO' && (
           <>
             <Separator className="my-10 bg-primary/20 h-px" />
             <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
@@ -487,10 +510,15 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
                     control={form.control}
                     name="years_of_activity"
                     render={({ field }) => (
-                      <FormItem className="flex flex-col items-start gap-1">
+                      <FormItem className="flex flex-col gap-1">
                         <FormLabel>Tiempo en la empresa *</FormLabel>
-                        <Input type="number" placeholder="2" {...field} className="w-full" min="0" step="1" />
-                        <FormDescription>¿Cuántos años llevas en tu empresa actual?</FormDescription>
+                        <NativeSelect {...field} className="w-full">
+                          <NativeSelectOption value="">Selecciona</NativeSelectOption>
+                          {YEARS_OF_ACTIVITY_OPTIONS.map((opt) => (
+                            <NativeSelectOption key={opt.value} value={opt.value}>{opt.label}</NativeSelectOption>
+                          ))}
+                        </NativeSelect>
+                        <FormDescription>¿Cuánto tiempo llevas en tu empresa actual?</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -506,10 +534,15 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
                       control={form.control}
                       name="years_of_activity"
                       render={({ field }) => (
-                        <FormItem className="flex flex-col items-start gap-1">
-                          <FormLabel>Años con tu actividad *</FormLabel>
-                          <Input type="number" placeholder="3" {...field} className="w-full" min="0" step="1" />
-                          <FormDescription>¿Cuántos años llevas en esta actividad?</FormDescription>
+                        <FormItem className="flex flex-col gap-1">
+                          <FormLabel>Tiempo con tu actividad *</FormLabel>
+                          <NativeSelect {...field} className="w-full">
+                            <NativeSelectOption value="">Selecciona</NativeSelectOption>
+                            {YEARS_OF_ACTIVITY_OPTIONS.map((opt) => (
+                              <NativeSelectOption key={opt.value} value={opt.value}>{opt.label}</NativeSelectOption>
+                            ))}
+                          </NativeSelect>
+                          <FormDescription>¿Cuánto tiempo llevas en esta actividad?</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -542,10 +575,15 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
                       control={form.control}
                       name="years_of_activity"
                       render={({ field }) => (
-                        <FormItem className="flex flex-col items-start gap-1">
-                          <FormLabel>Años con tu negocio *</FormLabel>
-                          <Input type="number" placeholder="5" {...field} className="w-full" min="0" step="1" />
-                          <FormDescription>¿Cuántos años tiene tu negocio?</FormDescription>
+                        <FormItem className="flex flex-col gap-1">
+                          <FormLabel>Tiempo con tu negocio *</FormLabel>
+                          <NativeSelect {...field} className="w-full">
+                            <NativeSelectOption value="">Selecciona</NativeSelectOption>
+                            {YEARS_OF_ACTIVITY_OPTIONS.map((opt) => (
+                              <NativeSelectOption key={opt.value} value={opt.value}>{opt.label}</NativeSelectOption>
+                            ))}
+                          </NativeSelect>
+                          <FormDescription>¿Cuánto tiempo tiene tu negocio?</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -575,10 +613,12 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
           </>
         )}
 
-        {/* Ingresos */}
-        <Separator className="my-10 bg-primary/20 h-px" />
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-          <SectionHeader title="Ingresos" description="Información sobre tus ingresos actuales" />
+        {/* Ingresos (SKIP si es DESEMPLEADO) */}
+        {employmentStatus !== 'DESEMPLEADO' && (
+          <>
+            <Separator className="my-10 bg-primary/20 h-px" />
+            <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+              <SectionHeader title="Ingresos" description="Información sobre tus ingresos actuales" />
           <div className="space-y-6 md:col-span-2">
 
             <FormField
@@ -748,7 +788,9 @@ export function FunnelLaborProfileShadcn({ dashboardMode = false, initialData, o
               </div>
             )}
           </div>
-        </div>
+            </div>
+          </>
+        )}
 
         <Separator className="my-10 bg-primary/20 h-px" />
 

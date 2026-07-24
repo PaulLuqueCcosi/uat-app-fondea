@@ -40,6 +40,8 @@ import {
   INCOME_RECEIPT_OPTIONS,
   REFERRAL_SOURCE_OPTIONS,
   ACCOUNT_TYPE_OPTIONS,
+  getYearsOfActivityLabel,
+  getYearsKnownLabel,
 } from '@/lib/constants';
 import { SaveErrorBanner } from '@/components/ui/save-error-banner';
 import { getActiveIntencion } from '@/app/actions/intencion.actions';
@@ -533,11 +535,11 @@ export function FunnelSummary({
 
                 {laborData.situation?.employment_status === 'EMPLEADO_DEPENDIENTE' && (
                   <>
-                    {laborData.details?.years_of_activity !== undefined && (
+                    {laborData.details?.years_of_activity && (
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Tiempo en la empresa</p>
                         <p className="font-medium text-foreground">
-                          {laborData.details.years_of_activity} {laborData.details.years_of_activity === 1 ? 'año' : 'años'}
+                          {getYearsOfActivityLabel(laborData.details.years_of_activity)}
                         </p>
                       </div>
                     )}
@@ -546,10 +548,10 @@ export function FunnelSummary({
 
                 {['INDEPENDIENTE', 'FREELANCE', 'EMPRESARIO'].includes(laborData.situation?.employment_status || '') && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Años de actividad</p>
+                    <p className="text-sm text-muted-foreground mb-1">Tiempo de actividad</p>
                     <p className="font-medium text-foreground">
-                      {laborData.details?.years_of_activity !== undefined
-                        ? `${laborData.details.years_of_activity} ${laborData.details.years_of_activity === 1 ? 'año' : 'años'}`
+                      {laborData.details?.years_of_activity
+                        ? getYearsOfActivityLabel(laborData.details.years_of_activity)
                         : 'No especificado'}
                     </p>
                   </div>
@@ -741,7 +743,7 @@ export function FunnelSummary({
                   <Users className="w-5 h-5 text-primary" />
                 </button>
                 <div className="flex-1 cursor-pointer" onClick={() => toggleSection('references')}>
-                  <h3 className="text-lg font-semibold text-foreground">Referencias Personales</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Referencias</h3>
                   {!expandedSections.references && (
                     <p className="text-sm text-muted-foreground">
                       {referencesData.profile ? '2 referencias agregadas' : 'No completado'}
@@ -799,7 +801,7 @@ export function FunnelSummary({
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{referencesData.profile.non_family_reference.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {referencesData.profile.non_family_reference.phone} • {getRelationLabel(referencesData.profile.non_family_reference.relationship, referencesData.profile.non_family_reference.relationship_other, NON_FAMILY_RELATIONS_MAP)} • {referencesData.profile.non_family_reference.years_known} años de conocidos
+                          {referencesData.profile.non_family_reference.phone} • {getRelationLabel(referencesData.profile.non_family_reference.relationship, referencesData.profile.non_family_reference.relationship_other, NON_FAMILY_RELATIONS_MAP)} • {getYearsKnownLabel(referencesData.profile.non_family_reference.years_known)} de conocidos
                         </p>
                       </div>
                     </div>
@@ -824,7 +826,7 @@ export function FunnelSummary({
                   <MapPin className="w-5 h-5 text-primary" />
                 </button>
                 <div className="flex-1 cursor-pointer" onClick={() => toggleSection('address')}>
-                  <h3 className="text-lg font-semibold text-foreground">Dirección de Residencia</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Dirección</h3>
                   {!expandedSections.address && (
                     <p className="text-sm text-muted-foreground">
                       {ubigeoNames?.district || 'No especificado'}, {ubigeoNames?.province || 'No especificado'}

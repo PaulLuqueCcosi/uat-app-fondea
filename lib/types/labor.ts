@@ -6,7 +6,8 @@ export type EmploymentStatus =
   | 'EMPLEADO_DEPENDIENTE'
   | 'INDEPENDIENTE'
   | 'EMPRESARIO'
-  | 'FREELANCE';
+  | 'FREELANCE'
+  | 'DESEMPLEADO';
 
 export type LaborStatus = 'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING';
 
@@ -33,6 +34,12 @@ export type IncomeReceiptMethod =
   | 'BILLETERA_DIGITAL'
   | 'OTROS';
 
+export type YearsOfActivityRange =
+  | 'MENOS_DE_6_MESES'
+  | 'DE_6_A_12_MESES'
+  | 'DE_1_A_3_ANIOS'
+  | 'MAS_DE_3_ANIOS';
+
 export interface AdditionalIncome {
   id: string;
   type: AdditionalIncomeType;
@@ -48,29 +55,29 @@ export interface LaborSituation {
 
 export interface LaborDetails {
   industry: LaborIndustry;
-  years_of_activity?: number;
+  years_of_activity?: YearsOfActivityRange;
   business_ruc?: string;
   verified?: boolean;
 }
 
 export interface LaborDetailsEmpleado {
   industry: LaborIndustry;
-  years_of_activity: number;
+  years_of_activity: YearsOfActivityRange;
 }
 
 export interface LaborDetailsIndependiente {
   industry: LaborIndustry;
-  years_of_activity: number;
+  years_of_activity: YearsOfActivityRange;
 }
 
 export interface LaborDetailsFreelance {
   industry: LaborIndustry;
-  years_of_activity: number;
+  years_of_activity: YearsOfActivityRange;
 }
 
 export interface LaborDetailsEmpresario {
   industry: LaborIndustry;
-  years_of_activity: number;
+  years_of_activity: YearsOfActivityRange;
   business_ruc: string;
 }
 

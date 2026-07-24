@@ -56,7 +56,7 @@ export const FUNNEL_STEPS: FunnelStep[] = [
   },
   {
     id: 4,
-    title: 'Info Adicional',
+    title: 'Dirección',
     path: '/solicitar/additional',
     icon: MapPin,
     description: 'Dirección y más',

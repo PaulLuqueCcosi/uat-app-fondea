@@ -12,6 +12,7 @@ export const EMPLOYMENT_OPTIONS = [
   { value: 'INDEPENDIENTE',        label: 'Trabajador independiente' },
   { value: 'EMPRESARIO',           label: 'Dueño de negocio' },
   { value: 'FREELANCE',            label: 'Freelancer / Consultor' },
+  { value: 'DESEMPLEADO',          label: 'Desempleado' },
 ] as const;
 
 export const INDUSTRY_OPTIONS = [
@@ -22,6 +23,13 @@ export const INDUSTRY_OPTIONS = [
   { value: 'COMERCIO',                label: 'Comercio' },
   { value: 'SERVICIOS_PROFESIONALES', label: 'Servicios profesionales' },
   { value: 'OTRO',                    label: 'Otro' },
+] as const;
+
+export const YEARS_OF_ACTIVITY_OPTIONS = [
+  { value: 'MENOS_DE_6_MESES', label: 'Menos de 6 meses' },
+  { value: 'DE_6_A_12_MESES',  label: '6 a 12 meses' },
+  { value: 'DE_1_A_3_ANIOS',   label: '1 a 3 años' },
+  { value: 'MAS_DE_3_ANIOS',   label: 'Más de 3 años' },
 ] as const;
 
 export const ADDITIONAL_INCOME_TYPE_OPTIONS = [
@@ -39,3 +47,11 @@ export const INCOME_RECEIPT_OPTIONS = [
   { value: 'BILLETERA_DIGITAL', label: 'Billetera digital (Yape, Plin, etc.)' },
   { value: 'OTROS', label: 'Otro' },
 ] as const;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+export function getYearsOfActivityLabel(value: string | undefined | null): string {
+  if (!value) return '—';
+  const option = YEARS_OF_ACTIVITY_OPTIONS.find(opt => opt.value === value);
+  return option?.label ?? value;
+}

@@ -14,7 +14,9 @@ import {
   ReferencesProfile,
   FamilyRelationship,
   NonFamilyRelationship,
+  YearsKnownRange,
 } from '@/lib/types';
+import { YEARS_KNOWN_OPTIONS, getYearsKnownLabel } from '@/lib/constants';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -111,9 +113,9 @@ const referencesFormSchema = z.object({
     .regex(/^9\d{8}$/, 'Debe comenzar con 9 y tener 9 dígitos'),
   years_known: z
     .string()
-    .min(1, 'Ingresa los años')
-    .refine((val) => Number(val) >= 1, {
-      message: 'Debe ser al menos 1 año',
+    .min(1, 'Selecciona un rango')
+    .refine((val) => ['MENOS_DE_1_ANIO', 'DE_1_A_3_ANIOS', 'MAS_DE_3_ANIOS'].includes(val), {
+      message: 'Selecciona un rango válido',
     }),
 }).superRefine((data, ctx) => {
   // Texto libre requerido cuando se elige OTRO
@@ -185,7 +187,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
       non_family_relation: isReplaced ? '' : (prevProfile?.non_family_reference.relationship || ''),
       non_family_relation_other: isReplaced ? '' : (prevProfile?.non_family_reference.relationship_other || ''),
       non_family_phone: isReplaced ? '' : (prevProfile?.non_family_reference.phone || ''),
-      years_known: isReplaced ? '' : (prevProfile?.non_family_reference.years_known ? String(prevProfile.non_family_reference.years_known) : ''),
+      years_known: isReplaced ? '' : (prevProfile?.non_family_reference.years_known ?? ''),
     },
   });
 
@@ -217,7 +219,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
         phone: data.non_family_phone,
         relationship: data.non_family_relation as NonFamilyRelationship,
         relationship_other: data.non_family_relation === 'OTRO' ? data.non_family_relation_other : undefined,
-        years_known: Number(data.years_known),
+        years_known: data.years_known as YearsKnownRange,
       },
     };
 
@@ -283,7 +285,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
             <DataRow label="Nombre completo" value={savedProfile?.non_family_reference.name} />
             <DataRow label="Relación" value={nonFamilyRelationLabel} />
             <DataRow label="Teléfono" value={savedProfile?.non_family_reference.phone ? `+51 ${savedProfile.non_family_reference.phone}` : '—'} />
-            <DataRow label="Años de conocerse" value={savedProfile?.non_family_reference.years_known ? `${savedProfile.non_family_reference.years_known} ${savedProfile.non_family_reference.years_known === 1 ? 'año' : 'años'}` : '—'} />
+            <DataRow label="Años de conocerse" value={getYearsKnownLabel(savedProfile?.non_family_reference.years_known)} />
           </div>
         </div>
       </div>
@@ -500,8 +502,15 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
                 name="years_known"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1">
-                    <FormLabel>¿Hace cuántos años se conocen?</FormLabel>
-                    <Input type="number" placeholder="5" {...field} className="w-full" min="1" step="1" />
+                    <FormLabel>¿Hace cuánto tiempo se conocen?</FormLabel>
+                    <NativeSelect {...field} className="w-full">
+                      <NativeSelectOption value="">Selecciona un rango</NativeSelectOption>
+                      {YEARS_KNOWN_OPTIONS.map((opt) => (
+                        <NativeSelectOption key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </NativeSelectOption>
+                      ))}
+                    </NativeSelect>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -561,7 +570,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
             <CardHeader className="pb-4">
               <FormHeader
                 icon={Users}
-                title="Referencias personales"
+                title="Referencias"
                 description={
                   editControl.isReadOnly
                     ? 'Tus referencias están registradas'
@@ -587,7 +596,7 @@ export function FunnelReferencesShadcn({ dashboardMode = false, initialData, onC
         <CardHeader className="pb-4">
           <FormHeader
             icon={currentStep?.icon || Users}
-            title="Referencias personales"
+            title="Referencias"
             description={
               editControl.isReadOnly
                 ? 'Tus referencias están registradas'

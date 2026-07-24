@@ -211,7 +211,7 @@ export function MiExpedienteClient({
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Briefcase className="w-4 h-4 text-primary" />
-              Situación Laboral
+              Perfil Laboral
             </CardTitle>
             <CardDescription>Empleo, ingresos y sector</CardDescription>
             <CardAction>

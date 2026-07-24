@@ -122,7 +122,7 @@ function mapProfileFromBackend(raw: any): ReferencesProfile & { verified: boolea
       phone:              nonFam.phone,
       relationship:       nonFam.relationship,
       relationship_other: nonFam.relationshipOther ?? nonFam.relationship_other ?? undefined,
-      years_known:        nonFam.yearsKnown ?? nonFam.years_known ?? 0,
+      years_known:        nonFam.yearsKnown ?? nonFam.years_known,
     },
     verified: true,
   };
