@@ -85,6 +85,7 @@ export interface FieldDefinition {
   label: string;
   type: 'number' | 'boolean' | 'text' | 'select';
   options: string[] | null;
+  enumNumericMapping?: Record<string, number> | null;
 }
 
 export interface FieldGroup {

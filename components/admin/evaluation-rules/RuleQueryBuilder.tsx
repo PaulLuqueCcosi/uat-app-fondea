@@ -104,39 +104,87 @@ export function RuleQueryBuilder({ logic, onChange, fieldGroups, readOnly = fals
 
   if (!query) return null;
 
+  // Extraer nombres de campos usados en la query actual
+  const extractFieldsFromQuery = (q: RuleGroupType): Set<string> => {
+    const fieldNames = new Set<string>();
+
+    const traverse = (group: RuleGroupType) => {
+      group.rules?.forEach(rule => {
+        if ('field' in rule && rule.field) {
+          fieldNames.add(rule.field as string);
+        } else if ('rules' in rule) {
+          traverse(rule as RuleGroupType);
+        }
+      });
+    };
+
+    traverse(q);
+    return fieldNames;
+  };
+
+  const usedFieldNames = extractFieldsFromQuery(query);
+
+  // Buscar campos con mapping numérico que están en uso en la regla
+  const activeFieldsWithMapping = fieldGroups.flatMap(group =>
+    group.fields
+      .filter(f => f.enumNumericMapping && usedFieldNames.has(f.name))
+      .map(f => ({ ...f, groupLabel: group.label }))
+  );
+
   return (
-    <div className="rqb-wrapper">
-      <QueryBuilder
-        fields={fields}
-        query={query}
-        onQueryChange={handleQueryChange}
-        disabled={readOnly}
-        combinators={[
-          { name: 'and', label: 'Y (todas deben cumplirse)' },
-          { name: 'or', label: 'O (al menos una)' },
-        ]}
-        operators={[
-          { name: '=', label: 'igual a' },
-          { name: '!=', label: 'diferente de' },
-          { name: '<', label: 'menor que' },
-          { name: '<=', label: 'menor o igual que' },
-          { name: '>', label: 'mayor que' },
-          { name: '>=', label: 'mayor o igual que' },
-          { name: 'in', label: 'está en' },
-          { name: 'notIn', label: 'no está en' },
-        ]}
-        translations={{
-          addRule: { label: '+ Condición' },
-          addGroup: { label: '+ Grupo' },
-          removeRule: { label: '✕' },
-          removeGroup: { label: '✕' },
-        }}
-        controlClassnames={{
-          queryBuilder: 'text-xs',
-          ruleGroup: 'border rounded-md p-2 bg-muted/30',
-          rule: 'bg-background rounded border px-2 py-1.5',
-        }}
-      />
+    <div className="space-y-2">
+      <div className="rqb-wrapper">
+        <QueryBuilder
+          fields={fields}
+          query={query}
+          onQueryChange={handleQueryChange}
+          disabled={readOnly}
+          combinators={[
+            { name: 'and', label: 'Y (todas deben cumplirse)' },
+            { name: 'or', label: 'O (al menos una)' },
+          ]}
+          operators={[
+            { name: '=', label: 'igual a' },
+            { name: '!=', label: 'diferente de' },
+            { name: '<', label: 'menor que' },
+            { name: '<=', label: 'menor o igual que' },
+            { name: '>', label: 'mayor que' },
+            { name: '>=', label: 'mayor o igual que' },
+            { name: 'in', label: 'está en' },
+            { name: 'notIn', label: 'no está en' },
+          ]}
+          translations={{
+            addRule: { label: '+ Condición' },
+            addGroup: { label: '+ Grupo' },
+            removeRule: { label: '✕' },
+            removeGroup: { label: '✕' },
+          }}
+          controlClassnames={{
+            queryBuilder: 'text-xs',
+            ruleGroup: 'border rounded-md p-2 bg-muted/30',
+            rule: 'bg-background rounded border px-2 py-1.5',
+          }}
+        />
+      </div>
+
+      {/* Hints solo para campos con mapping numérico que están en uso */}
+      {activeFieldsWithMapping.length > 0 && (
+        <div className="text-xs bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+          <div className="font-medium text-blue-900">💡 Valores numéricos para esta regla:</div>
+          {activeFieldsWithMapping.map(field => (
+            <div key={field.name} className="ml-2">
+              <span className="font-semibold text-blue-800">{field.label}:</span>
+              <div className="ml-4 mt-1 space-y-0.5">
+                {Object.entries(field.enumNumericMapping!).map(([key, value]) => (
+                  <div key={key} className="text-blue-700">
+                    • <code className="bg-blue-100 px-1 rounded">{value}</code> = {key.replace(/_/g, ' ').toLowerCase()}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
