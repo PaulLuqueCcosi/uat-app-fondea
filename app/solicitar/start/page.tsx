@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { getFunnelRedirect } from '@/app/actions/funnel-orchestrator.actions';
+import { toast } from 'sonner';
 
 const MESSAGES = [
   'Verificando tu identidad...',
@@ -24,6 +25,7 @@ const MESSAGE_INTERVAL_MS = 1500;
 export default function SolicitarStartPage() {
   const router = useRouter();
   const [messageIndex, setMessageIndex] = useState(0);
+  const hasShownToast = useRef(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -34,8 +36,17 @@ export default function SolicitarStartPage() {
 
   useEffect(() => {
     getFunnelRedirect()
-      .then((path) => {
+      .then(({ path, allCompleted }) => {
         console.log('[START] redirigiendo a:', path);
+
+        if (allCompleted && !hasShownToast.current) {
+          hasShownToast.current = true;
+          toast.info('Información completa', {
+            description: 'Solo necesitas revisar tu información antes de enviar.',
+            duration: 5000,
+          });
+        }
+
         router.replace(path);
       })
       .catch(() => router.replace('/solicitar/kyc-validation'));

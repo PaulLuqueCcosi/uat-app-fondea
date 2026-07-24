@@ -17,13 +17,13 @@ import { getBankAccountProfileStatus } from './bank-account.actions';
  * Bloque 2 — Los 5 perfiles restantes en paralelo.
  *   Solo se ejecuta si KYC ya está verificado.
  */
-export async function getFunnelRedirect(): Promise<string> {
+export async function getFunnelRedirect(): Promise<{ path: string; allCompleted: boolean }> {
   await requireValidSession();
 
   // ── Bloque 1: KYC ────────────────────────────────────────────────────────
   const kyc = await getKYCData();
   // Solo VERIFIED permite avanzar; EXPIRED, REPLACED o sin datos → volver a KYC
-  if (kyc.data?.status !== 'VERIFIED') return '/solicitar/kyc-validation';
+  if (kyc.data?.status !== 'VERIFIED') return { path: '/solicitar/kyc-validation', allCompleted: false };
 
   // ── Bloque 2: resto en paralelo ──────────────────────────────────────────
   const [labor, economic, address, references, bankAccount] = await Promise.all([
@@ -34,11 +34,11 @@ export async function getFunnelRedirect(): Promise<string> {
     getBankAccountProfileStatus(),
   ]);
 
-  if (!labor.overall_verified)       return '/solicitar/labor';
-  if (!economic.overall_verified)    return '/solicitar/economic';
-  if (!address.overall_verified)     return '/solicitar/additional';
-  if (!references.overall_verified)  return '/solicitar/references';
-  if (!bankAccount.overall_verified) return '/solicitar/bank-account';
+  if (!labor.overall_verified)       return { path: '/solicitar/labor', allCompleted: false };
+  if (!economic.overall_verified)    return { path: '/solicitar/economic', allCompleted: false };
+  if (!address.overall_verified)     return { path: '/solicitar/additional', allCompleted: false };
+  if (!references.overall_verified)  return { path: '/solicitar/references', allCompleted: false };
+  if (!bankAccount.overall_verified) return { path: '/solicitar/bank-account', allCompleted: false };
 
-  return '/solicitar/summary';
+  return { path: '/solicitar/summary', allCompleted: true };
 }
