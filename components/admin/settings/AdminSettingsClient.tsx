@@ -16,7 +16,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
-import { CircleDollarSign, FileText, Shield, Bell, Pencil } from 'lucide-react';
+import { CircleDollarSign, FileText, Bell, Pencil } from 'lucide-react';
 import { PenaltyConfigCard } from './PenaltyConfigCard';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -37,11 +37,6 @@ interface FormAttemptConfig {
   blockHours: number;
 }
 
-interface ScoringConfig {
-  minScoreApproval: number;
-  autoApproveThreshold: number;
-  autoRejectThreshold: number;
-}
 
 interface NotificationConfig {
   paymentReminderDaysBefore: number;
@@ -52,7 +47,6 @@ interface NotificationConfig {
 interface SystemConfig {
   mora: MoraRange[];
   formAttempts: FormAttemptConfig[];
-  scoring: ScoringConfig;
   notifications: NotificationConfig;
 }
 
@@ -72,11 +66,6 @@ const defaultConfig: SystemConfig = {
     { label: 'Datos Económicos', key: 'economic', maxAttempts: 3, blockHours: 24 },
     { label: 'Referencias', key: 'references', maxAttempts: 3, blockHours: 24 },
   ],
-  scoring: {
-    minScoreApproval: 600,
-    autoApproveThreshold: 750,
-    autoRejectThreshold: 350,
-  },
   notifications: {
     paymentReminderDaysBefore: 1,
     overdueReminderIntervalDays: 3,
@@ -96,9 +85,6 @@ export function AdminSettingsClient() {
 
       {/* ═══ INTENTOS DE FORMULARIOS ═══ */}
       <FormAttemptsCard config={config} onSave={(formAttempts) => setConfig((p) => ({ ...p, formAttempts }))} />
-
-      {/* ═══ SCORING ═══ */}
-      <ScoringCard config={config} onSave={(scoring) => setConfig((p) => ({ ...p, scoring }))} />
 
       {/* ═══ NOTIFICACIONES ═══ */}
       <NotificationsCard config={config} onSave={(notifications) => setConfig((p) => ({ ...p, notifications }))} />
@@ -252,87 +238,6 @@ function FormAttemptsCard({ config, onSave }: { config: SystemConfig; onSave: (v
             <span className="text-xs text-muted-foreground">{form.maxAttempts} intentos · {form.blockHours}h bloqueo</span>
           </div>
         ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ── Scoring Card ──────────────────────────────────────────────────────────────
-
-function ScoringCard({ config, onSave }: { config: SystemConfig; onSave: (v: ScoringConfig) => void }) {
-  const [draft, setDraft] = useState<ScoringConfig>({ minScoreApproval: 0, autoApproveThreshold: 0, autoRejectThreshold: 0 });
-
-  function openDraft() {
-    setDraft({ ...config.scoring });
-  }
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Shield className="h-4 w-4 text-success-600" /> Reglas de Scoring
-          </CardTitle>
-          <Dialog>
-            <DialogTrigger render={<Button variant="ghost" size="sm" className="h-7 text-xs" onClick={openDraft} />}>
-              <Pencil className="h-3 w-3 mr-1" /> Editar
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Editar Reglas de Scoring</DialogTitle>
-                <DialogDescription>Configura los umbrales de aprobación y rechazo automático</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Score mínimo para aprobación</Label>
-                  <Input
-                    type="number"
-                    value={draft.minScoreApproval}
-                    onChange={(e) => setDraft({ ...draft, minScoreApproval: Number(e.target.value) })}
-                    className="h-9 font-mono"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Auto-aprobación si score ≥</Label>
-                  <Input
-                    type="number"
-                    value={draft.autoApproveThreshold}
-                    onChange={(e) => setDraft({ ...draft, autoApproveThreshold: Number(e.target.value) })}
-                    className="h-9 font-mono"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Auto-rechazo si score ≤</Label>
-                  <Input
-                    type="number"
-                    value={draft.autoRejectThreshold}
-                    onChange={(e) => setDraft({ ...draft, autoRejectThreshold: Number(e.target.value) })}
-                    className="h-9 font-mono"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose render={<Button variant="outline" />}>Cancelar</DialogClose>
-                <DialogClose render={<Button onClick={() => onSave(draft)} />}>Guardar cambios</DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <CardDescription className="text-xs">Umbrales de aprobación automática</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <div className="flex items-center justify-between py-1.5">
-          <span className="text-sm text-foreground">Score mínimo aprobación</span>
-          <Badge variant="success" className="font-mono">{config.scoring.minScoreApproval}</Badge>
-        </div>
-        <div className="flex items-center justify-between py-1.5">
-          <span className="text-sm text-foreground">Auto-aprobación (≥)</span>
-          <Badge variant="success" className="font-mono">{config.scoring.autoApproveThreshold}</Badge>
-        </div>
-        <div className="flex items-center justify-between py-1.5">
-          <span className="text-sm text-foreground">Auto-rechazo (≤)</span>
-          <Badge variant="error" className="font-mono">{config.scoring.autoRejectThreshold}</Badge>
-        </div>
       </CardContent>
     </Card>
   );

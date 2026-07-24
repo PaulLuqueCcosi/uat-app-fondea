@@ -97,7 +97,7 @@ export function PortfolioAnalyticsClient() {
   if (loading) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-        <PortfolioHeader loading={loading} onRefresh={refresh} />
+        <PortfolioHeader />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
@@ -109,7 +109,7 @@ export function PortfolioAnalyticsClient() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      <PortfolioHeader loading={loading} onRefresh={refresh} />
+      <PortfolioHeader />
 
       <PortfolioKpiCards
         averageTicket={data.averageTicket}

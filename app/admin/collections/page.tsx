@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, Clock, CalendarClock, CircleDollarSign, User, CreditCard } from 'lucide-react';
+import { AlertTriangle, Clock, CalendarClock, BarChart3, User, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { mockCollections } from '@/modules/admin';
 
@@ -96,12 +96,13 @@ export default async function AdminCollectionsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-warning-50 flex items-center justify-center">
-          <CircleDollarSign className="h-5 w-5 text-warning-600" />
+        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <BarChart3 className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-foreground">Centro de Cobranza</h1>
+          <h1 className="text-xl font-bold text-foreground">Cobranza</h1>
           <p className="text-sm text-muted-foreground">Monitoreo de cuotas y morosidad</p>
         </div>
       </div>

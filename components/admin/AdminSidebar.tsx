@@ -4,7 +4,6 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
   Users,
   FileText,
   CreditCard,
@@ -35,7 +34,6 @@ import {
 } from '@/components/ui/sidebar';
 
 const mainNav = [
-  { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/analytics', label: 'KPIs Globales', icon: TrendingUp },
   { path: '/admin/nps', label: 'NPS', icon: BarChart },
   { path: '/admin/users', label: 'Usuarios', icon: Users },
@@ -99,7 +97,8 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
               const Icon = item.icon;
               const isActive =
                 pathname === item.path ||
-                (item.path !== '/admin' && pathname?.startsWith(item.path));
+                (pathname === '/admin' && item.path === '/admin/analytics') || // /admin redirige a /admin/analytics
+                pathname?.startsWith(item.path);
 
               return (
                 <SidebarMenuItem key={item.path}>
