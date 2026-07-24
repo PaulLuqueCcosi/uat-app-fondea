@@ -8,7 +8,8 @@ import {
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table';
-import { Users, Copy, Check, MessageCircle, Gift, RefreshCw } from 'lucide-react';
+import { Users, Copy, MessageCircle, Gift, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -92,8 +93,6 @@ export function ReferidosClient() {
   const [loading, setLoading] = React.useState(true);
   const [reloading, setReloading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [copiedCode, setCopiedCode] = React.useState(false);
-  const [copiedLink, setCopiedLink] = React.useState(false);
 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
@@ -136,15 +135,13 @@ export function ReferidosClient() {
   const handleCopyCode = () => {
     if (!summary) return;
     navigator.clipboard.writeText(summary.code);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+    toast.success('Código copiado al portapapeles');
   };
 
   const handleCopyLink = () => {
     if (!summary) return;
     navigator.clipboard.writeText(summary.link);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    toast.success('Link copiado al portapapeles');
   };
 
   const handleShareWhatsApp = () => {
@@ -254,8 +251,8 @@ export function ReferidosClient() {
                 {summary.code}
               </code>
               <Button variant="outline" size="sm" onClick={handleCopyCode} className="gap-1.5 shrink-0">
-                {copiedCode ? <Check className="w-3.5 h-3.5 text-accent-600" /> : <Copy className="w-3.5 h-3.5" />}
-                {copiedCode ? 'Copiado' : 'Copiar'}
+                <Copy className="w-3.5 h-3.5" />
+                Copiar
               </Button>
             </div>
 
@@ -263,8 +260,8 @@ export function ReferidosClient() {
             <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5">
               <span className="text-xs text-muted-foreground truncate flex-1">{summary.link}</span>
               <Button variant="outline" size="sm" onClick={handleCopyLink} className="gap-1.5 shrink-0">
-                {copiedLink ? <Check className="w-3.5 h-3.5 text-accent-600" /> : <Copy className="w-3.5 h-3.5" />}
-                {copiedLink ? 'Copiado' : 'Copiar'}
+                <Copy className="w-3.5 h-3.5" />
+                Copiar
               </Button>
             </div>
 
