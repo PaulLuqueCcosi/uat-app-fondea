@@ -88,7 +88,7 @@ export type LaborDetailsByEmploymentStatus = {
   EMPRESARIO:           LaborDetailsEmpresario;
 };
 
-export type GetLaborDetailsType<T extends EmploymentStatus> = LaborDetailsByEmploymentStatus[T];
+export type GetLaborDetailsType<T extends keyof LaborDetailsByEmploymentStatus> = LaborDetailsByEmploymentStatus[T];
 
 export interface LaborIncome {
   monthly_income: number;
