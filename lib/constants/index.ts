@@ -10,6 +10,7 @@ export { getYearsOfActivityLabel } from './labor';
 export * from './economic';
 export * from './address';
 export * from './bank-account';
+export { BANKS_PERU, BANKS_FOR_ACCOUNT, BANKS_FOR_DEBTS } from './bank-account';
 export * from './credit-bureau';
 export * from './references';
 export { getYearsKnownLabel } from './references';

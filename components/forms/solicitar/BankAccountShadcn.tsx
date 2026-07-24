@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Separator } from '@/components/ui/separator';
 import { FormHeader } from '@/components/ui/form-header';
+import { BANKS_FOR_ACCOUNT } from '@/lib/constants';
 import {
   saveBankAccountProfile,
   getBankAccountProfileStatus,
@@ -56,18 +57,6 @@ function SectionHeader({ title, description }: { title: string; description: str
   );
 }
 
-const BANKS = [
-  { value: 'BCP', label: 'BCP' },
-  { value: 'BBVA', label: 'BBVA' },
-  { value: 'Interbank', label: 'Interbank' },
-  { value: 'Scotiabank', label: 'Scotiabank' },
-  { value: 'Banco de la Nación', label: 'Banco de la Nación' },
-  { value: 'Banco Pichincha', label: 'Banco Pichincha' },
-  { value: 'BanBif', label: 'BanBif' },
-  { value: 'Falabella', label: 'Falabella' },
-  { value: 'Ripley', label: 'Ripley' },
-  { value: 'Otro', label: 'Otro' },
-];
 
 const ACCOUNT_TYPES = [
   { value: 'AHORROS', label: 'Cuenta de ahorros' },
@@ -220,7 +209,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
 
   // ── Vista resumen ───────────────────────────────────────────────────────────
 
-  const bankLabel = BANKS.find(b => b.value === savedProfile?.bank_name)?.label ?? savedProfile?.bank_name ?? '—';
+  const bankLabel = BANKS_FOR_ACCOUNT.find(b => b.value === savedProfile?.bank_name)?.label ?? savedProfile?.bank_name ?? '—';
   const accountTypeLabel = ACCOUNT_TYPES.find(t => t.value === savedProfile?.account_type)?.label ?? '—';
 
   const maskedAccountNumber = savedProfile?.account_number
@@ -351,7 +340,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
                   <FormLabel>Banco *</FormLabel>
                   <NativeSelect {...field} className="w-full">
                     <NativeSelectOption value="">Selecciona tu banco</NativeSelectOption>
-                    {BANKS.map((opt) => (
+                    {BANKS_FOR_ACCOUNT.map((opt) => (
                       <NativeSelectOption key={opt.value} value={opt.value}>
                         {opt.label}
                       </NativeSelectOption>

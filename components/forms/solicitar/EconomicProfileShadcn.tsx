@@ -25,7 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { FormHeader } from '@/components/ui/form-header';
 import { saveEconomicProfile } from '@/app/actions/economic.actions';
 import type { EconomicSaveResult } from '@/app/actions/economic.actions';
-import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/lib/constants';
+import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS, BANKS_FOR_DEBTS } from '@/lib/constants';
 import type { EconomicProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
 import { useFormErrorHandler } from '@/hooks/use-form-error-handler';
@@ -66,24 +66,6 @@ const DEBT_TYPES = [
   { value: 'other', label: 'Otro' },
 ];
 
-const FINANCIAL_ENTITIES = [
-  { value: 'BCP', label: 'BCP' },
-  { value: 'BBVA', label: 'BBVA' },
-  { value: 'Interbank', label: 'Interbank' },
-  { value: 'Scotiabank', label: 'Scotiabank' },
-  { value: 'Banco de la Nación', label: 'Banco de la Nación' },
-  { value: 'Banco Pichincha', label: 'Banco Pichincha' },
-  { value: 'BanBif', label: 'BanBif' },
-  // { value: 'Falabella', label: 'Falabella' },
-  // { value: 'Ripley', label: 'Ripley' },
-  // { value: 'Mibanco', label: 'Mibanco' },
-  // { value: 'Caja Arequipa', label: 'Caja Arequipa' },
-  // { value: 'Caja Huancayo', label: 'Caja Huancayo' },
-  // { value: 'Caja Piura', label: 'Caja Piura' },
-  // { value: 'Compartamos', label: 'Compartamos' },
-  // { value: 'Crediscotia', label: 'Crediscotia' },
-  // { value: 'Otro', label: 'Otro' },
-];
 
 const economicFormSchema = z.object({
   loan_purpose: z.string().min(1, 'Selecciona para qué usarás el dinero'),
@@ -509,7 +491,7 @@ export function FunnelEconomicProfileShadcn({ dashboardMode = false, initialData
                           <FormLabel>Entidad financiera *</FormLabel>
                           <NativeSelect {...field} className="w-full">
                             <NativeSelectOption value="">Selecciona la entidad</NativeSelectOption>
-                            {FINANCIAL_ENTITIES.map((opt) => (
+                            {BANKS_FOR_DEBTS.map((opt) => (
                               <NativeSelectOption key={opt.value} value={opt.value}>
                                 {opt.label}
                               </NativeSelectOption>
