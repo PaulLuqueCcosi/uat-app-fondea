@@ -1,10 +1,10 @@
 'use client';
 
+import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { MapPin, ArrowRight } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { KpiCard } from './KpiWrapper';
+import { MetricCard, MetricCardSkeleton } from '@/components/admin/metrics/MetricCard';
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
@@ -38,73 +38,80 @@ function getBarColor(index: number, total: number): string {
 }
 
 export function CityDistributionKpiCard() {
+  const [data, setData] = useState<GeoDistributionData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/kpis/geo-distribution');
+      if (res.ok) setData(await res.json());
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (loading && !data) return <MetricCardSkeleton />;
+  if (!data) return null;
+
+  const chartData = data.departments.map((dep) => ({
+    name: DEP_NAMES[dep.region_code] ?? dep.region_code,
+    prestamos: dep.loan_count,
+    label: `${dep.loan_count} (${dep.percentage}%)`,
+  }));
+
+  const chartHeight = Math.max(180, chartData.length * 40 + 10);
+
   return (
-    <KpiCard<GeoDistributionData>
-      endpoint="/geo-distribution"
-      errorLabel="Distribución geográfica"
-      render={(data) => {
-        const chartData = data.departments.map((dep) => ({
-          name: DEP_NAMES[dep.region_code] ?? dep.region_code,
-          prestamos: dep.loan_count,
-          label: `${dep.loan_count} (${dep.percentage}%)`,
-        }));
-
-        const chartHeight = Math.max(180, chartData.length * 40 + 10);
-
-        return (
-          <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <MapPin className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-sm leading-tight">Distribución Geográfica</CardTitle>
-                  <p className="text-[11px] text-muted-foreground">
-                    {data.total_loans.toLocaleString()} préstamos activos · {data.departments.length} departamentos
-                  </p>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 shrink-0" render={<Link href="/admin/analytics/geo-distribution" />}>
-                Ver mapa <ArrowRight className="h-3 w-3" />
-              </Button>
-            </CardHeader>
-            <CardContent className="pt-0 pb-3">
-              {data.departments.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Sin datos</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={chartHeight}>
-                  <BarChart
-                    data={chartData}
-                    layout="vertical"
-                    margin={{ top: 5, right: 90, left: 5, bottom: 5 }}
-                  >
-                    <XAxis type="number" hide />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={85}
-                      tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Bar dataKey="prestamos" radius={[0, 4, 4, 0]} barSize={24}>
-                      {chartData.map((_entry, index) => (
-                        <Cell key={index} fill={getBarColor(index, chartData.length)} />
-                      ))}
-                      <LabelList
-                        dataKey="label"
-                        position="right"
-                        style={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-        );
-      }}
-    />
+    <MetricCard
+      icon={MapPin}
+      title="Distribución Geográfica"
+      description={`${data.total_loans.toLocaleString()} préstamos activos · ${data.departments.length} departamentos`}
+      onRefresh={fetchData}
+      isRefreshing={loading && !!data}
+      footer={
+        <Link href="/admin/analytics/geo-distribution">
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+            Ver mapa <ArrowRight className="h-3 w-3" />
+          </Button>
+        </Link>
+      }
+    >
+      {data.departments.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-4">Sin datos</p>
+      ) : (
+        <ResponsiveContainer width="100%" height={chartHeight}>
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 5, right: 90, left: 5, bottom: 5 }}
+          >
+            <XAxis type="number" hide />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={85}
+              tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <Bar dataKey="prestamos" radius={[0, 4, 4, 0]} barSize={24}>
+              {chartData.map((_entry, index) => (
+                <Cell key={index} fill={getBarColor(index, chartData.length)} />
+              ))}
+              <LabelList
+                dataKey="label"
+                position="right"
+                style={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </MetricCard>
   );
 }
