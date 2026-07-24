@@ -1,210 +1,176 @@
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Receipt, History, Clock, DollarSign, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getAdminCreditFullDetail } from '@/modules/admin/admin-credit-detail.service';
-import type { InstallmentStatus } from '@/modules/admin/admin-credit-detail.service';
-
-const INSTALLMENT_STATUS: Record<InstallmentStatus, { label: string; bg: string; text: string }> = {
-  PENDING: { label: 'Pendiente', bg: 'bg-gray-100', text: 'text-gray-700' },
-  CURRENT: { label: 'Activa', bg: 'bg-blue-100', text: 'text-blue-700' },
-  PARTIALLY_PAID: { label: 'Pago Parcial', bg: 'bg-amber-100', text: 'text-amber-700' },
-  PAID: { label: 'Pagada', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  OVERDUE: { label: 'Vencida', bg: 'bg-red-100', text: 'text-red-700' },
-};
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, CalendarDays, Wallet, History } from 'lucide-react';
+import { getAdminInstallmentDetail } from '@/modules/admin/admin-credit-detail.service';
+import type { AdminInstallmentDetail } from '@/modules/admin/admin-credit-detail.service';
 
 interface Props {
   params: Promise<{ id: string; installmentNo: string }>;
 }
 
+const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  PENDING: { label: 'Pendiente', variant: 'outline' },
+  CURRENT: { label: 'Vigente', variant: 'default' },
+  PARTIALLY_PAID: { label: 'Parcial', variant: 'secondary' },
+  PAID: { label: 'Pagada', variant: 'default' },
+  OVERDUE: { label: 'Vencida', variant: 'destructive' },
+};
+
+const TX_TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  DISBURSEMENT: { label: 'Desembolso', color: 'text-blue-600' },
+  REPAYMENT: { label: 'Pago', color: 'text-emerald-600' },
+  PENALTY_ACCRUAL: { label: 'Mora cobrada', color: 'text-amber-600' },
+  PENALTY_PAYMENT: { label: 'Pago mora', color: 'text-orange-600' },
+  REVERSAL: { label: 'Reversión', color: 'text-red-600' },
+};
+
+function formatCurrency(value: number) {
+  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) return '—';
+  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 export default async function AdminInstallmentDetailPage({ params }: Props) {
   const { id, installmentNo } = await params;
-  const data = await getAdminCreditFullDetail(id);
+  const no = parseInt(installmentNo, 10);
 
-  if (!data) {
-    notFound();
-  }
+  if (isNaN(no)) notFound();
 
-  const inst = data.installments.find(i => i.installment_no === Number(installmentNo));
-  if (!inst) {
-    notFound();
-  }
+  const data = await getAdminInstallmentDetail(id, no);
+  if (!data) notFound();
 
-  const auditEvents = data.installment_audit_events.filter(
-    e => e.installment_no === Number(installmentNo)
-  );
-
-  const stCfg = INSTALLMENT_STATUS[inst.status];
-  const penaltyOutstanding = Math.max(0, inst.penalty_accrued - inst.penalty_paid);
-  const installmentOutstanding = Math.max(0, inst.amount_due - inst.amount_paid);
+  const sc = STATUS_CONFIG[data.status] ?? { label: data.status, variant: 'outline' as const };
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      <Link href={`/admin/credits/${id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground w-fit">
-        <ArrowLeft className="h-4 w-4" /> Crédito {id.slice(0, 8)}…
-      </Link>
-
+      {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-          <Receipt className="h-5 w-5 text-amber-600" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">Cuota {inst.installment_no}</h1>
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${stCfg.bg} ${stCfg.text}`}>
-              {stCfg.label}
-            </span>
+        <Link href={`/admin/credits/${id}`} className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <CalendarDays className="h-5 w-5 text-primary" />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Vencimiento: {new Date(inst.due_date).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
+          <div>
+            <h1 className="text-xl font-bold">Cuota #{data.installmentNo}</h1>
+            <p className="text-xs text-muted-foreground font-mono">Crédito #{id.slice(0, 8)}</p>
+          </div>
         </div>
+        <Badge variant={sc.variant} className="ml-auto">{sc.label}</Badge>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Monto de cuota</p>
-            </div>
-            <p className="text-2xl font-bold">S/ {inst.amount_due.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign className="h-4 w-4 text-emerald-500" />
-              <p className="text-xs text-muted-foreground">Pagado</p>
-            </div>
-            <p className="text-2xl font-bold text-emerald-600">S/ {inst.amount_paid.toFixed(2)}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {inst.amount_due > 0 ? Math.round((inst.amount_paid / inst.amount_due) * 100) : 0}% del monto
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-              <p className="text-xs text-muted-foreground">Mora acumulada</p>
-            </div>
-            <p className="text-2xl font-bold text-red-600">S/ {inst.penalty_accrued.toFixed(2)}</p>
-            {inst.penalty_paid > 0 && (
-              <p className="text-[10px] text-emerald-600 mt-0.5">
-                Mora pagada: S/ {inst.penalty_paid.toFixed(2)}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="border-2 border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Receipt className="h-4 w-4 text-primary" />
-              <p className="text-xs text-muted-foreground font-medium">Total pendiente</p>
-            </div>
-            <p className="text-2xl font-bold text-primary">S/ {inst.outstanding.toFixed(2)}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Cuota: S/ {installmentOutstanding.toFixed(2)} + Mora: S/ {penaltyOutstanding.toFixed(2)}
-            </p>
-          </CardContent>
-        </Card>
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <KpiCard label="Monto cuota" value={formatCurrency(data.amountDue)} />
+        <KpiCard label="Pagado" value={formatCurrency(data.amountPaid)} />
+        <KpiCard label="Mora acumulada" value={formatCurrency(data.penaltyAccrued)} />
+        <KpiCard label="Mora pagada" value={formatCurrency(data.penaltyPaid)} />
+        <KpiCard label="Pendiente total" value={formatCurrency(data.outstanding)} highlight />
+        <KpiCard label="Días atraso" value={data.daysOverdue > 0 ? `${data.daysOverdue} días` : 'Al día'} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Desglose</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-sm text-muted-foreground">Monto de cuota</span>
-                <span className="text-sm font-mono font-medium">S/ {inst.amount_due.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-sm text-muted-foreground">Pagado a cuota</span>
-                <span className="text-sm font-mono font-medium text-emerald-600">- S/ {inst.amount_paid.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-sm text-muted-foreground">Mora acumulada</span>
-                <span className="text-sm font-mono font-medium text-red-600">+ S/ {inst.penalty_accrued.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-sm text-muted-foreground">Mora pagada</span>
-                <span className="text-sm font-mono font-medium text-emerald-600">- S/ {inst.penalty_paid.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 font-bold">
-                <span className="text-sm">SALDO PENDIENTE</span>
-                <span className="text-sm font-mono">S/ {inst.outstanding.toFixed(2)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Info */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Información</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <InfoItem label="Vencimiento" value={formatDate(data.dueDate)} />
+            <InfoItem label="Pagada el" value={formatDateTime(data.paidAt)} />
+            <InfoItem label="Última mora cobrada" value={formatDate(data.lastPenaltyDate)} />
+            <InfoItem label="Pendiente cuota" value={formatCurrency(data.installmentOutstanding)} />
+            <InfoItem label="Pendiente mora" value={formatCurrency(data.penaltyOutstanding)} />
+            <InfoItem label="Creada" value={formatDateTime(data.createdAt)} />
+            <InfoItem label="Actualizada" value={formatDateTime(data.updatedAt)} />
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Estado y Fechas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-sm text-muted-foreground">Estado</span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${stCfg.bg} ${stCfg.text}`}>
-                  {stCfg.label}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-sm text-muted-foreground">Fecha de vencimiento</span>
-                <span className="text-sm font-medium">{new Date(inst.due_date).toLocaleDateString('es-PE')}</span>
-              </div>
-              {inst.days_overdue > 0 && (
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-red-500" /> Días de atraso
-                  </span>
-                  <span className="text-sm font-bold text-red-600">{inst.days_overdue} días</span>
-                </div>
-              )}
-              {inst.paid_at && (
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm text-muted-foreground">Pagada el</span>
-                  <span className="text-sm font-medium text-emerald-600">
-                    {new Date(inst.paid_at).toLocaleString('es-PE')}
-                  </span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Transacciones */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
-            <History className="h-4 w-4" /> Historial de esta cuota
+            <Wallet className="h-4 w-4" /> Transacciones ({data.transactions.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {auditEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">Sin eventos registrados para esta cuota</p>
+          {data.transactions.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Sin transacciones para esta cuota</p>
           ) : (
-            <div className="space-y-4">
-              {auditEvents.map((event) => (
-                <div key={event.id} className="flex gap-3 items-start">
-                  <div className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 font-medium text-muted-foreground">Tipo</th>
+                    <th className="text-right py-2 font-medium text-muted-foreground">Monto</th>
+                    <th className="text-left py-2 font-medium text-muted-foreground">Fecha</th>
+                    <th className="text-left py-2 font-medium text-muted-foreground">Método</th>
+                    <th className="text-left py-2 font-medium text-muted-foreground">Referencia</th>
+                    <th className="text-left py-2 font-medium text-muted-foreground">Banco</th>
+                    <th className="text-left py-2 font-medium text-muted-foreground">Fuente</th>
+                    <th className="text-left py-2 font-medium text-muted-foreground">Creado por</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.transactions.map((tx) => {
+                    const typeConfig = TX_TYPE_LABELS[tx.type] ?? { label: tx.type, color: '' };
+                    return (
+                      <tr key={tx.id} className="border-b last:border-0">
+                        <td className="py-2">
+                          <span className={`font-medium ${typeConfig.color}`}>{typeConfig.label}</span>
+                          {tx.isReversed && <Badge variant="destructive" className="ml-1 text-[9px]">REV</Badge>}
+                        </td>
+                        <td className="py-2 text-right font-mono">{formatCurrency(tx.amount)}</td>
+                        <td className="py-2">{formatDateTime(tx.processedAt ?? tx.transactionDate)}</td>
+                        <td className="py-2">{tx.paymentMethod ?? '—'}</td>
+                        <td className="py-2 font-mono text-[10px]">{tx.referenceNumber ?? '—'}</td>
+                        <td className="py-2">{tx.bankName ?? '—'}</td>
+                        <td className="py-2">{tx.source ?? '—'}</td>
+                        <td className="py-2 text-muted-foreground">{tx.createdBy ?? '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Auditoría */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <History className="h-4 w-4" /> Auditoría ({data.auditEvents.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.auditEvents.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Sin eventos de auditoría</p>
+          ) : (
+            <div className="space-y-3">
+              {data.auditEvents.map((e) => (
+                <div key={e.id} className="flex items-start gap-3 border-l-2 border-muted pl-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{event.description}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-muted-foreground">
-                        {new Date(event.created_at).toLocaleString('es-PE')}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">·</span>
-                      <span className="text-[10px] text-muted-foreground font-mono">{event.triggered_by}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
-                        {event.event_type}
-                      </span>
+                    <p className="text-xs font-medium">{e.description}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
+                      <span>{e.eventType}</span>
+                      <span>·</span>
+                      <span>{e.triggeredBy}</span>
+                      <span>·</span>
+                      <span>{formatDateTime(e.createdAt)}</span>
                     </div>
                   </div>
                 </div>
@@ -213,6 +179,26 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ── Sub-components ───────────────────────────────────────────────────────────
+
+function KpiCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`rounded-lg border p-3 ${highlight ? 'border-primary/30 bg-primary/5' : ''}`}>
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className={`text-sm font-semibold mt-0.5 ${highlight ? 'text-primary' : ''}`}>{value}</p>
+    </div>
+  );
+}
+
+function InfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium">{value}</p>
     </div>
   );
 }

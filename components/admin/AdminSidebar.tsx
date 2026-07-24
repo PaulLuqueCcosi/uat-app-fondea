@@ -10,6 +10,7 @@ import {
   CreditCard,
   Settings,
   BarChart3,
+  BarChart,
   ArrowLeftRight,
   Target,
   Wallet,
@@ -36,6 +37,7 @@ import {
 const mainNav = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/analytics', label: 'KPIs Globales', icon: TrendingUp },
+  { path: '/admin/nps', label: 'NPS', icon: BarChart },
   { path: '/admin/users', label: 'Usuarios', icon: Users },
   { path: '/admin/intentions', label: 'Intenciones', icon: Target },
   { path: '/admin/applications', label: 'Solicitudes', icon: FileText },

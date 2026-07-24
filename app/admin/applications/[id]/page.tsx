@@ -1,5 +1,11 @@
 import { notFound } from 'next/navigation';
-import { getApplicationDetail } from '@/modules/admin/admin-application-detail.service';
+import {
+  getAdminApplicationCore,
+  getAdminApplicationDetail,
+  getAdminApplicationDocuments,
+  getAdminApplicationContract,
+  getAdminApplicationEvaluation,
+} from '@/modules/admin/admin-application-detail.service';
 import { ApplicationDetailClient } from '@/components/admin/applications/ApplicationDetailClient';
 
 interface Props {
@@ -8,11 +14,28 @@ interface Props {
 
 export default async function AdminApplicationDetailPage({ params }: Props) {
   const { id } = await params;
-  const data = await getApplicationDetail(id);
 
-  if (!data) {
+  // Fetch todos los sub-módulos en paralelo
+  const [core, detail, documents, contract, evaluation] = await Promise.all([
+    getAdminApplicationCore(id),
+    getAdminApplicationDetail(id),
+    getAdminApplicationDocuments(id),
+    getAdminApplicationContract(id),
+    getAdminApplicationEvaluation(id),
+  ]);
+
+  // Si no hay core, la solicitud no existe
+  if (!core) {
     notFound();
   }
 
-  return <ApplicationDetailClient data={data} />;
+  return (
+    <ApplicationDetailClient
+      core={core}
+      detail={detail}
+      documents={documents}
+      contract={contract}
+      evaluation={evaluation}
+    />
+  );
 }

@@ -11,3 +11,4 @@ export * from './admin-user-detail.types';
 export * from './admin-form-labels';
 export * from './admin-dashboard.service';
 export * from './admin-applications.service';
+export * from './admin-nps.service';
