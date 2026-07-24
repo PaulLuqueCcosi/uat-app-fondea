@@ -41,7 +41,7 @@ const mainNav = [
   { path: '/admin/applications', label: 'Solicitudes', icon: FileText },
   { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
   { path: '/admin/portfolio', label: 'Cartera', icon: PieChart },
-  { path: '/admin/collections', label: 'Cobranza', icon: BarChart3 },
+  // { path: '/admin/collections', label: 'Cobranza', icon: BarChart3 },
 ];
 
 const businessRulesNav = [

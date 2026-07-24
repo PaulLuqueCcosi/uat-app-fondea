@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,8 +20,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   Wallet, RotateCcw, Loader2, ArrowUpCircle, ArrowDownCircle,
-  Wrench, History, RefreshCw, AlertTriangle,
+  Wrench, History, RefreshCw, AlertTriangle, TrendingUp, DollarSign,
+  PieChart, Percent,
 } from 'lucide-react';
+import { MetricCard, MetricCardSkeleton } from '@/components/admin/metrics/MetricCard';
 import {
   getFundStatusAction, registerFundMovementAction, getFundMovementsAction,
   type FundStatus, type FundMovement, type FundMovementType,
@@ -197,7 +201,15 @@ export function FundManagement() {
   // ── Loading / Error states ──────────────────────────────────────────────────
 
   if (loading && !status) {
-    return <div className="h-64 bg-muted animate-pulse rounded-lg" />;
+    return (
+      <div className="space-y-6">
+        <MetricCardSkeleton className="h-48" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <MetricCardSkeleton className="h-96" />
+          <MetricCardSkeleton className="h-96" />
+        </div>
+      </div>
+    );
   }
 
   if (error && !status) {
@@ -223,112 +235,107 @@ export function FundManagement() {
   return (
     <div className="space-y-6">
       {/* ═══ ESTADO DEL FONDO ═══ */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-primary" /> Estado actual
-            </CardTitle>
-            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={fetchData} disabled={loading}>
-              {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
-              Actualizar
-            </Button>
+      <MetricCard
+        icon={Wallet}
+        title="Estado del Fondo"
+        description="Resumen financiero completo"
+        onRefresh={fetchData}
+        isRefreshing={loading && !!status}
+        footer={
+          <div className="flex items-center justify-between w-full text-xs text-muted-foreground">
+            <span>
+              Última sincronización: {status?.last_sync_at ? fmtDate(status.last_sync_at) : 'Nunca'}
+            </span>
+            <Badge variant="secondary" className="gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-warning-400" />
+              Sync manual
+            </Badge>
           </div>
-        </CardHeader>
-        <CardContent>
-          {status ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Capital base</p>
-                  <p className="text-xl font-bold">{fmt(status.capital_base)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Saldo banco</p>
-                  <p className="text-xl font-bold text-primary">{fmt(status.bank_balance)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Colocado</p>
-                  <p className="text-xl font-bold">{fmt(status.total_deployed)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Utilización</p>
-                  <p className="text-xl font-bold">{status.utilization_rate}%</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Intereses ganados</p>
-                  <p className="text-xl font-bold text-success-600">{fmt(status.accumulated_interest)}</p>
-                </div>
-              </div>
-              {/*
-                TODO — Sincronización automática con banco:
-                Cuando se implemente la integración con API bancaria, agregar aquí:
-                1. Toggle para activar/desactivar sync automático
-                2. Selector de frecuencia (cada hora, cada 6h, diario a las X)
-                3. Indicador de estado: último sync exitoso/fallido con fecha
-                4. Botón "Sincronizar ahora" que fuerza un sync inmediato
-                5. Si sync está activo: dot verde + "Sync cada día a las 6:00am"
-                6. Si sync falló: dot rojo + "Último sync falló: [error]"
-                Ver FundService.java para el plan completo del backend.
-              */}
-              <div className="flex items-center justify-between pt-3 border-t text-xs text-muted-foreground">
-                <span>
-                  Última sincronización: {status.last_sync_at ? fmtDate(status.last_sync_at) : 'Nunca'}
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-2 h-2 rounded-full bg-warning-400" />
-                  Sync automático no disponible (solo manual)
-                </span>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-warning-600">Fondo no disponible.</p>
-          )}
-        </CardContent>
-      </Card>
+        }
+      >
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Capital base</p>
+            <p className="text-2xl font-bold">{fmt(currentCapitalBase)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Inversión total</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Saldo banco</p>
+            <p className="text-2xl font-bold text-primary">{fmt(currentBankBalance)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Disponible</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Colocado</p>
+            <p className="text-2xl font-bold">{fmt(status?.total_deployed ?? 0)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">En préstamos</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Utilización</p>
+            <p className="text-2xl font-bold">{status?.utilization_rate ?? 0}%</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">% colocado</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Intereses</p>
+            <p className="text-2xl font-bold text-success-600">{fmt(status?.accumulated_interest ?? 0)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Ganancia acumulada</p>
+          </div>
+        </div>
+      </MetricCard>
 
       {/* ═══ ACCIONES + HISTORIAL (side by side en desktop) ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ─── ACCIONES ─── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Operaciones</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <MetricCard
+          icon={Wrench}
+          title="Operaciones"
+          description="Registra movimientos del fondo"
+        >
           {/* Botones de acción */}
           {!activeAction && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2"
+                className="h-24 flex-col gap-2 hover:border-warning-600 hover:bg-warning-50"
                 onClick={() => setActiveAction('adjust')}
               >
-                <Wrench className="h-5 w-5 text-warning-600" />
-                <span className="text-xs">Capital base</span>
+                <Wrench className="h-6 w-6 text-warning-600" />
+                <div className="text-center">
+                  <p className="text-xs font-medium">Ajustar</p>
+                  <p className="text-[10px] text-muted-foreground">Capital base</p>
+                </div>
               </Button>
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2"
+                className="h-24 flex-col gap-2 hover:border-primary hover:bg-primary/5"
                 onClick={() => setActiveAction('sync')}
               >
-                <RefreshCw className="h-5 w-5 text-primary" />
-                <span className="text-xs">Sync banco (manual)</span>
+                <RefreshCw className="h-6 w-6 text-primary" />
+                <div className="text-center">
+                  <p className="text-xs font-medium">Sincronizar</p>
+                  <p className="text-[10px] text-muted-foreground">Saldo banco</p>
+                </div>
               </Button>
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2"
+                className="h-24 flex-col gap-2 hover:border-success-600 hover:bg-success-50"
                 onClick={() => setActiveAction('deposit')}
               >
-                <ArrowUpCircle className="h-5 w-5 text-success-600" />
-                <span className="text-xs">Depositar</span>
+                <ArrowUpCircle className="h-6 w-6 text-success-600" />
+                <div className="text-center">
+                  <p className="text-xs font-medium">Depositar</p>
+                  <p className="text-[10px] text-muted-foreground">Ingreso de fondos</p>
+                </div>
               </Button>
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2"
+                className="h-24 flex-col gap-2 hover:border-error-600 hover:bg-error-50"
                 onClick={() => setActiveAction('withdraw')}
               >
-                <ArrowDownCircle className="h-5 w-5 text-error-600" />
-                <span className="text-xs">Retirar</span>
+                <ArrowDownCircle className="h-6 w-6 text-error-600" />
+                <div className="text-center">
+                  <p className="text-xs font-medium">Retirar</p>
+                  <p className="text-[10px] text-muted-foreground">Retiro de utilidades</p>
+                </div>
               </Button>
             </div>
           )}
@@ -337,16 +344,23 @@ export function FundManagement() {
           {activeAction && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">
-                  {activeAction === 'adjust' && '🔧 Capital base — establece la inversión total'}
-                  {activeAction === 'sync' && '🔄 Saldo banco — sincroniza con el banco real'}
-                  {activeAction === 'deposit' && '💰 Depositar — entra dinero (sube capital + banco)'}
-                  {activeAction === 'withdraw' && '📤 Retirar — sale dinero (baja capital + banco)'}
-                </p>
+                <div className="flex items-center gap-2">
+                  {activeAction === 'adjust' && <Wrench className="h-4 w-4 text-warning-600" />}
+                  {activeAction === 'sync' && <RefreshCw className="h-4 w-4 text-primary" />}
+                  {activeAction === 'deposit' && <ArrowUpCircle className="h-4 w-4 text-success-600" />}
+                  {activeAction === 'withdraw' && <ArrowDownCircle className="h-4 w-4 text-error-600" />}
+                  <p className="text-sm font-medium">
+                    {activeAction === 'adjust' && 'Capital base — establece la inversión total'}
+                    {activeAction === 'sync' && 'Saldo banco — sincroniza con el banco real'}
+                    {activeAction === 'deposit' && 'Depositar — entra dinero (sube capital + banco)'}
+                    {activeAction === 'withdraw' && 'Retirar — sale dinero (baja capital + banco)'}
+                  </p>
+                </div>
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={resetForm}>
                   Cancelar
                 </Button>
               </div>
+              <Separator />
 
               <div className="space-y-1.5">
                 <Label className="text-sm">
@@ -426,58 +440,71 @@ export function FundManagement() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </MetricCard>
 
         {/* ─── HISTORIAL ─── */}
-        <Card className={movements.length === 0 ? 'hidden lg:block' : ''}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <History className="h-4 w-4 text-muted-foreground" /> Historial de movimientos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {movements.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-8">Sin movimientos registrados</p>
-            ) : (
-            <div className="space-y-1 max-h-[500px] overflow-y-auto">
+        <MetricCard
+          icon={History}
+          title="Historial de movimientos"
+          description={`Últimos ${movements.length} registros`}
+          onRefresh={fetchData}
+          isRefreshing={loading}
+          className={movements.length === 0 ? 'hidden lg:block' : ''}
+        >
+          {movements.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-8">Sin movimientos registrados</p>
+          ) : (
+            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
               {movements.map((m) => {
                 const meta = MOVEMENT_LABELS[m.type] ?? { label: m.type, icon: Wrench, color: 'text-muted-foreground' };
                 const Icon = meta.icon;
                 const isPositive = m.amount > 0;
                 return (
-                  <div key={m.id} className="flex items-start gap-3 py-2.5 border-b last:border-b-0">
-                    <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${meta.color}`} />
+                  <div
+                    key={m.id}
+                    className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                  >
+                    <div className={`p-2 rounded-lg ${isPositive ? 'bg-success-50' : 'bg-error-50'}`}>
+                      <Icon className={`h-4 w-4 shrink-0 ${meta.color}`} />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium truncate">{meta.label}</span>
-                        <span className={`text-sm font-mono font-bold shrink-0 ${isPositive ? 'text-success-600' : 'text-error-600'}`}>
+                        <Badge variant={isPositive ? "default" : "destructive"} className="font-mono shrink-0">
                           {isPositive ? '+' : ''}{fmt(m.amount)}
-                        </span>
+                        </Badge>
                       </div>
                       {m.description && (
-                        <p className="text-xs text-muted-foreground truncate">{m.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{m.description}</p>
                       )}
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <p className="text-[10px] text-muted-foreground">
-                          {fmtDate(m.created_at)} · {m.created_by}
+                          {fmtDate(m.created_at)}
+                        </p>
+                        <span className="text-[10px] text-muted-foreground">•</span>
+                        <p className="text-[10px] text-muted-foreground">
+                          {m.created_by}
                         </p>
                         {m.external_reference && (
-                          <p className="text-[10px] text-muted-foreground">· Ref: {m.external_reference}</p>
+                          <>
+                            <span className="text-[10px] text-muted-foreground">•</span>
+                            <Badge variant="outline" className="text-[10px] h-4 px-1">
+                              Ref: {m.external_reference}
+                            </Badge>
+                          </>
                         )}
                       </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[10px] text-muted-foreground">Saldo después</p>
-                      <p className="text-xs font-mono">{fmt(m.balance_after)}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <p className="text-[10px] text-muted-foreground">Saldo después:</p>
+                        <p className="text-xs font-mono font-medium">{fmt(m.balance_after)}</p>
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </MetricCard>
       </div>
 
       {/* ═══ MODAL DE CONFIRMACIÓN ═══ */}

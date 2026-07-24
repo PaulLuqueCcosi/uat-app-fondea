@@ -59,12 +59,3 @@ export interface UpcomingDue {
   total_amount: number;
   loans: UpcomingDueLoan[];
 }
-
-export interface PortfolioAnalyticsData {
-  distributionByTerm: DistributionByTerm | null;
-  distributionByAmount: DistributionByAmount | null;
-  averageTicket: AverageTicket | null;
-  rotation: Rotation | null;
-  cohorts: Cohorts | null;
-  upcomingDue: UpcomingDue | null;
-}

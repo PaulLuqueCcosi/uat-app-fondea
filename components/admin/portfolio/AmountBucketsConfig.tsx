@@ -13,6 +13,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  getAmountBucketsConfigAction,
+  saveAmountBucketsConfigAction,
+} from '@/app/actions/configuracion-generica.actions';
 
 export interface AmountBucketConfig {
   min: number;
@@ -21,9 +25,7 @@ export interface AmountBucketConfig {
 }
 
 interface AmountBucketsConfigProps {
-  buckets: AmountBucketConfig[];
-  onSave: (buckets: AmountBucketConfig[]) => void;
-  disabled?: boolean;
+  onConfigSaved?: () => void;
 }
 
 function generateLabel(min: number, max: number | null): string {
@@ -81,18 +83,25 @@ function validateBuckets(buckets: AmountBucketConfig[]): string | null {
   return null;
 }
 
-export function AmountBucketsConfig({ buckets, onSave, disabled }: AmountBucketsConfigProps) {
+export function AmountBucketsConfig({ onConfigSaved }: AmountBucketsConfigProps) {
   const [open, setOpen] = useState(false);
-  const [localBuckets, setLocalBuckets] = useState<AmountBucketConfig[]>(buckets);
+  const [buckets, setBuckets] = useState<AmountBucketConfig[]>([]);
+  const [localBuckets, setLocalBuckets] = useState<AmountBucketConfig[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  // Resetear cuando se abre el modal
+  // Cargar configuración cuando se abre el modal
   useEffect(() => {
     if (open) {
-      setLocalBuckets(buckets);
-      setError(null);
+      const load = async () => {
+        const config = await getAmountBucketsConfigAction();
+        setBuckets(config);
+        setLocalBuckets(config);
+        setError(null);
+      };
+      load();
     }
-  }, [open, buckets]);
+  }, [open]);
 
   const handleAdd = () => {
     const last = localBuckets[localBuckets.length - 1];
@@ -183,23 +192,34 @@ export function AmountBucketsConfig({ buckets, onSave, disabled }: AmountBuckets
     setError(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const sorted = [...localBuckets].sort((a, b) => a.min - b.min);
     const validationError = validateBuckets(sorted);
     if (validationError) {
       setError(validationError);
       return;
     }
-    onSave(sorted);
-    setError(null);
-    setOpen(false);
+
+    setSaving(true);
+    try {
+      await saveAmountBucketsConfigAction(sorted);
+      setBuckets(sorted);
+      setError(null);
+      setOpen(false);
+      onConfigSaved?.();
+    } catch (e) {
+      setError('Error al guardar la configuración');
+      console.error('[AMOUNT_BUCKETS_CONFIG]', e);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" className="gap-1" disabled={disabled}>
+          <Button variant="outline" size="sm" className="gap-1">
             <Settings className="h-3.5 w-3.5" /> Configurar rangos
           </Button>
         }
@@ -227,7 +247,7 @@ export function AmountBucketsConfig({ buckets, onSave, disabled }: AmountBuckets
                     variant="ghost"
                     size="sm"
                     onClick={() => handleRemove(index)}
-                    disabled={disabled || localBuckets.length === 1}
+                    disabled={saving || localBuckets.length === 1}
                     className="h-7 px-2 text-destructive hover:text-destructive"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -242,7 +262,7 @@ export function AmountBucketsConfig({ buckets, onSave, disabled }: AmountBuckets
                       value={bucket.min}
                       onChange={(e) => handleMinChange(index, e.target.value)}
                       className="h-9"
-                      disabled={disabled}
+                      disabled={saving}
                       min={0}
                       step={10}
                     />
@@ -257,7 +277,7 @@ export function AmountBucketsConfig({ buckets, onSave, disabled }: AmountBuckets
                       value={bucket.max ?? ''}
                       onChange={(e) => handleMaxChange(index, e.target.value)}
                       className="h-9"
-                      disabled={disabled}
+                      disabled={saving}
                       min={bucket.min + 1}
                       step={10}
                       placeholder={isLast ? 'Opcional: dejar vacío para ∞' : 'Requerido'}
@@ -284,30 +304,30 @@ export function AmountBucketsConfig({ buckets, onSave, disabled }: AmountBuckets
         )}
 
         <DialogFooter className="flex justify-between sm:justify-between gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleAdd} 
-            disabled={disabled}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAdd}
+            disabled={saving}
             className="gap-1"
           >
             <Plus className="h-4 w-4" /> Agregar rango
           </Button>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setOpen(false)}
-              disabled={disabled}
+              disabled={saving}
             >
               Cancelar
             </Button>
-            <Button 
-              size="sm" 
-              onClick={handleSave} 
-              disabled={disabled}
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={saving}
             >
-              Guardar cambios
+              {saving ? 'Guardando...' : 'Guardar cambios'}
             </Button>
           </div>
         </DialogFooter>
