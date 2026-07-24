@@ -385,12 +385,29 @@ export function FunnelKYCValidation({
   // ── Formulario editable ──────────────────────────────────────────────────
   const editForm = (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="w-full" autoComplete="off">
         {/* Banner de expirado */}
         {expiredBanner}
 
         {/* Error feedback centralizado */}
         <FormErrorFeedback handler={errorHandler} />
+
+        {/* Honeypot invisible para confundir autocompletado */}
+        <input
+          type="text"
+          name="payment_card_number"
+          autoComplete="cc-number"
+          tabIndex={-1}
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            opacity: 0,
+            pointerEvents: 'none',
+            width: 0,
+            height: 0,
+            left: '-9999px'
+          }}
+        />
 
         {/* DNI */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
@@ -404,11 +421,15 @@ export function FunnelKYCValidation({
                   <FormLabel>Número de DNI *</FormLabel>
                   <Input
                     placeholder="12345678"
-                    {...field}
+                    type="text"
                     className="w-full font-mono text-lg"
                     maxLength={8}
                     autoComplete="off"
+                    role="presentation"
+                    data-form-type="other"
+                    data-lpignore="true"
                     inputMode='numeric'
+                    {...field}
                     onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
                     onFocus={() => setActiveField('dni')}
                     onBlur={() => setActiveField(null)}
@@ -437,6 +458,9 @@ export function FunnelKYCValidation({
                     placeholder="CARLOS"
                     {...field}
                     className="w-full"
+                    autoComplete="off"
+                    data-form-type="other"
+                    data-lpignore="true"
                     onChange={(e) =>
                       field.onChange(
                         e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
@@ -460,6 +484,9 @@ export function FunnelKYCValidation({
                     placeholder="ANDRES"
                     {...field}
                     className="w-full"
+                    autoComplete="off"
+                    data-form-type="other"
+                    data-lpignore="true"
                     onChange={(e) =>
                       field.onChange(
                         e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
@@ -492,6 +519,9 @@ export function FunnelKYCValidation({
                     placeholder="GARCIA"
                     {...field}
                     className="w-full"
+                    autoComplete="off"
+                    data-form-type="other"
+                    data-lpignore="true"
                     onChange={(e) =>
                       field.onChange(
                         e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
@@ -515,6 +545,9 @@ export function FunnelKYCValidation({
                     placeholder="RAMIREZ"
                     {...field}
                     className="w-full"
+                    autoComplete="off"
+                    data-form-type="other"
+                    data-lpignore="true"
                     onChange={(e) =>
                       field.onChange(
                         e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase()
@@ -545,9 +578,15 @@ export function FunnelKYCValidation({
                   <FormLabel>Código de verificación *</FormLabel>
                   <Input
                     placeholder="1"
-                    {...field}
+                    type="text"
                     className="w-full font-mono text-lg"
                     maxLength={1}
+                    autoComplete="off"
+                    role="presentation"
+                    data-form-type="other"
+                    data-lpignore="true"
+                    inputMode='numeric'
+                    {...field}
                     onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
                     onFocus={() => setActiveField('verificationCode')}
                     onBlur={() => setActiveField(null)}

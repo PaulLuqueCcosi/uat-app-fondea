@@ -19,17 +19,17 @@ interface PolicyConfig {
 const EDIT_POLICIES: Record<FormModuleType, PolicyConfig> = {
   // ── KYC ────────────────────────────────────────────────────────────────────
   kyc: {
-    editable: false,
+    editable: true,
     policy: 'CONFIRM_REQUIRED',
   },
 
   kyc_documents: {
-    editable: false,
+    editable: true,
     policy: 'ALWAYS_EDITABLE',
   },
 
   kyc_selfie: {
-    editable: false,
+    editable: true,
     policy: 'ALWAYS_EDITABLE',
   },
 

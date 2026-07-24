@@ -145,13 +145,16 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       body: JSON.stringify(body),
     });
 
-    // 503 — backend / token no disponible
+    let json: any = {};
+    try { json = await res.json(); } catch { /* body vacío */ }
+
+    // 503 — backend / RENIEC no disponible
     if (res.status === 503) {
       return {
         success: false,
         httpStatus: 503,
         errorCategory: 'server',
-        error: 'El servicio no está disponible en este momento. Por favor, inténtalo más tarde.',
+        error: json.message ?? json.error ?? json.detail ?? 'Ocurrió un error con el servicio de verificación. Por favor, inténtalo más tarde.',
       };
     }
 
@@ -159,9 +162,6 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
     if (res.status === 200 || res.status === 201) {
       return { success: true, httpStatus: res.status };
     }
-
-    let json: any = {};
-    try { json = await res.json(); } catch { /* body vacío */ }
 
     // 429 — bloqueado por demasiados intentos
     if (res.status === 429) {
