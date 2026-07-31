@@ -1,9 +1,7 @@
 /**
  * Mapper: respuesta del backend → IntencionConfig del frontend.
  *
- * Compartido entre:
- * - app/actions/intencion.actions.ts (server actions)
- * - lib/client-api/intenciones.ts (client API layer)
+ * Usado por app/actions/intencion.actions.ts (server actions).
  */
 
 import type { IntencionConfig, IntencionStatus } from '@/lib/types';

@@ -343,37 +343,3 @@ export function getMockIntentionsPaginated(page: number, pageSize: number, query
   const data = filtered.slice(start, start + pageSize);
   return { data, pagination: { page, pageSize, totalItems, totalPages } };
 }
-
-// ── Intenciones Anónimas (Landing / Calculadora) ──────────────────────────────
-
-export interface MockCalcIntention {
-  id: string;
-  productId: string;
-  amount: number;
-  termDays: number;
-  installmentCount: number;
-  isFirstLoan: boolean;
-  selectedRangeCode: string | null;
-  registeredUserId: string | null;
-  createdAt: string;
-}
-
-export const mockCalcIntentions: MockCalcIntention[] = [
-  { id: 'calc_001', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 500, termDays: 7, installmentCount: 1, isFirstLoan: true, selectedRangeCode: 'ALTO', registeredUserId: 'usr_005', createdAt: '2026-06-28T07:50:00Z' },
-  { id: 'calc_002', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 1000, termDays: 30, installmentCount: 3, isFirstLoan: true, selectedRangeCode: 'MEDIO', registeredUserId: null, createdAt: '2026-06-28T09:10:00Z' },
-  { id: 'calc_003', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 3000, termDays: 60, installmentCount: 6, isFirstLoan: false, selectedRangeCode: 'BAJO', registeredUserId: null, createdAt: '2026-06-29T11:00:00Z' },
-  { id: 'calc_004', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 200, termDays: 7, installmentCount: 1, isFirstLoan: true, selectedRangeCode: 'ALTO', registeredUserId: 'usr_003', createdAt: '2026-06-25T10:30:00Z' },
-  { id: 'calc_005', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 1500, termDays: 30, installmentCount: 3, isFirstLoan: true, selectedRangeCode: null, registeredUserId: null, createdAt: '2026-06-30T14:20:00Z' },
-  { id: 'calc_006', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 500, termDays: 15, installmentCount: 2, isFirstLoan: true, selectedRangeCode: 'MEDIO', registeredUserId: null, createdAt: '2026-06-30T15:00:00Z' },
-  { id: 'calc_007', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 300, termDays: 7, installmentCount: 1, isFirstLoan: true, selectedRangeCode: 'ALTO', registeredUserId: 'usr_006', createdAt: '2026-06-24T08:00:00Z' },
-  { id: 'calc_008', productId: '550e8400-e29b-41d4-a716-446655440000', amount: 1000, termDays: 30, installmentCount: 2, isFirstLoan: true, selectedRangeCode: 'MEDIO', registeredUserId: null, createdAt: '2026-06-30T16:00:00Z' },
-];
-
-export const mockCalcMetrics = {
-  totalIntentions: 142,
-  last30Days: 89,
-  avgAmount: 1250,
-  topAmount: 500,
-  topTerm: 30,
-  conversion: { total: 142, registered: 34, rate: 23.9 },
-};

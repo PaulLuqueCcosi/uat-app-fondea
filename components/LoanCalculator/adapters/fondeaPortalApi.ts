@@ -3,8 +3,8 @@
  *
  * Diferencias con fondeaApi.ts (landing):
  * - fetchConfig y fetchCalculation → mismos endpoints públicos
- * - createIntention → llama a las API routes autenticadas (/api/intenciones)
- *   que son proxies al backend real con JWT
+ * - createIntention → llama directamente a los server actions de app/actions/intencion.actions.ts,
+ *   que a su vez llaman al backend real con JWT
  * - Soporta modo "editar" (updateIntencion) además de "crear" (createIntencion)
  * - No redirige a una URL externa — el componente wrapper maneja la navegación
  */
