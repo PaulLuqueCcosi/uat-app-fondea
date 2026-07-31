@@ -6,11 +6,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { backendFetch, proxyResponse } from '../../intenciones/helpers';
+import { backendFetch, proxyResponse } from '@/lib/backend-fetch';
 
 export async function GET() {
   try {
-    const res = await backendFetch('/api/v1/buro/me');
+    const res = await backendFetch('/api/v1/buro/me', { context: 'API_PROXY' });
     return proxyResponse(res);
   } catch (error) {
     console.error('[API] GET /api/buro/me → error:', error);
