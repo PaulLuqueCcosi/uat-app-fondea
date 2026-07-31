@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Label } from '@/components/ui/label';
 import {
-  Eye, RefreshCw, Loader2, Unlock, XCircle,
+  Eye, RefreshCw, Loader2,
   Filter, X, ChevronDown, ChevronUp, Search,
 } from 'lucide-react';
 import {
@@ -26,9 +26,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import Link from 'next/link';
-import { cancelIntentionAction, unlockIntentionAction } from '@/app/actions/admin-intentions.actions';
 import type { AdminIntentionResponse } from '@/modules/admin/admin-intentions.service';
-import { toast } from 'sonner';
 
 type IntentionStatus = AdminIntentionResponse['status'];
 
@@ -56,14 +54,19 @@ interface IntentionsTableClientProps {
   data: AdminIntentionResponse[];
   pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
   currentFilters: IntentionFilters;
+  /** Plazos (días) realmente configurados para el producto — GET /api/products/{id}/options */
+  termDaysOptions: number[];
+  /** Cuotas realmente configuradas para el producto — GET /api/products/{id}/options */
+  installmentCountOptions: number[];
 }
 
-export function IntentionsTableClient({ data, pagination, currentFilters }: IntentionsTableClientProps) {
+export function IntentionsTableClient({
+  data, pagination, currentFilters, termDaysOptions, installmentCountOptions,
+}: IntentionsTableClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [viewing, setViewing] = useState<AdminIntentionResponse | null>(null);
-  const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Parsear sorting inicial desde URL (formato Spring: sort=amount,asc)
   const getInitialSorting = (): SortingState => {
@@ -253,36 +256,6 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
     return parts.length > 0 ? parts.join(', ') : undefined;
   };
 
-  // ── Acciones ──────────────────────────────────────────────────────────────
-
-  const handleCancel = (id: string) => {
-    setActionMsg(null);
-    startTransition(async () => {
-      const result = await cancelIntentionAction(id);
-      if (result.ok) {
-        setActionMsg({ type: 'success', text: 'Intención cancelada' });
-        setViewing(null);
-        router.refresh();
-      } else {
-        setActionMsg({ type: 'error', text: result.error ?? 'Error' });
-      }
-    });
-  };
-
-  const handleUnlock = (id: string) => {
-    setActionMsg(null);
-    startTransition(async () => {
-      const result = await unlockIntentionAction(id);
-      if (result.ok) {
-        setActionMsg({ type: 'success', text: 'Intención desbloqueada' });
-        setViewing(null);
-        router.refresh();
-      } else {
-        setActionMsg({ type: 'error', text: result.error ?? 'Error' });
-      }
-    });
-  };
-
   return (
     <>
       <div className="space-y-4">
@@ -326,15 +299,15 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
               <NativeSelectOption value="REPLACED">Reemplazada</NativeSelectOption>
             </NativeSelect>
 
-            <CollapsibleTrigger>
-              <Button variant="outline" size="sm" className="h-9 gap-2" type="button" disabled={isPending}>
-                <Filter className="h-4 w-4" />
-                Filtros
-                {activeFilterCount > 0 && (
-                  <Badge variant="default" className="h-5 min-w-5 px-1 text-[10px]">{activeFilterCount}</Badge>
-                )}
-                {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </Button>
+            <CollapsibleTrigger
+              render={<Button variant="outline" size="sm" className="h-9 gap-2" type="button" disabled={isPending} />}
+            >
+              <Filter className="h-4 w-4" />
+              Filtros
+              {activeFilterCount > 0 && (
+                <Badge variant="default" className="h-5 min-w-5 px-1 text-[10px]">{activeFilterCount}</Badge>
+              )}
+              {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             </CollapsibleTrigger>
 
               {activeFilterCount > 0 && (
@@ -385,11 +358,9 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                     disabled={isPending}
                   >
                     <NativeSelectOption value="">Todos</NativeSelectOption>
-                    <NativeSelectOption value="15">15 días</NativeSelectOption>
-                    <NativeSelectOption value="30">30 días</NativeSelectOption>
-                    <NativeSelectOption value="45">45 días</NativeSelectOption>
-                    <NativeSelectOption value="60">60 días</NativeSelectOption>
-                    <NativeSelectOption value="90">90 días</NativeSelectOption>
+                    {termDaysOptions.map((days) => (
+                      <NativeSelectOption key={days} value={String(days)}>{days} días</NativeSelectOption>
+                    ))}
                   </NativeSelect>
                 </div>
 
@@ -403,11 +374,11 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                     disabled={isPending}
                   >
                     <NativeSelectOption value="">Todas</NativeSelectOption>
-                    <NativeSelectOption value="1">1 cuota</NativeSelectOption>
-                    <NativeSelectOption value="2">2 cuotas</NativeSelectOption>
-                    <NativeSelectOption value="3">3 cuotas</NativeSelectOption>
-                    <NativeSelectOption value="4">4 cuotas</NativeSelectOption>
-                    <NativeSelectOption value="6">6 cuotas</NativeSelectOption>
+                    {installmentCountOptions.map((count) => (
+                      <NativeSelectOption key={count} value={String(count)}>
+                        {count} {count === 1 ? 'cuota' : 'cuotas'}
+                      </NativeSelectOption>
+                    ))}
                   </NativeSelect>
                 </div>
               </div>
@@ -477,14 +448,12 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
         getExportData={() => data}
         exportFilterLabel={buildExportFilterLabel()}
         isLoading={isPending}
-        onRowClick={(row) => {
-          router.push(`/admin/lifecycle/${row.id}`);
-        }}
+        onRowClick={(row) => setViewing(row)}
       />
       </div>
 
-      {/* ── Modal de detalle ── */}
-      <Dialog open={!!viewing} onOpenChange={() => { setViewing(null); setActionMsg(null); }}>
+      {/* ── Modal de detalle (solo lectura) ── */}
+      <Dialog open={!!viewing} onOpenChange={() => setViewing(null)}>
         <DialogContent className="max-w-md">
           {viewing && (
             <>
@@ -546,26 +515,6 @@ export function IntentionsTableClient({ data, pagination, currentFilters }: Inte
                     </div>
                   )}
                 </div>
-
-                <Separator />
-                <div className="flex gap-2 flex-wrap">
-                  {viewing.status === 'LOCKED' && (
-                    <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => handleUnlock(viewing.id)} disabled={isPending}>
-                      <Unlock className="h-3.5 w-3.5" /> Desbloquear
-                    </Button>
-                  )}
-                  {viewing.status === 'ACTIVE' && (
-                    <Button variant="outline" size="sm" className="text-xs gap-1.5 text-destructive border-destructive/30" onClick={() => handleCancel(viewing.id)} disabled={isPending}>
-                      <XCircle className="h-3.5 w-3.5" /> Cancelar
-                    </Button>
-                  )}
-                </div>
-
-                {actionMsg && (
-                  <p className={`text-xs ${actionMsg.type === 'success' ? 'text-emerald-600' : 'text-destructive'}`}>
-                    {actionMsg.text}
-                  </p>
-                )}
               </div>
             </>
           )}

@@ -39,9 +39,15 @@ interface AnonymousIntentionsTabProps {
   data: AnonymousIntention[];
   pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
   currentFilters: AnonymousIntentionFilters;
+  /** Plazos (días) realmente configurados para el producto — GET /api/products/{id}/options */
+  termDaysOptions: number[];
+  /** Cuotas realmente configuradas para el producto — GET /api/products/{id}/options */
+  installmentCountOptions: number[];
 }
 
-export function AnonymousIntentionsTab({ data, pagination, currentFilters }: AnonymousIntentionsTabProps) {
+export function AnonymousIntentionsTab({
+  data, pagination, currentFilters, termDaysOptions, installmentCountOptions,
+}: AnonymousIntentionsTabProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -240,27 +246,29 @@ export function AnonymousIntentionsTab({ data, pagination, currentFilters }: Ano
       {/* ── Barra de filtros ── */}
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
         <div className="flex items-center gap-3 flex-wrap">
-          <CollapsibleTrigger>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 gap-2"
-              type="button"
-              disabled={isPending}
-            >
-              <Filter className="h-4 w-4" />
-              Filtros
-              {activeFilterCount > 0 && (
-                <Badge variant="default" className="h-5 min-w-5 px-1 text-[10px]">
-                  {activeFilterCount}
-                </Badge>
-              )}
-              {filtersOpen ? (
-                <ChevronUp className="h-3 w-3" />
-              ) : (
-                <ChevronDown className="h-3 w-3" />
-              )}
-            </Button>
+          <CollapsibleTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-2"
+                type="button"
+                disabled={isPending}
+              />
+            }
+          >
+            <Filter className="h-4 w-4" />
+            Filtros
+            {activeFilterCount > 0 && (
+              <Badge variant="default" className="h-5 min-w-5 px-1 text-[10px]">
+                {activeFilterCount}
+              </Badge>
+            )}
+            {filtersOpen ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
           </CollapsibleTrigger>
 
           {activeFilterCount > 0 && (
@@ -319,11 +327,9 @@ export function AnonymousIntentionsTab({ data, pagination, currentFilters }: Ano
                   disabled={isPending}
                 >
                   <NativeSelectOption value="">Todos</NativeSelectOption>
-                  <NativeSelectOption value="15">15 días</NativeSelectOption>
-                  <NativeSelectOption value="30">30 días</NativeSelectOption>
-                  <NativeSelectOption value="45">45 días</NativeSelectOption>
-                  <NativeSelectOption value="60">60 días</NativeSelectOption>
-                  <NativeSelectOption value="90">90 días</NativeSelectOption>
+                  {termDaysOptions.map((days) => (
+                    <NativeSelectOption key={days} value={String(days)}>{days} días</NativeSelectOption>
+                  ))}
                 </NativeSelect>
               </div>
               {/* Cuotas */}
@@ -336,11 +342,11 @@ export function AnonymousIntentionsTab({ data, pagination, currentFilters }: Ano
                   disabled={isPending}
                 >
                   <NativeSelectOption value="">Todas</NativeSelectOption>
-                  <NativeSelectOption value="1">1 cuota</NativeSelectOption>
-                  <NativeSelectOption value="2">2 cuotas</NativeSelectOption>
-                  <NativeSelectOption value="3">3 cuotas</NativeSelectOption>
-                  <NativeSelectOption value="4">4 cuotas</NativeSelectOption>
-                  <NativeSelectOption value="6">6 cuotas</NativeSelectOption>
+                  {installmentCountOptions.map((count) => (
+                    <NativeSelectOption key={count} value={String(count)}>
+                      {count} {count === 1 ? 'cuota' : 'cuotas'}
+                    </NativeSelectOption>
+                  ))}
                 </NativeSelect>
               </div>
             </div>
@@ -391,9 +397,6 @@ export function AnonymousIntentionsTab({ data, pagination, currentFilters }: Ano
         getExportData={() => data}
         exportFilterLabel={buildExportFilterLabel()}
         isLoading={isPending}
-        onRowClick={(row) => {
-          router.push(`/admin/lifecycle/${row.id}`);
-        }}
       />
     </div>
   );

@@ -1,9 +1,10 @@
 /**
- * Service para intenciones de préstamo (admin).
+ * Service para intenciones de préstamo (admin) — solo lectura.
  * Endpoints:
  * - GET /api/v1/admin/intentions — intenciones de usuario
  * - GET /api/v1/admin/calculator-intentions — intenciones anónimas (proxy)
- * - GET /api/v1/admin/calculator-intentions/funnel — embudo completo
+ *
+ * El embudo de conversión vive en admin-funnel.service.ts (funcionalidad separada).
  */
 
 import { backendFetch } from '@/lib/backend-fetch';
@@ -102,36 +103,6 @@ export async function getAdminIntentions(
   };
 }
 
-/**
- * Cancela una intención (soft delete).
- */
-export async function cancelAdminIntention(id: string): Promise<{ ok: boolean; error?: string }> {
-  const res = await backendFetch(`/api/v1/admin/intentions/${id}`, {
-    context: 'ADMIN_INTENTION_CANCEL',
-    method: 'DELETE',
-  });
-  if (!res.ok && res.status !== 204) {
-    return { ok: false, error: `Error ${res.status}` };
-  }
-  return { ok: true };
-}
-
-/**
- * Desbloquea una intención (LOCKED → ACTIVE).
- */
-export async function unlockAdminIntention(id: string): Promise<{ ok: boolean; error?: string }> {
-  const res = await backendFetch(`/api/v1/admin/intentions/${id}/unlock`, {
-    context: 'ADMIN_INTENTION_UNLOCK',
-    method: 'POST',
-  });
-  if (!res.ok && res.status !== 204) {
-    const body = await res.text().catch(() => '');
-    return { ok: false, error: body || `Error ${res.status}` };
-  }
-  return { ok: true };
-}
-
-
 // ── Intenciones anónimas (landing) ────────────────────────────────────────────
 
 export interface AnonymousIntention {
@@ -204,34 +175,4 @@ export async function getAdminAnonymousIntentions(
       totalPages,
     },
   };
-}
-
-// ── Embudo de conversión ──────────────────────────────────────────────────────
-
-export interface FunnelMetrics {
-  period: { from: string; to: string };
-  anonymousIntentions: number;
-  linkedIntentions: number;
-  portalIntentions: number;
-  totalUserIntentions: number;
-  applicationsSubmitted: number;
-  applicationsApproved: number;
-  conversionRates: {
-    landingToRegister: number;
-    intentionToApplication: number;
-    applicationToApproval: number;
-  };
-}
-
-export async function getAdminFunnelMetrics(): Promise<FunnelMetrics | null> {
-  const res = await backendFetch('/api/v1/admin/calculator-intentions/funnel', {
-    context: 'ADMIN_FUNNEL',
-  });
-
-  if (!res.ok) {
-    console.error(`[ADMIN_FUNNEL] Error ${res.status}`);
-    return null;
-  }
-
-  return res.json();
 }

@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowDown, Globe, UserPlus, FileText, CheckCircle2 } from 'lucide-react';
-import type { FunnelMetrics } from '@/modules/admin/admin-intentions.service';
+import type { FunnelMetrics } from '@/modules/admin/admin-funnel.service';
 
 interface Props {
   metrics: FunnelMetrics | null;

@@ -2,13 +2,9 @@
 
 import {
   getAdminIntentions,
-  cancelAdminIntention,
-  unlockAdminIntention,
   getAdminAnonymousIntentions,
-  getAdminFunnelMetrics,
   type AdminIntentionsResult,
   type AnonymousIntentionsResult,
-  type FunnelMetrics,
 } from '@/modules/admin/admin-intentions.service';
 
 export async function getAdminIntentionsAction(
@@ -17,14 +13,6 @@ export async function getAdminIntentionsAction(
   options?: { status?: string; search?: string },
 ): Promise<AdminIntentionsResult> {
   return getAdminIntentions(page, pageSize, options);
-}
-
-export async function cancelIntentionAction(id: string) {
-  return cancelAdminIntention(id);
-}
-
-export async function unlockIntentionAction(id: string) {
-  return unlockAdminIntention(id);
 }
 
 export async function getAnonymousIntentionsAction(
@@ -41,8 +29,4 @@ export async function getAnonymousIntentionsAction(
   },
 ): Promise<AnonymousIntentionsResult> {
   return getAdminAnonymousIntentions(page, pageSize, options);
-}
-
-export async function getFunnelMetricsAction(): Promise<FunnelMetrics | null> {
-  return getAdminFunnelMetrics();
 }

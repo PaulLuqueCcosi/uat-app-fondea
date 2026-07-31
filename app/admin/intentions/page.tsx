@@ -1,9 +1,9 @@
 import { Target } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getAdminIntentions, getAdminAnonymousIntentions, getAdminFunnelMetrics } from '@/modules/admin/admin-intentions.service';
+import { getAdminIntentions, getAdminAnonymousIntentions } from '@/modules/admin/admin-intentions.service';
+import { getProductFilterOptions } from '@/modules/admin/admin-product-options.service';
 import { IntentionsTableClient } from '@/components/admin/intentions/IntentionsTableClient';
 import { AnonymousIntentionsTab } from '@/components/admin/intentions/AnonymousIntentionsTab';
-import { FunnelTab } from '@/components/admin/intentions/FunnelTab';
 
 interface Props {
   searchParams: Promise<{
@@ -28,7 +28,7 @@ interface Props {
 
 export default async function AdminIntentionsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const tab = params.tab || 'users';
+  const tab = params.tab === 'landing' ? 'landing' : 'users';
 
   // Users tab pagination & filters
   const userPage = Number(params.page) || 1;
@@ -62,10 +62,10 @@ export default async function AdminIntentionsPage({ searchParams }: Props) {
   };
 
   // Cargar datos en paralelo
-  const [intentionsResult, anonymousResult, funnelMetrics] = await Promise.all([
+  const [intentionsResult, anonymousResult, productOptions] = await Promise.all([
     getAdminIntentions(userPage, userPageSize, filters),
     getAdminAnonymousIntentions(landingPage, landingPageSize, landingFilters),
-    getAdminFunnelMetrics(),
+    getProductFilterOptions(),
   ]);
 
   return (
@@ -83,22 +83,29 @@ export default async function AdminIntentionsPage({ searchParams }: Props) {
       </div>
 
       <Tabs defaultValue={tab} className="w-full">
-        <TabsList className="grid grid-cols-3 w-full max-w-lg">
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
           <TabsTrigger value="users">Usuarios ({intentionsResult.pagination.totalItems})</TabsTrigger>
           <TabsTrigger value="landing">Landing ({anonymousResult.pagination.totalItems})</TabsTrigger>
-          <TabsTrigger value="funnel">Embudo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="mt-6">
-          <IntentionsTableClient data={intentionsResult.data} pagination={intentionsResult.pagination} currentFilters={filters} />
+          <IntentionsTableClient
+            data={intentionsResult.data}
+            pagination={intentionsResult.pagination}
+            currentFilters={filters}
+            termDaysOptions={productOptions.termDays}
+            installmentCountOptions={productOptions.installmentCounts}
+          />
         </TabsContent>
 
         <TabsContent value="landing" className="mt-6">
-          <AnonymousIntentionsTab data={anonymousResult.data} pagination={anonymousResult.pagination} currentFilters={landingFilters} />
-        </TabsContent>
-
-        <TabsContent value="funnel" className="mt-6">
-          <FunnelTab metrics={funnelMetrics} />
+          <AnonymousIntentionsTab
+            data={anonymousResult.data}
+            pagination={anonymousResult.pagination}
+            currentFilters={landingFilters}
+            termDaysOptions={productOptions.termDays}
+            installmentCountOptions={productOptions.installmentCounts}
+          />
         </TabsContent>
       </Tabs>
     </div>
