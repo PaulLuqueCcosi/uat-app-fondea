@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { AdminApplicationCore } from '@/modules/admin/admin-application-detail.service';
+import { CreditCreationRetryButton } from './CreditCreationRetryButton';
 
 interface Props {
   data: AdminApplicationCore;
@@ -23,6 +24,13 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
   FAILED: { label: 'Fallida', variant: 'destructive' },
   BLOCKED: { label: 'Bloqueada', variant: 'destructive' },
   EXPIRED: { label: 'Expirada', variant: 'outline' },
+};
+
+const CREDIT_CREATION_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  PENDING: { label: 'Pendiente', variant: 'secondary' },
+  PROCESSING: { label: 'Procesando', variant: 'secondary' },
+  COMPLETED: { label: 'Completado', variant: 'default' },
+  FAILED: { label: 'Falló', variant: 'destructive' },
 };
 
 const EVAL_STEP_LABELS: Record<string, string> = {
@@ -128,6 +136,45 @@ export function ApplicationCoreSection({ data }: Props) {
                     <p className="text-[11px] text-muted-foreground">Error de evaluación</p>
                     <p className="text-sm text-red-600">{data.evaluationError}</p>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Fase 2: Creación de crédito (post-firma) */}
+          {data.creditCreationStatus && (
+            <Card className={data.creditCreationStatus === 'FAILED' ? 'border-red-200' : undefined}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" /> Creación de crédito (Fase 2)
+                  </span>
+                  <Badge variant={CREDIT_CREATION_CONFIG[data.creditCreationStatus]?.variant ?? 'outline'}>
+                    {CREDIT_CREATION_CONFIG[data.creditCreationStatus]?.label ?? data.creditCreationStatus}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {data.creditId && (
+                  <InfoItem label="Crédito" value={
+                    <Link href={`/admin/credits/${data.creditId}`} className="font-mono text-xs text-primary hover:underline">
+                      {data.creditId.slice(0, 8)}…
+                    </Link>
+                  } />
+                )}
+                {data.creditCreationStatus === 'FAILED' && (
+                  <>
+                    {data.creditCreationError && (
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Error</p>
+                        <p className="text-sm text-red-600">{data.creditCreationError}</p>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      El reintento automático corre cada 15 min, pero podés forzarlo ahora.
+                    </p>
+                    <CreditCreationRetryButton applicationId={data.id} />
+                  </>
                 )}
               </CardContent>
             </Card>

@@ -23,6 +23,8 @@ export type EvaluationStep =
 
 export type ContractStatus = 'GENERATED' | 'SIGNED' | 'EXPIRED';
 
+export type CreditCreationStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
 export interface PepInfo {
   notPep: boolean | null;
   notPepRelative: boolean | null;
@@ -59,6 +61,9 @@ export interface AdminApplicationCore {
   evaluationError: string | null;
   contractId: string | null;
   contractStatus: ContractStatus | null;
+  creditCreationStatus: CreditCreationStatus | null;
+  creditCreationError: string | null;
+  creditId: string | null;
   expiresAt: string | null;
   submittedAt: string | null;
   evaluatedAt: string | null;

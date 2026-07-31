@@ -86,7 +86,7 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
           setLoadingContract(false);
           return;
         }
-        const pdfUrl = await getContractPdfUrlAction(contractInfo.contractId);
+        const pdfUrl = await getContractPdfUrlAction(applicationId!);
         setContractUrl(pdfUrl);
       } catch (err) {
         console.error('[ActiveLoanCard] Error fetching contract:', err);
