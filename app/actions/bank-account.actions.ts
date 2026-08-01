@@ -152,7 +152,7 @@ export async function getBankAccountProfileStatus(): Promise<BankAccountProfileS
     const verified = status === 'VERIFIED';
 
     // Calcular metadatos de edición
-    const editMetadata = getEditMetadata('bank_account', verified);
+    const editMetadata = await getEditMetadata('bank_account', verified);
 
     return {
       profile: parsedData ? mapProfileFromBackend(parsedData) : null,

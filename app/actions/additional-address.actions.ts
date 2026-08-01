@@ -189,7 +189,7 @@ export async function getAddressProfileStatus(): Promise<AddressProfileStatus> {
     const verified = status === 'VERIFIED';
 
     // Calcular metadatos de edición
-    const editMetadata = getEditMetadata('address', verified);
+    const editMetadata = await getEditMetadata('address', verified);
 
     return {
       profile:          parsedData ? mapProfileFromBackend(parsedData) : null,

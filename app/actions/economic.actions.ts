@@ -168,7 +168,7 @@ export async function getEconomicProfileStatus(): Promise<EconomicProfileStatus>
     const verified = status === 'VERIFIED';
 
     // Calcular metadatos de edición
-    const editMetadata = getEditMetadata('economic', verified);
+    const editMetadata = await getEditMetadata('economic', verified);
 
     return {
       profile:          parsedData ? mapProfileFromBackend(parsedData) : null,

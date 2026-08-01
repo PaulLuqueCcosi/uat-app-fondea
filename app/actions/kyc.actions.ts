@@ -92,7 +92,7 @@ export async function getKYCData(): Promise<{
     const verified = status === 'VERIFIED';
 
     // Calcular metadatos de edición
-    const editMetadata = getEditMetadata('kyc', verified);
+    const editMetadata = await getEditMetadata('kyc', verified);
 
     const data: KYCData | null = parsedData
       ? {

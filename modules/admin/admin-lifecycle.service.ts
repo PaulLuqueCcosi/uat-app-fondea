@@ -69,7 +69,6 @@ export interface ApplicationSummary {
   evaluation_error: string | null;
   contract_id: string | null;
   contract_status: string | null;
-  evaluation_detail: string | null;
   submitted_profile_snapshot: string | null;
   submitted_intention_snapshot: string | null;
   submitted_puntaje_snapshot: string | null;

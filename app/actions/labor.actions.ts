@@ -188,7 +188,7 @@ export async function getLaborProfileStatus(): Promise<LaborProfileStatus> {
     const verified = status === 'VERIFIED';
 
     // Calcular metadatos de edición
-    const editMetadata = getEditMetadata('labor', verified);
+    const editMetadata = await getEditMetadata('labor', verified);
 
     return {
       situation: parsedData?.situation ? mapSituationFromBackend(parsedData) : null,

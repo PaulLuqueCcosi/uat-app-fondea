@@ -181,6 +181,64 @@ export interface AdminApplicationContract {
 
 // ── Types: Evaluation ───────────────────────────────────────────────────────
 
+export interface EvaluationVersionInfo {
+  id: string | null;
+  version: string;
+  source: string; // "database" | "json-fallback" | "default"
+}
+
+export interface EvaluationRuleTrace {
+  ruleId: string;
+  label: string;
+  passed?: boolean;       // eliminatorias
+  triggered?: boolean;    // scoring
+  points?: number;        // scoring
+  variables: Record<string, any>;
+}
+
+export interface EvaluationModuleTrace {
+  module: string;
+  label?: string;
+  passed?: boolean;
+  rules: EvaluationRuleTrace[];
+}
+
+export interface EvaluationSnapshotTrace {
+  eliminatory?: {
+    passed: boolean;
+    failedModule: string | null;
+    modules: EvaluationModuleTrace[];
+  };
+  scoring?: {
+    baseScore: number;
+    finalScore: number;
+    approvedMin: number;
+    decision: string;
+    modules: EvaluationModuleTrace[];
+    appliedFactors: { ruleId: string; label: string; points: number }[];
+  };
+  versions?: {
+    eliminatory: EvaluationVersionInfo;
+    scoring: EvaluationVersionInfo;
+    thresholds: EvaluationVersionInfo & { baseScore?: number; approvedMin?: number };
+  };
+}
+
+export interface EvaluationSnapshotItem {
+  id: string;
+  evaluatedAt: string;
+  passed: boolean;
+  decision: string;
+  failedModule: string | null;
+  baseScore: number | null;
+  finalScore: number | null;
+  approvedMin: number | null;
+  eliminatoryVersion: EvaluationVersionInfo | null;
+  scoringVersion: EvaluationVersionInfo | null;
+  thresholds: EvaluationVersionInfo | null;
+  trace: EvaluationSnapshotTrace | null;
+}
+
 export interface AdminApplicationEvaluation {
   applicationId: string;
   evaluationStep: EvaluationStep | null;
@@ -188,7 +246,7 @@ export interface AdminApplicationEvaluation {
   failureCode: string | null;
   rejectionReason: string | null;
   evaluatedAt: string | null;
-  evaluationTrace: Record<string, any> | null;
+  evaluations: EvaluationSnapshotItem[] | null;
 }
 
 // ── Service functions ───────────────────────────────────────────────────────

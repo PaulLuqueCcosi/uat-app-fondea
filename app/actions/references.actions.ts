@@ -163,7 +163,7 @@ export async function getReferencesProfileStatus(): Promise<ReferencesProfileSta
     const verified = status === 'VERIFIED';
 
     // Calcular metadatos de edición
-    const editMetadata = getEditMetadata('references', verified);
+    const editMetadata = await getEditMetadata('references', verified);
 
     return {
       profile:          parsedData ? mapProfileFromBackend(parsedData) : null,

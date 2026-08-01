@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { CircleDollarSign, FileText, Bell, Pencil } from 'lucide-react';
 import { PenaltyConfigCard } from './PenaltyConfigCard';
+import { FormEditPoliciesCard } from './FormEditPoliciesCard';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,9 @@ export function AdminSettingsClient() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* ═══ MORA (conectado al backend) ═══ */}
       <PenaltyConfigCard />
+
+      {/* ═══ EDICIÓN DE EXPEDIENTE (conectado al backend) ═══ */}
+      <FormEditPoliciesCard />
 
       {/* ═══ INTENTOS DE FORMULARIOS ═══ */}
       <FormAttemptsCard config={config} onSave={(formAttempts) => setConfig((p) => ({ ...p, formAttempts }))} />

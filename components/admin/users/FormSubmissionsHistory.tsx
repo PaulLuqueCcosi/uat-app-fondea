@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
@@ -11,11 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { FormSubmission } from '@/modules/admin';
+import { DataTable, type DataTableColumnDef, type DataTablePagination } from '@/components/admin/DataTable';
+import type { FormSubmission, PageResponse } from '@/modules/admin';
 import { AdminFormDataView } from './AdminFormDataView';
 
 interface FormSubmissionsHistoryProps {
-  submissions: FormSubmission[];
+  page: PageResponse<FormSubmission>;
   formKey?: string;
 }
 
@@ -25,70 +26,95 @@ const RESULT_LABELS: Record<string, string> = {
   PENDING: 'Pendiente',
 };
 
-export function FormSubmissionsHistory({ submissions, formKey = '' }: FormSubmissionsHistoryProps) {
+/** Motivo corto para la columna — la traza completa está en el detalle. */
+function rejectionSummary(sub: FormSubmission): string {
+  if (sub.verificationResult === 'APPROVED' || sub.ruleOutcomes.length === 0) return '—';
+  const failed = sub.ruleOutcomes.find((o) => !o.passed);
+  return failed?.message ?? '—';
+}
+
+export function FormSubmissionsHistory({ page, formKey = '' }: FormSubmissionsHistoryProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [viewingSubmission, setViewingSubmission] = useState<FormSubmission | null>(null);
 
-  if (submissions.length === 0) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Historial de envíos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Sin envíos registrados.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const pagination: DataTablePagination = {
+    page: (page.number ?? 0) + 1,
+    pageSize: page.size || 20,
+    totalItems: page.totalElements ?? 0,
+    totalPages: page.totalPages ?? 0,
+  };
+
+  const updateUrl = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set(key, value);
+      router.push(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
+
+  const handlePageChange = useCallback(
+    (newPage: number) => updateUrl('submissionsPage', String(newPage - 1)),
+    [updateUrl],
+  );
+  const handlePageSizeChange = useCallback(
+    (newSize: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('submissionsSize', String(newSize));
+      params.set('submissionsPage', '0');
+      router.push(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
+
+  const columns: DataTableColumnDef<FormSubmission>[] = [
+    {
+      accessorKey: 'submittedAt',
+      header: 'Fecha',
+      cell: ({ row }) => (
+        <span className="text-xs whitespace-nowrap">{new Date(row.original.submittedAt).toLocaleString('es-PE')}</span>
+      ),
+    },
+    {
+      accessorKey: 'verificationResult',
+      header: 'Resultado',
+      cell: ({ row }) => (
+        <Badge variant={row.original.verificationResult === 'APPROVED' ? 'success' : 'error'} className="text-[9px]">
+          {RESULT_LABELS[row.original.verificationResult] ?? row.original.verificationResult}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: 'ruleOutcomes',
+      header: 'Motivo',
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground max-w-xs truncate block">{rejectionSummary(row.original)}</span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Datos',
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setViewingSubmission(row.original)}>
+          <Eye className="h-3.5 w-3.5" />
+        </Button>
+      ),
+    },
+  ];
 
   return (
-    <>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Historial de envíos ({submissions.length})</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-muted/30 border-b">
-                <tr>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Fecha</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Resultado</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Motivo rechazo</th>
-                  <th className="text-center px-4 py-2.5 font-medium text-muted-foreground">Datos</th>
-                </tr>
-              </thead>
-              <tbody>
-                {submissions.map((sub) => (
-                  <tr key={sub.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      {new Date(sub.submittedAt).toLocaleString('es-PE')}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <Badge variant={sub.verificationResult === 'APPROVED' ? 'success' : 'error'} className="text-[9px]">
-                        {RESULT_LABELS[sub.verificationResult] ?? sub.verificationResult}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-2.5 text-muted-foreground max-w-xs truncate">
-                      {sub.rejectionReason || '—'}
-                    </td>
-                    <td className="px-4 py-2.5 text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        onClick={() => setViewingSubmission(sub)}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium text-foreground">Historial de envíos ({pagination.totalItems})</h3>
+      <DataTable
+        columns={columns}
+        data={page.content}
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        enableExport={false}
+        pageSizeOptions={[10, 20, 50]}
+      />
 
       {/* Modal de detalle */}
       <Dialog open={!!viewingSubmission} onOpenChange={() => setViewingSubmission(null)}>
@@ -116,11 +142,30 @@ export function FormSubmissionsHistory({ submissions, formKey = '' }: FormSubmis
                 <span>Enviado: {new Date(viewingSubmission.submittedAt).toLocaleString('es-PE')}</span>
               </div>
 
-              {/* Motivo de rechazo */}
-              {viewingSubmission.rejectionReason && (
-                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
-                  <p className="text-xs font-medium text-destructive">Motivo de rechazo:</p>
-                  <p className="text-sm text-foreground mt-0.5">{viewingSubmission.rejectionReason}</p>
+              {/* Traza de reglas evaluadas — el motivo real de rechazo */}
+              {viewingSubmission.ruleOutcomes.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-foreground">Reglas evaluadas:</p>
+                  {viewingSubmission.ruleOutcomes.map((outcome, i) => (
+                    <div
+                      key={i}
+                      className={
+                        outcome.passed
+                          ? 'rounded-lg border border-success-200 bg-success-50/50 p-3'
+                          : 'rounded-lg border border-destructive/20 bg-destructive/5 p-3'
+                      }
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-mono text-foreground">{outcome.ruleCode}</span>
+                        <Badge variant={outcome.passed ? 'success' : 'error'} className="text-[9px]">
+                          {outcome.passed ? 'OK' : 'FALLÓ'}
+                        </Badge>
+                      </div>
+                      {outcome.message && (
+                        <p className="text-sm text-foreground mt-0.5">{outcome.message}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -130,6 +175,6 @@ export function FormSubmissionsHistory({ submissions, formKey = '' }: FormSubmis
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

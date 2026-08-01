@@ -77,8 +77,8 @@ export const mockUserForms: Record<string, UserExpedientes> = {
       totalSubmissions: 2,
       lock: { isBlocked: false, failedAttempts: 1, maxAttempts: 3, blockedUntil: null },
       submissions: [
-        { id: 'sub_kyc_002', submittedAt: '2026-05-12T10:00:00Z', verificationResult: 'APPROVED', submissionData: { dni: '71234567', firstName: 'María', secondName: 'Elena', firstLastName: 'García', secondLastName: 'López', verificationCode: '4', birth_date: '15/03/1990' } },
-        { id: 'sub_kyc_001', submittedAt: '2026-05-11T14:30:00Z', verificationResult: 'REJECTED', submissionData: { dni: '71234567', firstName: 'Maria', secondName: 'Elena', firstLastName: 'García', secondLastName: 'López', verificationCode: '3', birth_date: '15/03/1990' }, rejectionReason: 'Código de verificación incorrecto' },
+        { id: 'sub_kyc_002', submittedAt: '2026-05-12T10:00:00Z', verificationResult: 'APPROVED', submissionData: { dni: '71234567', firstName: 'María', secondName: 'Elena', firstLastName: 'García', secondLastName: 'López', verificationCode: '4', birth_date: '15/03/1990' }, ruleOutcomes: [] },
+        { id: 'sub_kyc_001', submittedAt: '2026-05-11T14:30:00Z', verificationResult: 'REJECTED', submissionData: { dni: '71234567', firstName: 'Maria', secondName: 'Elena', firstLastName: 'García', secondLastName: 'López', verificationCode: '3', birth_date: '15/03/1990' }, rejectionReason: 'Código de verificación incorrecto', ruleOutcomes: [] },
       ],
     },
     labor: {
@@ -88,7 +88,7 @@ export const mockUserForms: Record<string, UserExpedientes> = {
       totalSubmissions: 1,
       lock: { isBlocked: false, failedAttempts: 0, maxAttempts: 3, blockedUntil: null },
       submissions: [
-        { id: 'sub_lab_001', submittedAt: '2026-05-13T08:00:00Z', verificationResult: 'APPROVED', submissionData: { employment_status: 'EMPLEADO_DEPENDIENTE', industry: 'TECNOLOGIA', years_of_activity: 3, monthly_income: 3500, income_receipt_method: 'CUENTA_BANCARIA' } },
+        { id: 'sub_lab_001', submittedAt: '2026-05-13T08:00:00Z', verificationResult: 'APPROVED', submissionData: { employment_status: 'EMPLEADO_DEPENDIENTE', industry: 'TECNOLOGIA', years_of_activity: 3, monthly_income: 3500, income_receipt_method: 'CUENTA_BANCARIA' }, ruleOutcomes: [] },
       ],
     },
     economic: {
@@ -98,7 +98,7 @@ export const mockUserForms: Record<string, UserExpedientes> = {
       totalSubmissions: 1,
       lock: { isBlocked: false, failedAttempts: 0, maxAttempts: 3, blockedUntil: null },
       submissions: [
-        { id: 'sub_eco_001', submittedAt: '2026-05-14T09:00:00Z', verificationResult: 'APPROVED', submissionData: { loan_purpose: 'NEGOCIO', monthly_expenses: 1500, has_debts: false, has_property: true, has_vehicle: false, education_level: 'UNIVERSITARIA' } },
+        { id: 'sub_eco_001', submittedAt: '2026-05-14T09:00:00Z', verificationResult: 'APPROVED', submissionData: { loan_purpose: 'NEGOCIO', monthly_expenses: 1500, has_debts: false, has_property: true, has_vehicle: false, education_level: 'UNIVERSITARIA' }, ruleOutcomes: [] },
       ],
     },
     references: {
@@ -108,7 +108,7 @@ export const mockUserForms: Record<string, UserExpedientes> = {
       totalSubmissions: 1,
       lock: { isBlocked: false, failedAttempts: 0, maxAttempts: 3, blockedUntil: null },
       submissions: [
-        { id: 'sub_ref_001', submittedAt: '2026-05-14T10:00:00Z', verificationResult: 'APPROVED', submissionData: { family_name: 'Elena García', family_phone: '912345678', family_relation: 'MADRE', non_family_name: 'Carlos Ruiz', non_family_phone: '923456789', non_family_relation: 'COLEGA' } },
+        { id: 'sub_ref_001', submittedAt: '2026-05-14T10:00:00Z', verificationResult: 'APPROVED', submissionData: { family_name: 'Elena García', family_phone: '912345678', family_relation: 'MADRE', non_family_name: 'Carlos Ruiz', non_family_phone: '923456789', non_family_relation: 'COLEGA' }, ruleOutcomes: [] },
       ],
     },
     address: {
@@ -118,7 +118,7 @@ export const mockUserForms: Record<string, UserExpedientes> = {
       totalSubmissions: 1,
       lock: { isBlocked: false, failedAttempts: 0, maxAttempts: 3, blockedUntil: null },
       submissions: [
-        { id: 'sub_addr_001', submittedAt: '2026-05-14T11:00:00Z', verificationResult: 'APPROVED', submissionData: { street_address: 'Av. Javier Prado 1234', region: 'Lima', province: 'Lima', district: 'San Isidro', referral_source: 'GOOGLE' } },
+        { id: 'sub_addr_001', submittedAt: '2026-05-14T11:00:00Z', verificationResult: 'APPROVED', submissionData: { street_address: 'Av. Javier Prado 1234', region: 'Lima', province: 'Lima', district: 'San Isidro', referral_source: 'GOOGLE' }, ruleOutcomes: [] },
       ],
     },
     bankAccount: {
@@ -128,7 +128,7 @@ export const mockUserForms: Record<string, UserExpedientes> = {
       totalSubmissions: 1,
       lock: { isBlocked: false, failedAttempts: 0, maxAttempts: 3, blockedUntil: null },
       submissions: [
-        { id: 'sub_bank_001', submittedAt: '2026-05-15T08:00:00Z', verificationResult: 'APPROVED', submissionData: { bank_name: 'BCP', account_type: 'AHORROS', account_number: '****4567', cci: '****8901' } },
+        { id: 'sub_bank_001', submittedAt: '2026-05-15T08:00:00Z', verificationResult: 'APPROVED', submissionData: { bank_name: 'BCP', account_type: 'AHORROS', account_number: '****4567', cci: '****8901' }, ruleOutcomes: [] },
       ],
     },
   },
