@@ -8,16 +8,19 @@ import {
   MapPin,
   Users,
   Building2,
-  Eye,
-  CheckCircle,
+  CheckCircle2,
   Clock,
-  X,
+  History,
+  ChevronRight,
+  ArrowLeft,
+  type LucideIcon,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge, badgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageTitle } from '@/components/ui/page-title';
-import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import type { VariantProps } from 'class-variance-authority';
 
 import { FunnelKYCValidation } from '@/components/forms/solicitar/KYCValidation';
 import { FunnelLaborProfileShadcn } from '@/components/forms/solicitar/LaborProfileShadcn';
@@ -35,6 +38,8 @@ import type {
   BankAccountProfileStatus,
 } from '@/lib/types';
 
+type FormStatus = 'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING' | undefined;
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type SectionId = 'kyc' | 'labor' | 'economic' | 'address' | 'references' | 'bank-account';
@@ -49,41 +54,105 @@ interface MiExpedienteClientProps {
   referencesData: ReferencesProfileStatus;
   addressData: AddressProfileStatus;
   bankAccountData: BankAccountProfileStatus;
-  ubigeoNames: { region: string; province: string; district: string };
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Status config ─────────────────────────────────────────────────────────────
 
-function StatusBadge({ verified }: { verified: boolean }) {
-  if (verified) {
-    return (
-      <Badge variant="outline" className="bg-success-50 text-success-700 border-success-200">
-        <CheckCircle className="w-3 h-3 mr-1" />
-        Verificado
-      </Badge>
-    );
+type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
+
+const STATUS_CONFIG: Record<
+  'VERIFIED' | 'EXPIRED' | 'REPLACED' | 'PENDING',
+  {
+    label: string;
+    badgeVariant: BadgeVariant;
+    statusIcon: LucideIcon;
+    /** Color del círculo del icono principal */
+    iconBg: string;
+    iconFg: string;
   }
-  return (
-    <Badge variant="outline" className="bg-warning-50 text-warning-700 border-warning-200">
-      <Clock className="w-3 h-3 mr-1" />
-      Pendiente
-    </Badge>
-  );
+> = {
+  VERIFIED: {
+    label: 'Verificado',
+    badgeVariant: 'success',
+    statusIcon: CheckCircle2,
+    iconBg: 'bg-primary',
+    iconFg: 'text-primary-foreground',
+  },
+  EXPIRED: {
+    label: 'Expirado',
+    badgeVariant: 'warning',
+    statusIcon: Clock,
+    iconBg: 'bg-warning-100',
+    iconFg: 'text-warning-700',
+  },
+  REPLACED: {
+    label: 'Reemplazado',
+    badgeVariant: 'pending',
+    statusIcon: History,
+    iconBg: 'bg-muted',
+    iconFg: 'text-muted-foreground',
+  },
+  PENDING: {
+    label: 'Pendiente',
+    badgeVariant: 'pending',
+    statusIcon: Clock,
+    iconBg: 'bg-primary-50',
+    iconFg: 'text-primary-600',
+  },
+};
+
+function getStatusConfig(status: FormStatus) {
+  return STATUS_CONFIG[status ?? 'PENDING'];
 }
 
-function InfoRow({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div className="py-1.5">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
-      <p className="text-sm font-medium text-foreground">{value || '—'}</p>
-    </div>
-  );
+// ── Section Card ──────────────────────────────────────────────────────────────
+
+interface SectionCardProps {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  status: FormStatus;
+  onViewDetail: () => void;
 }
 
-function formatCurrency(amount: number | string | undefined): string {
-  if (!amount) return '—';
-  const num = typeof amount === 'string' ? Number(amount) : amount;
-  return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 }).format(num);
+function SectionCard({ icon: Icon, title, description, status, onViewDetail }: SectionCardProps) {
+  const config = getStatusConfig(status);
+
+  return (
+    <button
+      type="button"
+      onClick={onViewDetail}
+      className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-xl"
+    >
+      <Card className="h-full transition-all duration-200 hover:shadow-md hover:ring-primary-200">
+        <CardContent className="flex items-center gap-4 p-4">
+          {/* Icono circular — mismo estilo que FormHeader */}
+          <div
+            className={cn(
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+              config.iconBg,
+              config.iconFg
+            )}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+
+          {/* Contenido */}
+          <div className="min-w-0 flex-1 space-y-1">
+            <h3 className="text-sm font-semibold text-foreground leading-tight">{title}</h3>
+            <p className="text-xs text-muted-foreground leading-snug">{description}</p>
+            <Badge variant={config.badgeVariant} className="mt-1.5">
+              <config.statusIcon className="h-3 w-3" />
+              {config.label}
+            </Badge>
+          </div>
+
+          {/* Chevron */}
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+        </CardContent>
+      </Card>
+    </button>
+  );
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -98,11 +167,8 @@ export function MiExpedienteClient({
   referencesData,
   addressData,
   bankAccountData,
-  ubigeoNames,
 }: MiExpedienteClientProps) {
   const [editingSection, setEditingSection] = useState<SectionId | null>(null);
-
-  const isEditing = (section: SectionId) => editingSection === section;
 
   const handleEdit = (section: SectionId) => {
     setEditingSection(section);
@@ -112,11 +178,10 @@ export function MiExpedienteClient({
     setEditingSection(null);
   };
 
-  // ── Si hay una sección en edición, mostrar el formulario full-width ──
+  // ── Vista de edición ──
   if (editingSection) {
     return (
       <div className="flex flex-col gap-6">
-        {/* Header con volver */}
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -124,12 +189,11 @@ export function MiExpedienteClient({
             onClick={handleClose}
             className="gap-2 text-primary hover:text-primary-700 hover:bg-primary-50"
           >
-            <X className="w-4 h-4" />
-            Volver
+            <ArrowLeft className="w-4 h-4" />
+            Volver al expediente
           </Button>
         </div>
 
-        {/* Formulario con el mismo wrapper que /solicitar/* */}
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
           {editingSection === 'kyc' && (
             <FunnelKYCValidation
@@ -164,226 +228,54 @@ export function MiExpedienteClient({
   // ── Vista readonly — grid de secciones ──
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
       <PageTitle
         title="Mi Expediente"
-        description="Toda tu información personal verificada. Toca &quot;Ver Detalle&quot; para revisar una sección."
+        description="Toda tu información personal verificada. Toca una sección para revisar o completar."
       />
 
-      {/* Grid de secciones */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* ── Identidad (KYC) ── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Shield className="w-4 h-4 text-primary" />
-              Identidad
-            </CardTitle>
-            <CardDescription>Verificación de identidad con DNI</CardDescription>
-            <CardAction>
-              <div className="flex items-center gap-2">
-                <StatusBadge verified={kycData?.status === 'VERIFIED'} />
-                <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('kyc')}>
-                  <Eye className="w-3.5 h-3.5" />
-                  Ver Detalle
-                </Button>
-              </div>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            {kycData ? (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <InfoRow label="DNI" value={kycData.dni} />
-                <InfoRow label="Código verificación" value={kycData.verificationCode} />
-                <InfoRow label="Nombres" value={`${kycData.firstName} ${kycData.secondName}`.trim()} />
-                <InfoRow label="Apellidos" value={`${kycData.firstLastName} ${kycData.secondLastName}`.trim()} />
-                <InfoRow label="Fecha de nacimiento" value={kycData.birth_date} />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Sin datos registrados</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* ── Situación Laboral ── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-primary" />
-              Perfil Laboral
-            </CardTitle>
-            <CardDescription>Empleo, ingresos y sector</CardDescription>
-            <CardAction>
-              <div className="flex items-center gap-2">
-                <StatusBadge verified={laborData.overall_verified} />
-                <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('labor')}>
-                  <Eye className="w-3.5 h-3.5" />
-                  Ver Detalle
-                </Button>
-              </div>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            {laborData.situation ? (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <InfoRow label="Situación" value={laborData.situation.employment_status} />
-                <InfoRow label="Sector" value={laborData.details?.industry} />
-                <InfoRow label="Antigüedad" value={laborData.details?.years_of_activity != null ? `${laborData.details.years_of_activity} años` : undefined} />
-                <InfoRow label="Ingreso mensual" value={formatCurrency(laborData.income?.monthly_income)} />
-                <InfoRow label="Forma de cobro" value={laborData.income?.income_receipt_method} />
-                {laborData.details?.business_ruc && <InfoRow label="RUC" value={laborData.details.business_ruc} />}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Sin datos registrados</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* ── Perfil Económico ── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-primary" />
-              Perfil Económico
-            </CardTitle>
-            <CardDescription>Gastos, deudas y patrimonio</CardDescription>
-            <CardAction>
-              <div className="flex items-center gap-2">
-                <StatusBadge verified={economicData.overall_verified} />
-                <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('economic')}>
-                  <Eye className="w-3.5 h-3.5" />
-                  Ver Detalle
-                </Button>
-              </div>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            {economicData.profile ? (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <InfoRow label="Propósito del préstamo" value={economicData.profile.loan_purpose} />
-                <InfoRow label="Gastos mensuales" value={formatCurrency(economicData.profile.monthly_expenses)} />
-                <InfoRow label="Tiene deudas" value={economicData.profile.has_debts ? 'Sí' : 'No'} />
-                <InfoRow label="Nivel educativo" value={economicData.profile.education_level} />
-                <InfoRow label="Propiedad" value={economicData.profile.has_property ? 'Sí' : 'No'} />
-                <InfoRow label="Vehículo" value={economicData.profile.has_vehicle ? 'Sí' : 'No'} />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Sin datos registrados</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* ── Dirección ── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-primary" />
-              Dirección
-            </CardTitle>
-            <CardDescription>Domicilio actual</CardDescription>
-            <CardAction>
-              <div className="flex items-center gap-2">
-                <StatusBadge verified={addressData.overall_verified} />
-                <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('address')}>
-                  <Eye className="w-3.5 h-3.5" />
-                  Ver Detalle
-                </Button>
-              </div>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            {addressData.profile ? (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <InfoRow label="Departamento" value={ubigeoNames.region} />
-                <InfoRow label="Provincia" value={ubigeoNames.province} />
-                <InfoRow label="Distrito" value={ubigeoNames.district} />
-                <InfoRow
-                  label="Dirección"
-                  value={addressData.profile.google_address || addressData.profile.street_address}
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Sin datos registrados</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* ── Referencias ── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary" />
-              Referencias
-            </CardTitle>
-            <CardDescription>Contactos de referencia personal</CardDescription>
-            <CardAction>
-              <div className="flex items-center gap-2">
-                <StatusBadge verified={referencesData.overall_verified} />
-                <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('references')}>
-                  <Eye className="w-3.5 h-3.5" />
-                  Ver Detalle
-                </Button>
-              </div>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            {referencesData.profile ? (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Familiar</p>
-                  <p className="text-sm font-medium">{referencesData.profile.family_reference.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {referencesData.profile.family_reference.relationship} · {referencesData.profile.family_reference.phone}
-                  </p>
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">No familiar</p>
-                  <p className="text-sm font-medium">{referencesData.profile.non_family_reference.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {referencesData.profile.non_family_reference.relationship} · {referencesData.profile.non_family_reference.phone}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Sin datos registrados</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* ── Cuenta Bancaria ── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-primary" />
-              Cuenta Bancaria
-            </CardTitle>
-            <CardDescription>Cuenta para desembolso</CardDescription>
-            <CardAction>
-              <div className="flex items-center gap-2">
-                <StatusBadge verified={bankAccountData.overall_verified} />
-                <Button variant="ghost" size="sm" className="gap-1" onClick={() => handleEdit('bank-account')}>
-                  <Eye className="w-3.5 h-3.5" />
-                  Ver Detalle
-                </Button>
-              </div>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            {bankAccountData.profile ? (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <InfoRow label="Banco" value={bankAccountData.profile.bank_name} />
-                <InfoRow label="Tipo de cuenta" value={bankAccountData.profile.account_type} />
-                <InfoRow label="Número de cuenta" value={bankAccountData.profile.account_number} />
-                <InfoRow label="CCI" value={bankAccountData.profile.cci} />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Sin datos registrados</p>
-            )}
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <SectionCard
+          icon={Shield}
+          title="Identidad"
+          description="Verificación de identidad con DNI"
+          status={kycData?.status}
+          onViewDetail={() => handleEdit('kyc')}
+        />
+        <SectionCard
+          icon={Briefcase}
+          title="Perfil Laboral"
+          description="Empleo, ingresos y sector"
+          status={laborData.status}
+          onViewDetail={() => handleEdit('labor')}
+        />
+        <SectionCard
+          icon={DollarSign}
+          title="Perfil Económico"
+          description="Gastos, deudas y patrimonio"
+          status={economicData.status}
+          onViewDetail={() => handleEdit('economic')}
+        />
+        <SectionCard
+          icon={MapPin}
+          title="Dirección"
+          description="Domicilio actual"
+          status={addressData.status}
+          onViewDetail={() => handleEdit('address')}
+        />
+        <SectionCard
+          icon={Users}
+          title="Referencias"
+          description="Contactos de referencia personal"
+          status={referencesData.status}
+          onViewDetail={() => handleEdit('references')}
+        />
+        <SectionCard
+          icon={Building2}
+          title="Cuenta Bancaria"
+          description="Cuenta para desembolso"
+          status={bankAccountData.status}
+          onViewDetail={() => handleEdit('bank-account')}
+        />
       </div>
     </div>
   );
