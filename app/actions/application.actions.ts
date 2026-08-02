@@ -230,7 +230,7 @@ export async function getApplicationStatusAction(applicationId: string): Promise
 
 /**
  * Obtiene todas las solicitudes del usuario.
- * GET /api/v1/applications
+ * GET /api/v1/applications?page=0&size=100
  */
 export async function getApplicationsAction(): Promise<{
   applications: ApplicationRecord[];
@@ -239,14 +239,14 @@ export async function getApplicationsAction(): Promise<{
   await requireValidSession();
 
   try {
-    const res = await backendFetch('/api/v1/applications');
+    const res = await backendFetch('/api/v1/applications?page=0&size=100');
 
     if (!isSuccess(res.status)) return null;
 
     const data = await res.json();
     return {
-      applications: (data.applications ?? []).map(mapApplicationFromBackend),
-      total: data.total ?? 0,
+      applications: (data.content ?? data.applications ?? []).map(mapApplicationFromBackend),
+      total: data.totalElements ?? data.total ?? 0,
     };
   } catch (error) {
     console.error('[APPLICATION] Error al obtener aplicaciones:', error);

@@ -174,8 +174,18 @@ export interface SignatureInfo {
 
 export interface AdminApplicationContract {
   applicationId: string;
-  contractId: string | null;
-  contractStatus: ContractStatus | null;
+  documents: AdminContractDocument[];
+}
+
+export interface AdminContractDocument {
+  contractId: string;
+  documentTypeCode: string;
+  documentTypeName: string;
+  visibleBeforeSignature: boolean;
+  contractStatus: string;
+  generatedAt: string | null;
+  signedAt: string | null;
+  expiredAt: string | null;
   signature: SignatureInfo | null;
 }
 

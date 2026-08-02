@@ -1,9 +1,8 @@
 /**
  * Service de Solicitudes.
  *
- * GET /api/v1/applications → devuelve todas las solicitudes del usuario.
- * Un usuario tiene como mucho ~20 solicitudes, no requiere paginación server-side.
- * Filtros, búsqueda y paginación se manejan en el cliente con TanStack Table.
+ * GET /api/v1/applications → devuelve solicitudes del usuario paginadas.
+ * Filtros, búsqueda y ordenamiento se manejan en el cliente con TanStack Table.
  */
 
 import type { Result } from '@/modules/shared/result';
@@ -18,11 +17,12 @@ type AppResult<T> = Result<T> & (
   | { ok: false; error: ApplicationError }
 );
 
-// ── GET: Todas las solicitudes del usuario ────────────────────────────────────
+// ── GET: Todas las solicitudes del usuario (paginadas, trae todas con size grande) ─
 
 export async function getApplications(): Promise<AppResult<ApplicationRecord[]>> {
   try {
-    const res = await backendFetch('/api/v1/applications', { context: 'APPLICATIONS' });
+    // Pedimos un size grande para traer todas en una sola página (máx ~20 por usuario)
+    const res = await backendFetch('/api/v1/applications?page=0&size=100', { context: 'APPLICATIONS' });
 
     if (res.status === 401) {
       return { ok: false, error: errors.sessionExpired() };
@@ -41,7 +41,7 @@ export async function getApplications(): Promise<AppResult<ApplicationRecord[]>>
     }
 
     const raw = await res.json();
-    const applications = (raw.applications ?? raw.content ?? raw)
+    const applications = (raw.content ?? raw.applications ?? raw)
       .map(mapApplicationFromBackend);
 
     return { ok: true, data: applications };

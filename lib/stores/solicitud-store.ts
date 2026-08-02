@@ -43,11 +43,14 @@ export interface ApplicationIntention {
   installmentCount: number;
 }
 
-export type ContractStatus = 'GENERATED' | 'SIGNED' | 'EXPIRED';
+export type ContractStatus = 'GENERATED' | 'SIGNED' | 'EXPIRED' | 'FINALIZED';
 
 export interface ContractInfo {
   contractId: string;
   applicationId: string;
+  documentTypeCode: string;
+  documentTypeName: string;
+  visibleBeforeSignature: boolean;
   status: ContractStatus;
   generatedAt: string;
   signedAt: string | null;
@@ -194,9 +197,11 @@ interface SolicitudState {
   documentsVerification: DocumentsVerificationStatus | null;
 
   contractStatus: StoreStatus;
+  contracts: ContractInfo[];
+  contractHtmlMap: Record<string, string>;
+  pdfUrlMap: Record<string, string>;
+  /** @deprecated Usar `contracts` — getter de retrocompatibilidad que retorna el primer contrato firmable. */
   contractInfo: ContractInfo | null;
-  contractHtml: string | null;
-  pdfUrl: string | null;
 
   applicationIntention: ApplicationIntention | null;
 }
@@ -243,9 +248,10 @@ const INITIAL_STATE: SolicitudState = {
   documentsVerification: null,
 
   contractStatus: 'idle',
+  contracts: [],
+  contractHtmlMap: {},
+  pdfUrlMap: {},
   contractInfo: null,
-  contractHtml: null,
-  pdfUrl: null,
 
   applicationIntention: null,
 };
@@ -281,30 +287,44 @@ async function loadDocumentsWithUrls(appId: string) {
 // ── Helper: cargar contrato + HTML + PDF ──────────────────────────────────────
 
 async function loadContract(appId: string) {
-  const infoRaw = await fetchJson<any>(`/api/solicitudes/${appId}/contract`);
-  if (!infoRaw) return { contractInfo: null, contractHtml: null, pdfUrl: null };
+  const rawList = await fetchJson<any[]>(`/api/solicitudes/${appId}/contract`);
+  if (!rawList || !Array.isArray(rawList) || rawList.length === 0) {
+    return { contracts: [], contractHtmlMap: {}, pdfUrlMap: {} };
+  }
 
-  const contractInfo: ContractInfo = {
-    contractId: infoRaw.contractId,
-    applicationId: infoRaw.applicationId,
-    status: infoRaw.status,
-    generatedAt: infoRaw.generatedAt,
-    signedAt: infoRaw.signedAt,
-    expiredAt: infoRaw.expiredAt,
-  };
+  const contracts: ContractInfo[] = rawList.map((r: any) => ({
+    contractId: r.contractId,
+    applicationId: r.applicationId,
+    documentTypeCode: r.documentTypeCode ?? '',
+    documentTypeName: r.documentTypeName ?? '',
+    visibleBeforeSignature: r.visibleBeforeSignature ?? true,
+    status: r.status,
+    generatedAt: r.generatedAt,
+    signedAt: r.signedAt ?? null,
+    expiredAt: r.expiredAt ?? null,
+  }));
 
-  const [html, pdfData] = await Promise.all([
-    fetchText(`/api/solicitudes/${appId}/contract/html?contractId=${contractInfo.contractId}`),
-    contractInfo.status === 'SIGNED'
-      ? fetchJson<any>(`/api/solicitudes/${appId}/contract/pdf?contractId=${contractInfo.contractId}`)
-      : null,
-  ]);
+  // Cargar HTML de los documentos visibles antes de firma (los que el usuario lee)
+  const visibleContracts = contracts.filter(c => c.visibleBeforeSignature);
+  const htmlEntries = await Promise.all(
+    visibleContracts.map(async (c) => {
+      const html = await fetchText(`/api/solicitudes/${appId}/contract/html?contractId=${c.contractId}`);
+      return [c.contractId, html ?? ''] as [string, string];
+    })
+  );
+  const contractHtmlMap: Record<string, string> = Object.fromEntries(htmlEntries.filter(([, html]) => html));
 
-  return {
-    contractInfo,
-    contractHtml: html,
-    pdfUrl: pdfData?.pdfUrl ?? null,
-  };
+  // Cargar PDF URLs solo de los que ya están firmados/finalizados
+  const signedContracts = contracts.filter(c => c.status === 'SIGNED' || c.status === 'FINALIZED');
+  const pdfEntries = await Promise.all(
+    signedContracts.map(async (c) => {
+      const data = await fetchJson<any>(`/api/solicitudes/${appId}/contract/pdf?contractId=${c.contractId}`);
+      return [c.contractId, data?.pdfUrl ?? ''] as [string, string];
+    })
+  );
+  const pdfUrlMap: Record<string, string> = Object.fromEntries(pdfEntries.filter(([, url]) => url));
+
+  return { contracts, contractHtmlMap, pdfUrlMap };
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -415,7 +435,8 @@ export const useSolicitudStore = create<SolicitudStore>()(
       set({ contractStatus: 'pending' });
       try {
         const result = await loadContract(applicationId);
-        set({ ...result, contractStatus: 'success' });
+        const primaryContract = result.contracts.find(c => c.visibleBeforeSignature) ?? result.contracts[0] ?? null;
+        set({ ...result, contractInfo: primaryContract, contractStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error fetching contract:', err);
         set({ contractStatus: 'error' });
@@ -501,10 +522,11 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
-      set({ contractStatus: 'pending', contractInfo: null, contractHtml: null, pdfUrl: null });
+      set({ contractStatus: 'pending', contracts: [], contractHtmlMap: {}, pdfUrlMap: {}, contractInfo: null });
       try {
         const result = await loadContract(applicationId);
-        set({ ...result, contractStatus: 'success' });
+        const primaryContract = result.contracts.find(c => c.visibleBeforeSignature) ?? result.contracts[0] ?? null;
+        set({ ...result, contractInfo: primaryContract, contractStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing contract:', err);
         set({ contractStatus: 'error' });

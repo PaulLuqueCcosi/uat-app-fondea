@@ -85,9 +85,9 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
   const router = useRouter();
   const pathname = usePathname();
   const {
-    contractInfo: ctxContractInfo,
-    contractHtml: ctxContractHtml,
-    pdfUrl: ctxPdfUrl,
+    contracts: ctxContracts,
+    contractHtmlMap: ctxHtmlMap,
+    pdfUrlMap: ctxPdfUrlMap,
     contractStatus,
     refreshContract,
     documentsVerification,
@@ -99,76 +99,109 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
   const [fullName, setFullName] = useState('');
   const [signature, setSignature] = useState<string | null>(null);
 
-  // Estado del contrato — desde contexto si disponible
-  const [contractInfo, setContractInfo] = useState<ContractInfo | null>(ctxContractInfo);
-  const [contractHtml, setContractHtml] = useState<string | null>(ctxContractHtml);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(ctxPdfUrl);
+  // Estado de contratos — desde contexto
+  const [contracts, setContracts] = useState<ContractInfo[]>(ctxContracts);
+  const [htmlMap, setHtmlMap] = useState<Record<string, string>>(ctxHtmlMap);
+  const [pdfUrlMap, setPdfUrlMap] = useState<Record<string, string>>(ctxPdfUrlMap);
   const [loadingContract, setLoadingContract] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
 
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
   const solicitudId = applicationId;
 
-  const isSigned = contractInfo?.status === 'SIGNED';
-  const isExpired = contractInfo?.status === 'EXPIRED';
+  // Documentos visibles en esta vista (antes de firmar: solo visibleBeforeSignature)
+  const allSigned = contracts.length > 0 && contracts.every(c => c.status === 'SIGNED' || c.status === 'FINALIZED');
+  const visibleContracts = allSigned
+    ? contracts
+    : contracts.filter(c => c.visibleBeforeSignature);
 
-  // Sincronizar con contexto cuando los datos llegan
+  const activeContract = visibleContracts[activeTab] ?? null;
+  const activeHtml = activeContract ? htmlMap[activeContract.contractId] ?? null : null;
+
+  const isSigned = allSigned;
+  const isExpired = contracts.some(c => c.status === 'EXPIRED');
+
+  // Sincronizar con contexto
   useEffect(() => {
-    if (ctxContractInfo) setContractInfo(ctxContractInfo);
-    if (ctxContractHtml) setContractHtml(ctxContractHtml);
-    if (ctxPdfUrl) setPdfUrl(ctxPdfUrl);
-  }, [ctxContractInfo, ctxContractHtml, ctxPdfUrl]);
+    if (ctxContracts.length > 0) setContracts(ctxContracts);
+    if (Object.keys(ctxHtmlMap).length > 0) setHtmlMap(ctxHtmlMap);
+    if (Object.keys(ctxPdfUrlMap).length > 0) setPdfUrlMap(ctxPdfUrlMap);
+  }, [ctxContracts, ctxHtmlMap, ctxPdfUrlMap]);
 
   // Cargar solo si estamos fuera del flujo de solicitudes (sin provider)
   useEffect(() => {
     if (isInSolicitudFlow || !solicitudId) return;
 
-    async function loadContract() {
+    async function loadContracts() {
       setLoadingContract(true);
       try {
         const infoRes = await fetch(`/api/solicitudes/${solicitudId}/contract`, { cache: 'no-store' });
         if (!infoRes.ok) { setLoadingContract(false); return; }
-        const info: ContractInfo = await infoRes.json();
-        setContractInfo(info);
+        const rawList: any[] = await infoRes.json();
+        if (!Array.isArray(rawList)) { setLoadingContract(false); return; }
 
-        const htmlRes = await fetch(`/api/solicitudes/${solicitudId}/contract/html?contractId=${info.contractId}`, { cache: 'no-store' });
-        const html = htmlRes.ok ? await htmlRes.text() : null;
-        setContractHtml(html);
+        const infos: ContractInfo[] = rawList.map((r: any) => ({
+          contractId: r.contractId,
+          applicationId: r.applicationId,
+          documentTypeCode: r.documentTypeCode ?? '',
+          documentTypeName: r.documentTypeName ?? '',
+          visibleBeforeSignature: r.visibleBeforeSignature ?? true,
+          status: r.status,
+          generatedAt: r.generatedAt,
+          signedAt: r.signedAt ?? null,
+          expiredAt: r.expiredAt ?? null,
+        }));
+        setContracts(infos);
 
-        if (info.status === 'SIGNED') {
-          const pdfRes = await fetch(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${info.contractId}`, { cache: 'no-store' });
+        // Cargar HTML de los visibles
+        const visible = infos.filter(c => c.visibleBeforeSignature);
+        const newHtmlMap: Record<string, string> = {};
+        for (const c of visible) {
+          const htmlRes = await fetch(`/api/solicitudes/${solicitudId}/contract/html?contractId=${c.contractId}`, { cache: 'no-store' });
+          if (htmlRes.ok) newHtmlMap[c.contractId] = await htmlRes.text();
+        }
+        setHtmlMap(newHtmlMap);
+
+        // Cargar PDFs de los firmados
+        const signed = infos.filter(c => c.status === 'SIGNED' || c.status === 'FINALIZED');
+        const newPdfMap: Record<string, string> = {};
+        for (const c of signed) {
+          const pdfRes = await fetch(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${c.contractId}`, { cache: 'no-store' });
           if (pdfRes.ok) {
-            const pdfData = await pdfRes.json();
-            setPdfUrl(pdfData.pdfUrl ?? null);
+            const data = await pdfRes.json();
+            if (data.pdfUrl) newPdfMap[c.contractId] = data.pdfUrl;
           }
         }
+        setPdfUrlMap(newPdfMap);
       } catch (err) {
-        console.error('Error cargando contrato:', err);
+        console.error('Error cargando contratos:', err);
       } finally {
         setLoadingContract(false);
       }
     }
 
-    loadContract();
+    loadContracts();
   }, [solicitudId, isInSolicitudFlow]);
 
   const handleDownloadPdf = async () => {
-    if (!contractInfo || !solicitudId) return;
+    if (!activeContract || !solicitudId) return;
 
     setDownloadingPdf(true);
     try {
-      if (pdfUrl) {
-        window.open(pdfUrl, '_blank');
+      const existingUrl = pdfUrlMap[activeContract.contractId];
+      if (existingUrl) {
+        window.open(existingUrl, '_blank');
         return;
       }
 
-      const res = await fetch(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${contractInfo.contractId}`, { cache: 'no-store' });
+      const res = await fetch(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${activeContract.contractId}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         const url = data.pdfUrl ?? null;
         if (url) {
-          setPdfUrl(url);
+          setPdfUrlMap(prev => ({ ...prev, [activeContract.contractId]: url }));
           window.open(url, '_blank');
         }
       }
@@ -239,7 +272,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
 
   // ── No contract found (y no está cargando) ────────────────────────────────
 
-  if (!contractInfo && contractStatus === 'success' && !loadingContract) {
+  if (contracts.length === 0 && contractStatus === 'success' && !loadingContract) {
     return (
       <div className="max-w-4xl mx-auto">
         <Card className="p-8">
@@ -293,88 +326,97 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-dark mb-2">
-            Contrato Firmado
+            Documentos Firmados
           </h1>
           <p className="text-fondea-text">
-            Tu contrato fue firmado exitosamente el{' '}
-            {contractInfo.signedAt
-              ? new Date(contractInfo.signedAt).toLocaleDateString('es-PE', {
-                  day: 'numeric', month: 'long', year: 'numeric',
-                })
-              : '—'}
-            .
+            Tus documentos fueron firmados exitosamente.
           </p>
         </div>
 
         <div className="space-y-6">
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-dark flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                Contrato de Mutuo Dinerario
-              </h3>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowFullscreen(true)}
-                  title="Ver en pantalla completa"
+          {/* Tabs si hay más de un documento */}
+          {visibleContracts.length > 1 && (
+            <div className="flex gap-1 border-b border-border">
+              {visibleContracts.map((c, i) => (
+                <button
+                  key={c.contractId}
+                  onClick={() => setActiveTab(i)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === i
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  <Maximize2 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownloadPdf}
-                  disabled={downloadingPdf}
-                >
-                  {downloadingPdf ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  Descargar PDF
-                </Button>
-              </div>
+                  {c.documentTypeName}
+                </button>
+              ))}
             </div>
+          )}
 
-            <div className="rounded-lg border border-border overflow-hidden bg-white">
-              {contractHtml ? (
-                <ContractViewer html={contractHtml} />
-              ) : (
-                <div className="p-6 space-y-4 animate-pulse">
-                  <div className="h-6 bg-neutral-100 rounded w-2/3 mx-auto" />
-                  <div className="h-px bg-neutral-100 w-full" />
-                  <div className="space-y-2">
-                    <div className="h-4 bg-neutral-50 rounded w-full" />
-                    <div className="h-4 bg-neutral-50 rounded w-5/6" />
-                    <div className="h-4 bg-neutral-50 rounded w-4/6" />
-                  </div>
-                  <div className="h-5 bg-neutral-100 rounded w-1/2 mt-6" />
-                  <div className="space-y-2">
-                    <div className="h-4 bg-neutral-50 rounded w-full" />
-                    <div className="h-4 bg-neutral-50 rounded w-3/4" />
-                  </div>
+          {activeContract && (
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-dark flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  {activeContract.documentTypeName}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFullscreen(true)}
+                    title="Ver en pantalla completa"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </Button>
+                  {(activeContract.status === 'SIGNED' || activeContract.status === 'FINALIZED') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownloadPdf}
+                      disabled={downloadingPdf}
+                    >
+                      {downloadingPdf ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 mr-2" />
+                      )}
+                      Descargar PDF
+                    </Button>
+                  )}
                 </div>
-              )}
-            </div>
-          </Card>
+              </div>
+
+              <div className="rounded-lg border border-border overflow-hidden bg-white">
+                {activeHtml ? (
+                  <ContractViewer html={activeHtml} />
+                ) : (
+                  <div className="p-6 space-y-4 animate-pulse">
+                    <div className="h-6 bg-neutral-100 rounded w-2/3 mx-auto" />
+                    <div className="space-y-2">
+                      <div className="h-4 bg-neutral-50 rounded w-full" />
+                      <div className="h-4 bg-neutral-50 rounded w-5/6" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Signed badge */}
           <div className="bg-success-50 border border-success-200 rounded-xl p-5">
             <div className="flex gap-3">
               <Check className="w-5 h-5 text-success-600 shrink-0 mt-0.5" />
               <div className="text-sm">
-                <p className="font-semibold text-success-900">Contrato firmado correctamente</p>
+                <p className="font-semibold text-success-900">Documentos firmados correctamente</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Fullscreen modal */}
-        {showFullscreen && contractHtml && (
+        {showFullscreen && activeHtml && (
           <ContractFullscreenModal
-            html={contractHtml}
+            html={activeHtml}
             onClose={() => setShowFullscreen(false)}
           />
         )}
@@ -388,20 +430,39 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-dark mb-2">
-          Contrato de Préstamo
+          Documentos del Préstamo
         </h1>
         <p className="text-fondea-text">
-          Revisa y firma tu contrato para finalizar el proceso.
+          Revisa los documentos y firma para finalizar el proceso.
         </p>
       </div>
 
       <div className="space-y-6">
+        {/* Tabs si hay más de un documento visible */}
+        {visibleContracts.length > 1 && (
+          <div className="flex gap-1 border-b border-border">
+            {visibleContracts.map((c, i) => (
+              <button
+                key={c.contractId}
+                onClick={() => setActiveTab(i)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === i
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {c.documentTypeName}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Contract viewer */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-dark flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
-              Contrato de Mutuo Dinerario
+              {activeContract?.documentTypeName ?? 'Documento'}
             </h3>
             <div className="flex items-center gap-2">
               <Button
@@ -420,8 +481,8 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
 
           {/* Contract content — iframe aislado */}
           <div className="rounded-lg border border-border overflow-hidden bg-white">
-            {contractHtml ? (
-              <ContractViewer html={contractHtml} />
+            {activeHtml ? (
+              <ContractViewer html={activeHtml} />
             ) : (loadingContract || contractStatus !== 'success') ? (
               <div className="p-6 space-y-4 animate-pulse">
                 <div className="h-6 bg-neutral-100 rounded w-2/3 mx-auto" />
@@ -431,23 +492,11 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
                   <div className="h-4 bg-neutral-50 rounded w-5/6" />
                   <div className="h-4 bg-neutral-50 rounded w-4/6" />
                 </div>
-                <div className="h-5 bg-neutral-100 rounded w-1/2 mt-6" />
-                <div className="space-y-2">
-                  <div className="h-4 bg-neutral-50 rounded w-full" />
-                  <div className="h-4 bg-neutral-50 rounded w-3/4" />
-                  <div className="h-4 bg-neutral-50 rounded w-5/6" />
-                  <div className="h-4 bg-neutral-50 rounded w-2/3" />
-                </div>
-                <div className="h-5 bg-neutral-100 rounded w-1/3 mt-6" />
-                <div className="space-y-2">
-                  <div className="h-4 bg-neutral-50 rounded w-full" />
-                  <div className="h-4 bg-neutral-50 rounded w-4/5" />
-                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No se pudo cargar el contenido del contrato.</p>
+                <p>No se pudo cargar el contenido del documento.</p>
               </div>
             )}
           </div>
@@ -573,9 +622,9 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
       </div>
 
       {/* Fullscreen modal */}
-      {showFullscreen && contractHtml && (
+      {showFullscreen && activeHtml && (
         <ContractFullscreenModal
-          html={contractHtml}
+          html={activeHtml}
           onClose={() => setShowFullscreen(false)}
         />
       )}

@@ -18,6 +18,7 @@ import {
   Shield,
   Calculator,
   Sliders,
+  FileCode2,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -48,6 +49,7 @@ const businessRulesNav = [
   { path: '/admin/calculator', label: 'Calculadora', icon: Calculator },
   { path: '/admin/evaluation-rules', label: 'Reglas Motor', icon: Shield },
   { path: '/admin/scoring', label: 'Scorecard', icon: Sliders },
+  { path: '/admin/contracts', label: 'Contratos', icon: FileCode2 },
 ];
 
 const configNav = [
