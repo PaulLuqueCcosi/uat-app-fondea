@@ -6,6 +6,7 @@
  *   - GET /api/v1/admin/applications/{id}/documents    → documentos + verificación
  *   - GET /api/v1/admin/applications/{id}/contract     → contrato + firma digital
  *   - GET /api/v1/admin/applications/{id}/evaluation   → traza evaluación pipeline
+ *   - GET /api/v1/admin/applications/{id}/timeline     → línea de tiempo de auditoría cross-módulo
  */
 
 import { backendFetch } from '@/lib/backend-fetch';
@@ -259,6 +260,25 @@ export interface AdminApplicationEvaluation {
   evaluations: EvaluationSnapshotItem[] | null;
 }
 
+// ── Types: Timeline ─────────────────────────────────────────────────────────
+
+export type AuditModule = 'CORE' | 'DOCUMENTS' | 'EVALUATION' | 'CONTRACT' | 'DETAIL' | 'AUDIT';
+export type AuditOutcome = 'SUCCESS' | 'FAILURE';
+export type ActorType = 'SYSTEM' | 'USER' | 'ADMIN';
+
+export interface AuditTimelineEntry {
+  id: string;
+  module: AuditModule;
+  eventType: string;
+  outcome: AuditOutcome;
+  actorType: ActorType;
+  actorId: string | null;
+  message: string | null;
+  detail: string | null;
+  refId: string | null;
+  occurredAt: string;
+}
+
 // ── Service functions ───────────────────────────────────────────────────────
 
 export async function getAdminApplicationCore(id: string): Promise<AdminApplicationCore | null> {
@@ -311,6 +331,17 @@ export async function getAdminApplicationEvaluation(id: string): Promise<AdminAp
   });
   if (!res.ok) {
     console.error(`[ADMIN_APP_EVALUATION] Error ${res.status}`);
+    return null;
+  }
+  return res.json();
+}
+
+export async function getAdminApplicationTimeline(id: string): Promise<AuditTimelineEntry[] | null> {
+  const res = await backendFetch(`/api/v1/admin/applications/${id}/timeline`, {
+    context: 'ADMIN_APP_TIMELINE',
+  });
+  if (!res.ok) {
+    console.error(`[ADMIN_APP_TIMELINE] Error ${res.status}`);
     return null;
   }
   return res.json();

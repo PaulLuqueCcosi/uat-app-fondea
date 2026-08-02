@@ -1,7 +1,7 @@
 'use client';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, CreditCard, Camera, FileCheck, Brain, Database } from 'lucide-react';
+import { ArrowLeft, FileText, CreditCard, Camera, FileCheck, Brain, Database, History } from 'lucide-react';
 import Link from 'next/link';
 import { ApplicationCoreSection } from './detail/ApplicationCoreSection';
 import { ApplicationDetailSection } from './detail/ApplicationDetailSection';
@@ -9,12 +9,14 @@ import { ApplicationDocumentsSection } from './detail/ApplicationDocumentsSectio
 import { ApplicationContractSection } from './detail/ApplicationContractSection';
 import { ApplicationEvaluationSection } from './detail/ApplicationEvaluationSection';
 import { ApplicationSnapshotsSection } from './detail/ApplicationSnapshotsSection';
+import { ApplicationTimelineSection } from './detail/ApplicationTimelineSection';
 import type {
   AdminApplicationCore,
   AdminApplicationDetail,
   AdminApplicationDocuments,
   AdminApplicationContract,
   AdminApplicationEvaluation,
+  AuditTimelineEntry,
 } from '@/modules/admin/admin-application-detail.service';
 
 interface ApplicationDetailClientProps {
@@ -23,6 +25,7 @@ interface ApplicationDetailClientProps {
   documents: AdminApplicationDocuments | null;
   contract: AdminApplicationContract | null;
   evaluation: AdminApplicationEvaluation | null;
+  timeline: AuditTimelineEntry[] | null;
 }
 
 export function ApplicationDetailClient({
@@ -31,6 +34,7 @@ export function ApplicationDetailClient({
   documents,
   contract,
   evaluation,
+  timeline,
 }: ApplicationDetailClientProps) {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
@@ -59,6 +63,9 @@ export function ApplicationDetailClient({
           </TabsTrigger>
           <TabsTrigger value="snapshots">
             <Database className="h-3.5 w-3.5 mr-1.5" /> Snapshots
+          </TabsTrigger>
+          <TabsTrigger value="timeline">
+            <History className="h-3.5 w-3.5 mr-1.5" /> Timeline
           </TabsTrigger>
         </TabsList>
 
@@ -96,6 +103,14 @@ export function ApplicationDetailClient({
 
         <TabsContent value="snapshots" className="mt-4">
           <ApplicationSnapshotsSection data={core} />
+        </TabsContent>
+
+        <TabsContent value="timeline" className="mt-4">
+          {timeline && timeline.length > 0 ? (
+            <ApplicationTimelineSection entries={timeline} />
+          ) : (
+            <EmptyTabState message="No hay eventos de auditoría registrados para esta solicitud" />
+          )}
         </TabsContent>
       </Tabs>
     </div>
