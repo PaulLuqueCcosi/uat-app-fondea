@@ -329,80 +329,11 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
             Documentos Firmados
           </h1>
           <p className="text-fondea-text">
-            Tus documentos fueron firmados exitosamente.
+            Tus documentos fueron firmados exitosamente. Puedes descargar los PDFs.
           </p>
         </div>
 
         <div className="space-y-6">
-          {/* Tabs si hay más de un documento */}
-          {visibleContracts.length > 1 && (
-            <div className="flex gap-1 border-b border-border">
-              {visibleContracts.map((c, i) => (
-                <button
-                  key={c.contractId}
-                  onClick={() => setActiveTab(i)}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === i
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {c.documentTypeName}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {activeContract && (
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-dark flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
-                  {activeContract.documentTypeName}
-                </h3>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFullscreen(true)}
-                    title="Ver en pantalla completa"
-                  >
-                    <Maximize2 className="w-4 h-4" />
-                  </Button>
-                  {(activeContract.status === 'SIGNED' || activeContract.status === 'FINALIZED') && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDownloadPdf}
-                      disabled={downloadingPdf}
-                    >
-                      {downloadingPdf ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Download className="w-4 h-4 mr-2" />
-                      )}
-                      Descargar PDF
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border overflow-hidden bg-white">
-                {activeHtml ? (
-                  <ContractViewer html={activeHtml} />
-                ) : (
-                  <div className="p-6 space-y-4 animate-pulse">
-                    <div className="h-6 bg-neutral-100 rounded w-2/3 mx-auto" />
-                    <div className="space-y-2">
-                      <div className="h-4 bg-neutral-50 rounded w-full" />
-                      <div className="h-4 bg-neutral-50 rounded w-5/6" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
-
           {/* Signed badge */}
           <div className="bg-success-50 border border-success-200 rounded-xl p-5">
             <div className="flex gap-3">
@@ -412,14 +343,58 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
               </div>
             </div>
           </div>
-        </div>
 
-        {showFullscreen && activeHtml && (
-          <ContractFullscreenModal
-            html={activeHtml}
-            onClose={() => setShowFullscreen(false)}
-          />
-        )}
+          {/* Lista de documentos con botón de descarga cada uno */}
+          {contracts.map((c) => (
+            <Card key={c.contractId} className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-dark text-sm">{c.documentTypeName}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Firmado el {c.signedAt ? new Date(c.signedAt).toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const existing = pdfUrlMap[c.contractId];
+                    if (existing) {
+                      window.open(existing, '_blank');
+                      return;
+                    }
+                    setDownloadingPdf(true);
+                    try {
+                      const res = await fetch(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${c.contractId}`, { cache: 'no-store' });
+                      if (res.ok) {
+                        const data = await res.json();
+                        if (data.pdfUrl) {
+                          setPdfUrlMap(prev => ({ ...prev, [c.contractId]: data.pdfUrl }));
+                          window.open(data.pdfUrl, '_blank');
+                        }
+                      }
+                    } finally {
+                      setDownloadingPdf(false);
+                    }
+                  }}
+                  disabled={downloadingPdf}
+                >
+                  {downloadingPdf ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Descargar PDF
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
