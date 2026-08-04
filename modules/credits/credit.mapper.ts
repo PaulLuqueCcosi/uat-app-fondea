@@ -14,6 +14,7 @@ import type {
   PaymentResult,
   PaymentDistribution,
   CreditStatus,
+  CreditType,
   InstallmentStatus,
 } from './credit.types';
 
@@ -24,6 +25,7 @@ export function mapCreditFromBackend(raw: any): Credit {
   return {
     id: raw.id ?? '',
     status: mapCreditStatus(raw.status),
+    creditType: mapCreditType(raw.credit_type),
     principal: raw.principal ?? 0,
     totalDue: raw.total_due ?? 0,
     totalPaid: raw.total_paid ?? 0,
@@ -37,6 +39,10 @@ export function mapCreditFromBackend(raw: any): Credit {
     maturityDate: raw.maturity_date ?? '',
     overdueSince: raw.overdue_since ?? null,
     closedAt: raw.closed_at ?? null,
+    // Solo presentes si creditType = NEGOTIATION (@JsonInclude NON_NULL en el backend)
+    originInstallmentId: raw.origin_installment_id ?? null,
+    originCreditId: raw.origin_credit_id ?? null,
+    rootCreditId: raw.root_credit_id ?? null,
   };
 }
 
@@ -56,6 +62,8 @@ export function mapInstallmentFromBackend(raw: any): Installment {
     status: mapInstallmentStatus(raw.status),
     daysOverdue: raw.days_overdue ?? 0,
     paidAt: raw.paid_at ?? null,
+    // Solo presente si status = NEGOTIATED
+    negotiationCreditId: raw.negotiation_credit_id ?? null,
   };
 }
 
@@ -136,13 +144,21 @@ function mapDistributionFromBackend(raw: any): PaymentDistribution {
 // ─── Helpers de mapeo de enums ────────────────────────────────────────────────
 
 const VALID_CREDIT_STATUSES: CreditStatus[] = ['ACTIVE', 'OVERDUE', 'DEFAULTED', 'PAID_OFF'];
-const VALID_INSTALLMENT_STATUSES: InstallmentStatus[] = ['PENDING', 'CURRENT', 'PARTIALLY_PAID', 'PAID', 'OVERDUE'];
+const VALID_CREDIT_TYPES: CreditType[] = ['STANDARD', 'NEGOTIATION'];
+const VALID_INSTALLMENT_STATUSES: InstallmentStatus[] = ['PENDING', 'CURRENT', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'NEGOTIATED'];
 
 function mapCreditStatus(raw: unknown): CreditStatus {
   const upper = String(raw ?? '').toUpperCase();
   return VALID_CREDIT_STATUSES.includes(upper as CreditStatus)
     ? (upper as CreditStatus)
     : 'ACTIVE';
+}
+
+function mapCreditType(raw: unknown): CreditType {
+  const upper = String(raw ?? '').toUpperCase();
+  return VALID_CREDIT_TYPES.includes(upper as CreditType)
+    ? (upper as CreditType)
+    : 'STANDARD';
 }
 
 function mapInstallmentStatus(raw: unknown): InstallmentStatus {

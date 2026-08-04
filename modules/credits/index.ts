@@ -1,7 +1,7 @@
 // ── Service (lo que consumen las pages y actions) ────────────────────────────
 export {
   getCredits,
-  getActiveCredit,
+  getActiveCredits,
   getCreditById,
   getCreditSummary,
   getInstallments,
@@ -22,6 +22,7 @@ export type {
   PaymentDistribution,
   RegisterPaymentRequest,
   CreditStatus,
+  CreditType,
   InstallmentStatus,
   TransactionType,
   PaymentMethod,
@@ -29,6 +30,7 @@ export type {
 
 export {
   creditStatusLabels,
+  creditTypeLabels,
   installmentStatusLabels,
   transactionTypeLabels,
 } from './credit.types';

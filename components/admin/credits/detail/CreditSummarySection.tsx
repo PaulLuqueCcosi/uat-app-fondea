@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  CreditCard, User, Banknote, MapPin, Calendar, AlertTriangle, Shield,
+  CreditCard, User, Banknote, MapPin, Calendar, AlertTriangle, Shield, RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
@@ -66,8 +66,40 @@ export function CreditSummarySection({ data }: Props) {
             <p className="text-xs text-muted-foreground font-mono">#{data.id.slice(0, 8)}</p>
           </div>
         </div>
-        <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+        <div className="flex items-center gap-2">
+          {data.creditType === 'NEGOTIATION' && (
+            <Badge variant="secondary" className="gap-1">
+              <RefreshCw className="h-3 w-3" />
+              Refinanciamiento
+            </Badge>
+          )}
+          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+        </div>
       </div>
+
+      {/* Origen — solo si es crédito de negociación */}
+      {data.creditType === 'NEGOTIATION' && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-3">
+            <div className="flex items-center gap-3 flex-wrap text-sm">
+              <span className="flex items-center gap-1.5 font-medium text-foreground">
+                <RefreshCw className="h-4 w-4 text-primary" />
+                Crédito de refinanciamiento — no tuvo desembolso real
+              </span>
+              {data.originCreditId && (
+                <Link href={`/admin/credits/${data.originCreditId}`}>
+                  <Badge variant="outline" className="cursor-pointer text-xs">Ver crédito origen</Badge>
+                </Link>
+              )}
+              {data.rootCreditId && data.rootCreditId !== data.originCreditId && (
+                <Link href={`/admin/credits/${data.rootCreditId}`}>
+                  <Badge variant="outline" className="cursor-pointer text-xs">Ver crédito raíz</Badge>
+                </Link>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Grid principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

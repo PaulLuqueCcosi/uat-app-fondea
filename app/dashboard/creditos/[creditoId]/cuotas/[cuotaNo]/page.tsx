@@ -56,6 +56,7 @@ function formatDate(iso: string) {
 
 const badgeVariants: Record<InstallmentStatus, 'success' | 'warning' | 'error' | 'pending'> = {
   PAID: 'success',
+  NEGOTIATED: 'warning',
   CURRENT: 'warning',
   PARTIALLY_PAID: 'warning',
   PENDING: 'pending',

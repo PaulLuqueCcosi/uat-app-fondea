@@ -38,6 +38,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { getCreditsAction } from '@/app/actions/credit.actions';
 import {
   creditStatusLabels,
+  creditTypeLabels,
   type Credit,
   type CreditStatus,
 } from '@/modules/credits';
@@ -104,9 +105,14 @@ const columns: ColumnDef<Credit>[] = [
       </Button>
     ),
     cell: ({ row }) => (
-      <span className="text-sm font-semibold text-foreground">
-        {formatCurrency(row.original.principal)}
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold text-foreground">
+          {formatCurrency(row.original.principal)}
+        </span>
+        {row.original.creditType === 'NEGOTIATION' && (
+          <Badge variant="warning">{creditTypeLabels.NEGOTIATION}</Badge>
+        )}
+      </div>
     ),
   },
   {
@@ -195,9 +201,14 @@ function CreditMobileCard({ credit }: { credit: Credit }) {
     <Link href={`/dashboard/creditos/${credit.id}`} className="block group">
       <div className="rounded-lg border border-border bg-card p-4 transition-all group-hover:border-primary/40 group-hover:shadow-sm group-active:scale-[0.98]">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-lg font-bold text-foreground">
-            {formatCurrency(credit.principal)}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold text-foreground">
+              {formatCurrency(credit.principal)}
+            </span>
+            {credit.creditType === 'NEGOTIATION' && (
+              <Badge variant="warning">{creditTypeLabels.NEGOTIATION}</Badge>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Badge variant={statusVariants[credit.status]}>
               {creditStatusLabels[credit.status]}

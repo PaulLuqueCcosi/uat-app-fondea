@@ -4,6 +4,7 @@ import { HeaderWithContext } from '@/components/dashboard/sections/HeaderWithCon
 import { ProgressBar } from '@/components/dashboard/sections/ProgressBar';
 import { Applications } from '@/components/dashboard/sections/Applications';
 import { ActiveLoanCardServer } from '@/components/dashboard/sections/ActiveLoanCardServer';
+import { NegotiationOfferAlertServer } from '@/components/dashboard/sections/NegotiationOfferAlertServer';
 import { FinancialPassport } from '@/components/dashboard/sections/FinancialPassport';
 import { DashboardCalculator } from '@/components/dashboard/sections/DashboardCalculator';
 import { CreditScore } from '@/components/dashboard/sections/CreditScore';
@@ -19,6 +20,12 @@ export default async function DashboardPage() {
       <DashboardHomeClient>
         {/* 1. Cabecera y Bienvenida */}
         <HeaderWithContext />
+
+        {/* 2. Ofertas de refinanciamiento pendientes de firma — bien visible:
+              hoy es el único canal por el que el cliente se entera (sin correo real aún) */}
+        <Suspense fallback={null}>
+          <NegotiationOfferAlertServer />
+        </Suspense>
 
         {/* 3. Tu Préstamo Actual — El Núcleo (ancho completo, destaca) */}
         <Suspense fallback={null}>

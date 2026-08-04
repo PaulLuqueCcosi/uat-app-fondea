@@ -10,8 +10,16 @@
 /** Estado de un crédito (backend enum) */
 export type CreditStatus = 'ACTIVE' | 'OVERDUE' | 'DEFAULTED' | 'PAID_OFF';
 
+/**
+ * Tipo de crédito (backend enum).
+ * - STANDARD: viene de una solicitud aprobada (desembolso real, tasa propia)
+ * - NEGOTIATION: viene de una cuota en mora de OTRO crédito (deuda reempaquetada,
+ *   sin desembolso real, cronograma definido manualmente por el admin)
+ */
+export type CreditType = 'STANDARD' | 'NEGOTIATION';
+
 /** Estado de una cuota (backend enum) */
-export type InstallmentStatus = 'PENDING' | 'CURRENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
+export type InstallmentStatus = 'PENDING' | 'CURRENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'NEGOTIATED';
 
 /** Tipo de transacción */
 export type TransactionType = 'DISBURSEMENT' | 'REPAYMENT' | 'PENALTY_ACCRUAL' | 'PENALTY_PAYMENT' | 'REVERSAL';
@@ -25,6 +33,8 @@ export type PaymentMethod = 'BANK_TRANSFER' | 'YAPE' | 'PLIN' | 'CASH' | 'WALLET
 export interface Credit {
   id: string;
   status: CreditStatus;
+  /** Tipo de crédito — distingue el préstamo natural de los de negociación */
+  creditType: CreditType;
   /** Monto desembolsado original */
   principal: number;
   /** Total a pagar (capital + intereses) */
@@ -53,6 +63,15 @@ export interface Credit {
   closedAt: string | null;
   /** Configuración de mora aplicada a este crédito */
   penaltyConfig?: PenaltyConfigInfo;
+  /**
+   * Trazabilidad de origen — solo presentes si creditType = NEGOTIATION.
+   * originInstallmentId: la cuota en mora que este crédito vino a cerrar.
+   * originCreditId: el crédito inmediato anterior (puede ser otro NEGOTIATION si se anidó).
+   * rootCreditId: el crédito STANDARD original, sin importar cuántos saltos haya.
+   */
+  originInstallmentId?: string | null;
+  originCreditId?: string | null;
+  rootCreditId?: string | null;
 }
 
 /** Configuración de mora — PenaltyConfigInfo del backend */
@@ -99,6 +118,12 @@ export interface Installment {
   daysOverdue: number;
   /** Fecha/hora en que se pagó (null si no pagada) */
   paidAt: string | null;
+  /**
+   * Solo presente si status = NEGOTIATED.
+   * Apunta al crédito de negociación que asumió esta deuda
+   * (la cuota no se pagó directamente, se trasladó a ese crédito).
+   */
+  negotiationCreditId?: string | null;
 }
 
 // ─── Resumen ──────────────────────────────────────────────────────────────────
@@ -193,6 +218,12 @@ export const installmentStatusLabels: Record<InstallmentStatus, string> = {
   PARTIALLY_PAID: 'Pago parcial',
   PAID: 'Pagada',
   OVERDUE: 'Vencida',
+  NEGOTIATED: 'Refinanciada',
+};
+
+export const creditTypeLabels: Record<CreditType, string> = {
+  STANDARD: 'Préstamo',
+  NEGOTIATION: 'Refinanciamiento',
 };
 
 export const transactionTypeLabels: Record<TransactionType, string> = {

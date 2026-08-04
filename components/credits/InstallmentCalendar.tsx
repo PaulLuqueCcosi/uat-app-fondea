@@ -49,6 +49,9 @@ export function InstallmentCalendar({
   const overdueDates = installments
     .filter((i) => i.status === 'OVERDUE')
     .map((i) => new Date(i.dueDate));
+  const negotiatedDates = installments
+    .filter((i) => i.status === 'NEGOTIATED')
+    .map((i) => new Date(i.dueDate));
   const selectedDate = selectedInstallment
     ? [new Date(selectedInstallment.dueDate)]
     : [];
@@ -69,6 +72,7 @@ export function InstallmentCalendar({
         current: currentDates,
         pending: pendingDates,
         overdue: overdueDates,
+        negotiated: negotiatedDates,
         active: selectedDate,
       }}
       modifiersClassNames={{
@@ -76,6 +80,7 @@ export function InstallmentCalendar({
         current: 'bg-warning-400 text-warning-900 hover:bg-warning-500 font-bold cursor-pointer',
         pending: 'bg-primary-200 text-primary-900 hover:bg-primary-300 font-bold cursor-pointer',
         overdue: 'bg-error-500 text-white hover:bg-error-600 font-bold cursor-pointer',
+        negotiated: 'bg-primary-600 text-white hover:bg-primary-700 font-bold cursor-pointer',
         active: 'ring-2 ring-offset-2 ring-primary scale-110',
       }}
       numberOfMonths={numberOfMonths}
@@ -104,6 +109,10 @@ export function CalendarLegend() {
       <div className="flex items-center gap-1.5">
         <div className="w-2.5 h-2.5 rounded-full bg-primary-200" />
         <span className="text-xs text-muted-foreground">Futura</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className="w-2.5 h-2.5 rounded-full bg-primary-600" />
+        <span className="text-xs text-muted-foreground">Refinanciada</span>
       </div>
     </div>
   );

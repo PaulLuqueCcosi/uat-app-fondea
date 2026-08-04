@@ -25,6 +25,7 @@ import {
   FileText,
   ChevronRight,
   TrendingUp,
+  RefreshCw as RefreshCwIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -85,6 +86,7 @@ const statusBadgeVariant: Record<InstallmentStatus, 'success' | 'warning' | 'err
   PARTIALLY_PAID: 'warning',
   PENDING: 'pending',
   OVERDUE: 'error',
+  NEGOTIATED: 'warning',
 };
 
 const statusIconBg: Record<InstallmentStatus, string> = {
@@ -93,6 +95,7 @@ const statusIconBg: Record<InstallmentStatus, string> = {
   PARTIALLY_PAID: 'bg-warning-400',
   PENDING: 'bg-neutral-200',
   OVERDUE: 'bg-error-500',
+  NEGOTIATED: 'bg-primary-500',
 };
 
 function StatusIcon({ status }: { status: InstallmentStatus }) {
@@ -104,6 +107,8 @@ function StatusIcon({ status }: { status: InstallmentStatus }) {
       return <Clock className="w-3.5 h-3.5 text-warning-900" />;
     case 'OVERDUE':
       return <AlertCircle className="w-3.5 h-3.5 text-white" />;
+    case 'NEGOTIATED':
+      return <RefreshCwIcon className="w-3.5 h-3.5 text-white" />;
     default:
       return <Clock className="w-3.5 h-3.5 text-neutral-500" />;
   }
@@ -236,6 +241,11 @@ const columns: ColumnDef<Installment>[] = [
               <DollarSign className="w-3 h-3" />
               Pagar
             </Button>
+          )}
+          {inst.status === 'NEGOTIATED' && (
+            <span className="text-[11px] text-primary-700 font-medium">
+              Ver crédito de refinanciamiento
+            </span>
           )}
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
         </div>

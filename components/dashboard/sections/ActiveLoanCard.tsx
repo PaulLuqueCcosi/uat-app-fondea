@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { CreditCard, AlertCircle, ChevronDown, ChevronRight, FileText, ExternalLink, Download, ScrollText, Shield, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import {
@@ -64,6 +65,7 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
   const progressPercent = credit.totalDue > 0
     ? Math.round((credit.totalPaid / credit.totalDue) * 100)
     : 0;
+  const isNegotiation = credit.creditType === 'NEGOTIATION';
 
   const [expanded, setExpanded] = useState(true);
   const [selectedInstallment, setSelectedInstallment] = useState<Installment | null>(null);
@@ -128,7 +130,8 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
           <CardTitle>
             <span className="flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-primary" />
-              Tu préstamo actual
+              {isNegotiation ? 'Crédito de refinanciamiento' : 'Tu préstamo actual'}
+              {isNegotiation && <Badge variant="warning">Refinanciamiento</Badge>}
             </span>
           </CardTitle>
           <CardDescription>
@@ -232,6 +235,7 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
                         className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 border text-left transition-all hover:ring-1 hover:ring-primary/20 ${
                           inst.status === 'PAID' ? 'bg-accent-50/50 border-accent-200'
                           : inst.status === 'OVERDUE' ? 'bg-error-50/50 border-error-200'
+                          : inst.status === 'NEGOTIATED' ? 'bg-primary-50/50 border-primary-200'
                           : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-50/50 border-warning-200'
                           : 'border-border hover:bg-neutral-50'
                         } ${selectedInstallment?.id === inst.id ? 'ring-2 ring-primary' : ''}`}
@@ -239,6 +243,7 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[8px] font-bold text-white ${
                           inst.status === 'PAID' ? 'bg-accent-500'
                           : inst.status === 'OVERDUE' ? 'bg-error-500'
+                          : inst.status === 'NEGOTIATED' ? 'bg-primary-500'
                           : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-400'
                           : 'bg-primary/20'
                         }`}>
@@ -249,7 +254,7 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
                             Cuota {inst.installmentNo}
                           </p>
                           <p className="text-[10px] text-muted-foreground leading-tight">
-                            {formatDate(inst.dueDate)}
+                            {inst.status === 'NEGOTIATED' ? 'Refinanciada' : formatDate(inst.dueDate)}
                           </p>
                         </div>
                         <p className="text-xs font-bold text-foreground shrink-0">
@@ -339,7 +344,7 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
           </CollapsibleContent>
         </CardContent>
 
-        <CardFooter>
+        <CardFooter className="flex items-center justify-between gap-3">
           <Link
             href={`/dashboard/creditos/${credit.id}`}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
@@ -347,6 +352,15 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
             Ver detalle del crédito
             <ChevronRight className="w-3.5 h-3.5" />
           </Link>
+          {isNegotiation && credit.originCreditId && (
+            <Link
+              href={`/dashboard/creditos/${credit.originCreditId}`}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              Ver crédito original
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          )}
         </CardFooter>
       </Card>
     </Collapsible>

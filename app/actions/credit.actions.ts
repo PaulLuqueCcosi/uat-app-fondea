@@ -19,10 +19,13 @@ export async function getCreditsAction() {
   return creditService.getCredits();
 }
 
-/** Crédito activo (puede ser null) */
-export async function getActiveCreditAction() {
+/**
+ * Créditos activos del usuario — puede haber más de uno
+ * (el natural + negociaciones abiertas para cuotas en mora).
+ */
+export async function getActiveCreditsAction() {
   await requireValidSession();
-  return creditService.getActiveCredit();
+  return creditService.getActiveCredits();
 }
 
 /** Crédito por ID */

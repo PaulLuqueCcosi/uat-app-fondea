@@ -58,11 +58,18 @@ export interface DisbursementInfo {
   createdAt: string | null;
 }
 
+export type CreditType = 'STANDARD' | 'NEGOTIATION';
+
 export interface AdminCreditSummary {
   id: string;
   userId: string;
   applicationId: string | null;
   status: CreditStatus;
+  creditType: CreditType;
+  /** Solo presentes si creditType = NEGOTIATION */
+  originInstallmentId?: string | null;
+  originCreditId?: string | null;
+  rootCreditId?: string | null;
   principal: number;
   totalDue: number;
   installmentCount: number;
@@ -91,7 +98,7 @@ export interface ApprovalSnapshot {
 
 // ── Types: Installments (snake_case — backend usa @JsonProperty) ────────────
 
-export type InstallmentStatus = 'PENDING' | 'CURRENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
+export type InstallmentStatus = 'PENDING' | 'CURRENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'NEGOTIATED';
 
 export interface InstallmentItem {
   id: string;
@@ -105,6 +112,8 @@ export interface InstallmentItem {
   status: InstallmentStatus;
   days_overdue: number;
   paid_at: string | null;
+  /** Solo presente si status = NEGOTIATED — el crédito que asumió esta deuda */
+  negotiation_credit_id?: string | null;
 }
 
 export interface AdminCreditInstallments {
@@ -153,6 +162,100 @@ export interface CreditAuditEvent {
 
 // ── Services ────────────────────────────────────────────────────────────────
 
+/**
+ * Mapea la respuesta cruda del backend (snake_case — el DTO usa
+ * @JsonNaming(SnakeCaseStrategy)) a AdminCreditSummary (camelCase).
+ *
+ * ⚠️ Antes de agregar creditType/origin este endpoint se leía con
+ * `res.json()` directo sin mapear — asumía camelCase cuando el backend
+ * en realidad manda snake_case (user_id, total_due, client.first_name...).
+ * Los campos anidados (client, disbursement, penaltyConfig) también vienen
+ * en snake_case y se normalizan aquí.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapAdminCreditSummaryFromBackend(raw: any): AdminCreditSummary {
+  return {
+    id: raw.id ?? '',
+    userId: raw.user_id ?? '',
+    applicationId: raw.application_id ?? null,
+    status: raw.status ?? 'ACTIVE',
+    creditType: raw.credit_type ?? 'STANDARD',
+    originInstallmentId: raw.origin_installment_id ?? null,
+    originCreditId: raw.origin_credit_id ?? null,
+    rootCreditId: raw.root_credit_id ?? null,
+    principal: raw.principal ?? 0,
+    totalDue: raw.total_due ?? 0,
+    installmentCount: raw.installment_count ?? 0,
+    termDays: raw.term_days ?? 0,
+    disbursedAt: raw.disbursed_at ?? null,
+    firstDueDate: raw.first_due_date ?? '',
+    maturityDate: raw.maturity_date ?? '',
+    overdueSince: raw.overdue_since ?? null,
+    closedAt: raw.closed_at ?? null,
+    penaltyConfigId: raw.penalty_config_id ?? null,
+    ubigeoRegion: raw.ubigeo_region ?? null,
+    ubigeoProvince: raw.ubigeo_province ?? null,
+    ubigeoDistrict: raw.ubigeo_district ?? null,
+    createdAt: raw.created_at ?? '',
+    updatedAt: raw.updated_at ?? '',
+    client: raw.client
+      ? {
+          id: raw.client.id ?? '',
+          firstName: raw.client.first_name ?? null,
+          secondName: raw.client.second_name ?? null,
+          paternalSurname: raw.client.paternal_surname ?? null,
+          maternalSurname: raw.client.maternal_surname ?? null,
+          documentNumber: raw.client.document_number ?? null,
+        }
+      : null,
+    disbursement: raw.disbursement
+      ? {
+          id: raw.disbursement.id ?? '',
+          loanId: raw.disbursement.loan_id ?? '',
+          amount: raw.disbursement.amount ?? 0,
+          method: raw.disbursement.method ?? null,
+          destinationBank: raw.disbursement.destination_bank ?? null,
+          destinationAccount: raw.disbursement.destination_account ?? null,
+          destinationHolder: raw.disbursement.destination_holder ?? null,
+          referenceNumber: raw.disbursement.reference_number ?? null,
+          externalId: raw.disbursement.external_id ?? null,
+          status: raw.disbursement.status ?? 'PENDING',
+          failureReason: raw.disbursement.failure_reason ?? null,
+          retryCount: raw.disbursement.retry_count ?? 0,
+          disbursedAt: raw.disbursement.disbursed_at ?? null,
+          createdAt: raw.disbursement.created_at ?? null,
+        }
+      : null,
+    penaltyConfig: raw.penalty_config
+      ? {
+          id: raw.penalty_config.id ?? '',
+          name: raw.penalty_config.name ?? '',
+          isActive: raw.penalty_config.is_active ?? false,
+          // Defensivo: el ejemplo de la doc omite el shape exacto de ranges para
+          // este endpoint — soporta snake_case y camelCase por si acaso.
+          ranges: Array.isArray(raw.penalty_config.ranges)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ? raw.penalty_config.ranges.map((r: any) => ({
+                fromDay: r.fromDay ?? r.from_day ?? 0,
+                toDay: r.toDay ?? r.to_day ?? null,
+                type: r.type ?? '',
+                value: r.value ?? 0,
+                base: r.base ?? null,
+                label: r.label ?? null,
+                color: r.color ?? null,
+              }))
+            : [],
+        }
+      : null,
+    approvalSnapshot: raw.approval_snapshot
+      ? {
+          creditScore: raw.approval_snapshot.credit_score ?? null,
+          passportPoints: raw.approval_snapshot.passport_points ?? null,
+        }
+      : null,
+  };
+}
+
 export async function getAdminCreditSummary(creditId: string): Promise<AdminCreditSummary | null> {
   const res = await backendFetch(`/api/v1/admin/credits/${creditId}/summary`, {
     context: 'ADMIN_CREDIT_SUMMARY',
@@ -161,7 +264,8 @@ export async function getAdminCreditSummary(creditId: string): Promise<AdminCred
     console.error(`[ADMIN_CREDIT_SUMMARY] Error ${res.status}`);
     return null;
   }
-  return res.json();
+  const raw = await res.json();
+  return mapAdminCreditSummaryFromBackend(raw);
 }
 
 export async function getAdminCreditInstallments(creditId: string): Promise<AdminCreditInstallments | null> {
@@ -241,6 +345,8 @@ export interface AdminInstallmentDetail {
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Solo presente si status = NEGOTIATED — el crédito que asumió esta deuda */
+  negotiationCreditId?: string | null;
   transactions: InstallmentTransactionInfo[];
   auditEvents: InstallmentAuditEventDetail[];
 }

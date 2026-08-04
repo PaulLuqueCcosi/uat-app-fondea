@@ -60,20 +60,26 @@ export async function getCredits(): Promise<CreditResult<Credit[]>> {
 }
 
 /**
- * Obtiene el crédito activo del usuario.
+ * Obtiene los créditos activos del usuario.
+ *
+ * Puede haber más de uno: el crédito natural (STANDARD) + créditos de
+ * negociación (NEGOTIATION) abiertos para cuotas puntuales en mora.
+ * Usar `credit.creditType` para distinguirlos en la UI.
+ *
  * GET /api/v1/credits/active
  */
-export async function getActiveCredit(): Promise<CreditResult<Credit | null>> {
+export async function getActiveCredits(): Promise<CreditResult<Credit[]>> {
   try {
     const res = await backendFetch('/api/v1/credits/active', { context: CTX });
 
-    if (res.status === 404) return { ok: true, data: null };
+    if (res.status === 404) return { ok: true, data: [] };
     if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
     if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
     if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
 
     const raw = await res.json();
-    return { ok: true, data: mapCreditFromBackend(raw) };
+    const credits = (raw.credits ?? []).map(mapCreditFromBackend);
+    return { ok: true, data: credits };
   } catch {
     return { ok: false, error: errors.networkError() };
   }

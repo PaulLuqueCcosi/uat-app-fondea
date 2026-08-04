@@ -13,6 +13,7 @@ import {
   FileText,
   ChevronRight,
   ShieldAlert,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -207,11 +208,50 @@ export default function CreditoDetallePage() {
           <Badge variant={statusVariants[credit.status] ?? 'default'}>
             {creditStatusLabels[credit.status]}
           </Badge>
+          {credit.creditType === 'NEGOTIATION' && (
+            <Badge variant="warning">Refinanciamiento</Badge>
+          )}
         </div>
         <p className="text-sm text-muted-foreground">
           {credit.installmentCount} cuotas · Desembolsado el {formatDate(credit.disbursedAt)}
         </p>
       </div>
+
+      {/* ─── Subsección: Negociación (solo si es NEGOTIATION) ─── */}
+      {credit.creditType === 'NEGOTIATION' && (
+        <Card className="border-primary-200 bg-primary-50/40">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2 text-primary-900">
+              <RefreshCw className="w-4 h-4 text-primary-600" />
+              Crédito de refinanciamiento
+            </CardTitle>
+            <CardDescription className="text-primary-700">
+              Este crédito se creó para cerrar una cuota que estaba en mora. No tuvo desembolso
+              real — es la deuda de esa cuota reorganizada en un nuevo cronograma.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              {credit.originCreditId && (
+                <Link href={`/dashboard/creditos/${credit.originCreditId}`}>
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                    Ver crédito original
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
+                </Link>
+              )}
+              {credit.rootCreditId && credit.rootCreditId !== credit.originCreditId && (
+                <Link href={`/dashboard/creditos/${credit.rootCreditId}`}>
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                    Ver crédito raíz
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ─── Alerta próximo pago ─── */}
       {nextPayment && (
@@ -398,7 +438,7 @@ export default function CreditoDetallePage() {
               Sistema de mora aplicado
             </CardTitle>
             <CardDescription>
-              Este crédito usa la configuración "{credit.penaltyConfig.name}". La mora se calcula según los días de atraso.
+              Este crédito usa la configuración &quot;{credit.penaltyConfig.name}&quot;. La mora se calcula según los días de atraso.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -526,37 +566,49 @@ function InstallmentListMini({
           const statusColor =
             inst.status === 'PAID' ? 'bg-accent-50/50 border-accent-200'
             : inst.status === 'OVERDUE' ? 'bg-error-50/50 border-error-200'
+            : inst.status === 'NEGOTIATED' ? 'bg-primary-50/50 border-primary-200'
             : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-50/50 border-warning-200'
             : 'border-border hover:bg-neutral-50';
 
           return (
-            <button
-              key={inst.id}
-              onClick={() => onSelect(inst)}
-              className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 border text-left transition-all hover:ring-1 hover:ring-primary/20 ${statusColor} ${
-                isSelected ? 'ring-2 ring-primary' : ''
-              }`}
-            >
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                inst.status === 'PAID' ? 'bg-accent-500'
-                : inst.status === 'OVERDUE' ? 'bg-error-500'
-                : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-400'
-                : 'bg-primary/20'
-              }`}>
-                <span className="text-[9px] font-bold text-white">{inst.installmentNo}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground leading-tight">
-                  Cuota {inst.installmentNo}
+            <div key={inst.id} className="flex items-stretch gap-1.5">
+              <button
+                onClick={() => onSelect(inst)}
+                className={`flex-1 flex items-center gap-3 rounded-lg px-3 py-2.5 border text-left transition-all hover:ring-1 hover:ring-primary/20 ${statusColor} ${
+                  isSelected ? 'ring-2 ring-primary' : ''
+                }`}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                  inst.status === 'PAID' ? 'bg-accent-500'
+                  : inst.status === 'OVERDUE' ? 'bg-error-500'
+                  : inst.status === 'NEGOTIATED' ? 'bg-primary-500'
+                  : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-400'
+                  : 'bg-primary/20'
+                }`}>
+                  <span className="text-[9px] font-bold text-white">{inst.installmentNo}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground leading-tight">
+                    Cuota {inst.installmentNo}
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-tight">
+                    {inst.status === 'NEGOTIATED' ? 'Refinanciada' : formatDate(inst.dueDate)}
+                  </p>
+                </div>
+                <p className="text-sm font-bold text-foreground shrink-0">
+                  {formatCurrencyShort(inst.amountDue)}
                 </p>
-                <p className="text-xs text-muted-foreground leading-tight">
-                  {formatDate(inst.dueDate)}
-                </p>
-              </div>
-              <p className="text-sm font-bold text-foreground shrink-0">
-                {formatCurrencyShort(inst.amountDue)}
-              </p>
-            </button>
+              </button>
+              {inst.status === 'NEGOTIATED' && inst.negotiationCreditId && (
+                <Link
+                  href={`/dashboard/creditos/${inst.negotiationCreditId}`}
+                  className="flex items-center justify-center rounded-lg border border-primary-200 bg-primary-50 px-2 text-primary-700 hover:bg-primary-100 transition-colors"
+                  title="Ver crédito de refinanciamiento"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              )}
+            </div>
           );
         })}
       </div>
