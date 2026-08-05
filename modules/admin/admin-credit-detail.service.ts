@@ -363,5 +363,58 @@ export async function getAdminInstallmentDetail(
     console.error(`[ADMIN_INSTALLMENT_DETAIL] Error ${res.status}`);
     return null;
   }
-  return res.json();
+  const raw = await res.json();
+  return mapAdminInstallmentDetailFromBackend(raw);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapAdminInstallmentDetailFromBackend(raw: any): AdminInstallmentDetail {
+  return {
+    id: raw.id ?? '',
+    loanId: raw.loan_id ?? raw.loanId ?? '',
+    installmentNo: raw.installment_no ?? raw.installmentNo ?? 0,
+    dueDate: raw.due_date ?? raw.dueDate ?? '',
+    amountDue: raw.amount_due ?? raw.amountDue ?? 0,
+    amountPaid: raw.amount_paid ?? raw.amountPaid ?? 0,
+    penaltyAccrued: raw.penalty_accrued ?? raw.penaltyAccrued ?? 0,
+    penaltyPaid: raw.penalty_paid ?? raw.penaltyPaid ?? 0,
+    outstanding: raw.outstanding ?? 0,
+    penaltyOutstanding: raw.penalty_outstanding ?? raw.penaltyOutstanding ?? 0,
+    installmentOutstanding: raw.installment_outstanding ?? raw.installmentOutstanding ?? 0,
+    status: raw.status ?? 'PENDING',
+    daysOverdue: raw.days_overdue ?? raw.daysOverdue ?? 0,
+    lastPenaltyDate: raw.last_penalty_date ?? raw.lastPenaltyDate ?? null,
+    paidAt: raw.paid_at ?? raw.paidAt ?? null,
+    createdAt: raw.created_at ?? raw.createdAt ?? '',
+    updatedAt: raw.updated_at ?? raw.updatedAt ?? '',
+    negotiationCreditId: raw.negotiation_credit_id ?? raw.negotiationCreditId ?? null,
+    transactions: Array.isArray(raw.transactions)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? raw.transactions.map((tx: any) => ({
+          id: tx.id ?? '',
+          type: tx.type ?? 'REPAYMENT',
+          amount: tx.amount ?? 0,
+          transactionDate: tx.transaction_date ?? tx.transactionDate ?? '',
+          processedAt: tx.processed_at ?? tx.processedAt ?? null,
+          isReversed: tx.is_reversed ?? tx.isReversed ?? false,
+          createdBy: tx.created_by ?? tx.createdBy ?? null,
+          paymentMethod: tx.payment_method ?? tx.paymentMethod ?? null,
+          referenceNumber: tx.reference_number ?? tx.referenceNumber ?? null,
+          bankName: tx.bank_name ?? tx.bankName ?? null,
+          accountOrigin: tx.account_origin ?? tx.accountOrigin ?? null,
+          source: tx.source ?? null,
+          receiptUrl: tx.receipt_url ?? tx.receiptUrl ?? null,
+        }))
+      : [],
+    auditEvents: Array.isArray(raw.audit_events ?? raw.auditEvents)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? (raw.audit_events ?? raw.auditEvents ?? []).map((e: any) => ({
+          id: e.id ?? '',
+          eventType: e.event_type ?? e.eventType ?? '',
+          description: e.description ?? e.message ?? '',
+          triggeredBy: e.triggered_by ?? e.triggeredBy ?? '',
+          createdAt: e.created_at ?? e.createdAt ?? '',
+        }))
+      : [],
+  };
 }
