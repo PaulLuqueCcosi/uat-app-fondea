@@ -75,21 +75,42 @@ export async function getAdminMoraClients(
   };
 }
 
-// ── R25 — Payment Agreements (server-side) ───────────────────────────────────
+// ── R25 — Payment Agreements (server-side, paginado) ─────────────────────────
 
-export async function getAdminPaymentAgreements(): Promise<PaymentAgreement[]> {
-  const res = await backendFetch('/api/v1/admin/collections/payment-agreements', {
+export interface AdminPaymentAgreementsResult {
+  data: PaymentAgreement[];
+  pagination: Pagination;
+}
+
+export async function getAdminPaymentAgreements(
+  page: number = 1,
+  pageSize: number = 20,
+): Promise<AdminPaymentAgreementsResult> {
+  const backendPage = Math.max(0, page - 1);
+
+  const params = new URLSearchParams({
+    page: String(backendPage),
+    size: String(pageSize),
+  });
+
+  const res = await backendFetch(`/api/v1/admin/collections/payment-agreements?${params.toString()}`, {
     context: 'COLLECTIONS_AGREEMENTS',
   });
 
   if (!res.ok) {
     console.error(`[COLLECTIONS] Error ${res.status} al listar acuerdos de pago`);
-    return [];
+    return {
+      data: [],
+      pagination: { page, pageSize, totalItems: 0, totalPages: 0 },
+    };
   }
 
-  const body: any[] = await res.json();
+  const body: SpringPage<any> = await res.json();
 
-  return body.map((row: any) => ({
+  const totalItems = body.page?.totalElements ?? body.totalElements ?? 0;
+  const totalPages = body.page?.totalPages ?? body.totalPages ?? 0;
+
+  const data: PaymentAgreement[] = (body.content || []).map((row: any) => ({
     agreementId: row.agreement_id,
     creditId: row.credit_id,
     clientName: row.client_name ?? 'Sin nombre',
@@ -103,4 +124,9 @@ export async function getAdminPaymentAgreements(): Promise<PaymentAgreement[]> {
       paid: inst.paid ?? false,
     })),
   }));
+
+  return {
+    data,
+    pagination: { page, pageSize, totalItems, totalPages },
+  };
 }

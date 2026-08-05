@@ -1,10 +1,14 @@
 'use client';
 
+import { useCallback, useTransition } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Handshake, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Handshake, CheckCircle2, Clock, AlertTriangle, ChevronLeft, ChevronRight, RefreshCw, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import type { PaymentAgreement } from '@/modules/admin/admin-collections.types';
+import type { Pagination } from '@/modules/admin/admin-users.types';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -25,11 +29,29 @@ function getDaysLabel(days: number | null, paid: boolean): { text: string; class
 // ── Componente ───────────────────────────────────────────────────────────────
 
 interface PaymentAgreementsTableProps {
-  agreements: PaymentAgreement[];
+  data: PaymentAgreement[];
+  pagination: Pagination;
 }
 
-export function PaymentAgreementsTable({ agreements }: PaymentAgreementsTableProps) {
-  if (agreements.length === 0) {
+export function PaymentAgreementsTable({ data, pagination }: PaymentAgreementsTableProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+
+  const updateUrl = useCallback(
+    (params: URLSearchParams) => {
+      startTransition(() => { router.push(`/admin/collections?${params.toString()}`); });
+    }, [router]
+  );
+
+  const handlePageChange = useCallback((newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', 'agreements');
+    params.set('apage', String(newPage));
+    updateUrl(params);
+  }, [searchParams, updateUrl]);
+
+  if (data.length === 0 && pagination.totalItems === 0) {
     return (
       <div className="py-12 text-center">
         <Handshake className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
@@ -43,13 +65,31 @@ export function PaymentAgreementsTable({ agreements }: PaymentAgreementsTablePro
 
   return (
     <div className="space-y-4">
-      {agreements.map((agreement) => {
+      {/* Header con refresh */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {pagination.totalItems} acuerdo{pagination.totalItems !== 1 ? 's' : ''} activo{pagination.totalItems !== 1 ? 's' : ''}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => startTransition(() => router.refresh())}
+          disabled={isPending}
+          className="h-8 gap-2"
+        >
+          {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          Actualizar
+        </Button>
+      </div>
+
+      {/* Cards */}
+      {data.map((agreement) => {
         const paidCount = agreement.installments.filter((i) => i.paid).length;
         const totalCount = agreement.installments.length;
         const shortId = agreement.agreementId.slice(0, 6);
 
         return (
-          <Card key={agreement.agreementId} className="overflow-hidden">
+          <Card key={agreement.agreementId} className={`overflow-hidden ${isPending ? 'opacity-60' : ''}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
@@ -118,6 +158,40 @@ export function PaymentAgreementsTable({ agreements }: PaymentAgreementsTablePro
           </Card>
         );
       })}
+
+      {/* Paginación */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-xs text-muted-foreground">
+            Página {pagination.page} de {pagination.totalPages}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={pagination.page <= 1 || isPending}
+              className="h-8 w-8 p-0"
+              aria-label="Página anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="px-3 text-xs font-medium tabular-nums">
+              {pagination.page} / {pagination.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={pagination.page >= pagination.totalPages || isPending}
+              className="h-8 w-8 p-0"
+              aria-label="Página siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

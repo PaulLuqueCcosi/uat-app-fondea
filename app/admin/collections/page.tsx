@@ -9,6 +9,7 @@ import type { MoraClientsFilters } from '@/modules/admin/admin-collections.types
 interface Props {
   searchParams: Promise<{
     tab?: string;
+    // Mora (R24)
     page?: string;
     size?: string;
     q?: string;
@@ -17,6 +18,9 @@ interface Props {
     minDaysOverdue?: string;
     sortBy?: string;
     sortDir?: string;
+    // Agreements (R25)
+    apage?: string;
+    asize?: string;
   }>;
 }
 
@@ -24,8 +28,13 @@ export default async function AdminCollectionsPage({ searchParams }: Props) {
   const params = await searchParams;
   const tab = params.tab ?? 'mora';
 
+  // R24 pagination
   const page = Number(params.page) || 1;
   const pageSize = Number(params.size) || 20;
+
+  // R25 pagination (prefixed with 'a' to avoid collision)
+  const aPage = Number(params.apage) || 1;
+  const aPageSize = Number(params.asize) || 20;
 
   const filters: MoraClientsFilters = {
     search: params.q,
@@ -36,9 +45,9 @@ export default async function AdminCollectionsPage({ searchParams }: Props) {
     sortDir: (params.sortDir as MoraClientsFilters['sortDir']) ?? undefined,
   };
 
-  const [moraResult, agreements] = await Promise.all([
+  const [moraResult, agreementsResult] = await Promise.all([
     getAdminMoraClients(page, pageSize, filters),
-    getAdminPaymentAgreements(),
+    getAdminPaymentAgreements(aPage, aPageSize),
   ]);
 
   return (
@@ -70,9 +79,9 @@ export default async function AdminCollectionsPage({ searchParams }: Props) {
           <TabsTrigger value="agreements" className="gap-1.5">
             <Handshake className="h-3.5 w-3.5" />
             Acuerdos
-            {agreements.length > 0 && (
+            {agreementsResult.pagination.totalItems > 0 && (
               <span className="ml-1 rounded-full bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 leading-none">
-                {agreements.length}
+                {agreementsResult.pagination.totalItems}
               </span>
             )}
           </TabsTrigger>
@@ -87,7 +96,7 @@ export default async function AdminCollectionsPage({ searchParams }: Props) {
         </TabsContent>
 
         <TabsContent value="agreements" className="mt-6">
-          <PaymentAgreementsTable agreements={agreements} />
+          <PaymentAgreementsTable data={agreementsResult.data} pagination={agreementsResult.pagination} />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
