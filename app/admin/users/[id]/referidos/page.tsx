@@ -1,18 +1,40 @@
-import { mockUserDetail } from '@/modules/admin';
+import { getUserReferralOverview } from '@/modules/admin';
 import { UserReferralsTab } from '@/components/admin/users/UserReferralsTab';
+import { formatDate } from '@/components/admin/users/score-format';
 
-// TODO: mockUserDetail.referrals + referidos hardcodeados — fuera de alcance de este push (ver plan).
-export default async function AdminUserReferidosPage() {
+interface Props {
+  params: Promise<{ id: string }>;
+}
+
+export default async function AdminUserReferidosPage({ params }: Props) {
+  const { id } = await params;
+  const overview = await getUserReferralOverview(id);
+
+  if (!overview) {
+    return <p className="text-sm text-muted-foreground">No se pudo cargar la información de referidos.</p>;
+  }
+
+  const referredBy = overview.referredBy
+    ? {
+        ...overview.referredBy,
+        appliedAtDisplay: formatDate(overview.referredBy.appliedAt),
+      }
+    : null;
+
+  const referrals = overview.referrals.map((r) => ({
+    ...r,
+    referredRegisteredAtDisplay: r.referredRegisteredAt ? formatDate(r.referredRegisteredAt) : null,
+    createdAtDisplay: formatDate(r.createdAt),
+    completedAtDisplay: r.completedAt ? formatDate(r.completedAt) : null,
+  }));
+
   return (
     <UserReferralsTab
-      code={mockUserDetail.referrals.code}
-      totalReferred={mockUserDetail.referrals.totalReferred}
-      pointsEarned={mockUserDetail.referrals.pointsEarned}
-      referrals={[
-        { id: 'ref_001', referredUserId: 'usr_006', registeredAt: '2026-06-10T08:00:00Z', completedAt: '2026-06-25T10:00:00Z', status: 'LOAN_COMPLETED', pointsAwarded: 15 },
-        { id: 'ref_002', referredUserId: 'usr_007', registeredAt: '2026-06-18T14:00:00Z', completedAt: null, status: 'ACTIVE', pointsAwarded: 0 },
-        { id: 'ref_003', referredUserId: 'usr_008', registeredAt: '2026-06-28T09:00:00Z', completedAt: null, status: 'REGISTERED', pointsAwarded: 0 },
-      ]}
+      code={overview.code}
+      totalReferred={overview.totalReferred}
+      totalCompleted={overview.totalCompleted}
+      referredBy={referredBy}
+      referrals={referrals}
     />
   );
 }

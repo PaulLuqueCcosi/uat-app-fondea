@@ -1,5 +1,6 @@
-import { getAdminUserDetail } from '@/modules/admin';
+import { getAdminUserDetail, getAdminUserAuth } from '@/modules/admin';
 import { UserDetailNav } from '@/components/admin/users/UserDetailNav';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
@@ -11,7 +12,7 @@ export default async function AdminUserDetailLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await getAdminUserDetail(id);
+  const [user, auth] = await Promise.all([getAdminUserDetail(id), getAdminUserAuth(id)]);
 
   const displayUser = user || {
     id,
@@ -40,12 +41,17 @@ export default async function AdminUserDetailLayout({
       {/* Header del usuario */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center text-base sm:text-lg font-bold text-primary shrink-0">
-            {displayUser.name
-              .split(' ')
-              .slice(0, 2)
-              .map((n: string) => n[0])
-              .join('')}
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center text-base sm:text-lg font-bold text-primary shrink-0 overflow-hidden">
+            <Avatar className="w-full h-full">
+              {auth?.avatarUrl && <AvatarImage src={auth.avatarUrl} alt={displayUser.name} />}
+              <AvatarFallback className="bg-transparent text-inherit font-bold">
+                {displayUser.name
+                  .split(' ')
+                  .slice(0, 2)
+                  .map((n: string) => n[0])
+                  .join('')}
+              </AvatarFallback>
+            </Avatar>
           </div>
           <div className="min-w-0">
             <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">

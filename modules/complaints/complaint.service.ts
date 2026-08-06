@@ -8,6 +8,7 @@ import type {
   MyComplaint,
   SubmitComplaintRequest,
   ComplaintResult,
+  Pagination,
 } from './complaint.types';
 
 // ── Mapper (snake_case → camelCase) ──────────────────────────────────────────
@@ -32,10 +33,17 @@ function mapComplaint(raw: any): MyComplaint {
   };
 }
 
-// ── GET /api/v1/complaints — mis reclamaciones ───────────────────────────────
+// ── GET /api/v1/complaints — mis reclamaciones (paginado, Spring Page<T>) ────
 
-export async function getMyComplaints(): Promise<ComplaintResult<MyComplaint[]>> {
-  const res = await backendFetch('/api/v1/complaints', {
+export interface MyComplaintsPage {
+  data: MyComplaint[];
+  pagination: Pagination;
+}
+
+export async function getMyComplaints(page = 1, pageSize = 10): Promise<ComplaintResult<MyComplaintsPage>> {
+  const backendPage = Math.max(0, page - 1);
+
+  const res = await backendFetch(`/api/v1/complaints?page=${backendPage}&size=${pageSize}`, {
     context: 'MY_COMPLAINTS',
   });
 
@@ -48,8 +56,14 @@ export async function getMyComplaints(): Promise<ComplaintResult<MyComplaint[]>>
   }
 
   const body = await res.json();
-  const complaints = (Array.isArray(body) ? body : body.content ?? []).map(mapComplaint);
-  return { ok: true, data: complaints };
+  const data = (body.content ?? []).map(mapComplaint);
+  const totalItems = body.page?.totalElements ?? body.totalElements ?? 0;
+  const totalPages = body.page?.totalPages ?? body.totalPages ?? 0;
+
+  return {
+    ok: true,
+    data: { data, pagination: { page, pageSize, totalItems, totalPages } },
+  };
 }
 
 // ── GET /api/v1/complaints/{id} — detalle propio ─────────────────────────────

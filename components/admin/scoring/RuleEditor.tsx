@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Plus, ChevronRight } from 'lucide-react';
 import type { RuleConfig, RangeEntry, ScorecardMetadata, AvailableField } from '@/modules/admin/scoring';
+import { cn, READONLY_FIELD_CLASS } from '@/lib/utils';
 import { FieldSelectorModal } from './FieldSelectorModal';
 
 interface Props {
@@ -31,11 +32,14 @@ export function RuleEditor({ rule, metadata, readonly, onChange, onRemove }: Pro
     else if (field.dataType === 'ENUM') newType = 'ENUM_MAP';
     else newType = 'RANGES';
 
+    // code y name se resincronizan SIEMPRE con la variable elegida — si no,
+    // al recambiar de variable quedan describiendo el campo anterior mientras
+    // inputField/type ya apuntan al nuevo (regla "miente" sobre qué evalúa).
     const updates: Partial<RuleConfig> = {
       inputField: field.code,
       type: newType,
-      name: rule.name || field.name,
-      ...(!rule.code || rule.code.startsWith('REGLA_') ? { code: field.code.replace(/([A-Z])/g, '_$1').toUpperCase().replace(/^_/, '') } : {}),
+      name: field.name,
+      code: field.code.replace(/([A-Z])/g, '_$1').toUpperCase().replace(/^_/, ''),
     };
 
     if (newType === 'BOOLEAN') {
@@ -70,7 +74,7 @@ export function RuleEditor({ rule, metadata, readonly, onChange, onRemove }: Pro
               value={rule.name}
               onChange={(e) => updateField('name', e.target.value)}
               disabled={readonly}
-              className="h-8 text-sm"
+              className={cn('h-8 text-sm', readonly && READONLY_FIELD_CLASS)}
               placeholder="Ej: Antigüedad laboral"
             />
           </div>
@@ -78,14 +82,14 @@ export function RuleEditor({ rule, metadata, readonly, onChange, onRemove }: Pro
             <Label className="text-[10px] text-muted-foreground uppercase">Variable a evaluar</Label>
             <Button
               variant="outline"
-              className="w-full h-8 justify-between text-sm font-normal"
+              className={cn('w-full h-8 justify-between text-sm font-normal', readonly && READONLY_FIELD_CLASS)}
               onClick={() => setFieldModalOpen(true)}
               disabled={readonly}
             >
               <span className={selectedField ? 'text-foreground' : 'text-muted-foreground'}>
                 {selectedField ? selectedField.name : 'Seleccionar variable...'}
               </span>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              {!readonly && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
             </Button>
             <FieldSelectorModal
               open={fieldModalOpen}
@@ -102,7 +106,7 @@ export function RuleEditor({ rule, metadata, readonly, onChange, onRemove }: Pro
               value={rule.maxPoints}
               onChange={(e) => updateField('maxPoints', Number(e.target.value))}
               disabled={readonly}
-              className="h-8 text-sm"
+              className={cn('h-8 text-sm', readonly && READONLY_FIELD_CLASS)}
             />
           </div>
         </div>
@@ -211,7 +215,7 @@ function RangesEditor({ ranges, operators, field, maxPoints, readonly, onChange 
             <div key={i} className="flex items-center gap-2 bg-background rounded px-2 py-1.5 border">
               {/* Condición */}
               <Select value={range.operator} onValueChange={(v) => v && updateRange(i, 'operator', v)} disabled={readonly}>
-                <SelectTrigger className="h-7 w-[140px] text-xs">
+                <SelectTrigger className={cn('h-7 w-[140px] text-xs', readonly && READONLY_FIELD_CLASS)}>
                   <SelectValue>
                     {getOperatorLabel(range.operator)}
                   </SelectValue>
@@ -233,7 +237,7 @@ function RangesEditor({ ranges, operators, field, maxPoints, readonly, onChange 
                   value={range.value ?? ''}
                   onChange={(e) => updateRange(i, 'value', e.target.value ? Number(e.target.value) : null)}
                   disabled={readonly}
-                  className="h-7 w-24 text-xs"
+                  className={cn('h-7 w-24 text-xs', readonly && READONLY_FIELD_CLASS)}
                 />
               ) : (
                 <span className="text-xs text-muted-foreground italic w-24">—</span>
@@ -249,7 +253,7 @@ function RangesEditor({ ranges, operators, field, maxPoints, readonly, onChange 
                   value={range.points}
                   onChange={(e) => updateRange(i, 'points', Number(e.target.value))}
                   disabled={readonly}
-                  className={`h-7 w-16 text-xs text-center font-medium ${exceedsMax ? 'border-red-300 bg-red-50' : ''}`}
+                  className={cn('h-7 w-16 text-xs text-center font-medium', exceedsMax && 'border-red-300 bg-red-50', readonly && READONLY_FIELD_CLASS)}
                 />
                 <span className="text-[10px] text-muted-foreground">pts</span>
               </div>
@@ -308,7 +312,7 @@ function BooleanEditor({ truePoints, falsePoints, field, maxPoints, readonly, on
           <span className="text-sm flex-1 font-medium">Sí cumple</span>
           <span className="text-xs text-muted-foreground">→</span>
           <Input type="number" value={truePoints} onChange={(e) => onChangeTruePoints(Number(e.target.value))} disabled={readonly}
-            className={`w-16 h-7 text-xs text-center font-medium ${truePoints > maxPoints ? 'border-red-300' : ''}`} />
+            className={cn('w-16 h-7 text-xs text-center font-medium', truePoints > maxPoints && 'border-red-300', readonly && READONLY_FIELD_CLASS)} />
           <span className="text-[10px] text-muted-foreground">pts</span>
         </div>
         <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2.5 border">
@@ -316,7 +320,7 @@ function BooleanEditor({ truePoints, falsePoints, field, maxPoints, readonly, on
           <span className="text-sm flex-1 font-medium">No cumple</span>
           <span className="text-xs text-muted-foreground">→</span>
           <Input type="number" value={falsePoints} onChange={(e) => onChangeFalsePoints(Number(e.target.value))} disabled={readonly}
-            className="w-16 h-7 text-xs text-center font-medium" />
+            className={cn('w-16 h-7 text-xs text-center font-medium', readonly && READONLY_FIELD_CLASS)} />
           <span className="text-[10px] text-muted-foreground">pts</span>
         </div>
       </div>
@@ -363,7 +367,7 @@ function EnumMapEditor({ enumMap, defaultPoints, field, maxPoints, readonly, onC
                 value={points}
                 onChange={(e) => updateEntry(key, Number(e.target.value))}
                 disabled={readonly}
-                className={`w-16 h-7 text-xs text-center font-medium ${exceedsMax ? 'border-red-300 bg-red-50' : ''}`}
+                className={cn('w-16 h-7 text-xs text-center font-medium', exceedsMax && 'border-red-300 bg-red-50', readonly && READONLY_FIELD_CLASS)}
               />
               <span className="text-[10px] text-muted-foreground">pts</span>
               {exceedsMax && <span className="text-[10px] text-red-500">⚠️</span>}
@@ -380,7 +384,7 @@ function EnumMapEditor({ enumMap, defaultPoints, field, maxPoints, readonly, onC
             value={defaultPoints}
             onChange={(e) => onChangeDefault(Number(e.target.value))}
             disabled={readonly}
-            className="w-16 h-7 text-xs text-center font-medium"
+            className={cn('w-16 h-7 text-xs text-center font-medium', readonly && READONLY_FIELD_CLASS)}
           />
           <span className="text-[10px] text-muted-foreground">pts</span>
         </div>

@@ -17,21 +17,27 @@ import {
 } from '@/components/ui/dialog';
 
 interface PuntajeTabProps {
-  gamification: {
-    points: number;
-    rank: string;
-    maxLoanAmount: number;
-    history: { date: string; concept: string; points: number }[];
-  };
+  /** null cuando el usuario todavía no tiene puntaje inicializado en el backend. */
+  score: { points: number; maxLoanAmount: number; categoryName: string } | null;
+  history: { id: string; points: number; type: string; reason: string | null; createdAt: string }[];
+  ranges: { categoryName: string; minPoints: number; maxPoints: number | null; maxLoanAmount: number }[];
 }
 
-// Rangos del pasaporte (mock — luego viene del backend)
-const PASSPORT_LEVELS = [
-  { name: 'Bronce', minPoints: 0, maxPoints: 99, maxLoanAmount: 200, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
-  { name: 'Plata', minPoints: 100, maxPoints: 249, maxLoanAmount: 350, color: 'text-neutral-600', bg: 'bg-neutral-50', border: 'border-neutral-300' },
-  { name: 'Oro', minPoints: 250, maxPoints: 499, maxLoanAmount: 600, color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-300' },
-  { name: 'Master', minPoints: 500, maxPoints: null, maxLoanAmount: 1000, color: 'text-primary-700', bg: 'bg-primary-50', border: 'border-primary-200' },
-];
+// Estilos visuales por categoría — el backend solo manda el nombre (BRONCE/PLATA/ORO/MASTER).
+const LEVEL_META: Record<string, { color: string; bg: string; border: string }> = {
+  BRONCE: { color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
+  PLATA: { color: 'text-neutral-600', bg: 'bg-neutral-50', border: 'border-neutral-300' },
+  ORO: { color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-300' },
+  MASTER: { color: 'text-primary-700', bg: 'bg-primary-50', border: 'border-primary-200' },
+};
+const DEFAULT_LEVEL_META = { color: 'text-neutral-700', bg: 'bg-neutral-50', border: 'border-neutral-200' };
+
+const LEVEL_DISPLAY_NAMES: Record<string, string> = {
+  BRONCE: 'Bronce',
+  PLATA: 'Plata',
+  ORO: 'Oro',
+  MASTER: 'Master',
+};
 
 // Motivos predeterminados con montos por defecto
 const PRESET_REASONS = [
@@ -45,17 +51,27 @@ const PRESET_REASONS = [
   { value: 'AJUSTE_MANUAL', label: 'Ajuste manual (especificar)', defaultAmount: 0 },
 ];
 
-export function PuntajeTab({ gamification }: PuntajeTabProps) {
+export function PuntajeTab({ score, history, ranges }: PuntajeTabProps) {
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustType, setAdjustType] = useState<'add' | 'subtract'>('add');
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
   const [adjustCustomReason, setAdjustCustomReason] = useState('');
 
-  // Determinar nivel actual
-  const currentLevel = PASSPORT_LEVELS.find(
-    (l) => gamification.points >= l.minPoints && (l.maxPoints === null || gamification.points <= l.maxPoints)
-  ) ?? PASSPORT_LEVELS[0];
+  if (!score) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center text-sm text-muted-foreground">
+          Este usuario todavía no tiene puntaje registrado.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const levels = [...ranges].sort((a, b) => a.minPoints - b.minPoints);
+  const currentCategory = score.categoryName.toUpperCase();
+  const currentMeta = LEVEL_META[currentCategory] ?? DEFAULT_LEVEL_META;
+  const currentLevelName = LEVEL_DISPLAY_NAMES[currentCategory] ?? score.categoryName;
 
   const openAdjustModal = (type: 'add' | 'subtract') => {
     setAdjustType(type);
@@ -82,18 +98,18 @@ export function PuntajeTab({ gamification }: PuntajeTabProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center space-y-1">
-                <p className="text-4xl font-bold">{gamification.points}</p>
-                <Badge className={currentLevel.color}>{currentLevel.name}</Badge>
+                <p className="text-4xl font-bold">{score.points}</p>
+                <Badge className={currentMeta.color}>{currentLevelName}</Badge>
               </div>
               <Separator />
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Rango</span>
-                  <span className="font-medium">{currentLevel.name}</span>
+                  <span className="font-medium">{currentLevelName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Máx. préstamo</span>
-                  <span className="font-mono font-medium">S/ {currentLevel.maxLoanAmount.toLocaleString()}</span>
+                  <span className="font-mono font-medium">S/ {score.maxLoanAmount.toLocaleString()}</span>
                 </div>
               </div>
               <Separator />
@@ -117,17 +133,23 @@ export function PuntajeTab({ gamification }: PuntajeTabProps) {
               <CardTitle className="text-sm">Rangos del pasaporte</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {PASSPORT_LEVELS.map((level) => {
-                const isCurrent = level.name === currentLevel.name;
+              {levels.length === 0 && (
+                <p className="text-xs text-muted-foreground">Sin rangos configurados.</p>
+              )}
+              {levels.map((level) => {
+                const categoryUpper = level.categoryName.toUpperCase();
+                const isCurrent = categoryUpper === currentCategory;
+                const meta = LEVEL_META[categoryUpper] ?? DEFAULT_LEVEL_META;
+                const displayName = LEVEL_DISPLAY_NAMES[categoryUpper] ?? level.categoryName;
                 return (
                   <div
-                    key={level.name}
-                    className={`flex items-center justify-between rounded-lg border p-2.5 ${isCurrent ? `${level.bg} ${level.border}` : ''}`}
+                    key={level.categoryName}
+                    className={`flex items-center justify-between rounded-lg border p-2.5 ${isCurrent ? `${meta.bg} ${meta.border}` : ''}`}
                   >
                     <div className="flex items-center gap-2">
                       {isCurrent && <span className="w-2 h-2 rounded-full bg-primary" />}
-                      <span className={`text-sm font-medium ${isCurrent ? level.color : 'text-muted-foreground'}`}>
-                        {level.name}
+                      <span className={`text-sm font-medium ${isCurrent ? meta.color : 'text-muted-foreground'}`}>
+                        {displayName}
                       </span>
                     </div>
                     <div className="text-right">
@@ -161,10 +183,17 @@ export function PuntajeTab({ gamification }: PuntajeTabProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {gamification.history.map((h, i) => (
-                    <tr key={i} className="border-b last:border-0">
-                      <td className="px-4 py-2.5">{h.date}</td>
-                      <td className="px-4 py-2.5">{h.concept}</td>
+                  {history.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-6 text-center text-muted-foreground">
+                        Sin movimientos registrados.
+                      </td>
+                    </tr>
+                  )}
+                  {history.map((h) => (
+                    <tr key={h.id} className="border-b last:border-0">
+                      <td className="px-4 py-2.5">{h.createdAt}</td>
+                      <td className="px-4 py-2.5">{h.reason ?? h.type}</td>
                       <td className={`px-4 py-2.5 text-right font-mono font-medium ${h.points >= 0 ? 'text-success-600' : 'text-destructive'}`}>
                         {h.points >= 0 ? '+' : ''}{h.points}
                       </td>

@@ -35,15 +35,57 @@ export interface AdminComplaintRow {
   isOverdue: boolean;
 }
 
+// ── Detalle de una reclamación ───────────────────────────────────────────────
+
+/** Detalle completo — vista admin, GET /api/v1/admin/complaints/{id}. */
+export interface AdminComplaintDetail {
+  id: string;
+  correlativeNumber: number;
+  type: ComplaintType;
+  status: ComplaintStatus;
+  userId: string;
+  /** Crédito relacionado, si el reclamo es sobre un préstamo específico. Null si es general. */
+  relatedCreditId: string | null;
+  // Snapshot del consumidor al momento del reclamo (Anexo I) — no es una referencia viva al perfil.
+  consumerName: string;
+  consumerDocument: string;
+  consumerPhone: string | null;
+  consumerEmail: string | null;
+  productServiceDetail: string;
+  amountInvolved: number | null;
+  complaintDetail: string;
+  /** Pedido concreto del consumidor — campo obligatorio del Anexo I. */
+  consumerRequest: string;
+  submittedDate: string;
+  legalDeadline: string;
+  businessDaysElapsed: number;
+  businessDaysRemaining: number;
+  isOverdue: boolean;
+  responseText: string | null;
+  respondedAt: string | null;
+  respondedBy: string | null;
+  /** Null mientras no tenga respuesta. */
+  wasRespondedLate: boolean | null;
+}
+
 // ── Filtros ──────────────────────────────────────────────────────────────────
 
 export interface ComplaintFilters {
-  status?: ComplaintStatus;
+  /** Uno o más estados — ej. PENDING_STATUSES para "pendientes / no respondido". */
+  status?: ComplaintStatus | ComplaintStatus[];
   type?: ComplaintType;
   onlyOverdue?: boolean;
+  /**
+   * legalDeadline es equivalente a ordenar por días hábiles restantes — para
+   * un mismo "hoy", más días de calendario hasta el deadline siempre implica
+   * más (o igual) días hábiles restantes, nunca menos. asc = más urgentes primero.
+   */
   sortBy?: 'submittedDate' | 'legalDeadline';
   sortDir?: 'asc' | 'desc';
 }
+
+/** Reclamos todavía no cerrados — usado por el filtro rápido "Pendientes". */
+export const PENDING_STATUSES: ComplaintStatus[] = ['REGISTRADO', 'EN_REVISION'];
 
 // ── Helpers de UI ────────────────────────────────────────────────────────────
 

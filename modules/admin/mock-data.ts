@@ -136,23 +136,6 @@ export const mockUserForms: Record<string, UserExpedientes> = {
 
 // ── User Detail ───────────────────────────────────────────────────────────────
 
-export const mockUserDetail = {
-  id: 'usr_001', name: 'María García López', dni: '71234567', email: 'maria@gmail.com', phone: '956123456', registeredAt: '2026-05-10T08:30:00Z', maxLoanAmount: 5000,
-  score: { total: 720, level: 'BUENO', lastCalculated: '2026-06-25T10:00:00Z', dimensions: { capacidadPago: 85, estabilidadLaboral: 70, perfilPatrimonial: 60, comportamientoCrediticio: 80, coherenciaDatos: 90 } },
-  gamification: { points: 450, rank: 'PLATA', maxLoanAmount: 5000, history: [{ date: '2026-06-20', concept: 'Pago puntual', points: 20 }, { date: '2026-06-15', concept: 'Perfil completado', points: 50 }, { date: '2026-06-01', concept: 'Registro', points: 100 }] },
-  referrals: { code: 'MARIA2026', totalReferred: 3, pointsEarned: 150 },
-};
-
-// ── Solicitudes ───────────────────────────────────────────────────────────────
-
-export const mockApplications = [
-  { id: 'app_001', userId: 'usr_001', userName: 'María García López', status: 'APPROVED' as ApplicationStatus, amount: 3000, submittedAt: '2026-06-15T10:00:00Z', score: 720, updatedAt: '2026-06-16T14:00:00Z' },
-  { id: 'app_002', userId: 'usr_002', userName: 'Carlos Ruiz Mendoza', status: 'PRE_APPROVED' as ApplicationStatus, amount: 5000, submittedAt: '2026-06-20T08:30:00Z', score: 650, updatedAt: '2026-06-20T09:00:00Z' },
-  { id: 'app_003', userId: 'usr_003', userName: 'Ana Flores Quispe', status: 'PROCESSING' as ApplicationStatus, amount: 1500, submittedAt: '2026-06-25T11:00:00Z', score: 580, updatedAt: '2026-06-25T11:05:00Z' },
-  { id: 'app_004', userId: 'usr_004', userName: 'Pedro Huamán Torres', status: 'REJECTED' as ApplicationStatus, amount: 10000, submittedAt: '2026-06-22T15:00:00Z', score: 320, updatedAt: '2026-06-22T15:30:00Z' },
-  { id: 'app_005', userId: 'usr_005', userName: 'Lucía Mamani Ríos', status: 'BLOCKED' as ApplicationStatus, amount: 2000, submittedAt: '2026-06-28T09:00:00Z', score: 490, updatedAt: '2026-06-28T10:00:00Z' },
-];
-
 // ── Créditos ──────────────────────────────────────────────────────────────────
 
 export const mockCredits = [
@@ -283,22 +266,6 @@ export const mockKPIHistory: DashboardKPIHistory[] = [
   { date: '2026-07-07', activeLoans: 46, newApplications: 6, approvalRate: 66, disbursements: 9000, paymentsReceived: 8100, loansDueToday: 4, delinquencyRate: 8.6, arrears1_7: 4, arrears8_30: 2, arrears30Plus: 1, newUsers: 9, funnelConversion: 3.1, pendingComplaints: 2 },
   { date: '2026-07-08', activeLoans: 47, newApplications: 8, approvalRate: 62.5, disbursements: 12500, paymentsReceived: 8750, loansDueToday: 5, delinquencyRate: 8.5, arrears1_7: 4, arrears8_30: 2, arrears30Plus: 1, newUsers: 11, funnelConversion: 3.2, pendingComplaints: 2 },
 ];
-
-/** Simula respuesta paginada de solicitudes */
-export function getMockApplicationsPaginated(page: number, pageSize: number, query?: string) {
-  let filtered = mockApplications;
-  if (query) {
-    const q = query.toLowerCase();
-    filtered = mockApplications.filter(
-      (a) => a.userName.toLowerCase().includes(q) || a.id.toLowerCase().includes(q)
-    );
-  }
-  const totalItems = filtered.length;
-  const totalPages = Math.ceil(totalItems / pageSize);
-  const start = (page - 1) * pageSize;
-  const data = filtered.slice(start, start + pageSize);
-  return { data, pagination: { page, pageSize, totalItems, totalPages } };
-}
 
 // ── Intenciones ───────────────────────────────────────────────────────────────
 

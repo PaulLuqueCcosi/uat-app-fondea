@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,18 +17,29 @@ import { COMPLAINT_TYPE_OPTIONS } from '@/modules/complaints';
 import type { ComplaintType } from '@/modules/complaints';
 
 interface ComplaintFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
-  onCancel?: () => void;
+  /** Precargados desde el perfil del usuario — quedan editables por si el contacto de este reclamo es distinto. */
+  defaultPhone?: string | null;
+  defaultEmail?: string | null;
 }
 
-export function ComplaintForm({ onSuccess, onCancel }: ComplaintFormProps) {
+/** El perfil guarda el teléfono con código de país (ej: "51987654321") — este campo espera solo el número local de 9 dígitos. */
+function toLocalPhone(phone?: string | null): string {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  return digits.startsWith('51') && digits.length > 9 ? digits.slice(2) : digits;
+}
+
+export function ComplaintForm({ open, onOpenChange, onSuccess, defaultPhone, defaultEmail }: ComplaintFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const [type, setType] = useState<ComplaintType>('RECLAMO');
-  const [consumerPhone, setConsumerPhone] = useState('');
-  const [consumerEmail, setConsumerEmail] = useState('');
+  const [consumerPhone, setConsumerPhone] = useState(toLocalPhone(defaultPhone));
+  const [consumerEmail, setConsumerEmail] = useState(defaultEmail ?? '');
   const [productServiceDetail, setProductServiceDetail] = useState('');
   const [amountInvolved, setAmountInvolved] = useState('');
   const [complaintDetail, setComplaintDetail] = useState('');
@@ -64,14 +77,15 @@ export function ComplaintForm({ onSuccess, onCancel }: ComplaintFormProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Registrar reclamo o queja</CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Ley 32495 — Tienes derecho a registrar un reclamo y recibir respuesta en máximo 15 días hábiles.
-        </p>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={(v) => { if (!isPending) onOpenChange(v); }}>
+      <DialogContent className="sm:max-w-[560px] max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Registrar reclamo o queja</DialogTitle>
+          <DialogDescription>
+            Ley 32495 — Tienes derecho a registrar un reclamo y recibir respuesta en máximo 15 días hábiles.
+          </DialogDescription>
+        </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <Alert variant="destructive">
@@ -180,20 +194,17 @@ export function ComplaintForm({ onSuccess, onCancel }: ComplaintFormProps) {
             </p>
           </div>
 
-          {/* Botones */}
-          <div className="flex items-center gap-3 pt-2">
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+              Cancelar
+            </Button>
             <Button type="submit" disabled={isPending} className="gap-2">
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Enviar reclamo
             </Button>
-            {onCancel && (
-              <Button type="button" variant="ghost" onClick={onCancel} disabled={isPending}>
-                Cancelar
-              </Button>
-            )}
-          </div>
+          </DialogFooter>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

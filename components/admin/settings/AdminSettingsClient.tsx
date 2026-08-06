@@ -19,6 +19,7 @@ import {
 import { CircleDollarSign, FileText, Bell, Pencil } from 'lucide-react';
 import { PenaltyConfigCard } from './PenaltyConfigCard';
 import { FormEditPoliciesCard } from './FormEditPoliciesCard';
+import { PassportRangesCard } from './PassportRangesCard';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -86,6 +87,9 @@ export function AdminSettingsClient() {
 
       {/* ═══ EDICIÓN DE EXPEDIENTE (conectado al backend) ═══ */}
       <FormEditPoliciesCard />
+
+      {/* ═══ RANGOS DEL PASAPORTE (conectado al backend) ═══ */}
+      <PassportRangesCard />
 
       {/* ═══ INTENTOS DE FORMULARIOS ═══ */}
       <FormAttemptsCard config={config} onSave={(formAttempts) => setConfig((p) => ({ ...p, formAttempts }))} />

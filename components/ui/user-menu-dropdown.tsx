@@ -8,6 +8,7 @@ import {
   LogOut,
   CreditCard,
   LifeBuoy,
+  MessageSquareWarning,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -135,6 +136,13 @@ export function UserMenuDropdown({ user, onSignOut }: UserMenuDropdownProps) {
           >
             <Settings className="h-4 w-4" />
             Configuración
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => router.push('/dashboard/reclamos')}
+            className={pathname === '/dashboard/reclamos' ? 'bg-primary-50 text-primary font-semibold' : ''}
+          >
+            <MessageSquareWarning className="h-4 w-4" />
+            Libro de Reclamaciones
           </DropdownMenuItem>
         </DropdownMenuGroup>
 

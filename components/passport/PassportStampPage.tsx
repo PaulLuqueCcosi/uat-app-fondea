@@ -1,3 +1,4 @@
+import { Award } from 'lucide-react';
 import type { PassportLevel } from '@/modules/passport';
 
 interface PassportStampPageProps {
@@ -137,11 +138,15 @@ export function PassportStampPage({
               opacity: 0.4,
             }}
           />
-          <img
-            src={level.meta.image}
-            alt={level.name}
-            className="w-16 h-16 object-contain relative z-10"
-          />
+          {level.meta.image ? (
+            <img
+              src={level.meta.image}
+              alt={level.name}
+              className="w-16 h-16 object-contain relative z-10"
+            />
+          ) : (
+            <Award className="w-10 h-10 relative z-10 text-muted-foreground" />
+          )}
           {isUnlocked && (
             <div
               className="absolute inset-0 rounded-full border-2 opacity-20"

@@ -161,10 +161,11 @@ export function ComplaintsTable({ data, pagination }: ComplaintsTableProps) {
         <NativeSelect
           value={searchParams.get('status') ?? ''}
           onChange={(e) => applyFilters({ status: e.target.value || undefined })}
-          className="h-9 w-36"
+          className="h-9 w-44"
           disabled={isPending}
         >
           <NativeSelectOption value="">Todos los estados</NativeSelectOption>
+          <NativeSelectOption value="PENDIENTES">Pendientes (no respondido)</NativeSelectOption>
           <NativeSelectOption value="REGISTRADO">Registrado</NativeSelectOption>
           <NativeSelectOption value="EN_REVISION">En revisión</NativeSelectOption>
           <NativeSelectOption value="RESPONDIDO">Respondido</NativeSelectOption>
@@ -189,6 +190,21 @@ export function ComplaintsTable({ data, pagination }: ComplaintsTableProps) {
         >
           <NativeSelectOption value="">Todos</NativeSelectOption>
           <NativeSelectOption value="true">Solo vencidos</NativeSelectOption>
+        </NativeSelect>
+
+        <NativeSelect
+          value={`${searchParams.get('sortBy') ?? 'submittedDate'}:${searchParams.get('sortDir') ?? 'asc'}`}
+          onChange={(e) => {
+            const [sortBy, sortDir] = e.target.value.split(':');
+            applyFilters({ sortBy, sortDir });
+          }}
+          className="h-9 w-56"
+          disabled={isPending}
+        >
+          <NativeSelectOption value="legalDeadline:asc">Menos días hábiles restantes primero</NativeSelectOption>
+          <NativeSelectOption value="legalDeadline:desc">Más días hábiles restantes primero</NativeSelectOption>
+          <NativeSelectOption value="submittedDate:asc">Más antiguos primero</NativeSelectOption>
+          <NativeSelectOption value="submittedDate:desc">Más recientes primero</NativeSelectOption>
         </NativeSelect>
 
         {overdueCount > 0 && (

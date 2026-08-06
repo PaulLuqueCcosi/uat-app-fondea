@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Plus, Trash2, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Trash2, GripVertical, AlertTriangle } from 'lucide-react';
 import type { DimensionConfig, RuleConfig, ScorecardMetadata } from '@/modules/admin/scoring';
+import { cn, READONLY_FIELD_CLASS } from '@/lib/utils';
 import { RuleEditor } from './RuleEditor';
 
 interface Props {
@@ -23,6 +24,7 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
   const [open, setOpen] = useState(true);
 
   const totalRulePoints = dimension.rules.reduce((s, r) => s + r.maxPoints, 0);
+  const rulesExceedDimension = totalRulePoints > dimension.maxPoints;
   const percentage = dimension.maxPoints > 0 ? Math.round((dimension.maxPoints / 1000) * 100) : 0;
 
   const updateField = (field: keyof DimensionConfig, value: any) => {
@@ -69,6 +71,11 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {dimension.maxPoints} pts ({percentage}%) · {dimension.rules.length} regla{dimension.rules.length !== 1 ? 's' : ''}
                 </span>
+                {rulesExceedDimension && (
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 whitespace-nowrap">
+                    <AlertTriangle className="h-3 w-3" /> reglas exceden el peso
+                  </span>
+                )}
               </div>
             </CollapsibleTrigger>
             {!readonly && (
@@ -90,7 +97,7 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
                   onChange={(e) => updateField('code', e.target.value.toUpperCase().replace(/\s/g, '_'))}
                   placeholder="CAPACIDAD_PAGO"
                   disabled={readonly}
-                  className="h-8 text-sm font-mono"
+                  className={cn('h-8 text-sm font-mono', readonly && READONLY_FIELD_CLASS)}
                 />
               </div>
               <div className="space-y-1">
@@ -100,7 +107,7 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
                   onChange={(e) => updateField('name', e.target.value)}
                   placeholder="Capacidad de Pago"
                   disabled={readonly}
-                  className="h-8 text-sm"
+                  className={cn('h-8 text-sm', readonly && READONLY_FIELD_CLASS)}
                 />
               </div>
               <div className="space-y-1">
@@ -110,10 +117,11 @@ export function DimensionEditor({ dimension, index, metadata, readonly, onChange
                   value={dimension.maxPoints}
                   onChange={(e) => updateField('maxPoints', Number(e.target.value))}
                   disabled={readonly}
-                  className="h-8 text-sm"
+                  className={cn('h-8 text-sm', readonly && READONLY_FIELD_CLASS)}
                 />
-                <p className="text-[10px] text-muted-foreground">
-                  Suma reglas: {totalRulePoints} pts {totalRulePoints > dimension.maxPoints && '(se capea)'}
+                <p className={`text-[10px] ${rulesExceedDimension ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                  Suma reglas: {totalRulePoints} pts
+                  {rulesExceedDimension && ` — excede el peso por ${totalRulePoints - dimension.maxPoints} pts, no se podrán obtener`}
                 </p>
               </div>
             </div>

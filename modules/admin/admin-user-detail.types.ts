@@ -18,20 +18,25 @@ export interface AdminUserDetailBackend {
   documentType: string | null;
   documentNumber: string | null;
   nationality: string | null;
+  hasDisbursedLoan: boolean;
   createdAt: string;
   updatedAt: string | null;
 }
 
 export interface AdminUserDetail {
   id: string;
+  logtoId: string;
   name: string;
   firstName: string | null;
   secondName: string | null;
   paternalSurname: string | null;
   maternalSurname: string | null;
+  additionalNames: string | null;
   documentType: string | null;
   documentNumber: string | null;
   nationality: string | null;
+  /** true si ya se le desembolsó al menos un crédito alguna vez (flag de una sola vía, nunca se revierte). */
+  hasDisbursedLoan: boolean;
   registeredAt: string;
   updatedAt: string | null;
 }

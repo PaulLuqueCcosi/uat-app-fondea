@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight } from 'lucide-react';
+import { Award, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import type { PassportSummary } from '@/modules/passport';
 
@@ -75,7 +75,11 @@ export function PassportDocument({ summary, compact = false }: PassportDocumentP
                 }`}
               >
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isUnlocked ? '' : 'opacity-30 grayscale'}`}>
-                  <img src={level.meta.image} alt={level.name} className="w-10 h-10 object-contain" />
+                  {level.meta.image ? (
+                    <img src={level.meta.image} alt={level.name} className="w-10 h-10 object-contain" />
+                  ) : (
+                    <Award className="w-6 h-6 text-muted-foreground" />
+                  )}
                 </div>
                 <p className={`text-[11px] font-medium text-center ${isUnlocked ? level.meta.color : 'text-muted-foreground'}`}>
                   {level.name}

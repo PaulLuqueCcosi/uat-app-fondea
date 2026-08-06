@@ -8,10 +8,10 @@ import { requireValidSession } from './auth.actions';
 import * as complaintService from '@/modules/complaints/complaint.service';
 import type { SubmitComplaintRequest } from '@/modules/complaints';
 
-/** Mis reclamaciones */
-export async function getMyComplaintsAction() {
+/** Mis reclamaciones — paginado (Spring Page<T>) */
+export async function getMyComplaintsAction(page = 1, pageSize = 10) {
   await requireValidSession();
-  return complaintService.getMyComplaints();
+  return complaintService.getMyComplaints(page, pageSize);
 }
 
 /** Detalle de un reclamo */

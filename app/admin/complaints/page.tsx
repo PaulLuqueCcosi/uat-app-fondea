@@ -1,7 +1,10 @@
-import { MessageSquareWarning } from 'lucide-react';
+import Link from 'next/link';
+import { MessageSquareWarning, CalendarDays } from 'lucide-react';
 import { getAdminComplaints } from '@/modules/admin/admin-complaints.service';
 import { ComplaintsTable } from '@/components/admin/complaints/ComplaintsTable';
+import { Button } from '@/components/ui/button';
 import type { ComplaintFilters, ComplaintStatus, ComplaintType } from '@/modules/admin/admin-complaints.types';
+import { PENDING_STATUSES } from '@/modules/admin/admin-complaints.types';
 
 interface Props {
   searchParams: Promise<{
@@ -22,7 +25,7 @@ export default async function AdminComplaintsPage({ searchParams }: Props) {
   const pageSize = Number(params.size) || 20;
 
   const filters: ComplaintFilters = {
-    status: (params.status as ComplaintStatus) ?? undefined,
+    status: params.status === 'PENDIENTES' ? PENDING_STATUSES : (params.status as ComplaintStatus) ?? undefined,
     type: (params.type as ComplaintType) ?? undefined,
     onlyOverdue: params.onlyOverdue === 'true' ? true : undefined,
     sortBy: (params.sortBy as ComplaintFilters['sortBy']) ?? undefined,
@@ -34,16 +37,24 @@ export default async function AdminComplaintsPage({ searchParams }: Props) {
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <MessageSquareWarning className="h-5 w-5 text-primary" />
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <MessageSquareWarning className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Libro de Reclamaciones</h1>
+            <p className="text-sm text-muted-foreground">
+              Reclamos y quejas activos — plazo legal: 15 días hábiles (Ley 32495)
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Libro de Reclamaciones</h1>
-          <p className="text-sm text-muted-foreground">
-            Reclamos y quejas activos — plazo legal: 15 días hábiles (Ley 32495)
-          </p>
-        </div>
+        <Link href="/admin/complaints/feriados">
+          <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
+            <CalendarDays className="w-3.5 h-3.5" />
+            Feriados
+          </Button>
+        </Link>
       </div>
 
       <ComplaintsTable data={result.data} pagination={result.pagination} />

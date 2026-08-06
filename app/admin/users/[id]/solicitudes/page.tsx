@@ -1,8 +1,18 @@
-import { mockApplications } from '@/modules/admin';
+import { getAdminApplications } from '@/modules/admin/admin-applications.service';
 import { UserApplicationsTab } from '@/components/admin/users/UserApplicationsTab';
 
-// TODO: mockApplications — fuera de alcance de este push (ver plan).
-export default async function AdminUserSolicitudesPage({ params }: { params: Promise<{ id: string }> }) {
+interface Props {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string; size?: string }>;
+}
+
+export default async function AdminUserSolicitudesPage({ params, searchParams }: Props) {
   const { id } = await params;
-  return <UserApplicationsTab applications={mockApplications.filter((a) => a.userId === id)} />;
+  const sp = await searchParams;
+  const page = Number(sp.page) || 1;
+  const pageSize = Number(sp.size) || 10;
+
+  const { data, pagination } = await getAdminApplications(page, pageSize, { userId: id });
+
+  return <UserApplicationsTab userId={id} applications={data} pagination={pagination} />;
 }

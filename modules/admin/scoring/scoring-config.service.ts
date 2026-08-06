@@ -32,19 +32,39 @@ export async function getConfigById(id: string): Promise<ScorecardConfig | null>
   return res.json();
 }
 
+export interface SaveConfigResult {
+  config: ScorecardConfig | null;
+  error: string | null;
+}
+
+async function extractErrorMessage(res: Response): Promise<string> {
+  try {
+    const body = await res.text();
+    if (!body) return `Error ${res.status}: ${res.statusText}`;
+    try {
+      const parsed = JSON.parse(body);
+      return parsed.message || parsed.error || parsed.detail || body.slice(0, 300);
+    } catch {
+      return body.slice(0, 300);
+    }
+  } catch {
+    return `Error ${res.status}: ${res.statusText}`;
+  }
+}
+
 export async function createConfig(data: {
   name: string;
   description: string;
   maxScore: number;
   dimensionsJson: string;
-}): Promise<ScorecardConfig | null> {
+}): Promise<SaveConfigResult> {
   const res = await backendFetch('/api/v1/admin/scoring/configs', {
     method: 'POST',
     body: JSON.stringify(data),
     context: 'SCORECARD',
   });
-  if (!res.ok) return null;
-  return res.json();
+  if (!res.ok) return { config: null, error: await extractErrorMessage(res) };
+  return { config: await res.json(), error: null };
 }
 
 export async function updateConfig(id: string, data: {
@@ -52,14 +72,14 @@ export async function updateConfig(id: string, data: {
   description: string;
   maxScore: number;
   dimensionsJson: string;
-}): Promise<ScorecardConfig | null> {
+}): Promise<SaveConfigResult> {
   const res = await backendFetch(`/api/v1/admin/scoring/configs/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
     context: 'SCORECARD',
   });
-  if (!res.ok) return null;
-  return res.json();
+  if (!res.ok) return { config: null, error: await extractErrorMessage(res) };
+  return { config: await res.json(), error: null };
 }
 
 export async function activateConfig(id: string): Promise<ScorecardConfig | null> {

@@ -57,6 +57,16 @@ export interface SubmitComplaintRequest {
   consumerRequest: string;
 }
 
+// ── Paginación (Spring Page<T>) ─────────────────────────────────────────────
+
+export interface Pagination {
+  /** 1-based, como espera el componente DataTable. */
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
 // ── Resultado ────────────────────────────────────────────────────────────────
 
 export interface ComplaintError {

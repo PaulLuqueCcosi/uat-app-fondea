@@ -33,6 +33,8 @@ export interface AdminApplicationsResult {
 export interface ApplicationFilters {
   search?: string;
   status?: ApplicationStatus;
+  /** Filtra por el ID exacto de un usuario — ej. tab "Solicitudes" del detalle de usuario. */
+  userId?: string;
   submittedFrom?: string; // ISO date: YYYY-MM-DD
   submittedTo?: string;
   scoreMin?: number;
@@ -56,6 +58,9 @@ export async function getAdminApplications(
   }
   if (filters.status) {
     params.set('status', filters.status);
+  }
+  if (filters.userId) {
+    params.set('userId', filters.userId);
   }
   if (filters.submittedFrom) {
     params.set('submittedFrom', filters.submittedFrom + 'T00:00:00');

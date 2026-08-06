@@ -45,6 +45,17 @@ const DEFAULT_META: PassportLevelMeta = {
   image: '',
 };
 
+// ── Imagen por defecto por categoría ───────────────────────────────────────────
+// El admin puede subir una imagen custom por rango (queda en data.imageUrl, vía S3).
+// Mientras no la suba, usamos estas imágenes locales de marca en vez de dejar el
+// <img> sin src (rompe el render — el navegador interpreta src="" como la página actual).
+const LEVEL_FALLBACK_IMAGE: Record<string, string> = {
+  BRONCE: '/levels/Bronze.png',
+  PLATA: '/levels/Silver.png',
+  ORO: '/levels/Gold.png',
+  MASTER: '/levels/Master.png',
+};
+
 // ── Mapeo de nombres de categoría para la UI ──────────────────────────────────
 
 const LEVEL_DISPLAY_NAMES: Record<string, string> = {
@@ -96,7 +107,7 @@ export function mapLevelFromBackend(data: any): PassportLevel {
     currency: data.currency ?? 'PEN',
     meta: {
       ...(LEVEL_META[categoryUpper] ?? DEFAULT_META),
-      image: data.imageUrl || '',
+      image: data.imageUrl || LEVEL_FALLBACK_IMAGE[categoryUpper] || '',
     },
   };
 }

@@ -46,14 +46,17 @@ function mapUserDetail(raw: AdminUserDetailBackend): AdminUserDetail {
 
   return {
     id: raw.id,
+    logtoId: raw.logtoId,
     name: parts.length > 0 ? parts.join(' ') : '(Sin nombre)',
     firstName: raw.firstName ?? null,
     secondName: raw.secondName ?? null,
     paternalSurname: raw.paternalSurname ?? null,
     maternalSurname: raw.maternalSurname ?? null,
+    additionalNames: raw.additionalNames ?? null,
     documentType: raw.documentType ?? null,
     documentNumber: raw.documentNumber ?? null,
     nationality: raw.nationality ?? null,
+    hasDisbursedLoan: raw.hasDisbursedLoan,
     registeredAt: raw.createdAt,
     updatedAt: raw.updatedAt ?? null,
   };

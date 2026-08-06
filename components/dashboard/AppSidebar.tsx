@@ -15,7 +15,6 @@ import {
   Award,
   Users,
   Shield,
-  MessageSquareWarning,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -40,7 +39,6 @@ const mainNav = [
   { path: '/dashboard/loans', label: 'Mis Solicitudes', icon: FileText },
   { path: '/dashboard/referidos', label: 'Referidos', icon: Users },
   { path: '/dashboard/mi-expediente', label: 'Mi Expedientes', icon: FileText },
-  { path: '/dashboard/reclamos', label: 'Libro de Reclamaciones', icon: MessageSquareWarning },
 ];
 
 const devNav = [

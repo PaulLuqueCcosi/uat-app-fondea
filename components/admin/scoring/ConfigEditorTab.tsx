@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, Loader2, Plus, Info, AlertTriangle } from 'lucide-react';
 import type { ScorecardConfig, ScorecardMetadata, DimensionConfig } from '@/modules/admin/scoring';
 import { createNewConfig, updateExistingConfig } from '@/app/admin/scoring/actions';
+import { cn, READONLY_FIELD_CLASS } from '@/lib/utils';
 import { DimensionEditor } from './DimensionEditor';
 
 interface Props {
@@ -31,9 +32,27 @@ export function ConfigEditorTab({ config, metadata, onSaved, onCancel }: Props) 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const validate = (): string | null => {
+    if (!name.trim()) return 'El nombre es requerido';
+    if (dimensions.length === 0) return 'Agrega al menos una dimensión';
+
+    for (const dim of dimensions) {
+      for (const rule of dim.rules) {
+        if (!rule.inputField) {
+          return `La regla "${rule.name || '(sin nombre)'}" en "${dim.name || dim.code}" no tiene una variable seleccionada.`;
+        }
+      }
+      const ruleSum = dim.rules.reduce((s, r) => s + r.maxPoints, 0);
+      if (ruleSum > dim.maxPoints) {
+        return `"${dim.name || dim.code}" tiene reglas que suman ${ruleSum} pts pero el peso de la dimensión es ${dim.maxPoints} pts — ${ruleSum - dim.maxPoints} pts nunca se podrán obtener. Ajusta el peso de la dimensión o los puntos de las reglas antes de guardar.`;
+      }
+    }
+    return null;
+  };
+
   const handleSave = async () => {
-    if (!name.trim()) { setError('El nombre es requerido'); return; }
-    if (dimensions.length === 0) { setError('Agrega al menos una dimensión'); return; }
+    const validationError = validate();
+    if (validationError) { setError(validationError); return; }
 
     setSaving(true);
     setError(null);
@@ -45,18 +64,15 @@ export function ConfigEditorTab({ config, metadata, onSaved, onCancel }: Props) 
       dimensionsJson: JSON.stringify(dimensions),
     };
 
-    let result;
-    if (isNew) {
-      result = await createNewConfig(data);
-    } else {
-      result = await updateExistingConfig(config!.id, data);
-    }
+    const result = isNew
+      ? await createNewConfig(data)
+      : await updateExistingConfig(config!.id, data);
 
     setSaving(false);
-    if (result) {
+    if (result.config) {
       onSaved();
     } else {
-      setError('Error al guardar. Verifica que los datos sean correctos.');
+      setError(result.error || 'Error al guardar. Verifica que los datos sean correctos.');
     }
   };
 
@@ -106,6 +122,7 @@ export function ConfigEditorTab({ config, metadata, onSaved, onCancel }: Props) 
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ej: Ajuste Q3 2026"
                 disabled={isReadonly}
+                className={cn(isReadonly && READONLY_FIELD_CLASS)}
               />
             </div>
             <div className="space-y-1.5">
@@ -116,6 +133,7 @@ export function ConfigEditorTab({ config, metadata, onSaved, onCancel }: Props) 
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="¿Qué cambia en esta versión?"
                 disabled={isReadonly}
+                className={cn(isReadonly && READONLY_FIELD_CLASS)}
               />
             </div>
             <div className="space-y-1.5">
@@ -126,6 +144,7 @@ export function ConfigEditorTab({ config, metadata, onSaved, onCancel }: Props) 
                 value={maxScore}
                 onChange={(e) => setMaxScore(Number(e.target.value))}
                 disabled={isReadonly}
+                className={cn(isReadonly && READONLY_FIELD_CLASS)}
               />
             </div>
           </div>
