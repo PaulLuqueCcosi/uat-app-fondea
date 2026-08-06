@@ -1,9 +1,10 @@
 'use client';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, CreditCard, Camera, FileCheck, Brain, Database, History } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, CreditCard, Camera, FileCheck, Brain, Database, History } from 'lucide-react';
 import Link from 'next/link';
-import { ApplicationCoreSection } from './detail/ApplicationCoreSection';
+import { ApplicationDetailHeader } from './detail/ApplicationDetailHeader';
+import { ApplicationOverviewTab } from './detail/ApplicationOverviewTab';
 import { ApplicationDetailSection } from './detail/ApplicationDetailSection';
 import { ApplicationDocumentsSection } from './detail/ApplicationDocumentsSection';
 import { ApplicationContractSection } from './detail/ApplicationContractSection';
@@ -19,8 +20,18 @@ import type {
   AuditTimelineEntry,
 } from '@/modules/admin/admin-application-detail.service';
 
+interface CoreDates {
+  submittedAt: string;
+  evaluatedAt: string;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+  canRetryAt: string;
+}
+
 interface ApplicationDetailClientProps {
   core: AdminApplicationCore;
+  coreDates: CoreDates;
   detail: AdminApplicationDetail | null;
   documents: AdminApplicationDocuments | null;
   contract: AdminApplicationContract | null;
@@ -30,6 +41,7 @@ interface ApplicationDetailClientProps {
 
 export function ApplicationDetailClient({
   core,
+  coreDates,
   detail,
   documents,
   contract,
@@ -43,12 +55,15 @@ export function ApplicationDetailClient({
         <ArrowLeft className="h-4 w-4" /> Solicitudes
       </Link>
 
-      {/* Core header (siempre visible) */}
-      <ApplicationCoreSection data={core} />
+      {/* Header angosto (siempre visible) */}
+      <ApplicationDetailHeader data={core} />
 
       {/* Tabs para el resto */}
-      <Tabs defaultValue="detail">
-        <TabsList>
+      <Tabs defaultValue="overview">
+        <TabsList variant="line">
+          <TabsTrigger value="overview">
+            <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" /> Resumen
+          </TabsTrigger>
           <TabsTrigger value="detail">
             <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Financiero
           </TabsTrigger>
@@ -68,6 +83,10 @@ export function ApplicationDetailClient({
             <History className="h-3.5 w-3.5 mr-1.5" /> Timeline
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="overview" className="mt-4">
+          <ApplicationOverviewTab data={core} dates={coreDates} />
+        </TabsContent>
 
         <TabsContent value="detail" className="mt-4">
           {detail ? (

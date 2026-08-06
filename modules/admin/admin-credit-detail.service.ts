@@ -149,15 +149,23 @@ export interface AdminCreditTransactions {
   transactions: TransactionItem[];
 }
 
-// ── Types: Audit ────────────────────────────────────────────────────────────
+// ── Types: Timeline (camelCase — sin @JsonNaming/@JsonProperty en el DTO) ────
 
-export interface CreditAuditEvent {
+export type CreditAuditModule = 'CORE' | 'PAYMENT' | 'PENALTY' | 'NEGOTIATION' | 'AUDIT';
+export type CreditAuditOutcome = 'SUCCESS' | 'FAILURE';
+export type CreditActorType = 'SYSTEM' | 'USER' | 'ADMIN';
+
+export interface CreditAuditEntry {
   id: string;
-  loanId: string;
+  module: CreditAuditModule;
   eventType: string;
-  description: string;
-  triggeredBy: string;
-  createdAt: string;
+  outcome: CreditAuditOutcome;
+  actorType: CreditActorType;
+  actorId: string | null;
+  message: string | null;
+  detail: string | null;
+  refId: string | null;
+  occurredAt: string;
 }
 
 // ── Services ────────────────────────────────────────────────────────────────
@@ -290,12 +298,12 @@ export async function getAdminCreditTransactions(creditId: string): Promise<Admi
   return res.json();
 }
 
-export async function getAdminCreditAudit(creditId: string): Promise<CreditAuditEvent[] | null> {
-  const res = await backendFetch(`/api/v1/admin/credits/${creditId}/audit`, {
-    context: 'ADMIN_CREDIT_AUDIT',
+export async function getAdminCreditTimeline(creditId: string): Promise<CreditAuditEntry[] | null> {
+  const res = await backendFetch(`/api/v1/admin/credits/${creditId}/timeline`, {
+    context: 'ADMIN_CREDIT_TIMELINE',
   });
   if (!res.ok) {
-    console.error(`[ADMIN_CREDIT_AUDIT] Error ${res.status}`);
+    console.error(`[ADMIN_CREDIT_TIMELINE] Error ${res.status}`);
     return null;
   }
   return res.json();
@@ -303,6 +311,11 @@ export async function getAdminCreditAudit(creditId: string): Promise<CreditAudit
 
 // ── Types: Installment Detail ───────────────────────────────────────────────
 
+/**
+ * No incluye externalId/rawPayload/metadata a propósito — son para cuando se
+ * conecte una pasarela de pagos real (hoy todo es source=manual). Agregar recién
+ * ahí, tanto acá como en AdminInstallmentDetailResponse.TransactionInfo (backend).
+ */
 export interface InstallmentTransactionInfo {
   id: string;
   type: TransactionType;

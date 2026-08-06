@@ -8,6 +8,8 @@ import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.ser
 
 interface Props {
   data: AdminCreditSummary;
+  /** Saldo pendiente real — suma del `outstanding` por cuota (ver page.tsx). */
+  outstanding: number;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string }> = {
@@ -28,11 +30,11 @@ function buildFullName(client: AdminCreditSummary['client']) {
     .join(' ');
 }
 
-export function CreditDetailHeader({ data }: Props) {
+export function CreditDetailHeader({ data, outstanding }: Props) {
   const statusConfig = STATUS_CONFIG[data.status] ?? { label: data.status, variant: 'outline' as const, color: 'bg-neutral-400' };
   const interestEarned = data.totalDue - data.principal;
   const progressPercent = data.totalDue > 0
-    ? Math.min(100, Math.round(((data.totalDue - computeOutstanding(data)) / data.totalDue) * 100))
+    ? Math.min(100, Math.round(((data.totalDue - outstanding) / data.totalDue) * 100))
     : 0;
   const clientName = buildFullName(data.client);
 
@@ -121,7 +123,10 @@ export function CreditDetailHeader({ data }: Props) {
 
       {/* KPIs principales */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiCard label="Capital desembolsado" value={formatCurrency(data.principal)} />
+        <KpiCard
+          label={data.creditType === 'NEGOTIATION' ? 'Deuda negociada' : 'Capital desembolsado'}
+          value={formatCurrency(data.principal)}
+        />
         <KpiCard label="Total a pagar" value={formatCurrency(data.totalDue)} sub={`+${formatCurrency(interestEarned)} interés`} />
         <KpiCard label="Cuotas" value={`${data.installmentCount}`} sub={`Plazo ${data.termDays}d`} />
         <KpiCard
@@ -133,18 +138,12 @@ export function CreditDetailHeader({ data }: Props) {
         />
         <KpiCard
           label={data.status === 'PAID_OFF' ? 'Cerrado' : 'Pendiente'}
-          value={data.status === 'PAID_OFF' ? '✓ Liquidado' : formatCurrency(computeOutstanding(data))}
+          value={data.status === 'PAID_OFF' ? '✓ Liquidado' : formatCurrency(outstanding)}
           highlight={data.status !== 'PAID_OFF'}
         />
       </div>
     </div>
   );
-}
-
-function computeOutstanding(data: AdminCreditSummary): number {
-  // Approximate outstanding from available data
-  // The exact value comes from installments, but we can estimate here
-  return Math.max(0, data.totalDue - (data.totalDue * 0)); // placeholder - real value from installments
 }
 
 function KpiCard({ label, value, sub, highlight, progress, progressColor }: {

@@ -4,13 +4,15 @@ import {
   getAdminCreditSummary,
   getAdminCreditInstallments,
   getAdminCreditTransactions,
+  getAdminCreditTimeline,
 } from '@/modules/admin/admin-credit-detail.service';
 import { CreditDetailHeader } from '@/components/admin/credits/detail/CreditDetailHeader';
 import { CreditOverviewTab } from '@/components/admin/credits/detail/CreditOverviewTab';
 import { CreditInstallmentsSection } from '@/components/admin/credits/detail/CreditInstallmentsSection';
 import { CreditTransactionsSection } from '@/components/admin/credits/detail/CreditTransactionsSection';
+import { CreditTimelineSection } from '@/components/admin/credits/detail/CreditTimelineSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, Wallet, LayoutDashboard } from 'lucide-react';
+import { CalendarDays, Wallet, LayoutDashboard, History } from 'lucide-react';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -19,22 +21,30 @@ interface Props {
 export default async function AdminCreditDetailPage({ params }: Props) {
   const { id } = await params;
 
-  const [summary, installments, transactions] = await Promise.all([
+  const [summary, installments, transactions, timeline] = await Promise.all([
     getAdminCreditSummary(id),
     getAdminCreditInstallments(id),
     getAdminCreditTransactions(id),
+    getAdminCreditTimeline(id),
   ]);
 
   if (!summary) {
     notFound();
   }
 
+  // Fuente de verdad del saldo pendiente: suma del `outstanding` por cuota (ya calculado
+  // por el backend en /installments), igual que hace CreditInstallmentsSection — no re-derivarlo
+  // del total del crédito, que no descuenta lo ya pagado.
+  const totalOutstanding = installments
+    ? installments.installments.reduce((sum, i) => sum + i.outstanding, 0)
+    : summary.totalDue;
+
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-7xl">
-      <CreditDetailHeader data={summary} />
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <CreditDetailHeader data={summary} outstanding={totalOutstanding} />
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full max-w-md">
+        <TabsList variant="line" className="w-full">
           <TabsTrigger value="overview" className="gap-1.5">
             <LayoutDashboard className="h-3.5 w-3.5" />
             Resumen
@@ -46,6 +56,10 @@ export default async function AdminCreditDetailPage({ params }: Props) {
           <TabsTrigger value="transactions" className="gap-1.5">
             <Wallet className="h-3.5 w-3.5" />
             Movimientos {transactions ? `(${transactions.transactions.length})` : ''}
+          </TabsTrigger>
+          <TabsTrigger value="timeline" className="gap-1.5">
+            <History className="h-3.5 w-3.5" />
+            Timeline {timeline ? `(${timeline.length})` : ''}
           </TabsTrigger>
         </TabsList>
 
@@ -66,6 +80,14 @@ export default async function AdminCreditDetailPage({ params }: Props) {
             <CreditTransactionsSection data={transactions} />
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">No se pudieron cargar las transacciones</p>
+          )}
+        </TabsContent>
+
+        <TabsContent value="timeline" className="mt-6">
+          {timeline ? (
+            <CreditTimelineSection entries={timeline} />
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-8">No se pudo cargar la línea de tiempo</p>
           )}
         </TabsContent>
       </Tabs>

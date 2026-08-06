@@ -6,7 +6,23 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Database, ChevronDown, ChevronRight, User, Briefcase, DollarSign, MapPin, Building, Users, Smartphone, Target } from 'lucide-react';
 import { getFieldLabel } from '@/modules/admin/admin-form-labels';
+import { AdminFormDataView } from '@/components/admin/users/AdminFormDataView';
 import type { AdminApplicationCore } from '@/modules/admin/admin-application-detail.service';
+
+/** formKeys que AdminFormDataView sabe renderizar con sus labels/ubigeo/mapa reales
+ *  (mismo componente que usa /admin/users) — evita reimplementar esa lógica acá. */
+const KNOWN_FORM_KEYS = new Set(['kyc', 'labor', 'economic', 'address', 'bankAccount', 'references']);
+
+function parseIfJson(value: any): any {
+  if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
 
 interface Props {
   data: AdminApplicationCore;
@@ -222,7 +238,11 @@ function CollapsibleProfileSection({ formKey, title, icon: Icon, data }: {
   data: any;
 }) {
   const [open, setOpen] = useState(false);
-  const entries = flattenForDisplay(data, formKey);
+  const parsedData = parseIfJson(data);
+  const useKnownView = KNOWN_FORM_KEYS.has(formKey);
+  // Solo para el badge de cantidad — AdminFormDataView no expone un conteo, así que
+  // igual lo derivamos del flatten genérico (no afecta qué se renderiza adentro).
+  const entries = flattenForDisplay(parsedData, formKey);
 
   return (
     <div className="rounded-lg border overflow-hidden">
@@ -243,7 +263,9 @@ function CollapsibleProfileSection({ formKey, title, icon: Icon, data }: {
       </button>
       {open && (
         <div className="border-t px-4 py-3 bg-muted/10">
-          {entries.length > 0 ? (
+          {useKnownView ? (
+            <AdminFormDataView formKey={formKey} data={parsedData} bare />
+          ) : entries.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
               {entries.map(({ key, label, value }) => (
                 <div key={key} className="flex flex-col">

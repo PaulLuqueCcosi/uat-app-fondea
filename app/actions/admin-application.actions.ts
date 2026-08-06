@@ -31,3 +31,10 @@ export async function regenerateContractsAction(applicationId: string): Promise<
     return { ok: false, error: 'Error de conexión' };
   }
 }
+
+// Nota: la URL del PDF de contrato y la URL de un documento (DNI/selfie) se piden
+// vía API routes normales (app/api/admin/applications/[id]/contract/.../pdf y
+// .../documents/.../url), NO Server Actions — invocar una Server Action desde el
+// botón que las dispara chocaba con su propio setState local (loading) y tiraba
+// "insertBefore ... not a child of this node" por el re-render de RSC que dispara
+// toda Server Action al ser llamada desde un Client Component.

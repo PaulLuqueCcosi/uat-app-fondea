@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, CalendarDays, Wallet, History, Handshake, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Handshake, AlertCircle } from 'lucide-react';
 import { getAdminInstallmentDetail } from '@/modules/admin/admin-credit-detail.service';
+import { InstallmentTransactionsCard } from '@/components/admin/credits/detail/InstallmentTransactionsCard';
 
 interface Props {
   params: Promise<{ id: string; installmentNo: string }>;
@@ -18,14 +19,6 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
   PAID: { label: 'Pagada', variant: 'default', description: 'Pagada completamente' },
   OVERDUE: { label: 'Vencida', variant: 'destructive', description: 'Venció sin completar el pago' },
   NEGOTIATED: { label: 'Refinanciada', variant: 'secondary', description: 'La deuda se trasladó a un crédito de negociación' },
-};
-
-const TX_TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  DISBURSEMENT: { label: 'Desembolso', color: 'text-blue-700', bg: 'bg-blue-50' },
-  REPAYMENT: { label: 'Pago de cuota', color: 'text-emerald-700', bg: 'bg-emerald-50' },
-  PENALTY_ACCRUAL: { label: 'Mora generada', color: 'text-amber-700', bg: 'bg-amber-50' },
-  PENALTY_PAYMENT: { label: 'Pago de mora', color: 'text-orange-700', bg: 'bg-orange-50' },
-  REVERSAL: { label: 'Reversión', color: 'text-red-700', bg: 'bg-red-50' },
 };
 
 function formatCurrency(value: number) {
@@ -63,8 +56,16 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
   const totalPaidAmount = data.amountPaid + data.penaltyPaid;
   const paymentProgress = totalOwed > 0 ? Math.min(100, Math.round((totalPaidAmount / totalOwed) * 100)) : 0;
 
+  // Fechas ya formateadas acá (server component) para pasarle strings al client
+  // component — evita hydration mismatch por diferencias de ICU Node vs navegador.
+  const transactionsForDisplay = data.transactions.map((tx) => ({
+    ...tx,
+    displayDateTime: formatDateTime(tx.processedAt ?? tx.transactionDate),
+    displayTransactionDate: formatDate(tx.transactionDate),
+  }));
+
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-5xl">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -175,89 +176,7 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
       </Card>
 
       {/* Transacciones */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-muted-foreground" /> Transacciones ({data.transactions.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.transactions.length === 0 ? (
-            <div className="text-center py-8">
-              <Wallet className="h-8 w-8 text-muted-foreground/40 mx-auto" />
-              <p className="text-sm text-muted-foreground mt-2">Sin movimientos registrados para esta cuota</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {data.transactions.map((tx) => {
-                const typeConfig = TX_TYPE_LABELS[tx.type] ?? { label: tx.type, color: 'text-foreground', bg: 'bg-muted' };
-                return (
-                  <div key={tx.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/30 transition-colors">
-                    <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${typeConfig.bg}`}>
-                      <Wallet className={`h-4 w-4 ${typeConfig.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-medium ${typeConfig.color}`}>{typeConfig.label}</span>
-                        {tx.isReversed && <Badge variant="destructive" className="text-[9px]">Revertida</Badge>}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
-                        <span>{formatDateTime(tx.processedAt ?? tx.transactionDate)}</span>
-                        {tx.paymentMethod && <><span>·</span><span>{tx.paymentMethod}</span></>}
-                        {tx.referenceNumber && <><span>·</span><span className="font-mono">{tx.referenceNumber}</span></>}
-                        {tx.bankName && <><span>·</span><span>{tx.bankName}</span></>}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold font-mono">{formatCurrency(tx.amount)}</p>
-                      {tx.createdBy && <p className="text-[10px] text-muted-foreground">{tx.createdBy}</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Auditoría */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <History className="h-4 w-4 text-muted-foreground" /> Auditoría ({data.auditEvents.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.auditEvents.length === 0 ? (
-            <div className="text-center py-8">
-              <History className="h-8 w-8 text-muted-foreground/40 mx-auto" />
-              <p className="text-sm text-muted-foreground mt-2">Sin eventos de auditoría</p>
-            </div>
-          ) : (
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-border" />
-              <div className="space-y-4">
-                {data.auditEvents.map((e) => (
-                  <div key={e.id} className="relative flex items-start gap-3 pl-7">
-                    {/* Dot */}
-                    <div className="absolute left-[7px] top-1.5 w-2.5 h-2.5 rounded-full bg-muted-foreground/30 border-2 border-background" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium leading-tight">{e.description}</p>
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0">{e.eventType}</Badge>
-                        <span>{e.triggeredBy}</span>
-                        <span>·</span>
-                        <span>{formatDateTime(e.createdAt)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <InstallmentTransactionsCard transactions={transactionsForDisplay} />
     </div>
   );
 }

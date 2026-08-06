@@ -9,6 +9,7 @@ import type { SpringPage, Pagination } from './admin-users.types';
 // ── Tipos ───────────────────────────────────────────────────────────────────
 
 export type CreditStatus = 'ACTIVE' | 'OVERDUE' | 'DEFAULTED' | 'PAID_OFF';
+export type CreditTypeFilter = 'STANDARD' | 'NEGOTIATION';
 
 export interface AdminCreditRow {
   id: string;
@@ -46,6 +47,7 @@ export interface AdminCreditsResult {
 export interface CreditFilters {
   search?: string;
   status?: CreditStatus;
+  creditType?: CreditTypeFilter;
   city?: string;
   termDays?: number;
   minAmount?: number;
@@ -73,6 +75,7 @@ export async function getAdminCredits(
 
   if (filters.search?.trim()) params.set('search', filters.search.trim());
   if (filters.status) params.set('status', filters.status);
+  if (filters.creditType) params.set('creditType', filters.creditType);
   if (filters.city) params.set('city', filters.city);
   if (filters.termDays) params.set('termDays', String(filters.termDays));
   if (filters.minAmount) params.set('minAmount', String(filters.minAmount));

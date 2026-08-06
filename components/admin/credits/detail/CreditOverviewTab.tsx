@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Calendar, MapPin, AlertTriangle, Shield, Banknote, User,
 } from 'lucide-react';
+import { getDepartment, getProvince, getDistrict } from 'ubigeo-fns';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 
 interface Props {
@@ -39,7 +40,24 @@ const DISBURSEMENT_STATUS: Record<string, { label: string; color: string }> = {
   FAILED: { label: 'Fallido', color: 'text-red-600' },
 };
 
+/**
+ * getDepartment/getProvince/getDistrict (ubigeo-fns) necesitan el código completo
+ * de 6 dígitos — con el distrito alcanza para resolver los 3 nombres a la vez.
+ */
+function resolveUbigeoNames(region: string | null, province: string | null, district: string | null) {
+  if (district) {
+    return {
+      region: getDepartment(district) ?? region,
+      province: getProvince(district) ?? province,
+      district: getDistrict(district) ?? district,
+    };
+  }
+  return { region, province, district };
+}
+
 export function CreditOverviewTab({ data }: Props) {
+  const ubigeoNames = resolveUbigeoNames(data.ubigeoRegion, data.ubigeoProvince, data.ubigeoDistrict);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Col 1-2: Info principal */}
@@ -53,7 +71,10 @@ export function CreditOverviewTab({ data }: Props) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-              <DataField label="Desembolso" value={formatDateTime(data.disbursedAt)} />
+              <DataField
+                label={data.creditType === 'NEGOTIATION' ? 'Vigente desde' : 'Desembolso'}
+                value={formatDateTime(data.disbursedAt)}
+              />
               <DataField label="Primera cuota" value={formatDate(data.firstDueDate)} />
               <DataField label="Vencimiento final" value={formatDate(data.maturityDate)} />
               <DataField label="En mora desde" value={data.overdueSince ? formatDate(data.overdueSince) : '—'} alert={!!data.overdueSince} />
@@ -107,63 +128,14 @@ export function CreditOverviewTab({ data }: Props) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
-                <DataField label="Región" value={data.ubigeoRegion ?? '—'} mono />
-                <DataField label="Provincia" value={data.ubigeoProvince ?? '—'} mono />
-                <DataField label="Distrito" value={data.ubigeoDistrict ?? '—'} mono />
+                <DataField label="Región" value={ubigeoNames.region ?? '—'} />
+                <DataField label="Provincia" value={ubigeoNames.province ?? '—'} />
+                <DataField label="Distrito" value={ubigeoNames.district ?? '—'} />
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Configuración de mora */}
-        {data.penaltyConfig && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" /> Configuración de mora
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-medium">{data.penaltyConfig.name}</span>
-                <Badge variant={data.penaltyConfig.isActive ? 'default' : 'outline'} className="text-[10px]">
-                  {data.penaltyConfig.isActive ? 'Activa' : 'Inactiva'}
-                </Badge>
-              </div>
-              {data.penaltyConfig.ranges.length > 0 && (
-                <div className="rounded-md border overflow-hidden">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Rango</th>
-                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Tipo</th>
-                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">Valor</th>
-                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Base</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.penaltyConfig.ranges.map((r, i) => (
-                        <tr key={i} className="border-t">
-                          <td className="py-2 px-3">
-                            <span className="inline-flex items-center gap-1.5">
-                              {r.color && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: r.color }} />}
-                              Día {r.fromDay}{r.toDay ? `–${r.toDay}` : '+'}
-                            </span>
-                          </td>
-                          <td className="py-2 px-3">{r.type === 'PERCENTAGE' ? 'Porcentaje' : 'Fijo'}</td>
-                          <td className="py-2 px-3 text-right font-mono">
-                            {r.type === 'PERCENTAGE' ? `${r.value}%` : formatCurrency(r.value)}
-                          </td>
-                          <td className="py-2 px-3">{r.base === 'INSTALLMENT' ? 'Cuota' : r.base === 'PRINCIPAL' ? 'Capital' : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Col 3: Sidebar */}
@@ -225,30 +197,58 @@ export function CreditOverviewTab({ data }: Props) {
           </Card>
         )}
 
-        {/* Info técnica */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Info técnica</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">ID completo</span>
-              <span className="font-mono text-[10px] text-muted-foreground">{data.id}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Tipo</span>
-              <span className="font-medium">{data.creditType === 'NEGOTIATION' ? 'Negociación' : 'Estándar'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Penalty Config</span>
-              <span className="font-mono text-[10px]">{data.penaltyConfigId?.slice(0, 8) ?? '—'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Actualizado</span>
-              <span>{formatDateTime(data.updatedAt)}</span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Configuración de mora */}
+        {data.penaltyConfig && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" /> Configuración de mora del crédito
+              </CardTitle>
+              <p className="text-[11px] text-muted-foreground">
+                Con la que se creó el crédito — queda fija aunque luego se actualice la configuración por defecto.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-sm font-medium">{data.penaltyConfig.name}</span>
+                <Badge variant={data.penaltyConfig.isActive ? 'default' : 'outline'} className="text-[10px]">
+                  {data.penaltyConfig.isActive ? 'Sigue siendo la config. por defecto' : 'Ya no es la config. por defecto'}
+                </Badge>
+              </div>
+              {data.penaltyConfig.ranges.length > 0 && (
+                <div className="rounded-md border overflow-hidden overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Rango</th>
+                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Tipo</th>
+                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">Valor</th>
+                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Base</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.penaltyConfig.ranges.map((r, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="py-2 px-3">
+                            <span className="inline-flex items-center gap-1.5">
+                              {r.color && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: r.color }} />}
+                              Día {r.fromDay}{r.toDay ? `–${r.toDay}` : '+'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3">{r.type === 'PERCENTAGE' ? 'Porcentaje' : 'Fijo'}</td>
+                          <td className="py-2 px-3 text-right font-mono">
+                            {r.type === 'PERCENTAGE' ? `${r.value}%` : formatCurrency(r.value)}
+                          </td>
+                          <td className="py-2 px-3">{r.base === 'INSTALLMENT' ? 'Cuota' : r.base === 'PRINCIPAL' ? 'Capital' : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

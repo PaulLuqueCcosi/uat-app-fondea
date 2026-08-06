@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileCheck, Fingerprint, Globe, Monitor, RefreshCw, Loader2 } from 'lucide-react';
+import { FileCheck, Fingerprint, Globe, Monitor, RefreshCw, Loader2, FileText, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import type { AdminApplicationContract, AdminContractDocument } from '@/modules/admin/admin-application-detail.service';
 import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
@@ -98,7 +98,7 @@ export function ApplicationContractSection({ data }: Props) {
 
       {/* Lista de documentos */}
       {documents.map((doc) => (
-        <DocumentCard key={doc.contractId} doc={doc} />
+        <DocumentCard key={doc.contractId} doc={doc} applicationId={data.applicationId} />
       ))}
 
       <ConfirmAction
@@ -115,8 +115,29 @@ export function ApplicationContractSection({ data }: Props) {
 
 // ── Card individual por documento ─────────────────────────────────────────────
 
-function DocumentCard({ doc }: { doc: AdminContractDocument }) {
+function DocumentCard({ doc, applicationId }: { doc: AdminContractDocument; applicationId: string }) {
+  const [loadingPdf, setLoadingPdf] = useState(false);
   const cfg = CONTRACT_STATUS_CONFIG[doc.contractStatus] ?? { label: doc.contractStatus, bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
+  const canViewPdf = doc.contractStatus === 'SIGNED' || doc.contractStatus === 'FINALIZED';
+
+  const handleViewPdf = async () => {
+    setLoadingPdf(true);
+    try {
+      // fetch a una API route normal, NO una Server Action — invocar una Server
+      // Action desde acá dispara un re-render del árbol de Server Components de
+      // la página que choca con este mismo setState y tira
+      // "insertBefore ... not a child of this node".
+      const res = await fetch(`/api/admin/applications/${applicationId}/contract/${doc.contractId}/pdf`);
+      if (res.ok) {
+        const { pdfUrl } = await res.json();
+        window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        toast.error('El PDF todavía no está disponible (¿el documento ya fue firmado?)');
+      }
+    } finally {
+      setLoadingPdf(false);
+    }
+  };
 
   return (
     <Card>
@@ -126,8 +147,17 @@ function DocumentCard({ doc }: { doc: AdminContractDocument }) {
             <FileCheck className="h-4 w-4" />
             {doc.documentTypeName}
           </span>
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-            {cfg.label}
+          <span className="flex items-center gap-2">
+            {canViewPdf && (
+              <Button size="sm" variant="outline" className="h-6 gap-1 text-[10px] px-2" onClick={handleViewPdf} disabled={loadingPdf}>
+                {loadingPdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+                Ver PDF
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            )}
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+              {cfg.label}
+            </span>
           </span>
         </CardTitle>
       </CardHeader>

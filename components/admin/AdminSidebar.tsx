@@ -19,6 +19,8 @@ import {
   Calculator,
   Sliders,
   FileCode2,
+  MessageSquareWarning,
+  UserMinus,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -50,6 +52,12 @@ const businessRulesNav = [
   { path: '/admin/evaluation-rules', label: 'Reglas Motor', icon: Shield },
   { path: '/admin/scoring', label: 'Scorecard', icon: Sliders },
   { path: '/admin/contracts', label: 'Contratos', icon: FileCode2 },
+];
+
+const customersNav = [
+  { path: '/admin/complaints', label: 'Reclamaciones', icon: MessageSquareWarning },
+  { path: '/admin/customers/churn', label: 'Riesgo de Churn', icon: UserMinus },
+  { path: '/admin/customers/segmentation', label: 'Segmentación', icon: PieChart },
 ];
 
 const configNav = [
@@ -100,6 +108,33 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
               const isActive =
                 pathname === item.path ||
                 (pathname === '/admin' && item.path === '/admin/analytics') || // /admin redirige a /admin/analytics
+                pathname?.startsWith(item.path);
+
+              return (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    tooltip={item.label}
+                    render={<Link href={item.path} />}
+                  >
+                    <Icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Clientes</SidebarGroupLabel>
+          <SidebarMenu>
+            {customersNav.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.path ||
                 pathname?.startsWith(item.path);
 
               return (

@@ -229,28 +229,35 @@ interface CreditsTableClientProps {
     totalItems: number;
     totalPages: number;
   };
+  /**
+   * Prefijo para los query params (q, status, page, size, etc.) — permite montar
+   * dos instancias de esta tabla en la misma página (ej. tabs "Créditos"/"Negociación")
+   * sin que los filtros de una pisen los de la otra en la URL.
+   */
+  paramPrefix?: string;
 }
 
-export function CreditsTableClient({ data, pagination }: CreditsTableClientProps) {
+export function CreditsTableClient({ data, pagination, paramPrefix = '' }: CreditsTableClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const p = useCallback((key: string) => `${paramPrefix}${key}`, [paramPrefix]);
 
-  const [search, setSearch] = useState(searchParams.get('q') ?? '');
+  const [search, setSearch] = useState(searchParams.get(p('q')) ?? '');
   const [isPending, startTransition] = useTransition();
   const [filtersOpen, setFiltersOpen] = useState(() => {
-    return !!(searchParams.get('disbursed_from') || searchParams.get('disbursed_to') ||
-      searchParams.get('overdue_only') || searchParams.get('term_days') ||
-      searchParams.get('min_amount') || searchParams.get('max_amount') ||
-      searchParams.get('min_days_mora') || searchParams.get('passport_level') ||
-      searchParams.get('city'));
+    return !!(searchParams.get(p('disbursed_from')) || searchParams.get(p('disbursed_to')) ||
+      searchParams.get(p('overdue_only')) || searchParams.get(p('term_days')) ||
+      searchParams.get(p('min_amount')) || searchParams.get(p('max_amount')) ||
+      searchParams.get(p('min_days_mora')) || searchParams.get(p('passport_level')) ||
+      searchParams.get(p('city')));
   });
 
   const activeFilterCount = [
-    searchParams.get('disbursed_from'), searchParams.get('disbursed_to'),
-    searchParams.get('overdue_only'), searchParams.get('term_days'),
-    searchParams.get('min_amount'), searchParams.get('max_amount'),
-    searchParams.get('min_days_mora'), searchParams.get('passport_level'),
-    searchParams.get('city'),
+    searchParams.get(p('disbursed_from')), searchParams.get(p('disbursed_to')),
+    searchParams.get(p('overdue_only')), searchParams.get(p('term_days')),
+    searchParams.get(p('min_amount')), searchParams.get(p('max_amount')),
+    searchParams.get(p('min_days_mora')), searchParams.get(p('passport_level')),
+    searchParams.get(p('city')),
   ].filter(Boolean).length;
 
   const updateUrl = useCallback(
@@ -262,13 +269,13 @@ export function CreditsTableClient({ data, pagination }: CreditsTableClientProps
   const applyFilters = useCallback(
     (patch: Record<string, string | undefined>) => {
       const params = new URLSearchParams(searchParams.toString());
-      params.set('page', '1');
+      params.set(p('page'), '1');
       for (const [key, val] of Object.entries(patch)) {
-        if (val != null && val !== '') params.set(key, val);
-        else params.delete(key);
+        if (val != null && val !== '') params.set(p(key), val);
+        else params.delete(p(key));
       }
       updateUrl(params);
-    }, [searchParams, updateUrl]
+    }, [searchParams, updateUrl, p]
   );
 
   const handleSearch = (value: string) => {
@@ -281,26 +288,30 @@ export function CreditsTableClient({ data, pagination }: CreditsTableClientProps
 
   const handlePageChange = useCallback((newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('page', String(newPage));
+    params.set(p('page'), String(newPage));
     updateUrl(params);
-  }, [searchParams, updateUrl]);
+  }, [searchParams, updateUrl, p]);
 
   const handlePageSizeChange = useCallback((newSize: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('size', String(newSize));
-    params.set('page', '1');
+    params.set(p('size'), String(newSize));
+    params.set(p('page'), '1');
     updateUrl(params);
-  }, [searchParams, updateUrl]);
+  }, [searchParams, updateUrl, p]);
 
   const clearAllFilters = useCallback(() => {
     setSearch('');
-    const params = new URLSearchParams();
-    params.set('page', '1');
-    params.set('size', searchParams.get('size') ?? '20');
+    const params = new URLSearchParams(searchParams.toString());
+    // Solo limpia las claves de ESTA instancia — no toca el tab activo ni los
+    // filtros de la otra tabla si comparten la misma página.
+    ['q', 'status', 'term_days', 'passport_level', 'city', 'min_amount', 'max_amount',
+      'min_days_mora', 'disbursed_from', 'disbursed_to', 'overdue_only']
+      .forEach((key) => params.delete(p(key)));
+    params.set(p('page'), '1');
     updateUrl(params);
-  }, [searchParams, updateUrl]);
+  }, [searchParams, updateUrl, p]);
 
-  const currentStatus = searchParams.get('status') ?? '';
+  const currentStatus = searchParams.get(p('status')) ?? '';
 
   return (
     <div className="space-y-4">
@@ -331,15 +342,15 @@ export function CreditsTableClient({ data, pagination }: CreditsTableClientProps
         </NativeSelect>
 
         <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <CollapsibleTrigger>
-            <Button variant="outline" size="sm" className="h-9 gap-2" type="button" disabled={isPending}>
-              <Filter className="h-4 w-4" />
-              Filtros
-              {activeFilterCount > 0 && (
-                <Badge variant="default" className="h-5 min-w-5 px-1 text-[10px]">{activeFilterCount}</Badge>
-              )}
-              {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </Button>
+          <CollapsibleTrigger
+            render={<Button variant="outline" size="sm" className="h-9 gap-2" type="button" disabled={isPending} />}
+          >
+            <Filter className="h-4 w-4" />
+            Filtros
+            {activeFilterCount > 0 && (
+              <Badge variant="default" className="h-5 min-w-5 px-1 text-[10px]">{activeFilterCount}</Badge>
+            )}
+            {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </CollapsibleTrigger>
         </Collapsible>
 
@@ -363,7 +374,7 @@ export function CreditsTableClient({ data, pagination }: CreditsTableClientProps
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Plazo</Label>
                 <NativeSelect
-                  value={searchParams.get('term_days') ?? ''}
+                  value={searchParams.get(p('term_days')) ?? ''}
                   onChange={(e) => applyFilters({ term_days: e.target.value || undefined })}
                   className="h-8 text-sm" disabled={isPending}
                 >
@@ -376,7 +387,7 @@ export function CreditsTableClient({ data, pagination }: CreditsTableClientProps
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Nivel Pasaporte</Label>
                 <NativeSelect
-                  value={searchParams.get('passport_level') ?? ''}
+                  value={searchParams.get(p('passport_level')) ?? ''}
                   onChange={(e) => applyFilters({ passport_level: e.target.value || undefined })}
                   className="h-8 text-sm" disabled={isPending}
                 >
@@ -390,7 +401,7 @@ export function CreditsTableClient({ data, pagination }: CreditsTableClientProps
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Ciudad (Dpto.)</Label>
                 <NativeSelect
-                  value={searchParams.get('city') ?? ''}
+                  value={searchParams.get(p('city')) ?? ''}
                   onChange={(e) => applyFilters({ city: e.target.value || undefined })}
                   className="h-8 text-sm" disabled={isPending}
                 >
@@ -409,38 +420,38 @@ export function CreditsTableClient({ data, pagination }: CreditsTableClientProps
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Monto mínimo</Label>
-                <Input type="number" placeholder="S/ min" defaultValue={searchParams.get('min_amount') ?? ''}
+                <Input type="number" placeholder="S/ min" defaultValue={searchParams.get(p('min_amount')) ?? ''}
                   className="h-8 text-sm" disabled={isPending}
                   onChange={(e) => applyFilters({ min_amount: e.target.value || undefined })} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Monto máximo</Label>
-                <Input type="number" placeholder="S/ max" defaultValue={searchParams.get('max_amount') ?? ''}
+                <Input type="number" placeholder="S/ max" defaultValue={searchParams.get(p('max_amount')) ?? ''}
                   className="h-8 text-sm" disabled={isPending}
                   onChange={(e) => applyFilters({ max_amount: e.target.value || undefined })} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Días mora mín.</Label>
-                <Input type="number" placeholder="Ej: 5" defaultValue={searchParams.get('min_days_mora') ?? ''}
+                <Input type="number" placeholder="Ej: 5" defaultValue={searchParams.get(p('min_days_mora')) ?? ''}
                   className="h-8 text-sm" disabled={isPending}
                   onChange={(e) => applyFilters({ min_days_mora: e.target.value || undefined })} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Desembolsado desde</Label>
-                <Input type="date" defaultValue={searchParams.get('disbursed_from') ?? ''}
+                <Input type="date" defaultValue={searchParams.get(p('disbursed_from')) ?? ''}
                   className="h-8 text-sm" disabled={isPending}
                   onChange={(e) => applyFilters({ disbursed_from: e.target.value || undefined })} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Desembolsado hasta</Label>
-                <Input type="date" defaultValue={searchParams.get('disbursed_to') ?? ''}
+                <Input type="date" defaultValue={searchParams.get(p('disbursed_to')) ?? ''}
                   className="h-8 text-sm" disabled={isPending}
                   onChange={(e) => applyFilters({ disbursed_to: e.target.value || undefined })} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Solo en mora</Label>
                 <NativeSelect
-                  value={searchParams.get('overdue_only') ?? ''}
+                  value={searchParams.get(p('overdue_only')) ?? ''}
                   onChange={(e) => applyFilters({ overdue_only: e.target.value || undefined })}
                   className="h-8 text-sm" disabled={isPending}
                 >

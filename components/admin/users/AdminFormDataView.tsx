@@ -9,10 +9,12 @@ import {
   INDUSTRY_OPTIONS,
   INCOME_RECEIPT_OPTIONS,
   ADDITIONAL_INCOME_TYPE_OPTIONS,
+  getYearsOfActivityLabel,
 } from '@/lib/constants/labor';
 import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/lib/constants/economic';
 import { ACCOUNT_TYPE_OPTIONS } from '@/lib/constants/bank-account';
 import { REFERRAL_SOURCE_OPTIONS } from '@/lib/constants/address';
+import { getYearsKnownLabel } from '@/lib/constants/references';
 import { getDepartments, getProvinces, getDistricts } from 'ubigeo-fns';
 
 const LocationMapPicker = dynamic(
@@ -178,7 +180,7 @@ function LaborDataView({ data }: { data: Record<string, any> }) {
         <h3 className="text-sm font-semibold text-primary mb-3">Detalles Laborales</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {yearsOfActivity != null && (
-            <DataRow label="Años de actividad" value={`${yearsOfActivity} ${yearsOfActivity === 1 ? 'año' : 'años'}`} />
+            <DataRow label="Años de actividad" value={getYearsOfActivityLabel(yearsOfActivity)} />
           )}
           {businessRuc && <DataRow label="RUC" value={businessRuc} mono />}
         </div>
@@ -362,7 +364,7 @@ function ReferencesDataView({ data }: { data: Record<string, any> }) {
           <DataRow label="Teléfono" value={nonFamilyPhone} mono />
           <DataRow label="Relación" value={getNonFamilyRelLabel(nonFamilyRelation)} />
           {nonFamilyYearsKnown != null && (
-            <DataRow label="Años de conocerse" value={`${nonFamilyYearsKnown} ${nonFamilyYearsKnown === 1 ? 'año' : 'años'}`} />
+            <DataRow label="Años de conocerse" value={getYearsKnownLabel(nonFamilyYearsKnown)} />
           )}
         </div>
       </div>

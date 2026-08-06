@@ -14,3 +14,7 @@ export * from './admin-applications.service';
 export * from './admin-nps.service';
 export * from './admin-collections.service';
 export * from './admin-collections.types';
+export * from './admin-complaints.service';
+export * from './admin-complaints.types';
+export * from './admin-customers.service';
+export * from './admin-customers.types';

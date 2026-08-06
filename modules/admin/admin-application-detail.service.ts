@@ -153,10 +153,31 @@ export interface VerificationInfo {
   updatedAt: string | null;
 }
 
+/**
+ * No incluye requestPayload/responsePayload (JSON crudo de la Lambda) a propósito —
+ * ver AdminApplicationDocumentsResponse.AttemptInfo (backend) para el detalle.
+ */
+export interface AttemptInfo {
+  id: string;
+  documentType: string | null;
+  attemptNumber: number | null;
+  result: string | null;
+  valid: boolean | null;
+  confidence: number | null;
+  message: string | null;
+  userMessage: string | null;
+  issues: string | null;
+  aiModel: string | null;
+  processingTimeMs: number | null;
+  invocationError: boolean | null;
+  createdAt: string;
+}
+
 export interface AdminApplicationDocuments {
   applicationId: string;
   documents: DocumentItem[];
   verification: VerificationInfo | null;
+  attempts: AttemptInfo[];
 }
 
 // ── Types: Contract ─────────────────────────────────────────────────────────
