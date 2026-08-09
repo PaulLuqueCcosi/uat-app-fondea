@@ -3,10 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { submitNpsAction } from '@/app/actions/nps.actions';
+import { submitNpsAction, getNpsEligibilityAction } from '@/app/actions/nps.actions';
 import { X } from 'lucide-react';
-
-const STORAGE_KEY = 'fondea_nps_responded';
 
 export function NpsSurveyPrompt() {
   const [visible, setVisible] = useState(false);
@@ -15,14 +13,19 @@ export function NpsSurveyPrompt() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    try {
-      const already = localStorage.getItem(STORAGE_KEY);
-      if (!already) {
+    let cancelled = false;
+
+    // Siempre se consulta al backend — es la única fuente de verdad. Un admin
+    // puede pedirle a un usuario que ya respondió que vuelva a hacerlo, así
+    // que cachear "ya respondió" localmente (ej. localStorage) rompería ese
+    // flujo: el popup nunca reaparecería en el mismo navegador.
+    getNpsEligibilityAction().then(({ hasResponded }) => {
+      if (!cancelled && !hasResponded) {
         setVisible(true);
       }
-    } catch {
-      // localStorage no disponible
-    }
+    });
+
+    return () => { cancelled = true; };
   }, []);
 
   const handleSubmit = async (score: number) => {
@@ -31,11 +34,6 @@ export function NpsSurveyPrompt() {
     try {
       await submitNpsAction(score);
       setSubmitted(true);
-      try {
-        localStorage.setItem(STORAGE_KEY, 'true');
-      } catch {
-        // ignorar
-      }
     } catch {
       setError('No se pudo enviar tu respuesta. Intenta de nuevo.');
     } finally {
@@ -65,13 +63,13 @@ export function NpsSurveyPrompt() {
             <p className="text-sm text-muted-foreground">¡Gracias por tu feedback!</p>
           ) : (
             <>
-              <div className="flex flex-wrap gap-1.5 mt-1">
+              <div className="grid grid-cols-10 gap-1 mt-1">
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((score) => (
                   <Button
                     key={score}
                     variant="outline"
                     size="sm"
-                    className="h-8 w-8 p-0 text-xs"
+                    className="h-7 w-full min-w-0 p-0 text-[11px] font-medium"
                     disabled={loading}
                     onClick={() => handleSubmit(score)}
                   >
@@ -79,7 +77,7 @@ export function NpsSurveyPrompt() {
                   </Button>
                 ))}
               </div>
-              <div className="flex justify-between text-[10px] text-muted-foreground mt-2 px-1">
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-1.5 px-0.5">
                 <span>Nada probable</span>
                 <span>Muy probable</span>
               </div>

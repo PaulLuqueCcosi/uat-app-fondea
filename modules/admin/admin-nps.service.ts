@@ -3,6 +3,7 @@
  * Endpoints:
  * - GET /api/v1/admin/nps/distribution
  * - GET /api/v1/admin/nps/users/{userId}/surveys
+ * - POST /api/v1/admin/nps/users/{userId}/request-again
  * - GET /api/v1/admin/users?search={dni} (para resolver DNI → UUID)
  */
 
@@ -190,4 +191,19 @@ export async function getNpsUserSurveys(
     userName: null,
     documentNumber: null,
   };
+}
+
+/** Pide que el usuario vuelva a responder NPS — le vuelve a mostrar el popup aunque ya haya respondido antes. */
+export async function requestNpsResubmission(userId: string): Promise<{ ok: boolean; message?: string }> {
+  const res = await backendFetch(`/api/v1/admin/nps/users/${userId}/request-again`, {
+    method: 'POST',
+    context: 'ADMIN_NPS_REQUEST_AGAIN',
+  });
+
+  if (!res.ok) {
+    console.error(`[ADMIN_NPS_REQUEST_AGAIN] Error ${res.status}`);
+    return { ok: false, message: `Error al pedir que vuelva a responder: ${res.status}` };
+  }
+
+  return { ok: true };
 }

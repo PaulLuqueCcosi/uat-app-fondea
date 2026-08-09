@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, FileText, Shield, Award, ClipboardList, Users } from 'lucide-react';
+import { User, FileText, Shield, Award, ClipboardList, Users, Smile } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface UserDetailNavProps {
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { segment: 'puntaje', label: 'Puntaje', icon: Award },
   { segment: 'solicitudes', label: 'Solicitudes', icon: ClipboardList },
   { segment: 'referidos', label: 'Referidos', icon: Users },
+  { segment: 'nps', label: 'NPS', icon: Smile },
 ];
 
 export function UserDetailNav({ userId }: UserDetailNavProps) {
