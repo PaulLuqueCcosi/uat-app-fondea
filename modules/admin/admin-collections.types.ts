@@ -54,10 +54,14 @@ export interface NplByCityEntry {
   active_loans: number;
   overdue_loans: number;
   npl_rate: number;
+  share_of_total_overdue: number;
 }
 
 export interface NplByCityResponse {
   cities: NplByCityEntry[];
+  total_active_loans: number;
+  total_overdue_loans: number;
+  total_npl_rate: number;
 }
 
 export interface NplByChannelEntry {

@@ -219,15 +219,13 @@ export function MoraClientsTable({ data, pagination }: MoraClientsTableProps) {
         </NativeSelect>
 
         <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <CollapsibleTrigger>
-            <Button variant="outline" size="sm" className="h-9 gap-2" type="button" disabled={isPending}>
-              <Filter className="h-4 w-4" />
-              Filtros
-              {activeFilterCount > 0 && (
-                <Badge variant="default" className="h-5 min-w-5 px-1 text-[10px]">{activeFilterCount}</Badge>
-              )}
-              {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </Button>
+          <CollapsibleTrigger className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 h-9 gap-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" disabled={isPending}>
+            <Filter className="h-4 w-4" />
+            Filtros
+            {activeFilterCount > 0 && (
+              <Badge variant="default" className="h-5 min-w-5 px-1 text-[10px]">{activeFilterCount}</Badge>
+            )}
+            {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </CollapsibleTrigger>
         </Collapsible>
 

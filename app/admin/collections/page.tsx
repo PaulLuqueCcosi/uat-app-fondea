@@ -1,9 +1,10 @@
-import { BarChart3, Users, Handshake, TrendingUp } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { getAdminMoraClients, getAdminPaymentAgreements } from '@/modules/admin/admin-collections.service';
 import { MoraClientsTable } from '@/components/admin/collections/MoraClientsTable';
 import { PaymentAgreementsTable } from '@/components/admin/collections/PaymentAgreementsTable';
 import { CollectionsAnalytics } from '@/components/admin/collections/CollectionsAnalytics';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NplGeoMap } from '@/components/admin/collections/NplGeoMap';
+import { CollectionsTabs } from '@/components/admin/collections/CollectionsTabs';
 import type { MoraClientsFilters } from '@/modules/admin/admin-collections.types';
 
 interface Props {
@@ -26,7 +27,6 @@ interface Props {
 
 export default async function AdminCollectionsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const tab = params.tab ?? 'mora';
 
   // R24 pagination
   const page = Number(params.page) || 1;
@@ -65,44 +65,14 @@ export default async function AdminCollectionsPage({ searchParams }: Props) {
         </div>
       </div>
 
-      <Tabs defaultValue={tab} className="w-full">
-        <TabsList className="grid grid-cols-3 w-full max-w-lg">
-          <TabsTrigger value="mora" className="gap-1.5">
-            <Users className="h-3.5 w-3.5" />
-            Mora
-            {moraResult.pagination.totalItems > 0 && (
-              <span className="ml-1 rounded-full bg-red-500 text-white text-[10px] px-1.5 py-0.5 leading-none">
-                {moraResult.pagination.totalItems}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="agreements" className="gap-1.5">
-            <Handshake className="h-3.5 w-3.5" />
-            Acuerdos
-            {agreementsResult.pagination.totalItems > 0 && (
-              <span className="ml-1 rounded-full bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 leading-none">
-                {agreementsResult.pagination.totalItems}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-1.5">
-            <TrendingUp className="h-3.5 w-3.5" />
-            Analytics
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="mora" className="mt-6">
-          <MoraClientsTable data={moraResult.data} pagination={moraResult.pagination} />
-        </TabsContent>
-
-        <TabsContent value="agreements" className="mt-6">
-          <PaymentAgreementsTable data={agreementsResult.data} pagination={agreementsResult.pagination} />
-        </TabsContent>
-
-        <TabsContent value="analytics" className="mt-6">
-          <CollectionsAnalytics />
-        </TabsContent>
-      </Tabs>
+      <CollectionsTabs
+        moraCount={moraResult.pagination.totalItems}
+        agreementsCount={agreementsResult.pagination.totalItems}
+        moraContent={<MoraClientsTable data={moraResult.data} pagination={moraResult.pagination} />}
+        agreementsContent={<PaymentAgreementsTable data={agreementsResult.data} pagination={agreementsResult.pagination} />}
+        mapContent={<NplGeoMap />}
+        analyticsContent={<CollectionsAnalytics />}
+      />
     </div>
   );
 }

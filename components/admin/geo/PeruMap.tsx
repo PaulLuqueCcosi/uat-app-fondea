@@ -20,12 +20,23 @@ export interface GeoRegionData {
   percentage: number;
 }
 
+export interface ColorScheme {
+  /** Array de colores en orden ascendente (del valor más bajo al más alto) */
+  colors: string[];
+  /** Dominios opcionales - si no se especifica, distribuye uniformemente sobre [1, maxLoanCount] */
+  domain?: number[];
+}
+
 interface PeruMapProps {
   data: GeoRegionData[];
   maxLoanCount: number;
   onRegionClick?: (code: string, name: string, level: MapLevel) => void;
   /** Se llama cuando el nivel cambia (para sincronizar tabla lateral) */
   onLevelChange?: (level: MapLevel, depCode: string | null, provCode: string | null) => void;
+  /** Esquema de colores personalizado. Si no se especifica, usa la paleta azul por defecto. */
+  colorScheme?: ColorScheme;
+  /** Tooltip personalizado. Recibe nombre de región y data. Si no se especifica usa el default. */
+  renderTooltip?: (name: string, regionData: GeoRegionData | undefined) => React.ReactNode;
 }
 
 // Color para regiones sin datos
@@ -34,7 +45,7 @@ const EMPTY_STROKE = '#cbd5e1'; // neutral-300
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export function PeruMap({ data, maxLoanCount, onRegionClick, onLevelChange }: PeruMapProps) {
+export function PeruMap({ data, maxLoanCount, onRegionClick, onLevelChange, colorScheme, renderTooltip }: PeruMapProps) {
   const [level, setLevel] = useState<MapLevel>('pais');
   const [selectedDep, setSelectedDep] = useState<string | null>(null);    // NOMBDEP
   const [selectedDepCode, setSelectedDepCode] = useState<string | null>(null); // "04"
@@ -145,9 +156,26 @@ export function PeruMap({ data, maxLoanCount, onRegionClick, onLevelChange }: Pe
 
   const pathGenerator = useMemo(() => geoPath().projection(projection), [projection]);
 
-  // Color scale using our primary palette (#00A1CD)
+  // Color scale
   const colorScale = useMemo(() => {
     const max = Math.max(maxLoanCount, 1);
+
+    // Si hay colorScheme personalizado, usarlo
+    if (colorScheme) {
+      const domain = colorScheme.domain || [
+        1,
+        max * 0.33,
+        max * 0.66,
+        max
+      ].slice(0, colorScheme.colors.length);
+
+      return scaleLinear<string>()
+        .domain(domain)
+        .range(colorScheme.colors)
+        .clamp(true);
+    }
+
+    // Por defecto: paleta azul (#00A1CD)
     return scaleLinear<string>()
       .domain([1, max * 0.33, max * 0.66, max])
       .range([
@@ -157,7 +185,7 @@ export function PeruMap({ data, maxLoanCount, onRegionClick, onLevelChange }: Pe
         '#006E8F',  // primary-700 — oscuro
       ])
       .clamp(true);
-  }, [maxLoanCount]);
+  }, [maxLoanCount, colorScheme]);
 
   // Setup zoom
   useEffect(() => {
@@ -237,23 +265,27 @@ export function PeruMap({ data, maxLoanCount, onRegionClick, onLevelChange }: Pe
     const regionData = dataMap.get(code);
     setHoveredRegion(code);
 
-    setTooltipContent(
-      <div className="p-3 space-y-1">
-        <p className="font-semibold text-sm text-foreground">{name}</p>
-        {regionData && regionData.loanCount > 0 ? (
-          <>
-            <p className="text-xs text-primary font-medium">
-              {regionData.loanCount} préstamo{regionData.loanCount !== 1 ? 's' : ''}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {regionData.percentage}% del total
-            </p>
-          </>
-        ) : (
-          <p className="text-xs text-muted-foreground">Sin préstamos</p>
-        )}
-      </div>
-    );
+    if (renderTooltip) {
+      setTooltipContent(renderTooltip(name, regionData));
+    } else {
+      setTooltipContent(
+        <div className="p-3 space-y-1">
+          <p className="font-semibold text-sm text-foreground">{name}</p>
+          {regionData && regionData.loanCount > 0 ? (
+            <>
+              <p className="text-xs text-primary font-medium">
+                {regionData.loanCount} préstamo{regionData.loanCount !== 1 ? 's' : ''}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {regionData.percentage}% del total
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">Sin préstamos</p>
+          )}
+        </div>
+      );
+    }
     setTooltipPosition({ x: event.clientX, y: event.clientY });
   };
 
@@ -298,9 +330,12 @@ export function PeruMap({ data, maxLoanCount, onRegionClick, onLevelChange }: Pe
             const isHovered = hoveredRegion === code;
             const path = pathGenerator(feature);
 
-            // Sin datos = gris claro. Con datos = escala primaria.
-            const fill = value > 0 ? colorScale(value) : EMPTY_FILL;
-            const stroke = isHovered ? '#00A1CD' : (value > 0 ? '#ffffff' : EMPTY_STROKE);
+            // Sin datos en dataMap = gris (no sabemos nada).
+            // Con datos y valor 0 = verde (sin mora, estado sano).
+            // Con datos y valor > 0 = escala de color.
+            const hasData = regionData !== undefined;
+            const fill = hasData ? colorScale(Math.max(value, 0)) : EMPTY_FILL;
+            const stroke = isHovered ? '#00A1CD' : (hasData ? '#ffffff' : EMPTY_STROKE);
 
             return (
               <path
