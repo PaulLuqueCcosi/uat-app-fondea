@@ -17,7 +17,24 @@ interface Props {
     dni?: string;
     minScore?: string;
     maxScore?: string;
+    month?: string; // formato: YYYY-MM o vacío para "todos"
   }>;
+}
+
+/**
+ * Calcula from/to ISO para un mes dado (YYYY-MM).
+ * Si no hay mes → retorna undefined (todos los meses).
+ */
+function getMonthDateRange(month?: string): { from?: string; to?: string } {
+  if (!month || month === 'all') return {};
+  const [yearStr, monthStr] = month.split('-');
+  const year = Number(yearStr);
+  const m = Number(monthStr);
+  if (isNaN(year) || isNaN(m) || m < 1 || m > 12) return {};
+
+  const from = new Date(year, m - 1, 1);
+  const to = new Date(year, m, 0, 23, 59, 59); // último día del mes
+  return { from: from.toISOString(), to: to.toISOString() };
 }
 
 export default async function AdminNpsPage({ searchParams }: Props) {
@@ -29,6 +46,9 @@ export default async function AdminNpsPage({ searchParams }: Props) {
   const minScore = params.minScore || '1';
   const maxScore = params.maxScore || '10';
   const dni = params.dni || '';
+  const month = params.month || 'all';
+
+  const { from, to } = getMonthDateRange(month);
 
   // Resolver DNI → UUID (solo si hay DNI)
   let userId: string | null = null;
@@ -56,9 +76,9 @@ export default async function AdminNpsPage({ searchParams }: Props) {
     .filter((r) => !isNaN(r.min) && !isNaN(r.max));
 
   const [distribution, surveys] = await Promise.all([
-    getNpsDistribution(parsedRanges),
+    getNpsDistribution(parsedRanges, from, to),
     userId
-      ? getNpsUserSurveys(userId, page, pageSize, Number(minScore), Number(maxScore))
+      ? getNpsUserSurveys(userId, page, pageSize, Number(minScore), Number(maxScore), from, to)
       : Promise.resolve({
           data: [],
           pagination: { page, pageSize, totalItems: 0, totalPages: 0 },
@@ -88,6 +108,7 @@ export default async function AdminNpsPage({ searchParams }: Props) {
         userName={userName}
         documentNumber={documentNumber}
         currentDni={dni}
+        currentMonth={month}
       />
     </div>
   );

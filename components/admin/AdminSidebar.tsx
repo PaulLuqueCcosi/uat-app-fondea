@@ -36,9 +36,12 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 
-const mainNav = [
+const kpisNav = [
   { path: '/admin/analytics', label: 'KPIs Globales', icon: TrendingUp },
   { path: '/admin/nps', label: 'NPS', icon: BarChart },
+];
+
+const mainNav = [
   { path: '/admin/users', label: 'Usuarios', icon: Users },
   { path: '/admin/intentions', label: 'Intenciones', icon: Target },
   { path: '/admin/applications', label: 'Solicitudes', icon: FileText },
@@ -98,8 +101,36 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
         </SidebarMenu>
       </SidebarHeader>
 
-      {/* Navegación principal */}
+      {/* Navegación */}
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>M1 - KPIs Globales</SidebarGroupLabel>
+          <SidebarMenu>
+            {kpisNav.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.path ||
+                (pathname === '/admin' && item.path === '/admin/analytics') ||
+                pathname?.startsWith(item.path);
+
+              return (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    tooltip={item.label}
+                    render={<Link href={item.path} />}
+                  >
+                    <Icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
         <SidebarGroup>
           <SidebarGroupLabel>Principal</SidebarGroupLabel>
           <SidebarMenu>
@@ -107,7 +138,6 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
               const Icon = item.icon;
               const isActive =
                 pathname === item.path ||
-                (pathname === '/admin' && item.path === '/admin/analytics') || // /admin redirige a /admin/analytics
                 pathname?.startsWith(item.path);
 
               return (

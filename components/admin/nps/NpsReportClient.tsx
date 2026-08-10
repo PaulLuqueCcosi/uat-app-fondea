@@ -8,18 +8,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Search,
   RefreshCw,
   Loader2,
   X,
   Users,
+  CalendarDays,
 } from 'lucide-react';
 import {
   DEFAULT_NPS_RANGES,
   type NpsDistributionResponse,
   type UserNpsSurveyItem,
 } from '@/modules/admin';
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
 const RANGE_VISUALS: Record<string, { label: string; text: string; border: string; bg: string; dot: string }> = {
   detractors: {
@@ -45,15 +49,22 @@ const RANGE_VISUALS: Record<string, { label: string; text: string; border: strin
   },
 };
 
-interface NpsReportClientProps {
-  distribution: NpsDistributionResponse | null;
-  surveys: {
-    data: UserNpsSurveyItem[];
-    pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
-  };
-  userName: string | null;
-  documentNumber: string | null;
-  currentDni: string;
+function generateMonthOptions(count: number = 12): { value: string; label: string }[] {
+  const now = new Date();
+  const options: { value: string; label: string }[] = [
+    { value: 'all', label: 'Todos los meses' },
+  ];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const label = d.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
+    options.push({
+      value: `${year}-${String(month).padStart(2, '0')}`,
+      label: label.charAt(0).toUpperCase() + label.slice(1),
+    });
+  }
+  return options;
 }
 
 function classifyRange(min: number): string {
@@ -71,12 +82,29 @@ function calculateNpsScore(distribution: NpsDistributionResponse | null): number
   return Math.round(promotersPercentage - detractorsPercentage);
 }
 
+// ── Props ───────────────────────────────────────────────────────────────────
+
+interface NpsReportClientProps {
+  distribution: NpsDistributionResponse | null;
+  surveys: {
+    data: UserNpsSurveyItem[];
+    pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
+  };
+  userName: string | null;
+  documentNumber: string | null;
+  currentDni: string;
+  currentMonth: string;
+}
+
+// ── Component ───────────────────────────────────────────────────────────────
+
 export function NpsReportClient({
   distribution,
   surveys,
   userName,
   documentNumber,
   currentDni,
+  currentMonth,
 }: NpsReportClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,6 +113,12 @@ export function NpsReportClient({
   const [dni, setDni] = useState(currentDni);
 
   const npsScore = useMemo(() => calculateNpsScore(distribution), [distribution]);
+  const monthOptions = useMemo(() => generateMonthOptions(12), []);
+
+  const currentMonthLabel = useMemo(() => {
+    const opt = monthOptions.find((o) => o.value === currentMonth);
+    return opt?.label ?? 'Todos los meses';
+  }, [currentMonth, monthOptions]);
 
   const updateUrl = useCallback(
     (newParams: URLSearchParams) => {
@@ -92,7 +126,21 @@ export function NpsReportClient({
         router.push(`/admin/nps?${newParams.toString()}`);
       });
     },
-    [router]
+    [router],
+  );
+
+  const handleMonthChange = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === 'all') {
+        params.delete('month');
+      } else {
+        params.set('month', value);
+      }
+      params.set('page', '1');
+      updateUrl(params);
+    },
+    [searchParams, updateUrl],
   );
 
   const handleSearchDni = useCallback(() => {
@@ -156,7 +204,24 @@ export function NpsReportClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end gap-2">
+      {/* Controles: filtro de mes + refrescar */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <Select value={currentMonth} onValueChange={handleMonthChange}>
+            <SelectTrigger className="h-9 w-48 text-sm">
+              <SelectValue placeholder="Todos los meses" />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isPending} className="gap-2">
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Actualizar
@@ -168,7 +233,7 @@ export function NpsReportClient({
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">NPS Score</p>
+              <p className="text-sm font-medium text-muted-foreground">NPS Score — {currentMonthLabel}</p>
               <div className="flex items-baseline gap-3 mt-1">
                 <span className="text-5xl font-extrabold tracking-tight text-foreground">
                   {npsScore ?? 0}
@@ -182,7 +247,7 @@ export function NpsReportClient({
             {distribution && (
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">
-                  {distribution.total_responses} respuestas en total
+                  {distribution.total_responses} respuestas
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Escala del 1 al 10

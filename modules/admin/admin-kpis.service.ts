@@ -56,6 +56,20 @@ export interface NpsKpi {
   nps_score: number;
 }
 
+export interface NpsKpiWithTrend {
+  total_responses: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  nps_score: number;
+  year: number;
+  month: number;
+  month_label: string;
+  prev_nps_score: number | null;
+  prev_total_responses: number | null;
+  trend_delta: number | null;
+}
+
 export interface FunnelKpi {
   applications_submitted: number;
   applications_pre_approved: number;
@@ -113,6 +127,10 @@ export async function getIncomeKpi(days: number = 30): Promise<IncomeKpi | null>
 
 export async function getNpsKpi(days: number = 30): Promise<NpsKpi | null> {
   return fetchKpi(`/nps?days=${days}`);
+}
+
+export async function getNpsKpiMonthly(year: number, month: number): Promise<NpsKpiWithTrend | null> {
+  return fetchKpi(`/nps/monthly?year=${year}&month=${month}`);
 }
 
 export async function getFunnelKpi(days: number = 30): Promise<FunnelKpi | null> {
