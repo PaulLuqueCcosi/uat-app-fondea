@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Handshake } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { getAdminCreditInstallments } from '@/modules/admin/admin-credit-detail.service';
@@ -33,79 +34,91 @@ export default async function NegotiateInstallmentPage({ params }: Props) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      <div className="flex flex-col gap-6 w-full max-w-3xl">
-        {/* Header */}
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link
+          href={`/admin/credits/${id}/installments/${no}`}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
         <div className="flex items-center gap-3">
-          <Link
-            href={`/admin/credits/${id}/installments/${no}`}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Handshake className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">Negociar cuota #{installment.installment_no}</h1>
-              <p className="text-xs text-muted-foreground font-mono">Crédito #{id.slice(0, 8)}</p>
-            </div>
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Handshake className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">Negociar cuota #{installment.installment_no}</h1>
+            <p className="text-xs text-muted-foreground font-mono">Crédito #{id.slice(0, 8)}</p>
           </div>
         </div>
+      </div>
 
-        {/* Datos de la cuota */}
-        <Card>
-          <CardContent className="py-4">
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
+      {/* Bloqueos: cuota no elegible o ya hay una oferta SENT sin resolver */}
+      {!isEligible && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Esta cuota no es elegible para negociación</AlertTitle>
+          <AlertDescription>
+            Solo se pueden negociar cuotas con estado <strong>OVERDUE</strong>. Estado actual: {installment.status}.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isEligible && pendingOffer && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-700">Ya hay una oferta pendiente de firma para esta cuota</AlertTitle>
+          <AlertDescription>
+            Espera a que el cliente responda (o a que expire) antes de crear una nueva. El backend rechaza intentos duplicados con un error 409.{' '}
+            <Link href={`/admin/negotiation-offers/${pendingOffer.id}`} className="underline font-medium">Ver oferta pendiente</Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Contenido: formulario a la izquierda (ocupa el ancho disponible), resumen + historial a la derecha */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2">
+          {isEligible && !pendingOffer ? (
+            <NegotiationOfferForm
+              installmentId={installment.id}
+              creditId={id}
+              outstanding={installment.outstanding}
+            />
+          ) : (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                No hay ninguna acción disponible para esta cuota en este momento.
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          {/* Datos de la cuota */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Datos de la cuota</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
                 <p className="text-[11px] text-muted-foreground">Monto cuota</p>
-                <p className="font-semibold">S/ {installment.amount_due.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
+                <p className="font-semibold">S/ {installment.amount_due.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</p>
               </div>
-              <div>
+              <div className="flex items-center justify-between">
                 <p className="text-[11px] text-muted-foreground">Mora acumulada</p>
-                <p className="font-semibold text-red-600">S/ {installment.penalty_accrued.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
+                <p className="font-semibold text-red-600">S/ {installment.penalty_accrued.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</p>
               </div>
-              <div>
+              <Separator />
+              <div className="flex items-center justify-between">
                 <p className="text-[11px] text-muted-foreground">Total pendiente</p>
-                <p className="font-semibold">S/ {installment.outstanding.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
+                <p className="font-semibold">S/ {installment.outstanding.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Historial de intentos previos */}
-        <NegotiationOfferHistory offers={history} />
-
-        {/* Bloqueos: cuota no elegible o ya hay una oferta SENT sin resolver */}
-        {!isEligible && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Esta cuota no es elegible para negociación</AlertTitle>
-            <AlertDescription>
-              Solo se pueden negociar cuotas con estado <strong>OVERDUE</strong>. Estado actual: {installment.status}.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {isEligible && pendingOffer && (
-          <Alert>
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-700">Ya hay una oferta pendiente de firma para esta cuota</AlertTitle>
-            <AlertDescription>
-              Espera a que el cliente responda (o a que expire) antes de crear una nueva. El backend rechaza intentos duplicados con un error 409.{' '}
-              <Link href={`/admin/negotiation-offers/${pendingOffer.id}`} className="underline font-medium">Ver oferta pendiente</Link>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Formulario — solo si es elegible y no hay oferta pendiente sin resolver */}
-        {isEligible && !pendingOffer && (
-          <NegotiationOfferForm
-            installmentId={installment.id}
-            creditId={id}
-            outstanding={installment.outstanding}
-          />
-        )}
+          {/* Historial de intentos previos */}
+          <NegotiationOfferHistory offers={history} />
+        </div>
       </div>
     </div>
   );

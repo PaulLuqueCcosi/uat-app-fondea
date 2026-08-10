@@ -21,6 +21,7 @@ import {
   FileCode2,
   MessageSquareWarning,
   UserMinus,
+  Handshake,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -41,13 +42,26 @@ const kpisNav = [
   { path: '/admin/nps', label: 'NPS', icon: BarChart },
 ];
 
-const mainNav = [
-  { path: '/admin/users', label: 'Usuarios', icon: Users },
-  { path: '/admin/intentions', label: 'Intenciones', icon: Target },
-  { path: '/admin/applications', label: 'Solicitudes', icon: FileText },
+const carteraNav = [
   { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
   { path: '/admin/portfolio', label: 'Cartera', icon: PieChart },
+];
+
+const cobranzaNav = [
   { path: '/admin/collections', label: 'Cobranza', icon: BarChart3 },
+  { path: '/admin/negotiation-offers', label: 'Negociaciones', icon: Handshake },
+];
+
+const mainNav = [
+  { path: '/admin/intentions', label: 'Intenciones', icon: Target },
+  { path: '/admin/applications', label: 'Solicitudes', icon: FileText },
+];
+
+const clientesNav = [
+  { path: '/admin/users', label: 'Usuarios', icon: Users },
+  { path: '/admin/complaints', label: 'Reclamaciones', icon: MessageSquareWarning },
+  { path: '/admin/customers/churn', label: 'Riesgo de Churn', icon: UserMinus },
+  { path: '/admin/customers/segmentation', label: 'Segmentación', icon: PieChart },
 ];
 
 const businessRulesNav = [
@@ -55,12 +69,6 @@ const businessRulesNav = [
   { path: '/admin/evaluation-rules', label: 'Reglas Motor', icon: Shield },
   { path: '/admin/scoring', label: 'Scorecard', icon: Sliders },
   { path: '/admin/contracts', label: 'Contratos', icon: FileCode2 },
-];
-
-const customersNav = [
-  { path: '/admin/complaints', label: 'Reclamaciones', icon: MessageSquareWarning },
-  { path: '/admin/customers/churn', label: 'Riesgo de Churn', icon: UserMinus },
-  { path: '/admin/customers/segmentation', label: 'Segmentación', icon: PieChart },
 ];
 
 const configNav = [
@@ -132,6 +140,60 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
         <SidebarSeparator />
 
         <SidebarGroup>
+          <SidebarGroupLabel>M2 - Cartera y Préstamos</SidebarGroupLabel>
+          <SidebarMenu>
+            {carteraNav.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.path ||
+                pathname?.startsWith(item.path);
+
+              return (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    tooltip={item.label}
+                    render={<Link href={item.path} />}
+                  >
+                    <Icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>M3 - Cobranza y Mora</SidebarGroupLabel>
+          <SidebarMenu>
+            {cobranzaNav.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.path ||
+                pathname?.startsWith(item.path);
+
+              return (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    tooltip={item.label}
+                    render={<Link href={item.path} />}
+                  >
+                    <Icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
           <SidebarGroupLabel>Principal</SidebarGroupLabel>
           <SidebarMenu>
             {mainNav.map((item) => {
@@ -159,9 +221,9 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
         <SidebarSeparator />
 
         <SidebarGroup>
-          <SidebarGroupLabel>Clientes</SidebarGroupLabel>
+          <SidebarGroupLabel>M4 - Clientes</SidebarGroupLabel>
           <SidebarMenu>
-            {customersNav.map((item) => {
+            {clientesNav.map((item) => {
               const Icon = item.icon;
               const isActive =
                 pathname === item.path ||

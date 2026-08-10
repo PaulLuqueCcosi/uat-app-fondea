@@ -15,6 +15,7 @@ import type {
   CreateNegotiationOfferRequest,
   NegotiationOfferStatus,
 } from '@/modules/negotiation-offers';
+import type { PaginatedNegotiationOffers } from '@/modules/negotiation-offers/negotiation-offer.service';
 
 /** Todas las ofertas del usuario, más reciente primero */
 export async function getMyNegotiationOffersAction() {
@@ -52,6 +53,12 @@ export async function rejectNegotiationOfferAction(
 export async function getAdminNegotiationOffersAction(status?: NegotiationOfferStatus) {
   await requireAdminRole();
   return negotiationOfferService.getAdminNegotiationOffers(status);
+}
+
+/** Ofertas paginadas — requiere rol ADMIN */
+export async function getAdminNegotiationOffersPaginatedAction(page: number, size: number, status?: NegotiationOfferStatus) {
+  await requireAdminRole();
+  return negotiationOfferService.getAdminNegotiationOffersPaginated(page, size, status);
 }
 
 /** Historial de ofertas de una cuota específica — requiere rol ADMIN */

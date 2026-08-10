@@ -144,6 +144,48 @@ export async function getAdminNegotiationOffers(
   }
 }
 
+export interface PaginatedNegotiationOffers {
+  content: NegotiationOffer[];
+  totalElements: number;
+  totalPages: number;
+  number: number; // page 0-based
+  size: number;
+}
+
+/**
+ * Ofertas paginadas — dashboard admin.
+ * GET /api/v1/admin/negotiation-offers/paginated?page=0&size=20&status=SENT
+ */
+export async function getAdminNegotiationOffersPaginated(
+  page: number,
+  size: number,
+  status?: NegotiationOfferStatus,
+): Promise<NegotiationOfferResult<PaginatedNegotiationOffers>> {
+  try {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (status) params.set('status', status);
+    const res = await backendFetch(`/api/v1/admin/negotiation-offers/paginated?${params.toString()}`, { context: CTX });
+
+    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
+    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
+    if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
+
+    const raw = await res.json();
+    return {
+      ok: true,
+      data: {
+        content: (raw.content ?? []).map(mapNegotiationOfferFromBackend),
+        totalElements: raw.totalElements ?? 0,
+        totalPages: raw.totalPages ?? 0,
+        number: raw.number ?? 0,
+        size: raw.size ?? size,
+      },
+    };
+  } catch {
+    return { ok: false, error: errors.networkError() };
+  }
+}
+
 /**
  * Historial completo de ofertas de una cuota específica (incluye
  * rechazadas/expiradas, no solo la vigente) — para mostrar "intentos

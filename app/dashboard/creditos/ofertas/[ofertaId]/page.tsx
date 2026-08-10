@@ -512,7 +512,7 @@ export default function NegotiationOfferDetailPage() {
               ¿Por qué rechazas esta oferta?
             </CardTitle>
             <CardDescription>
-              Cuéntanos el motivo — el admin podrá crear una nueva propuesta si es necesario.
+              Cuéntanos el motivo.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

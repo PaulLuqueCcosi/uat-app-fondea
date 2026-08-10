@@ -19,7 +19,7 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
 };
 
 function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
 }
 
 function formatDateTime(value: string) {
@@ -35,10 +35,10 @@ export default async function AdminNegotiationOfferDetailPage({ params }: Props)
   const { offer, documents } = result.data;
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-3xl">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link href={`/admin/credits/${offer.originCreditId}`} className="text-muted-foreground hover:text-foreground">
+        <Link href="/admin/negotiation-offers" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex items-center gap-3">

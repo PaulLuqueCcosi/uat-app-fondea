@@ -58,21 +58,21 @@ type NegotiationFormValues = z.infer<typeof negotiationFormSchema>;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
 }
 
 /** Sugiere un cronograma inicial simple: N cuotas mensuales iguales que suman el pendiente */
 function buildSuggestedSchedule(outstanding: number, installments: number): { dueDate: string; amount: string }[] {
-  const base = Math.floor((outstanding / installments) * 100) / 100;
+  const base = Math.floor((outstanding / installments) * 10) / 10;
   const rows: { dueDate: string; amount: string }[] = [];
   let accumulated = 0;
   for (let i = 1; i <= installments; i++) {
     const isLast = i === installments;
-    const amount = isLast ? Math.round((outstanding - accumulated) * 100) / 100 : base;
+    const amount = isLast ? Math.round((outstanding - accumulated) * 10) / 10 : base;
     accumulated += amount;
     const date = new Date();
     date.setMonth(date.getMonth() + i);
-    rows.push({ dueDate: date.toISOString().slice(0, 10), amount: amount.toFixed(2) });
+    rows.push({ dueDate: date.toISOString().slice(0, 10), amount: amount.toFixed(1) });
   }
   return rows;
 }
@@ -207,7 +207,7 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
                       <FormControl>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">S/</span>
-                          <Input type="number" step="0.01" min={0} className="pl-8" {...f} />
+                          <Input type="number" step="0.1" min={0} className="pl-8" {...f} />
                         </div>
                       </FormControl>
                       <FormMessage />
