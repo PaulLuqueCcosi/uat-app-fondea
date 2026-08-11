@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import SignaturePad from '@/components/ui/signature-pad';
+import { NegotiationDocumentsViewer } from '@/components/negotiation/NegotiationDocumentsViewer';
 import {
   getNegotiationOfferByIdAction,
   acceptNegotiationOfferAction,
@@ -288,24 +289,29 @@ export default function NegotiationOfferDetailPage() {
 
       {/* ─── Ya aceptada (revisita a la página, sin necesidad de firmar de nuevo) ─── */}
       {offer.status === 'ACCEPTED' && step === 'review' && (
-        <Card className="border-success-200 bg-success-50/30">
-          <CardContent className="flex items-center gap-3 py-4">
-            <CheckCircle className="w-5 h-5 text-success-700 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-success-900">Ya firmaste esta oferta</p>
-              <p className="text-xs text-success-700">
-                {offer.resultingCreditId
-                  ? 'Tu crédito de refinanciamiento ya está disponible.'
-                  : 'Tu crédito se está creando — revisa Mis Créditos en unos momentos.'}
-              </p>
-            </div>
-            {offer.resultingCreditId && (
-              <Link href={`/dashboard/creditos/${offer.resultingCreditId}`}>
-                <Button size="sm" variant="outline">Ver crédito</Button>
-              </Link>
-            )}
-          </CardContent>
-        </Card>
+        <>
+          <Card className="border-success-200 bg-success-50/30">
+            <CardContent className="flex items-center gap-3 py-4">
+              <CheckCircle className="w-5 h-5 text-success-700 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-success-900">Ya firmaste esta oferta</p>
+                <p className="text-xs text-success-700">
+                  {offer.resultingCreditId
+                    ? 'Tu crédito de refinanciamiento ya está disponible.'
+                    : 'Tu crédito se está creando — revisa Mis Créditos en unos momentos.'}
+                </p>
+              </div>
+              {offer.resultingCreditId && (
+                <Link href={`/dashboard/creditos/${offer.resultingCreditId}`}>
+                  <Button size="sm" variant="outline">Ver crédito</Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+          {documents.length > 0 && (
+            <NegotiationDocumentsViewer key="signed" offerId={offerId} documents={documents} isSigned={true} />
+          )}
+        </>
       )}
 
       {/* ─── Ya rechazada ─── */}
@@ -368,36 +374,12 @@ export default function NegotiationOfferDetailPage() {
 
           {/* Documentos a revisar */}
           {documents.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-primary" />
-                  Documentos a revisar
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {documents.map((doc) => (
-                  <div key={doc.name} className="flex items-center justify-between rounded-lg border border-border p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-primary" />
-                      </div>
-                      <span className="text-sm font-medium text-foreground">{doc.name}</span>
-                    </div>
-                    {doc.url ? (
-                      <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="sm" className="gap-1.5">
-                          <Download className="w-3.5 h-3.5" />
-                          Ver documento
-                        </Button>
-                      </a>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Disponible al firmar</span>
-                    )}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            <NegotiationDocumentsViewer
+              key="pre-sign"
+              offerId={offerId}
+              documents={documents}
+              isSigned={false}
+            />
           )}
 
           {/* Aceptación de términos */}

@@ -1,11 +1,17 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileSignature, ExternalLink, FileText } from 'lucide-react';
+import { ArrowLeft, FileSignature, ExternalLink, FileText, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { getAdminNegotiationOfferByIdAction } from '@/app/actions/negotiation-offer.actions';
-import { negotiationOfferStatusLabels } from '@/modules/negotiation-offers';
+import {
+  negotiationOfferStatusLabels,
+  isOfferStaleExpired,
+  formatDeadlineUrgency,
+  type NegotiationOffer,
+} from '@/modules/negotiation-offers';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -24,6 +30,87 @@ function formatCurrency(value: number) {
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Resume el estado de la oferta en una sola vista: qué pasó y qué sigue.
+ * Reemplaza los bloques sueltos que antes vivían dentro de "Información general".
+ */
+function StatusAlert({ offer }: { offer: NegotiationOffer }) {
+  if (offer.status === 'SENT') {
+    if (isOfferStaleExpired(offer)) {
+      return (
+        <Alert>
+          <Clock className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-700">Plazo vencido, pendiente de expirar</AlertTitle>
+          <AlertDescription>
+            El cliente no respondió antes del {formatDateTime(offer.signDeadline)}. El proceso automático la marcará como <strong>Expirada</strong> en breve (corre cada hora).
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    const { label } = formatDeadlineUrgency(offer.signDeadline);
+    return (
+      <Alert>
+        <Clock className="h-4 w-4 text-amber-600" />
+        <AlertTitle className="text-amber-700">Pendiente de firma del cliente</AlertTitle>
+        <AlertDescription>
+          El cliente todavía no respondió. Tiene plazo hasta el {formatDateTime(offer.signDeadline)} ({label}).
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (offer.status === 'ACCEPTED') {
+    return (
+      <Alert>
+        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+        <AlertTitle className="text-emerald-700">Firmada por el cliente</AlertTitle>
+        <AlertDescription>
+          <div className="flex items-center justify-between gap-3">
+            <span>
+              Respondida el {offer.respondedAt ? formatDateTime(offer.respondedAt) : '—'}.{' '}
+              {offer.resultingCreditId
+                ? 'El crédito de negociación ya se creó.'
+                : 'El crédito se está creando (proceso asíncrono, normalmente toma segundos).'}
+            </span>
+            {offer.resultingCreditId && (
+              <Link href={`/admin/credits/${offer.resultingCreditId}`} className="shrink-0">
+                <Badge variant="outline" className="cursor-pointer gap-1">
+                  Ver crédito <ExternalLink className="h-3 w-3" />
+                </Badge>
+              </Link>
+            )}
+          </div>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (offer.status === 'REJECTED') {
+    return (
+      <Alert variant="destructive">
+        <XCircle className="h-4 w-4" />
+        <AlertTitle>Rechazada por el cliente</AlertTitle>
+        <AlertDescription>
+          {offer.respondedAt && <>Respondida el {formatDateTime(offer.respondedAt)} — </>}
+          {offer.rejectionReason ? <>Motivo: &ldquo;{offer.rejectionReason}&rdquo;.</> : 'No se registró un motivo.'}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // EXPIRED
+  return (
+    <Alert>
+      <Clock className="h-4 w-4 text-muted-foreground" />
+      <AlertTitle>Expiró sin respuesta</AlertTitle>
+      <AlertDescription>
+        El cliente no firmó antes del plazo ({formatDateTime(offer.signDeadline)}).
+      </AlertDescription>
+    </Alert>
+  );
 }
 
 export default async function AdminNegotiationOfferDetailPage({ params }: Props) {
@@ -54,6 +141,9 @@ export default async function AdminNegotiationOfferDetailPage({ params }: Props)
           {negotiationOfferStatusLabels[offer.status]}
         </Badge>
       </div>
+
+      {/* Estado — resume en una sola vista qué está pasando con la oferta y qué sigue */}
+      <StatusAlert offer={offer} />
 
       {/* Info general */}
       <Card>
@@ -92,39 +182,6 @@ export default async function AdminNegotiationOfferDetailPage({ params }: Props)
               <p className="text-xs">{offer.respondedAt ? formatDateTime(offer.respondedAt) : '—'}</p>
             </div>
           </div>
-
-          {offer.rejectionReason && (
-            <>
-              <Separator className="my-3" />
-              <div>
-                <p className="text-[11px] text-muted-foreground">Motivo de rechazo</p>
-                <p className="text-sm text-destructive">{offer.rejectionReason}</p>
-              </div>
-            </>
-          )}
-
-          {offer.status === 'ACCEPTED' && (
-            <>
-              <Separator className="my-3" />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] text-muted-foreground">Crédito resultante</p>
-                  <p className="text-xs">
-                    {offer.resultingCreditId
-                      ? 'El crédito de negociación ya se creó.'
-                      : 'Firmada — el crédito se está creando (proceso asíncrono, normalmente toma segundos).'}
-                  </p>
-                </div>
-                {offer.resultingCreditId && (
-                  <Link href={`/admin/credits/${offer.resultingCreditId}`}>
-                    <Badge variant="outline" className="cursor-pointer gap-1">
-                      Ver crédito <ExternalLink className="h-3 w-3" />
-                    </Badge>
-                  </Link>
-                )}
-              </div>
-            </>
-          )}
         </CardContent>
       </Card>
 
@@ -173,15 +230,25 @@ export default async function AdminNegotiationOfferDetailPage({ params }: Props)
           </CardHeader>
           <CardContent className="space-y-2">
             {documents.map((doc) => (
-              <div key={doc.name} className="flex items-center justify-between rounded-lg border p-3">
-                <span className="text-sm">{doc.name}</span>
-                {doc.url ? (
-                  <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
-                    Ver documento
-                  </a>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Disponible al firmar</span>
-                )}
+              <div key={doc.contractId} className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">{doc.name}</span>
+                  <Badge variant="outline" className="text-[10px]">{doc.status}</Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  {doc.visibleBeforeSignature && (
+                    <a href={`/api/negotiation-offers/${offer.id}/documents/${doc.contractId}/html`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+                      Ver HTML
+                    </a>
+                  )}
+                  {doc.pdfUrl ? (
+                    <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+                      Descargar PDF
+                    </a>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">PDF al firmar</span>
+                  )}
+                </div>
               </div>
             ))}
           </CardContent>

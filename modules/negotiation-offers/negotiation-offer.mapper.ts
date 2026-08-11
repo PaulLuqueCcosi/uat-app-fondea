@@ -56,8 +56,11 @@ export function mapNegotiationOfferFromBackend(raw: any): NegotiationOffer {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapDocument(raw: any): NegotiationOfferDocument {
   return {
+    contractId: raw.contractId ?? raw.contract_id ?? '',
     name: raw.name ?? '',
-    url: raw.url ?? null,
+    visibleBeforeSignature: raw.visibleBeforeSignature ?? raw.visible_before_signature ?? true,
+    status: raw.status ?? 'GENERATED',
+    pdfUrl: raw.pdfUrl ?? raw.pdf_url ?? null,
   };
 }
 

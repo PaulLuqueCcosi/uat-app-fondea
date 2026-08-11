@@ -180,6 +180,14 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            {/* Encabezados de columna — visibles desde md, evita repetir el label en cada fila */}
+            <div className="hidden md:flex items-center gap-3 px-3">
+              <span className="text-xs font-medium text-muted-foreground w-6 shrink-0">#</span>
+              <span className="text-xs font-medium text-muted-foreground flex-1">Fecha de vencimiento</span>
+              <span className="text-xs font-medium text-muted-foreground flex-1">Monto</span>
+              <span className="w-9 shrink-0" />
+            </div>
+
             {fields.map((field, index) => (
               <div key={field.id} className="flex items-start gap-3 rounded-lg border p-3">
                 <span className="mt-2.5 text-xs font-mono text-muted-foreground w-6 shrink-0">#{index + 1}</span>
@@ -189,7 +197,7 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
                   name={`schedule.${index}.dueDate`}
                   render={({ field: f }) => (
                     <FormItem className="flex-1">
-                      <FormLabel className="text-xs">Fecha de vencimiento</FormLabel>
+                      <FormLabel className="text-xs md:hidden">Fecha de vencimiento</FormLabel>
                       <FormControl>
                         <Input type="date" {...f} />
                       </FormControl>
@@ -203,7 +211,7 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
                   name={`schedule.${index}.amount`}
                   render={({ field: f }) => (
                     <FormItem className="flex-1">
-                      <FormLabel className="text-xs">Monto</FormLabel>
+                      <FormLabel className="text-xs md:hidden">Monto</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">S/</span>
@@ -219,7 +227,7 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="mt-6 text-destructive hover:text-destructive"
+                  className="mt-0.5 text-destructive hover:text-destructive"
                   onClick={() => remove(index)}
                   disabled={fields.length <= 1}
                 >

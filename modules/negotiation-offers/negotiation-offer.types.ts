@@ -65,9 +65,14 @@ export interface NegotiationOffer {
 
 /** Documento a revisar antes de firmar — parte de NegotiationOfferDetailResponse */
 export interface NegotiationOfferDocument {
+  contractId: string;
   name: string;
-  /** Puede venir null si el PDF final aún no está listo (solo existe una vez firmado) */
-  url: string | null;
+  /** Si true, el cliente puede ver el HTML antes de firmar */
+  visibleBeforeSignature: boolean;
+  /** GENERATED, SIGNED, FINALIZED, EXPIRED */
+  status: string;
+  /** URL del PDF — solo disponible post-firma (SIGNED/FINALIZED) */
+  pdfUrl: string | null;
 }
 
 /** Detalle de oferta + documentos — NegotiationOfferDetailResponse del backend */
