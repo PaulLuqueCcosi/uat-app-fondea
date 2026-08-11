@@ -13,9 +13,11 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string }> = {
+  PENDING_DISBURSEMENT: { label: 'Por desembolsar', variant: 'outline', color: 'bg-neutral-400' },
   ACTIVE: { label: 'Activo', variant: 'default', color: 'bg-emerald-500' },
   OVERDUE: { label: 'Vencido', variant: 'secondary', color: 'bg-amber-500' },
-  DEFAULTED: { label: 'En mora grave', variant: 'destructive', color: 'bg-red-500' },
+  SUSPENDED: { label: 'Suspendido', variant: 'secondary', color: 'bg-amber-600' },
+  WRITTEN_OFF: { label: 'Castigado', variant: 'destructive', color: 'bg-red-600' },
   PAID_OFF: { label: 'Liquidado', variant: 'outline', color: 'bg-neutral-400' },
 };
 

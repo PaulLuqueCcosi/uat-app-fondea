@@ -23,9 +23,11 @@ import type { AdminCreditRow, CreditStatus } from '@/modules/admin/admin-credits
 // ── Status config ──────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<CreditStatus, { label: string; bg: string; text: string; border: string }> = {
+  PENDING_DISBURSEMENT: { label: 'Por desembolsar', bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
   ACTIVE: { label: 'Activo', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
   OVERDUE: { label: 'Vencido', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-  DEFAULTED: { label: 'En mora', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+  SUSPENDED: { label: 'Suspendido', bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-300' },
+  WRITTEN_OFF: { label: 'Castigado', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
   PAID_OFF: { label: 'Liquidado', bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
 };
 
@@ -337,7 +339,8 @@ export function CreditsTableClient({ data, pagination, paramPrefix = '' }: Credi
           <NativeSelectOption value="">Todos</NativeSelectOption>
           <NativeSelectOption value="ACTIVE">Activo</NativeSelectOption>
           <NativeSelectOption value="OVERDUE">Vencido</NativeSelectOption>
-          <NativeSelectOption value="DEFAULTED">En mora</NativeSelectOption>
+          <NativeSelectOption value="SUSPENDED">Suspendido</NativeSelectOption>
+          <NativeSelectOption value="WRITTEN_OFF">Castigado</NativeSelectOption>
           <NativeSelectOption value="PAID_OFF">Liquidado</NativeSelectOption>
         </NativeSelect>
 

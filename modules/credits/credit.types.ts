@@ -7,8 +7,19 @@
 
 // ─── Estados ──────────────────────────────────────────────────────────────────
 
-/** Estado de un crédito (backend enum) */
-export type CreditStatus = 'ACTIVE' | 'OVERDUE' | 'DEFAULTED' | 'PAID_OFF';
+/**
+ * Estado de un crédito (backend enum — CreditStatus.java).
+ * SUSPENDED: congelado por admin (fraude/disputa/orden judicial) — no acumula mora, no recibe pagos.
+ * WRITTEN_OFF: castigado contablemente, pero puede recuperarse con pagos voluntarios
+ * (vuelve a OVERDUE o PAID_OFF solo con eso, sin intervención manual).
+ */
+export type CreditStatus =
+  | 'PENDING_DISBURSEMENT'
+  | 'ACTIVE'
+  | 'OVERDUE'
+  | 'SUSPENDED'
+  | 'WRITTEN_OFF'
+  | 'PAID_OFF';
 
 /**
  * Tipo de crédito (backend enum).
@@ -206,9 +217,11 @@ export interface RegisterPaymentRequest {
 // ─── Labels legibles ──────────────────────────────────────────────────────────
 
 export const creditStatusLabels: Record<CreditStatus, string> = {
+  PENDING_DISBURSEMENT: 'Por desembolsar',
   ACTIVE: 'Activo',
   OVERDUE: 'Vencido',
-  DEFAULTED: 'En mora',
+  SUSPENDED: 'Suspendido',
+  WRITTEN_OFF: 'Castigado',
   PAID_OFF: 'Liquidado',
 };
 

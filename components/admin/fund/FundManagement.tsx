@@ -24,6 +24,7 @@ import {
   PieChart, Percent,
 } from 'lucide-react';
 import { MetricCard, MetricCardSkeleton } from '@/components/admin/metrics/MetricCard';
+import { SyncCreditInterestButton } from '@/components/admin/fund/SyncCreditInterestButton';
 import {
   getFundStatusAction, registerFundMovementAction, getFundMovementsAction,
   type FundStatus, type FundMovement, type FundMovementType,
@@ -242,14 +243,17 @@ export function FundManagement() {
         onRefresh={fetchData}
         isRefreshing={loading && !!status}
         footer={
-          <div className="flex items-center justify-between w-full text-xs text-muted-foreground">
+          <div className="flex items-center justify-between w-full text-xs text-muted-foreground gap-3 flex-wrap">
             <span>
               Última sincronización: {status?.last_sync_at ? fmtDate(status.last_sync_at) : 'Nunca'}
             </span>
-            <Badge variant="secondary" className="gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-warning-400" />
-              Sync manual
-            </Badge>
+            <div className="flex items-center gap-2">
+              <SyncCreditInterestButton onSynced={fetchData} />
+              <Badge variant="secondary" className="gap-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-warning-400" />
+                Sync manual
+              </Badge>
+            </div>
           </div>
         }
       >

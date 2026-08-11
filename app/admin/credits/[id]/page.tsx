@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
   getAdminCreditSummary,
+  getAdminCreditDetail,
   getAdminCreditInstallments,
   getAdminCreditTransactions,
   getAdminCreditTimeline,
@@ -21,8 +22,9 @@ interface Props {
 export default async function AdminCreditDetailPage({ params }: Props) {
   const { id } = await params;
 
-  const [summary, installments, transactions, timeline] = await Promise.all([
+  const [summary, detail, installments, transactions, timeline] = await Promise.all([
     getAdminCreditSummary(id),
+    getAdminCreditDetail(id),
     getAdminCreditInstallments(id),
     getAdminCreditTransactions(id),
     getAdminCreditTimeline(id),
@@ -32,12 +34,12 @@ export default async function AdminCreditDetailPage({ params }: Props) {
     notFound();
   }
 
-  // Fuente de verdad del saldo pendiente: suma del `outstanding` por cuota (ya calculado
-  // por el backend en /installments), igual que hace CreditInstallmentsSection — no re-derivarlo
-  // del total del crédito, que no descuenta lo ya pagado.
-  const totalOutstanding = installments
-    ? installments.installments.reduce((sum, i) => sum + i.outstanding, 0)
-    : summary.totalDue;
+  // Fuente de verdad del saldo pendiente: total_outstanding de /detail (CreditQueryReader
+  // en el backend) — NUNCA re-sumar `outstanding` por cuota acá. Una cuota NEGOTIATED queda
+  // con su outstanding congelado al monto que tenía al negociarse (no refleja nada de lo
+  // cobrado después en el crédito de negociación); calcularlo en el frontend duplicaría esa
+  // lógica y podía volver a desincronizarse si el backend la ajusta de nuevo.
+  const totalOutstanding = detail ? detail.totalOutstanding : summary.totalDue;
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -69,7 +71,7 @@ export default async function AdminCreditDetailPage({ params }: Props) {
 
         <TabsContent value="installments" className="mt-6">
           {installments ? (
-            <CreditInstallmentsSection data={installments} />
+            <CreditInstallmentsSection data={installments} totalOutstanding={totalOutstanding} />
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">No se pudieron cargar las cuotas</p>
           )}

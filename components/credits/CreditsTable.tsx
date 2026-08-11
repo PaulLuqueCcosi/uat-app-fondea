@@ -64,11 +64,13 @@ function formatDate(iso?: string | null): string {
 
 // ── Config de status ──────────────────────────────────────────────────────────
 
-const statusVariants: Record<CreditStatus, 'success' | 'completed' | 'error' | 'default'> = {
+const statusVariants: Record<CreditStatus, 'success' | 'completed' | 'error' | 'default' | 'warning' | 'destructive' | 'pending'> = {
+  PENDING_DISBURSEMENT: 'pending',
   ACTIVE: 'success',
   PAID_OFF: 'completed',
   OVERDUE: 'error',
-  DEFAULTED: 'error',
+  SUSPENDED: 'warning',
+  WRITTEN_OFF: 'destructive',
 };
 
 // ── Filtros de estado ─────────────────────────────────────────────────────────
@@ -79,7 +81,9 @@ const STATUS_FILTER_MAP: Record<StatusFilter, CreditStatus[] | null> = {
   ALL: null,
   ACTIVE: ['ACTIVE'],
   PAID_OFF: ['PAID_OFF'],
-  OVERDUE: ['OVERDUE', 'DEFAULTED'],
+  // Suspendido/castigado son estados administrativos excepcionales — se agrupan acá
+  // para no fragmentar el filtro simple del cliente en más botones.
+  OVERDUE: ['OVERDUE', 'SUSPENDED', 'WRITTEN_OFF'],
 };
 
 const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {

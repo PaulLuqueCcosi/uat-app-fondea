@@ -11,6 +11,9 @@ import type { AdminCreditInstallments, InstallmentItem } from '@/modules/admin/a
 
 interface Props {
   data: AdminCreditInstallments;
+  /** total_outstanding de /detail (CreditQueryReader) — ver nota en page.tsx sobre por
+   *  qué esto NO se recalcula sumando `outstanding` por cuota acá. */
+  totalOutstanding: number;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -33,14 +36,13 @@ function formatDate(value: string) {
   return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
 }
 
-export function CreditInstallmentsSection({ data }: Props) {
+export function CreditInstallmentsSection({ data, totalOutstanding }: Props) {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
   const paidCount = data.installments.filter((i) => i.status === 'PAID').length;
   const overdueCount = data.installments.filter((i) => i.status === 'OVERDUE').length;
-  const totalOutstanding = data.installments.reduce((sum, i) => sum + i.outstanding, 0);
 
   const totalPages = Math.max(1, Math.ceil(data.installments.length / pageSize));
   const pageData = useMemo(

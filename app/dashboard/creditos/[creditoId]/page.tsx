@@ -67,11 +67,13 @@ function formatDateLong(iso: string) {
 
 // ─── Status badge variant ─────────────────────────────────────────────────────
 
-const statusVariants: Record<string, 'success' | 'completed' | 'error' | 'default'> = {
+const statusVariants: Record<string, 'success' | 'completed' | 'error' | 'default' | 'warning' | 'destructive' | 'pending'> = {
+  PENDING_DISBURSEMENT: 'pending',
   ACTIVE: 'success',
-  PAID_OFF: 'completed',
   OVERDUE: 'error',
-  DEFAULTED: 'error',
+  SUSPENDED: 'warning',
+  WRITTEN_OFF: 'destructive',
+  PAID_OFF: 'completed',
 };
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────

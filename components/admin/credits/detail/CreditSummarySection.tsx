@@ -13,9 +13,11 @@ interface Props {
 // ── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  PENDING_DISBURSEMENT: { label: 'Por desembolsar', variant: 'outline' },
   ACTIVE: { label: 'Activo', variant: 'default' },
   OVERDUE: { label: 'Vencido', variant: 'secondary' },
-  DEFAULTED: { label: 'En mora', variant: 'destructive' },
+  SUSPENDED: { label: 'Suspendido', variant: 'secondary' },
+  WRITTEN_OFF: { label: 'Castigado', variant: 'destructive' },
   PAID_OFF: { label: 'Liquidado', variant: 'outline' },
 };
 

@@ -34,9 +34,11 @@ const APP_STATUS_LABELS: Record<string, { label: string; bg: string; text: strin
 };
 
 const CREDIT_STATUS_LABELS: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  PENDING_DISBURSEMENT: { label: 'Por desembolsar', bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
   ACTIVE: { label: 'Activo', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  OVERDUE: { label: 'En mora', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
-  DEFAULTED: { label: 'Default', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+  OVERDUE: { label: 'Vencido', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+  SUSPENDED: { label: 'Suspendido', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+  WRITTEN_OFF: { label: 'Castigado', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
   PAID_OFF: { label: 'Liquidado', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
 };
 

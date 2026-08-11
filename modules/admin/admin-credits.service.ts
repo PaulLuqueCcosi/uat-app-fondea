@@ -8,7 +8,7 @@ import type { SpringPage, Pagination } from './admin-users.types';
 
 // ── Tipos ───────────────────────────────────────────────────────────────────
 
-export type CreditStatus = 'ACTIVE' | 'OVERDUE' | 'DEFAULTED' | 'PAID_OFF';
+export type CreditStatus = 'PENDING_DISBURSEMENT' | 'ACTIVE' | 'OVERDUE' | 'SUSPENDED' | 'WRITTEN_OFF' | 'PAID_OFF';
 export type CreditTypeFilter = 'STANDARD' | 'NEGOTIATION';
 
 export interface AdminCreditRow {

@@ -143,7 +143,9 @@ function mapDistributionFromBackend(raw: any): PaymentDistribution {
 
 // ─── Helpers de mapeo de enums ────────────────────────────────────────────────
 
-const VALID_CREDIT_STATUSES: CreditStatus[] = ['ACTIVE', 'OVERDUE', 'DEFAULTED', 'PAID_OFF'];
+const VALID_CREDIT_STATUSES: CreditStatus[] = [
+  'PENDING_DISBURSEMENT', 'ACTIVE', 'OVERDUE', 'SUSPENDED', 'WRITTEN_OFF', 'PAID_OFF',
+];
 const VALID_CREDIT_TYPES: CreditType[] = ['STANDARD', 'NEGOTIATION'];
 const VALID_INSTALLMENT_STATUSES: InstallmentStatus[] = ['PENDING', 'CURRENT', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'NEGOTIATED'];
 

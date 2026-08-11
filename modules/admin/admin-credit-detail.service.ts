@@ -11,7 +11,7 @@ import { backendFetch } from '@/lib/backend-fetch';
 
 // ── Types: Summary (camelCase — backend usa @JsonNaming) ────────────────────
 
-export type CreditStatus = 'ACTIVE' | 'OVERDUE' | 'DEFAULTED' | 'PAID_OFF';
+export type CreditStatus = 'PENDING_DISBURSEMENT' | 'ACTIVE' | 'OVERDUE' | 'SUSPENDED' | 'WRITTEN_OFF' | 'PAID_OFF';
 export type DisbursementMethod = 'BANK_TRANSFER' | 'YAPE' | 'PLIN';
 export type DisbursementStatus = 'PENDING' | 'COMPLETED' | 'FAILED';
 
@@ -262,6 +262,95 @@ function mapAdminCreditSummaryFromBackend(raw: any): AdminCreditSummary {
         }
       : null,
   };
+}
+
+// ── Types: Detail (totales calculados + cuotas negociadas) ──────────────────
+
+/**
+ * Balance de un crédito — mismo shape que CreditSummaryResponse del backend,
+ * reusado tal cual para el balance del crédito de negociación de cada cuota
+ * movida (ver NegotiatedInstallmentSummary).
+ */
+export interface CreditFinancialSummary {
+  creditId: string;
+  totalDue: number;
+  totalPaid: number;
+  totalPenaltyAccrued: number;
+  totalPenaltyPaid: number;
+  totalOutstanding: number;
+  progressPercentage: number;
+}
+
+export interface NegotiatedInstallmentSummary {
+  installmentNo: number;
+  negotiationCreditId: string;
+  /** Null si el crédito de negociación no se pudo cargar (no debería pasar). */
+  summary: CreditFinancialSummary | null;
+}
+
+/**
+ * Totales calculados de GET /api/v1/admin/credits/{id}/detail — fuente de verdad
+ * para totalPaid/totalPenalty/totalOutstanding, NUNCA recalcular esto sumando
+ * `installments[].outstanding` a mano: una cuota NEGOTIATED queda con su
+ * outstanding congelado al monto que tenía al negociarse, y sumarla infla el
+ * pendiente (ver bug arreglado en page.tsx / CreditInstallmentsSection).
+ */
+export interface AdminCreditDetail {
+  totalPaid: number;
+  totalPenalty: number;
+  totalOutstanding: number;
+  installmentsCompleted: number;
+  installmentsOverdue: number;
+  negotiatedInstallments: NegotiatedInstallmentSummary[];
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapCreditFinancialSummaryFromBackend(raw: any): CreditFinancialSummary {
+  return {
+    creditId: raw.credit_id ?? '',
+    totalDue: raw.total_due ?? 0,
+    totalPaid: raw.total_paid ?? 0,
+    totalPenaltyAccrued: raw.total_penalty_accrued ?? 0,
+    totalPenaltyPaid: raw.total_penalty_paid ?? 0,
+    totalOutstanding: raw.total_outstanding ?? 0,
+    progressPercentage: raw.progress_percentage ?? 0,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapAdminCreditDetailFromBackend(raw: any): AdminCreditDetail {
+  return {
+    totalPaid: raw.total_paid ?? 0,
+    totalPenalty: raw.total_penalty ?? 0,
+    totalOutstanding: raw.total_outstanding ?? 0,
+    installmentsCompleted: raw.installments_completed ?? 0,
+    installmentsOverdue: raw.installments_overdue ?? 0,
+    negotiatedInstallments: Array.isArray(raw.negotiated_installments)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? raw.negotiated_installments.map((n: any) => ({
+          installmentNo: n.installment_no ?? 0,
+          negotiationCreditId: n.negotiation_credit_id ?? '',
+          summary: n.summary ? mapCreditFinancialSummaryFromBackend(n.summary) : null,
+        }))
+      : [],
+  };
+}
+
+/**
+ * Totales del crédito (totalPaid/totalPenalty/totalOutstanding + cuotas
+ * negociadas). Complementa a getAdminCreditSummary (que trae datos crudos —
+ * cliente, desembolso, config de mora — sin ningún cálculo a propósito).
+ */
+export async function getAdminCreditDetail(creditId: string): Promise<AdminCreditDetail | null> {
+  const res = await backendFetch(`/api/v1/admin/credits/${creditId}/detail`, {
+    context: 'ADMIN_CREDIT_DETAIL',
+  });
+  if (!res.ok) {
+    console.error(`[ADMIN_CREDIT_DETAIL] Error ${res.status}`);
+    return null;
+  }
+  const raw = await res.json();
+  return mapAdminCreditDetailFromBackend(raw);
 }
 
 export async function getAdminCreditSummary(creditId: string): Promise<AdminCreditSummary | null> {

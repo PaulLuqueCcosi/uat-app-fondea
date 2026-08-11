@@ -22,6 +22,39 @@ export async function deleteCreditAction(creditId: string): Promise<{ ok: boolea
 }
 
 /**
+ * Red de seguridad: reporta al fondo de capital la ganancia real (interés + mora,
+ * recursivo sobre cadenas de negociación) de créditos STANDARD ya cerrados
+ * (PAID_OFF) que se hayan quedado sin reportar — ver CreditInterestSyncService /
+ * CreditInterestReporter en el backend.
+ *
+ * En el flujo normal esto no debería encontrar nada: el reporte ya se dispara solo
+ * apenas un crédito cierra (CreditStatusRecalculator). Esto solo atrapa el caso raro
+ * de que ese disparo automático se haya perdido (caída a mitad de proceso, bug,
+ * datos históricos migrados sin el flag).
+ */
+export async function syncCreditInterestAction(): Promise<{ ok: boolean; message: string; creditsReported?: number }> {
+  const res = await backendFetch('/api/v1/admin/credits/interest-sync', {
+    method: 'POST',
+    context: 'ADMIN_CREDIT_INTEREST_SYNC',
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => 'Error desconocido');
+    return { ok: false, message: `Error ${res.status}: ${text}` };
+  }
+
+  const data = await res.json();
+  const count: number = data.creditsReported ?? 0;
+  return {
+    ok: true,
+    message: count > 0
+      ? `${count} crédito${count === 1 ? '' : 's'} reportado${count === 1 ? '' : 's'} al fondo`
+      : 'Todo al día — no había créditos pendientes de reportar',
+    creditsReported: count,
+  };
+}
+
+/**
  * Reintenta la creación del crédito (Fase 2) para una solicitud APPROVED cuyo
  * creditCreationStatus quedó en FAILED. Idempotente: si el crédito ya existe,
  * el backend lo detecta y no duplica.
