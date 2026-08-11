@@ -46,7 +46,7 @@ export function CalculatorAdminClient() {
   }
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <Tabs value={activeTab} onValueChange={(v) => { if (v) setActiveTab(v); }} className="w-full">
       <TabsList className="h-9 p-1">
         <TabsTrigger value="availability" className="gap-1.5 text-xs px-3">
           <Layers className="h-3.5 w-3.5" />

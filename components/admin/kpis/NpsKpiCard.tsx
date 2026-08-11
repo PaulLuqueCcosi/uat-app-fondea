@@ -76,7 +76,7 @@ export function NpsKpiCard({ days = 30 }: { days?: number }) {
             <span className="text-amber-600 font-medium">N: {data.passives}</span>
             <span className="text-red-600 font-medium">D: {data.detractors}</span>
           </div>
-          <Select value={selected} onValueChange={setSelected}>
+          <Select value={selected} onValueChange={(v) => { if (v) setSelected(v); }}>
             <SelectTrigger className="h-7 w-36 text-xs">
               <SelectValue />
             </SelectTrigger>

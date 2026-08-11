@@ -27,7 +27,8 @@ export function CollectionsTabs({
   const tab = searchParams.get('tab') ?? 'mora';
 
   const handleTabChange = useCallback(
-    (value: string) => {
+    (value: string | null) => {
+      if (!value) return;
       const params = new URLSearchParams(searchParams.toString());
       params.set('tab', value);
       router.push(`/admin/collections?${params.toString()}`);

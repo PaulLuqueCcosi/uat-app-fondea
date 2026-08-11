@@ -103,7 +103,7 @@ export function PassportSegmentationChart() {
                 innerRadius={60}
                 outerRadius={100}
                 dataKey="value"
-                label={({ name, percentage }) => `${name}: ${percentage}%`}
+                label={({ name, payload }: any) => `${name}: ${payload?.percentage ?? 0}%`}
               >
                 {chartData.map((entry, i) => (
                   <Cell key={i} fill={LEVEL_COLORS[entry.level] ?? '#94A3B8'} />
