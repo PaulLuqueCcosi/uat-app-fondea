@@ -15,8 +15,14 @@ interface CashflowKpi {
 }
 
 /**
- * KPI R7: Ingresos por día (cashflow) — Todo lo que entró a caja.
- * Muestra acumulado del período + lo de hoy. Botón "Ver gráfico".
+ * KPI #7 — Entradas a caja (cashflow), capital + interés SIN filtrar.
+ * GET /api/v1/admin/dashboard-kpis/cashflow
+ *
+ * accumulated = SUM(cuotas pagadas en los últimos N días) — TODO lo cobrado, capital
+ * y comisiones/interés juntos (a diferencia de KPI #6, que solo cuenta la porción
+ * de interés). Es el indicador de "salud diaria de caja": cuánta plata entró, sin
+ * distinguir si es devolución de capital o ganancia real.
+ * today = igual pero solo lo cobrado HOY (misma fecha del servidor).
  */
 export function CashflowKpiCard({ days: initialDays = 30 }: { days?: number }) {
   const [days, setDays] = useState(initialDays);

@@ -37,6 +37,17 @@ function getBarColor(index: number, total: number): string {
   return colors[idx];
 }
 
+/**
+ * KPI #12 — Distribución geográfica. GET /api/v1/admin/dashboard-kpis/geo-distribution
+ *
+ * ⚠️ DATOS MOCK, no reales — `KpiService.getGeoDistribution()` en el backend
+ * devuelve una lista hardcodeada (Arequipa/Lima/Cusco/etc., ~850 registros
+ * ficticios), aunque el puerto real que traería datos verdaderos
+ * (`KpiCreditDataPort.getGeoDistributionByDepartment/ByProvince`, conectado a
+ * `credit`) ya existe y funciona — simplemente `KpiService` no lo está usando
+ * todavía para este KPI. Pendiente de conectar; hasta entonces, lo que se ve en
+ * esta card y en /admin/analytics/geo-distribution es de prueba, no cartera real.
+ */
 export function CityDistributionKpiCard() {
   const [data, setData] = useState<GeoDistributionData | null>(null);
   const [loading, setLoading] = useState(true);

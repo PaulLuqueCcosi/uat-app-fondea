@@ -6,8 +6,18 @@ import { MetricCard, MetricCardSkeleton } from '@/components/admin/metrics/Metri
 import type { CapitalKpi } from '@/modules/admin/admin-kpis.service';
 
 /**
- * KPI 2: Capital disponible para prestar — Número S/ con semáforo.
- * Semáforo: verde si >30% libre, amarillo 15-30%, rojo <15%.
+ * KPI #2 — Capital disponible para prestar. GET /api/v1/admin/dashboard-kpis/capital
+ *
+ * available = Fund.bankBalance — el saldo BANCARIO REAL sincronizado desde el banco,
+ * NO un cálculo de "total_capital - deployed". Si la última sincronización con el
+ * banco está desactualizada (hay un warning en el backend cuando pasan >30min sin
+ * sync), este número puede no coincidir exacto con total_capital - deployed.
+ * total_capital = Fund.capitalBase (capital total aportado al fondo).
+ * deployed = SUM(principal) de créditos STANDARD activos (mismo cálculo que KPI #1).
+ *
+ * El semáforo de color (verde >30% libre, amarillo 15-30%, rojo <15%) se calcula
+ * ACÁ en el frontend con `available/total_capital` — el backend no manda ningún
+ * campo de "estado"/color, solo los 3 montos.
  */
 export function CapitalDisponibleKpiCard() {
   const [data, setData] = useState<CapitalKpi | null>(null);

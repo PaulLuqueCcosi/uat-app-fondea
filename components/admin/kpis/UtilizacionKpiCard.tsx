@@ -6,8 +6,12 @@ import { MetricCard, MetricCardSkeleton } from '@/components/admin/metrics/Metri
 import type { CapitalKpi } from '@/modules/admin/admin-kpis.service';
 
 /**
- * KPI 3: Tasa de utilización de cartera — Gauge circular 0-100%.
- * Si es muy bajo la cartera no rota bien.
+ * KPI #3 — Tasa de utilización de cartera. GET /api/v1/admin/dashboard-kpis/capital
+ * (mismo endpoint que KPI #2 — comparte el campo `utilization_rate` de la respuesta).
+ *
+ * utilization_rate = deployed / capitalBase × 100, calculado en el backend
+ * (Fund.calculateUtilizationRate). Si es muy bajo, la cartera no está rotando bien
+ * (mucho capital ocioso sin prestar).
  */
 export function UtilizacionKpiCard() {
   const [data, setData] = useState<CapitalKpi | null>(null);

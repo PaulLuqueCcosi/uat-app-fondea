@@ -6,8 +6,16 @@ import { MetricCard, MetricCardSkeleton } from '@/components/admin/metrics/Metri
 import type { ActiveLoansKpi } from '@/modules/admin/admin-kpis.service';
 
 /**
- * KPI 1: Préstamos activos — Número grande + monto S/ debajo.
- * TODO: Agregar gráfico de línea cuando haya datos históricos por día.
+ * KPI #1 — Préstamos activos. GET /api/v1/admin/dashboard-kpis/active-loans
+ *
+ * count = COUNT(créditos con credit_type=STANDARD y status IN (ACTIVE, OVERDUE)).
+ * total_principal = SUM(principal) de esos mismos créditos.
+ * Créditos de NEGOCIACIÓN se excluyen a propósito — no son capital nuevo
+ * desembolsado, son deuda ya existente reempaquetada (ver
+ * NegotiationCreditCreationService del backend).
+ *
+ * TODO: Agregar gráfico de línea cuando haya datos históricos por día (no existe
+ * endpoint de historial para este KPI todavía).
  */
 export function ActiveLoansKpiCard() {
   const [data, setData] = useState<ActiveLoansKpi | null>(null);

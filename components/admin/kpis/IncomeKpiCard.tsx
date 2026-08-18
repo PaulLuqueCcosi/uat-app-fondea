@@ -9,8 +9,18 @@ import { MetricCard, MetricCardSkeleton } from '@/components/admin/metrics/Metri
 import type { IncomeKpi } from '@/modules/admin/admin-kpis.service';
 
 /**
- * KPI 6: Ingresos brutos acumulados — Número S/ + "desde hace N días".
- * Permite cambiar días. Botón "Ver gráfico" abre página con chart por día.
+ * KPI #6 — Ingresos brutos (SOLO intereses). GET /api/v1/admin/dashboard-kpis/income
+ *
+ * accumulated_income = SUM(cuotas pagadas en los últimos N días) × interestRatio.
+ * income_today = igual pero solo lo cobrado HOY.
+ * interestRatio = promedio de (totalDue - principal) / totalDue entre los créditos
+ * activos — una ESTIMACIÓN de qué % de cada pago recibido es interés vs. capital
+ * devuelto (no usa el desglose real por cuota `interest_amount`/`principal_amount`
+ * que sí existe ahora en el dominio Installment — este KPI podría volverse exacto
+ * sumando esos campos directo en vez de aplicar un ratio promedio, pero hoy no lo hace).
+ *
+ * Distinto de KPI #7 (Cashflow): acá se filtra la porción de interés; en #7 se
+ * cuenta TODO lo que entró a caja (capital + interés), sin filtrar nada.
  */
 export function IncomeKpiCard({ days: initialDays = 30 }: { days?: number }) {
   const [days, setDays] = useState(initialDays);

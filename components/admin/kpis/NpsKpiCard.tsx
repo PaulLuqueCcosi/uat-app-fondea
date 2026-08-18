@@ -24,6 +24,16 @@ function generateMonthOptions(count: number = 6): { value: string; label: string
 
 // ── Component ───────────────────────────────────────────────────────────────
 
+/**
+ * KPI #8 — NPS (Net Promoter Score) del mes.
+ * GET /api/v1/admin/dashboard-kpis/nps/monthly?year=&month=
+ *
+ * nps_score = %promotores - %detractores de las respuestas del mes elegido.
+ * Encuesta: "¿qué tan probable es que recomiendes Fondea?", escala 0-10.
+ *   promotor = 9-10 · pasivo = 7-8 · detractor = 0-6.
+ * trend_delta = nps_score del mes elegido - nps_score del mes inmediato anterior
+ * (null si el mes anterior no tiene respuestas todavía).
+ */
 export function NpsKpiCard({ days = 30 }: { days?: number }) {
   const monthOptions = useMemo(() => generateMonthOptions(6), []);
   const [selected, setSelected] = useState(monthOptions[0].value);

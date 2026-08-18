@@ -1,4 +1,5 @@
 import { TrendingUp } from 'lucide-react';
+import { getProductFilterOptions } from '@/modules/admin/admin-product-options.service';
 import { ActiveLoansKpiCard } from '@/components/admin/kpis/ActiveLoansKpiCard';
 import { CapitalDisponibleKpiCard } from '@/components/admin/kpis/CapitalDisponibleKpiCard';
 import { UtilizacionKpiCard } from '@/components/admin/kpis/UtilizacionKpiCard';
@@ -6,6 +7,7 @@ import { IncomeKpiCard } from '@/components/admin/kpis/IncomeKpiCard';
 import { CashflowKpiCard } from '@/components/admin/kpis/CashflowKpiCard';
 import { NpsKpiCard } from '@/components/admin/kpis/NpsKpiCard';
 import { NplKpiCard } from '@/components/admin/kpis/NplKpiCard';
+import { NplTranchesKpiCard } from '@/components/admin/kpis/NplTranchesKpiCard';
 import { FunnelKpiCard } from '@/components/admin/kpis/FunnelKpiCard';
 import { ActiveClientsKpiCard } from '@/components/admin/kpis/ActiveClientsKpiCard';
 import { RepurchaseRateKpiCard } from '@/components/admin/kpis/RepurchaseRateKpiCard';
@@ -14,8 +16,12 @@ import { CityDistributionKpiCard } from '@/components/admin/kpis/CityDistributio
 /**
  * Página de KPIs Globales (M1) del Dashboard Admin.
  * Cada card es independiente: fetch propio, skeleton propio, refresh propio.
+ * Excepción: los plazos válidos (termDays) para el NPL por plazo se traen acá,
+ * server-side, desde fondea-calculator-service — mismo patrón que /admin/intentions.
  */
-export default function AdminAnalyticsPage() {
+export default async function AdminAnalyticsPage() {
+  const productOptions = await getProductFilterOptions();
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       {/* Header */}
@@ -38,8 +44,11 @@ export default function AdminAnalyticsPage() {
         <UtilizacionKpiCard />
       </div>
 
-      {/* Fila 2: NPL (ancho) */}
-      <NplKpiCard />
+      {/* Fila 2: NPL — R4 (por plazo) y R5 (por tramo de mora) en cards separadas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <NplKpiCard termDaysOptions={productOptions.termDays} />
+        <NplTranchesKpiCard />
+      </div>
 
       {/* Fila 3: Ingresos brutos + Ingresos a caja + NPS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

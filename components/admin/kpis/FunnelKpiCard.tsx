@@ -13,9 +13,17 @@ interface FunnelKpi {
 }
 
 /**
- * KPI R9: Funnel de conversión simplificado.
- * Enviadas → Pre-aprobadas → Desembolsadas
- * Con selector de días.
+ * KPI #9 — Funnel de conversión (mini). GET /api/v1/admin/dashboard-kpis/funnel
+ *
+ * 3 etapas, cada una = COUNT de eventos de ese tipo registrados en los últimos
+ * N días (tabla de eventos de funnel, no un cálculo derivado de solicitudes):
+ *   applications_submitted   = eventos SUBMITTED (pasó KYC + formularios)
+ *   applications_pre_approved = eventos PRE_APPROVED (evaluación crediticia OK)
+ *   credits_disbursed        = eventos DISBURSED (crédito creado, dinero enviado)
+ * overall_conversion_rate = credits_disbursed / applications_submitted × 100.
+ * Nota: el dominio interno tiene más etapas (VALIDATION_PASSED/FAILED, REJECTED,
+ * CONTRACT_SIGNED, EXPIRED) pero este KPI solo expone estas 3 — es un funnel
+ * "mini" a propósito, no el funnel completo (ese vive en userintentions).
  */
 export function FunnelKpiCard({ days: initialDays = 30 }: { days?: number }) {
   const [days, setDays] = useState(initialDays);

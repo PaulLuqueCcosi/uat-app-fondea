@@ -13,10 +13,15 @@ const BACKEND_URL = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
 const RESOURCE = process.env.LOGTO_API_RESOURCE;
 
 const VALID_KPIS = [
-  'active-loans', 'capital', 'npl', 'income', 'cashflow', 'nps',
+  'active-loans', 'capital', 'npl', 'npl-tranches', 'income', 'cashflow', 'nps',
   'funnel', 'active-clients', 'repurchase-rate', 'city-distribution',
   'geo-distribution',
 ];
+
+/** [kpi] no soporta segmentos con "/" — mapeo explícito para los que sí los necesitan en el backend. */
+const BACKEND_PATH_OVERRIDES: Record<string, string> = {
+  'npl-tranches': 'npl/tranches',
+};
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ kpi: string }> }) {
   const { kpi } = await params;
@@ -41,9 +46,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     // Build backend URL with days param for KPIs that need it
     const needsDays = ['income', 'cashflow', 'nps', 'funnel', 'active-clients', 'repurchase-rate'];
-    const queryStr = needsDays.includes(kpi) ? `?days=${days}` : '';
+    let queryStr = needsDays.includes(kpi) ? `?days=${days}` : '';
 
-    const res = await fetch(`${BACKEND_URL}/api/v1/admin/dashboard-kpis/${kpi}${queryStr}`, {
+    // npl acepta termDays=7,15,30 (o repetido) — se reenvía tal cual si vino del front.
+    if (kpi === 'npl') {
+      const termDays = request.nextUrl.searchParams.get('termDays');
+      if (termDays) queryStr = `?termDays=${encodeURIComponent(termDays)}`;
+    }
+
+    const backendPath = BACKEND_PATH_OVERRIDES[kpi] ?? kpi;
+    const res = await fetch(`${BACKEND_URL}/api/v1/admin/dashboard-kpis/${backendPath}${queryStr}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
