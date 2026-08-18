@@ -1,11 +1,9 @@
 /**
- * Service para KPIs del dashboard admin — usa endpoints individuales.
- * Cada función llama a un endpoint separado para carga independiente con Suspense.
+ * Tipos de los KPIs del dashboard admin (M1). Cada card en
+ * `components/admin/kpis/` hace su propio `fetch('/api/admin/kpis/...')`
+ * directo al proxy Next.js — este archivo solo define las formas de
+ * respuesta que esas cards importan como `import type {...}`.
  */
-
-import { backendFetch } from '@/lib/backend-fetch';
-
-const BASE = '/api/v1/admin/dashboard-kpis';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -89,6 +87,7 @@ export interface NpsKpiWithTrend {
 }
 
 export interface FunnelKpi {
+  new_intentions: number;
   applications_submitted: number;
   applications_pre_approved: number;
   credits_disbursed: number;
@@ -114,55 +113,4 @@ export interface CityEntry {
 
 export interface CityDistributionKpi {
   cities: CityEntry[];
-}
-
-// ── Fetch functions (server-side, one per KPI) ──────────────────────────────
-
-async function fetchKpi<T>(path: string): Promise<T | null> {
-  const res = await backendFetch(`${BASE}${path}`, { context: 'KPI' });
-  if (!res.ok) {
-    console.error(`[KPI] Error ${res.status} en ${path}`);
-    return null;
-  }
-  return res.json();
-}
-
-export async function getActiveLoansKpi(): Promise<ActiveLoansKpi | null> {
-  return fetchKpi('/active-loans');
-}
-
-export async function getCapitalKpi(): Promise<CapitalKpi | null> {
-  return fetchKpi('/capital');
-}
-
-export async function getNplKpi(): Promise<NplKpi | null> {
-  return fetchKpi('/npl');
-}
-
-export async function getIncomeKpi(days: number = 30): Promise<IncomeKpi | null> {
-  return fetchKpi(`/income?days=${days}`);
-}
-
-export async function getNpsKpi(days: number = 30): Promise<NpsKpi | null> {
-  return fetchKpi(`/nps?days=${days}`);
-}
-
-export async function getNpsKpiMonthly(year: number, month: number): Promise<NpsKpiWithTrend | null> {
-  return fetchKpi(`/nps/monthly?year=${year}&month=${month}`);
-}
-
-export async function getFunnelKpi(days: number = 30): Promise<FunnelKpi | null> {
-  return fetchKpi(`/funnel?days=${days}`);
-}
-
-export async function getActiveClientsKpi(days: number = 30): Promise<ActiveClientsKpi | null> {
-  return fetchKpi(`/active-clients?days=${days}`);
-}
-
-export async function getRepurchaseRateKpi(days: number = 30): Promise<RepurchaseRateKpi | null> {
-  return fetchKpi(`/repurchase-rate?days=${days}`);
-}
-
-export async function getCityDistributionKpi(): Promise<CityDistributionKpi | null> {
-  return fetchKpi('/city-distribution');
 }

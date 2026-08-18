@@ -10,14 +10,16 @@ import type { ActiveClientsKpi } from '@/modules/admin/admin-kpis.service';
  * KPI #10 — Clientes activos. GET /api/v1/admin/dashboard-kpis/active-clients
  *
  * count = clientes (usuarios) DISTINTOS con al menos un crédito status IN
- * (ACTIVE, OVERDUE) creado desde hace N días.
+ * (ACTIVE, OVERDUE), credit_type='STANDARD', creado desde hace N días.
  *
- * ⚠️ Gap conocido, no corregido: a diferencia de los KPIs #1, #2/#3, #4 y #5,
- * esta query NO filtra `credit_type = 'STANDARD'` — un cliente cuyo único
- * crédito "activo" reciente sea de NEGOCIACIÓN (deuda reempaquetada, no capital
- * nuevo) cuenta acá igual que uno con un crédito STANDARD real. Quedó fuera del
- * alcance cuando se corrigió el filtro STANDARD para el resto de los KPIs de
- * cartera/NPL — pendiente si se quiere consistencia total.
+ * ✅ Corregido (2026-08-18): antes NO filtraba `credit_type = 'STANDARD'` —
+ * un cliente cuyo único crédito "activo" reciente fuera de NEGOCIACIÓN (deuda
+ * reempaquetada, no capital nuevo) contaba igual que uno con un crédito
+ * STANDARD real. Ya consistente con el resto de los KPIs de cartera/NPL.
+ *
+ * ⚠️ Nota pendiente, no un bug: el brief pide "activo O desembolsado desde
+ * hace N días" (OR); la query real es "status activo Y creado desde hace N
+ * días" (AND) — confirmar con negocio si es la semántica correcta.
  */
 export function ActiveClientsKpiCard({ days: initialDays = 30 }: { days?: number }) {
   const [days, setDays] = useState(initialDays);

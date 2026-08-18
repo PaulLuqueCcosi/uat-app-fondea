@@ -1,8 +1,12 @@
 /**
- * Proxy genérico para KPIs individuales.
- * Rutea /api/admin/kpis/active-loans → backend /api/v1/admin/dashboard-kpis/active-loans
- * Rutea /api/admin/kpis/npl → backend /api/v1/admin/dashboard-kpis/npl
- * etc.
+ * GET /api/admin/kpis/<kpi>[/<subpath>]?<query>
+ *
+ * Proxy único para todos los KPIs del dashboard admin (M1) — reemplaza los
+ * 2 proxies duplicados que existían antes ([kpi]/route.ts + este archivo,
+ * ambos resolviendo /api/admin/kpis/*). Rutea tal cual al backend:
+ *   /api/admin/kpis/active-loans      -> /api/v1/admin/dashboard-kpis/active-loans
+ *   /api/admin/kpis/income/history    -> /api/v1/admin/dashboard-kpis/income/history
+ * Todos los query params se reenvían sin filtrar (days, termDays, year, month, etc.).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,9 +16,25 @@ import { logtoConfig } from '@/app/logto';
 const BACKEND_URL = process.env.BACKEND_API_URL ?? 'http://localhost:8080';
 const RESOURCE = process.env.LOGTO_API_RESOURCE;
 
+const VALID_KPIS = [
+  'active-loans', 'capital', 'npl', 'npl-tranches', 'income', 'cashflow', 'nps',
+  'funnel', 'active-clients', 'repurchase-rate', 'city-distribution',
+  'geo-distribution',
+];
+
+/** [...path] no soporta "/" dentro de un solo segmento de URL — mapeo explícito para el único caso que lo necesita. */
+const BACKEND_PATH_OVERRIDES: Record<string, string> = {
+  'npl-tranches': 'npl/tranches',
+};
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
-  const kpiPath = path.join('/');
+
+  if (path.length === 1 && !VALID_KPIS.includes(path[0])) {
+    return NextResponse.json({ error: 'invalid_kpi' }, { status: 400 });
+  }
+
+  const backendPath = path.length === 1 ? (BACKEND_PATH_OVERRIDES[path[0]] ?? path[0]) : path.join('/');
   const searchParams = request.nextUrl.searchParams.toString();
   const query = searchParams ? `?${searchParams}` : '';
 
@@ -30,7 +50,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   try {
-    const url = `${BACKEND_URL}/api/v1/admin/dashboard-kpis/${kpiPath}${query}`;
+    const url = `${BACKEND_URL}/api/v1/admin/dashboard-kpis/${backendPath}${query}`;
     const res = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,

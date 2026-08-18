@@ -40,13 +40,13 @@ function getBarColor(index: number, total: number): string {
 /**
  * KPI #12 — Distribución geográfica. GET /api/v1/admin/dashboard-kpis/geo-distribution
  *
- * ⚠️ DATOS MOCK, no reales — `KpiService.getGeoDistribution()` en el backend
- * devuelve una lista hardcodeada (Arequipa/Lima/Cusco/etc., ~850 registros
- * ficticios), aunque el puerto real que traería datos verdaderos
- * (`KpiCreditDataPort.getGeoDistributionByDepartment/ByProvince`, conectado a
- * `credit`) ya existe y funciona — simplemente `KpiService` no lo está usando
- * todavía para este KPI. Pendiente de conectar; hasta entonces, lo que se ve en
- * esta card y en /admin/analytics/geo-distribution es de prueba, no cartera real.
+ * ✅ Datos reales (corregido 2026-08-18) — `KpiService.getGeoDistribution()`
+ * lee de `KpiCreditDataPort.getGeoDistributionByDepartment/ByProvince`
+ * (conectado a `credit`), ya no devuelve la lista mock hardcodeada. Las
+ * provincias se agrupan bajo su departamento por prefijo de código ubigeo.
+ * Solo créditos `credit_type=STANDARD` con `ubigeo_region`/`ubigeo_province`
+ * cargado aparecen acá — en dev la mayoría de créditos de prueba no tienen
+ * ubigeo, así que es normal ver pocos departamentos.
  */
 export function CityDistributionKpiCard() {
   const [data, setData] = useState<GeoDistributionData | null>(null);

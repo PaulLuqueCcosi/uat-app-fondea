@@ -281,15 +281,15 @@ export function ApplicationsTableClient({ data, pagination }: ApplicationsTableC
             <NativeSelectOption value="EXPIRED">Expirada</NativeSelectOption>
           </NativeSelect>
 
-          <CollapsibleTrigger>
-            <Button variant="outline" size="sm" className="h-9 gap-2" type="button" disabled={isPending}>
-              <Filter className="h-4 w-4" />
-              Filtros
-              {activeFilterCount > 0 && (
-                <Badge variant="default" className="h-5 min-w-5 px-1 text-[10px]">{activeFilterCount}</Badge>
-              )}
-              {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </Button>
+          <CollapsibleTrigger
+            render={<Button variant="outline" size="sm" className="h-9 gap-2" type="button" disabled={isPending} />}
+          >
+            <Filter className="h-4 w-4" />
+            Filtros
+            {activeFilterCount > 0 && (
+              <Badge variant="default" className="h-5 min-w-5 px-1 text-[10px]">{activeFilterCount}</Badge>
+            )}
+            {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </CollapsibleTrigger>
 
           {(activeFilterCount > 0 || currentStatus || search) && (

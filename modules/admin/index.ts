@@ -17,7 +17,6 @@ export * from './admin-user-referrals.types';
 export * from './admin-user-auth.service';
 export * from './admin-user-auth.types';
 export * from './admin-form-labels';
-export * from './admin-dashboard.service';
 export * from './admin-applications.service';
 export * from './admin-nps.service';
 export * from './admin-collections.service';
