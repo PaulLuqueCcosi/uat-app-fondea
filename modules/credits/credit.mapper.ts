@@ -11,11 +11,11 @@ import type {
   CreditSummary,
   NextPayment,
   Transaction,
-  PaymentResult,
-  PaymentDistribution,
   CreditStatus,
   CreditType,
   InstallmentStatus,
+  PenaltyConfigInfo,
+  PenaltyRangeInfo,
 } from './credit.types';
 
 // ─── Crédito ──────────────────────────────────────────────────────────────────
@@ -39,10 +39,39 @@ export function mapCreditFromBackend(raw: any): Credit {
     maturityDate: raw.maturity_date ?? '',
     overdueSince: raw.overdue_since ?? null,
     closedAt: raw.closed_at ?? null,
+    penaltyConfig: raw.penalty_config ? mapPenaltyConfigFromBackend(raw.penalty_config) : undefined,
     // Solo presentes si creditType = NEGOTIATION (@JsonInclude NON_NULL en el backend)
     originInstallmentId: raw.origin_installment_id ?? null,
     originCreditId: raw.origin_credit_id ?? null,
     rootCreditId: raw.root_credit_id ?? null,
+  };
+}
+
+/**
+ * Config de mora aplicada al crédito. El backend la manda en `penalty_config`, pero los
+ * campos internos de cada rango vienen en camelCase (el record anidado no declara
+ * @JsonProperty por campo, a diferencia del resto del DTO) — de ahí el doble fallback.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPenaltyConfigFromBackend(raw: any): PenaltyConfigInfo {
+  return {
+    id: raw.id ?? '',
+    name: raw.name ?? '',
+    isActive: raw.is_active ?? raw.isActive ?? false,
+    ranges: Array.isArray(raw.ranges) ? raw.ranges.map(mapPenaltyRangeFromBackend) : [],
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPenaltyRangeFromBackend(raw: any): PenaltyRangeInfo {
+  return {
+    fromDay: raw.fromDay ?? raw.from_day ?? 0,
+    toDay: raw.toDay ?? raw.to_day ?? null,
+    type: raw.type === 'FIXED' ? 'FIXED' : 'PERCENTAGE',
+    value: raw.value ?? 0,
+    base: raw.base ?? null,
+    label: raw.label ?? null,
+    color: raw.color ?? null,
   };
 }
 
@@ -64,6 +93,9 @@ export function mapInstallmentFromBackend(raw: any): Installment {
     paidAt: raw.paid_at ?? null,
     // Solo presente si status = NEGOTIATED
     negotiationCreditId: raw.negotiation_credit_id ?? null,
+    // Comprobante en revisión: la mora está congelada, la UI debe mostrar
+    // "en revisión" en vez de "vencida".
+    hasPendingDeclaration: raw.has_pending_declaration ?? false,
   };
 }
 
@@ -116,30 +148,8 @@ export function mapTransactionFromBackend(raw: any): Transaction {
   };
 }
 
-// ─── Resultado de pago ────────────────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function mapPaymentResultFromBackend(raw: any): PaymentResult {
-  return {
-    creditId: raw.credit_id ?? '',
-    totalApplied: raw.total_applied ?? 0,
-    remaining: raw.remaining ?? 0,
-    creditStatus: raw.credit_status ?? '',
-    distributions: Array.isArray(raw.distributions)
-      ? raw.distributions.map(mapDistributionFromBackend)
-      : [],
-  };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapDistributionFromBackend(raw: any): PaymentDistribution {
-  return {
-    installmentNo: raw.installment_no ?? 0,
-    appliedToPenalty: raw.applied_to_penalty ?? 0,
-    appliedToInstallment: raw.applied_to_installment ?? 0,
-    installmentStatus: raw.installment_status ?? '',
-  };
-}
+// El mapeo del resultado de un pago vive en `modules/payment-declarations` — es ese
+// módulo el que aplica pagos y expone su resultado.
 
 // ─── Helpers de mapeo de enums ────────────────────────────────────────────────
 

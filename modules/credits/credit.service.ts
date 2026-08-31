@@ -14,8 +14,6 @@ import type {
   Installment,
   NextPayment,
   Transaction,
-  PaymentResult,
-  RegisterPaymentRequest,
 } from './credit.types';
 import type { CreditError } from './credit.errors';
 import { errors } from './credit.errors';
@@ -26,7 +24,6 @@ import {
   mapCreditSummaryFromBackend,
   mapNextPaymentFromBackend,
   mapTransactionFromBackend,
-  mapPaymentResultFromBackend,
 } from './credit.mapper';
 
 // Re-tipamos Result con nuestro error específico
@@ -222,42 +219,12 @@ export async function getTransactions(creditId: string): Promise<CreditResult<Tr
 }
 
 // ─── Pagar cuota ──────────────────────────────────────────────────────────────
-
-/**
- * Registrar pago de una cuota específica.
- * POST /api/v1/credits/{id}/installments/{installmentNo}/pay
- */
-export async function payInstallment(
-  creditId: string,
-  installmentNo: number,
-  payment: RegisterPaymentRequest,
-): Promise<CreditResult<PaymentResult>> {
-  try {
-    const res = await backendFetch(
-      `/api/v1/credits/${creditId}/installments/${installmentNo}/pay`,
-      {
-        context: CTX,
-        method: 'POST',
-        body: JSON.stringify(payment),
-      },
-    );
-
-    if (res.status === 400) {
-      const body = await res.json().catch(() => ({}));
-      return { ok: false, error: errors.validationFailed(body.detail ?? body.message) };
-    }
-    if (res.status === 401) return { ok: false, error: errors.sessionExpired() };
-    if (res.status === 404) return { ok: false, error: errors.installmentNotFound(creditId, installmentNo) };
-    if (res.status === 409) {
-      const body = await res.json().catch(() => ({}));
-      return { ok: false, error: errors.conflict(body.detail ?? body.message) };
-    }
-    if (res.status >= 500) return { ok: false, error: errors.serverError(res.status) };
-    if (!res.ok) return { ok: false, error: errors.paymentFailed() };
-
-    const raw = await res.json();
-    return { ok: true, data: mapPaymentResultFromBackend(raw) };
-  } catch {
-    return { ok: false, error: errors.networkError() };
-  }
-}
+//
+// Este módulo NO paga. El pago entra por `modules/payment-declarations`: el cliente
+// sube el comprobante de su transferencia y un admin lo valida — recién entonces el
+// backend lo aplica al crédito.
+//
+// Antes había acá un `payInstallment` contra
+// POST /api/v1/credits/{id}/installments/{no}/pay. Ese endpoint se eliminó del backend
+// (permitía reducir la propia deuda sin comprobante ni revisión) y esta función no la
+// usaba ninguna vista.

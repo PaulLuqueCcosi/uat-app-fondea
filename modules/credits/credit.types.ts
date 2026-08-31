@@ -35,8 +35,8 @@ export type InstallmentStatus = 'PENDING' | 'CURRENT' | 'PARTIALLY_PAID' | 'PAID
 /** Tipo de transacción */
 export type TransactionType = 'DISBURSEMENT' | 'REPAYMENT' | 'PENALTY_ACCRUAL' | 'PENALTY_PAYMENT' | 'REVERSAL';
 
-/** Método de pago */
-export type PaymentMethod = 'BANK_TRANSFER' | 'YAPE' | 'PLIN' | 'CASH' | 'WALLET' | 'DEBIT_CARD' | 'OTHER';
+// El método de pago y el resultado de aplicar un pago viven en
+// `modules/payment-declarations` — este módulo es de solo lectura del crédito.
 
 // ─── Crédito ──────────────────────────────────────────────────────────────────
 
@@ -135,6 +135,16 @@ export interface Installment {
    * (la cuota no se pagó directamente, se trasladó a ese crédito).
    */
   negotiationCreditId?: string | null;
+  /**
+   * El cliente ya subió un comprobante que alcanza a esta cuota y está esperando
+   * revisión del admin. Mientras sea true, la mora está congelada en el backend.
+   *
+   * `status` puede seguir siendo OVERDUE (es el estado real, lo que ve el admin y los
+   * reportes de cobranza). Usar este flag para mostrar "pago en revisión" en lugar de
+   * "vencida": el cliente ya pagó y, salvo que se rechace el comprobante, esa mora no
+   * va a existir.
+   */
+  hasPendingDeclaration: boolean;
 }
 
 // ─── Resumen ──────────────────────────────────────────────────────────────────
@@ -183,38 +193,23 @@ export interface Transaction {
 }
 
 // ─── Resultado de pago ────────────────────────────────────────────────────────
-
-export interface PaymentDistribution {
-  installmentNo: number;
-  appliedToPenalty: number;
-  appliedToInstallment: number;
-  installmentStatus: string;
-}
-
-export interface PaymentResult {
-  creditId: string;
-  totalApplied: number;
-  remaining: number;
-  creditStatus: string;
-  distributions: PaymentDistribution[];
-}
-
-// ─── Request de pago (camelCase — tal cual el backend lo espera) ──────────────
-
-export interface RegisterPaymentRequest {
-  amount: number;
-  paymentMethod: PaymentMethod;
-  referenceNumber?: string;
-  bankName?: string;
-  accountOrigin?: string;
-  transactionDate?: string;
-  source?: string;
-  externalId?: string;
-  receiptUrl?: string;
-  rawPayload?: string;
-}
+//
+// `PaymentResult` / `PaymentResultDistribution` viven en
+// `modules/payment-declarations` — es ese módulo el que aplica pagos (declaración con
+// comprobante + aprobación del admin) y el que expone su resultado. Antes estaban
+// duplicados acá para el `payInstallment` que se eliminó.
 
 // ─── Labels legibles ──────────────────────────────────────────────────────────
+
+/** Variantes del componente Badge (components/ui/badge.tsx). */
+export type CreditBadgeVariant =
+  | 'success'
+  | 'completed'
+  | 'error'
+  | 'default'
+  | 'warning'
+  | 'destructive'
+  | 'pending';
 
 export const creditStatusLabels: Record<CreditStatus, string> = {
   PENDING_DISBURSEMENT: 'Por desembolsar',
@@ -225,9 +220,51 @@ export const creditStatusLabels: Record<CreditStatus, string> = {
   PAID_OFF: 'Liquidado',
 };
 
+/**
+ * Variante de badge por estado. Estaba duplicado en `CreditsTable.tsx` y en la página de
+ * detalle del crédito, tipado como `Record<string, ...>` — con `string` como clave, un
+ * estado nuevo del backend no rompe la compilación y el badge sale sin color.
+ */
+export const creditStatusVariants: Record<CreditStatus, CreditBadgeVariant> = {
+  PENDING_DISBURSEMENT: 'pending',
+  ACTIVE: 'success',
+  OVERDUE: 'error',
+  SUSPENDED: 'warning',
+  WRITTEN_OFF: 'destructive',
+  PAID_OFF: 'completed',
+};
+
+/**
+ * Explicación del estado del crédito para el cliente, con la siguiente acción cuando
+ * aplica. El cliente no tiene por qué saber qué significa "Castigado" o "Suspendido".
+ */
+export const creditStatusDescriptions: Record<CreditStatus, string> = {
+  PENDING_DISBURSEMENT:
+    'Tu préstamo está aprobado y estamos transfiriendo el dinero. Te avisamos en cuanto llegue.',
+  ACTIVE: 'Tu préstamo está al día. Sigue pagando a tiempo para mejorar tu puntaje.',
+  // No se nombra "la cuota más antigua": puede ser justo la que ya tiene comprobante en
+  // revisión, y entonces el mensaje le pide pagar algo que ya pagó. El aviso de arriba
+  // (NextPaymentAlert) ya señala la cuota concreta que corresponde.
+  OVERDUE:
+    'Tienes cuotas vencidas acumulando mora. Declara tu pago para detenerla.',
+  SUSPENDED:
+    'Tu préstamo está temporalmente congelado mientras revisamos tu caso. No se genera mora. Escríbenos si necesitas más información.',
+  WRITTEN_OFF:
+    'Este préstamo pasó a cobranza por falta de pago prolongada. Contáctanos para regularizar tu situación.',
+  PAID_OFF: 'Este préstamo está completamente pagado. Ya puedes solicitar uno nuevo.',
+};
+
+/**
+ * Etiquetas del estado CONTABLE de la cuota, tal como lo maneja el backend.
+ *
+ * <p>Para mostrarle el estado al CLIENTE usa `getInstallmentViewStatus()` de
+ * `installment-view-status.ts`: ese contempla el comprobante en revisión, que acá no se
+ * ve. Estas etiquetas quedan para debugging y para cualquier vista que necesite el estado
+ * crudo.
+ */
 export const installmentStatusLabels: Record<InstallmentStatus, string> = {
   PENDING: 'Pendiente',
-  CURRENT: 'Próxima',
+  CURRENT: 'Por pagar',
   PARTIALLY_PAID: 'Pago parcial',
   PAID: 'Pagada',
   OVERDUE: 'Vencida',

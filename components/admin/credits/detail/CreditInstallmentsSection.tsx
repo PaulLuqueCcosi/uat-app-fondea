@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumnDef } from '@/components/admin/DataTable';
 import { Handshake, ExternalLink } from 'lucide-react';
 import type { AdminCreditInstallments, InstallmentItem } from '@/modules/admin/admin-credit-detail.service';
+import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
 
 interface Props {
   data: AdminCreditInstallments;
@@ -16,14 +17,8 @@ interface Props {
   totalOutstanding: number;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  PENDING: { label: 'Pendiente', variant: 'outline' },
-  CURRENT: { label: 'Vigente', variant: 'default' },
-  PARTIALLY_PAID: { label: 'Parcial', variant: 'secondary' },
-  PAID: { label: 'Pagada', variant: 'default' },
-  OVERDUE: { label: 'Vencida', variant: 'destructive' },
-  NEGOTIATED: { label: 'Refinanciada', variant: 'secondary' },
-};
+// Labels centralizados en `modules/admin/credit-status-labels` — antes este Record estaba
+// duplicado en varias vistas, con "Vigente" para CURRENT donde el cliente ve "Por pagar".
 
 const MIN_DAYS_OVERDUE_FOR_NEGOTIATION = 5;
 
@@ -97,8 +92,12 @@ export function CreditInstallmentsSection({ data, totalOutstanding }: Props) {
       accessorKey: 'status',
       header: 'Estado',
       cell: ({ row }) => {
-        const sc = STATUS_CONFIG[row.original.status] ?? { label: row.original.status, variant: 'outline' as const };
-        return <Badge variant={sc.variant} className="text-[10px]">{sc.label}</Badge>;
+        const sc = installmentStatusInfo(row.original.status);
+        return (
+          <Badge variant={sc.variant} className="text-[10px]" title={sc.description}>
+            {sc.label}
+          </Badge>
+        );
       },
     },
     {

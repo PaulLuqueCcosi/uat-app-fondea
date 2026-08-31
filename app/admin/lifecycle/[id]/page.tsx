@@ -17,7 +17,7 @@ import {
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getUniversalLifecycle } from '@/modules/admin/admin-lifecycle.service';
-import type { ApplicationLifecycle } from '@/modules/admin/admin-lifecycle.service';
+import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
 
 // ── Status configs ───────────────────────────────────────────────────────────
 
@@ -33,14 +33,8 @@ const APP_STATUS_LABELS: Record<string, { label: string; bg: string; text: strin
   EXPIRED: { label: 'Expirada', bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
 };
 
-const CREDIT_STATUS_LABELS: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  PENDING_DISBURSEMENT: { label: 'Por desembolsar', bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
-  ACTIVE: { label: 'Activo', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  OVERDUE: { label: 'Vencido', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
-  SUSPENDED: { label: 'Suspendido', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-  WRITTEN_OFF: { label: 'Castigado', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
-  PAID_OFF: { label: 'Liquidado', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-};
+// Los labels del crédito vienen de `modules/admin/credit-status-labels` — acá había un
+// Record duplicado que pintaba OVERDUE en rojo mientras el resto del admin lo pinta ámbar.
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -285,13 +279,16 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
           title="Crédito"
           subtitle="Desembolsado"
           icon={CreditCard}
+          // Rojo solo cuando hay problema real (mora o castigo). Antes cualquier estado
+          // distinto de ACTIVE/PAID_OFF salía rojo, así que un crédito recién creado
+          // (PENDING_DISBURSEMENT) se veía como si algo hubiera fallado.
           status={
             credit
-              ? credit.status === 'ACTIVE'
-                ? 'active'
-                : credit.status === 'PAID_OFF'
-                  ? 'completed'
-                  : 'rejected'
+              ? credit.status === 'PAID_OFF'
+                ? 'completed'
+                : credit.status === 'OVERDUE' || credit.status === 'WRITTEN_OFF'
+                  ? 'rejected'
+                  : 'active'
               : 'empty'
           }
           href={credit ? `/admin/credits/${credit.id}` : undefined}
@@ -299,8 +296,11 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
           {credit ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${CREDIT_STATUS_LABELS[credit.status]?.bg ?? 'bg-gray-50'} ${CREDIT_STATUS_LABELS[credit.status]?.text ?? 'text-gray-700'} ${CREDIT_STATUS_LABELS[credit.status]?.border ?? 'border-gray-200'}`}>
-                  {CREDIT_STATUS_LABELS[credit.status]?.label ?? credit.status}
+                <span
+                  title={creditStatusInfo(credit.status).description}
+                  className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${creditStatusInfo(credit.status).chipClass}`}
+                >
+                  {creditStatusInfo(credit.status).label}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">

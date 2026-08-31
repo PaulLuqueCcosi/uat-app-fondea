@@ -5,21 +5,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
+import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
 
 interface Props {
   data: AdminCreditSummary;
 }
 
-// ── Status config ────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  PENDING_DISBURSEMENT: { label: 'Por desembolsar', variant: 'outline' },
-  ACTIVE: { label: 'Activo', variant: 'default' },
-  OVERDUE: { label: 'Vencido', variant: 'secondary' },
-  SUSPENDED: { label: 'Suspendido', variant: 'secondary' },
-  WRITTEN_OFF: { label: 'Castigado', variant: 'destructive' },
-  PAID_OFF: { label: 'Liquidado', variant: 'outline' },
-};
+// Labels centralizados en `modules/admin/credit-status-labels`.
 
 const DISBURSEMENT_STATUS: Record<string, string> = {
   PENDING: 'Pendiente',
@@ -53,7 +45,7 @@ function buildFullName(client: AdminCreditSummary['client']) {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function CreditSummarySection({ data }: Props) {
-  const statusConfig = STATUS_CONFIG[data.status] ?? { label: data.status, variant: 'outline' as const };
+  const statusConfig = creditStatusInfo(data.status);
 
   return (
     <div className="space-y-4">
@@ -75,9 +67,17 @@ export function CreditSummarySection({ data }: Props) {
               Refinanciamiento
             </Badge>
           )}
-          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+          <Badge variant={statusConfig.variant} title={statusConfig.description}>
+            {statusConfig.label}
+          </Badge>
         </div>
       </div>
+
+      {/* Qué significa el estado — el admin necesita saber si el crédito acumula mora,
+          acepta pagos o está congelado antes de operar sobre él. */}
+      {statusConfig.description && (
+        <p className="text-xs text-muted-foreground">{statusConfig.description}</p>
+      )}
 
       {/* Origen — solo si es crédito de negociación */}
       {data.creditType === 'NEGOTIATION' && (

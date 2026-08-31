@@ -47,12 +47,56 @@ function formatDateTime(value: string) {
   });
 }
 
+/**
+ * Nombres en español para los tipos de evento.
+ *
+ * Sin esto el fallback humaniza el enum ("Payment Declaration Approved"), que se lee pero
+ * queda en inglés y con el vocabulario interno del backend. Solo hace falta declarar los
+ * que aparecen seguido — el resto sigue usando el fallback.
+ */
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  // ── Ciclo de vida del crédito ──
+  CREDIT_CREATED: 'Crédito creado',
+  DISBURSEMENT_COMPLETED: 'Desembolso completado',
+  CREDIT_STATUS_CHANGED: 'Cambio de estado',
+  CREDIT_CLOSED: 'Crédito liquidado',
+  CREDIT_SUSPENDED: 'Crédito suspendido',
+  CREDIT_REACTIVATED: 'Crédito reactivado',
+  CREDIT_WRITTEN_OFF: 'Crédito castigado',
+  INTEREST_REPORTED_TO_FUND: 'Ganancia reportada al fondo',
+  LOSS_REPORTED_TO_FUND: 'Pérdida reportada al fondo',
+  CREDIT_RESULT_REPORTED_TO_FUND: 'Resultado reportado al fondo',
+  CREDIT_CREATION_FAILED: 'Falló la creación del crédito',
+
+  // ── Pagos y comprobantes ──
+  PAYMENT_DECLARATION_SUBMITTED: 'Comprobante enviado por el cliente',
+  PAYMENT_DECLARATION_APPROVED: 'Comprobante aprobado',
+  PAYMENT_DECLARATION_REJECTED: 'Comprobante rechazado',
+  PAYMENT_APPLIED: 'Pago aplicado',
+  INSTALLMENT_PAID: 'Cuota liquidada',
+  PAYMENT_FAILED: 'Falló el pago',
+
+  // ── Mora ──
+  INSTALLMENT_ACTIVATED: 'Cuota activada',
+  INSTALLMENT_OVERDUE: 'Cuota vencida',
+  PENALTY_ACCRUED: 'Mora acumulada',
+  PENALTY_PROCESSING_FAILED: 'Falló el cálculo de mora',
+
+  // ── Negociación ──
+  NEGOTIATION_CREDIT_CREATED: 'Crédito de refinanciamiento creado',
+  INSTALLMENT_NEGOTIATED: 'Cuota refinanciada',
+
+  // ── Auditoría ──
+  AUDIT_PERSIST_ERROR: 'Error al registrar auditoría',
+};
+
 function humanizeEventType(eventType: string) {
-  return eventType
-    .toLowerCase()
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+  return EVENT_TYPE_LABELS[eventType]
+    ?? eventType
+      .toLowerCase()
+      .split('_')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
 }
 
 function tryParseJson(raw: string): unknown | null {

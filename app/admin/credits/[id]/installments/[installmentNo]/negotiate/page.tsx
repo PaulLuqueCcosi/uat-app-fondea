@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { getAdminCreditInstallments } from '@/modules/admin/admin-credit-detail.service';
+import { installmentStatusInfo, INSTALLMENT_STATUS_INFO } from '@/modules/admin/credit-status-labels';
 import { getNegotiationOffersByInstallmentAction } from '@/app/actions/negotiation-offer.actions';
 import { NegotiationOfferForm } from '@/components/admin/credits/negotiate/NegotiationOfferForm';
 import { NegotiationOfferHistory } from '@/components/admin/credits/negotiate/NegotiationOfferHistory';
@@ -59,7 +60,15 @@ export default async function NegotiateInstallmentPage({ params }: Props) {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Esta cuota no es elegible para negociación</AlertTitle>
           <AlertDescription>
-            Solo se pueden negociar cuotas con estado <strong>OVERDUE</strong>. Estado actual: {installment.status}.
+            Solo se pueden negociar cuotas en estado{' '}
+            <strong>{INSTALLMENT_STATUS_INFO.OVERDUE.label}</strong>. Esta cuota está{' '}
+            <strong>{installmentStatusInfo(installment.status).label}</strong> —{' '}
+            {installmentStatusInfo(installment.status).description}
+            {' '}Vuelve al{' '}
+            <Link href={`/admin/credits/${id}/installments/${no}`} className="underline font-medium">
+              detalle de la cuota
+            </Link>
+            {' '}para ver sus movimientos.
           </AlertDescription>
         </Alert>
       )}

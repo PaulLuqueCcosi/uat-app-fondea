@@ -11,7 +11,10 @@ import { backendFetch } from '@/lib/backend-fetch';
 
 // ── Types: Summary (camelCase — backend usa @JsonNaming) ────────────────────
 
-export type CreditStatus = 'PENDING_DISBURSEMENT' | 'ACTIVE' | 'OVERDUE' | 'SUSPENDED' | 'WRITTEN_OFF' | 'PAID_OFF';
+// Los enums de estado viven en `credit-status-labels.ts` junto a sus etiquetas.
+import type { CreditStatus, InstallmentStatus } from './credit-status-labels';
+export type { CreditStatus, InstallmentStatus } from './credit-status-labels';
+
 export type DisbursementMethod = 'BANK_TRANSFER' | 'YAPE' | 'PLIN';
 export type DisbursementStatus = 'PENDING' | 'COMPLETED' | 'FAILED';
 
@@ -98,7 +101,7 @@ export interface ApprovalSnapshot {
 
 // ── Types: Installments (snake_case — backend usa @JsonProperty) ────────────
 
-export type InstallmentStatus = 'PENDING' | 'CURRENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'NEGOTIATED';
+// `InstallmentStatus` se importa/reexporta arriba desde `credit-status-labels.ts`.
 
 export interface InstallmentItem {
   id: string;

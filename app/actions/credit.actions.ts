@@ -9,7 +9,6 @@
 
 import { requireValidSession } from './auth.actions';
 import * as creditService from '@/modules/credits/credit.service';
-import type { RegisterPaymentRequest } from '@/modules/credits';
 
 // ── Créditos ──────────────────────────────────────────────────────────────────
 
@@ -73,13 +72,13 @@ export async function getTransactionsAction(creditId: string) {
 }
 
 // ── Pagar cuota ───────────────────────────────────────────────────────────────
-
-/** Registrar pago de una cuota */
-export async function payInstallmentAction(
-  creditId: string,
-  installmentNo: number,
-  payment: RegisterPaymentRequest,
-) {
-  await requireValidSession();
-  return creditService.payInstallment(creditId, installmentNo, payment);
-}
+//
+// NO hay action de pago acá, a propósito. Fondea no tiene pasarela de cobro: el
+// cliente transfiere por su cuenta y sube el comprobante vía
+// `submitPaymentDeclarationAction` (modules/payment-declarations). El pago se aplica
+// al crédito recién cuando un admin valida ese comprobante.
+//
+// Antes existía un `payInstallmentAction` que llamaba a
+// POST /api/v1/credits/{id}/installments/{no}/pay. Ese endpoint se eliminó del backend
+// (permitía que un usuario redujera su propia deuda sin comprobante ni revisión) y esta
+// action nunca fue usada por ninguna vista.

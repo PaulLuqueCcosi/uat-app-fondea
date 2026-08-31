@@ -8,7 +8,11 @@ import type { SpringPage, Pagination } from './admin-users.types';
 
 // ── Tipos ───────────────────────────────────────────────────────────────────
 
-export type CreditStatus = 'PENDING_DISBURSEMENT' | 'ACTIVE' | 'OVERDUE' | 'SUSPENDED' | 'WRITTEN_OFF' | 'PAID_OFF';
+// El enum vive en `credit-status-labels.ts` junto a sus etiquetas — se reexporta acá para
+// no romper los imports existentes, pero no se redeclara.
+import type { CreditStatus } from './credit-status-labels';
+export type { CreditStatus } from './credit-status-labels';
+
 export type CreditTypeFilter = 'STANDARD' | 'NEGOTIATION';
 
 export interface AdminCreditRow {

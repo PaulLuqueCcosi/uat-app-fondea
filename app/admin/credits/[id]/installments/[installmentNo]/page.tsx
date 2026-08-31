@@ -6,20 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, CalendarDays, Handshake, AlertCircle } from 'lucide-react';
 import { getAdminInstallmentDetail } from '@/modules/admin/admin-credit-detail.service';
+import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
 import { InstallmentTransactionsCard } from '@/components/admin/credits/detail/InstallmentTransactionsCard';
 
 interface Props {
   params: Promise<{ id: string; installmentNo: string }>;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; description: string }> = {
-  PENDING: { label: 'Pendiente', variant: 'outline', description: 'Aún no llegó su fecha de vencimiento' },
-  CURRENT: { label: 'Vigente', variant: 'default', description: 'Es la cuota activa — próxima a pagar' },
-  PARTIALLY_PAID: { label: 'Pago parcial', variant: 'secondary', description: 'Tiene pagos parciales pero no está completa' },
-  PAID: { label: 'Pagada', variant: 'default', description: 'Pagada completamente' },
-  OVERDUE: { label: 'Vencida', variant: 'destructive', description: 'Venció sin completar el pago' },
-  NEGOTIATED: { label: 'Refinanciada', variant: 'secondary', description: 'La deuda se trasladó a un crédito de negociación' },
-};
+// Labels y descripciones centralizados en `modules/admin/credit-status-labels`.
 
 function formatCurrency(value: number) {
   return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -46,7 +40,7 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
   const data = await getAdminInstallmentDetail(id, no);
   if (!data) notFound();
 
-  const sc = STATUS_CONFIG[data.status] ?? { label: data.status, variant: 'outline' as const, description: '' };
+  const sc = installmentStatusInfo(data.status);
   const isOverdue = data.status === 'OVERDUE';
   const isNegotiated = data.status === 'NEGOTIATED';
   const canNegotiate = isOverdue && data.daysOverdue >= 5;

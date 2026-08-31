@@ -6,8 +6,6 @@ import { useParams } from 'next/navigation';
 import {
   ArrowLeft,
   CreditCard,
-  AlertCircle,
-  DollarSign,
   Calendar as CalendarIcon,
   Info,
   FileText,
@@ -22,6 +20,7 @@ import {
   InstallmentCalendar,
   CalendarLegend,
   MonthSelector,
+  NextPaymentAlert,
 } from '@/components/credits';
 import {
   getCreditByIdAction,
@@ -29,8 +28,20 @@ import {
   getInstallmentsAction,
   getNextPaymentAction,
 } from '@/app/actions/credit.actions';
-import type { Credit, CreditSummary, Installment, NextPayment } from '@/modules/credits';
-import { creditStatusLabels } from '@/modules/credits';
+import type {
+  Credit,
+  CreditSummary,
+  Installment,
+  NextPayment,
+  InstallmentViewStatus,
+} from '@/modules/credits';
+import {
+  creditStatusLabels,
+  creditStatusVariants,
+  creditStatusDescriptions,
+  getInstallmentViewStatus,
+} from '@/modules/credits';
+import { formatBackendDate, parseBackendDate } from '@/modules/shared/backend-date';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -50,31 +61,12 @@ function formatCurrencyShort(amount: number) {
   }).format(amount);
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PE', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
+// Ver `modules/shared/backend-date` — un LocalDate del backend parseado con `new Date()`
+// muestra el día anterior en Perú.
+const formatDate = formatBackendDate;
 
-function formatDateLong(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PE', {
-    day: 'numeric',
-    month: 'long',
-  });
-}
-
-// ─── Status badge variant ─────────────────────────────────────────────────────
-
-const statusVariants: Record<string, 'success' | 'completed' | 'error' | 'default' | 'warning' | 'destructive' | 'pending'> = {
-  PENDING_DISBURSEMENT: 'pending',
-  ACTIVE: 'success',
-  OVERDUE: 'error',
-  SUSPENDED: 'warning',
-  WRITTEN_OFF: 'destructive',
-  PAID_OFF: 'completed',
-};
+// El mapa de variantes vive en `modules/credits` (`creditStatusVariants`) — estaba
+// duplicado acá y en `CreditsTable.tsx`, tipado con `string` en vez del enum.
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -144,7 +136,7 @@ export default function CreditoDetallePage() {
         const focus = installmentsRes.data.find(
           (i) => i.status === 'OVERDUE' || i.status === 'CURRENT' || i.status === 'PENDING',
         );
-        if (focus) setCalendarMonth(new Date(focus.dueDate));
+        if (focus) setCalendarMonth(parseBackendDate(focus.dueDate));
       }
       if (nextPayRes.ok) setNextPayment(nextPayRes.data);
 
@@ -169,13 +161,31 @@ export default function CreditoDetallePage() {
 
   const progressPercent = summary?.progressPercentage ?? 0;
 
+  // El estado OVERDUE del backend es contable: se mantiene aunque el cliente ya haya
+  // subido su comprobante y la mora esté congelada. Si TODAS las cuotas vencidas están
+  // en revisión, pedirle "paga la más antigua para detener la mora" es incorrecto — ya
+  // pagó, y la demora es de nuestra validación. Ver `installment-view-status.ts`.
+  const overdueInstallments = installments.filter((i) => i.status === 'OVERDUE');
+  const allOverdueUnderReview =
+    overdueInstallments.length > 0 && overdueInstallments.every((i) => i.hasPendingDeclaration);
+
+  // Caso mixto: algunas vencidas en revisión y otras no. Se aclara que solo faltan las
+  // que no tienen comprobante, para que no crea que su declaración no llegó.
+  const someOverdueUnderReview = overdueInstallments.some((i) => i.hasPendingDeclaration);
+
+  const statusDescription = allOverdueUnderReview
+    ? 'Recibimos tu comprobante y lo estamos validando. La mora está detenida mientras lo revisamos.'
+    : credit.status === 'OVERDUE' && someOverdueUnderReview
+      ? 'Ya recibimos un comprobante y lo estamos validando. Las demás cuotas vencidas siguen acumulando mora — declara su pago para detenerla.'
+      : creditStatusDescriptions[credit.status];
+
   const handleSelectInstallment = (inst: Installment) => {
     if (selectedInstallment?.id === inst.id) {
       setSelectedInstallment(null);
       return;
     }
     setSelectedInstallment(inst);
-    const instDate = new Date(inst.dueDate);
+    const instDate = parseBackendDate(inst.dueDate);
     const startMonth = calendarMonth.getMonth();
     const startYear = calendarMonth.getFullYear();
     let isVisible = false;
@@ -207,7 +217,7 @@ export default function CreditoDetallePage() {
           <h1 className="text-2xl font-bold text-foreground">
             {formatCurrencyShort(credit.principal)}
           </h1>
-          <Badge variant={statusVariants[credit.status] ?? 'default'}>
+          <Badge variant={creditStatusVariants[credit.status] ?? 'default'}>
             {creditStatusLabels[credit.status]}
           </Badge>
           {credit.creditType === 'NEGOTIATION' && (
@@ -217,6 +227,11 @@ export default function CreditoDetallePage() {
         <p className="text-sm text-muted-foreground">
           {credit.installmentCount} cuotas · Desembolsado el {formatDate(credit.disbursedAt)}
         </p>
+        {/* "Suspendido" o "Castigado" no le dicen nada al cliente por sí solos — la
+            descripción explica qué significa y qué hacer. */}
+        {credit.status !== 'ACTIVE' && statusDescription && (
+          <p className="text-sm text-muted-foreground mt-1">{statusDescription}</p>
+        )}
       </div>
 
       {/* ─── Subsección: Negociación (solo si es NEGOTIATION) ─── */}
@@ -255,39 +270,18 @@ export default function CreditoDetallePage() {
         </Card>
       )}
 
-      {/* ─── Alerta próximo pago ─── */}
+      {/* ─── Alerta próximo pago ───
+          NextPayment no trae `hasPendingDeclaration`, así que se busca la cuota real en
+          `installments` para saber si ya hay un comprobante en revisión. Sin esto se le
+          decía "Cuota vencida — Pagar ahora" a alguien que ya había pagado. */}
       {nextPayment && (
-        <Card className={nextPayment.isOverdue ? 'border-error-200 bg-error-50' : ''}>
+        <Card>
           <CardContent>
-            <div className="flex items-center gap-3">
-              <AlertCircle className={`w-5 h-5 shrink-0 ${
-                nextPayment.isOverdue ? 'text-error-600' : 'text-warning-600'
-              }`} />
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold ${
-                  nextPayment.isOverdue ? 'text-error-900' : 'text-foreground'
-                }`}>
-                  Cuota {nextPayment.installmentNo} {nextPayment.isOverdue ? 'vencida' : 'pendiente'}
-                </p>
-                <p className={`text-xs ${
-                  nextPayment.isOverdue ? 'text-error-700' : 'text-muted-foreground'
-                }`}>
-                  {nextPayment.isOverdue
-                    ? `Venció el ${formatDateLong(nextPayment.dueDate)} · ${formatCurrency(nextPayment.totalToPay)} sin pagar`
-                    : `Vence el ${formatDateLong(nextPayment.dueDate)} · ${formatCurrency(nextPayment.totalToPay)}`
-                  }
-                </p>
-              </div>
-              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextPayment.installmentNo}`}>
-                <Button size="sm" className={`text-xs shrink-0 ${
-                  nextPayment.isOverdue
-                    ? 'bg-error-600 text-white hover:bg-error-700'
-                    : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
-                }`}>
-                  {nextPayment.isOverdue ? 'Pagar ahora' : 'Pagar cuota'}
-                </Button>
-              </Link>
-            </div>
+            <NextPaymentAlert
+              nextPayment={nextPayment}
+              installment={installments.find((i) => i.installmentNo === nextPayment.installmentNo)}
+              creditId={credit.id}
+            />
           </CardContent>
         </Card>
       )}
@@ -331,39 +325,9 @@ export default function CreditoDetallePage() {
         </CardContent>
       </Card>
 
-      {/* ─── Cuota a pagar (CTA prominente) ─── */}
-      {nextPayment && (
-        <Card>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">
-                  {nextPayment.isOverdue ? 'Cuota vencida' : 'Próxima cuota'}
-                </p>
-                <p className="text-xl font-bold text-foreground">
-                  {formatCurrency(nextPayment.totalToPay)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {nextPayment.isOverdue
-                    ? `Venció el ${formatDateLong(nextPayment.dueDate)}`
-                    : `Vence el ${formatDateLong(nextPayment.dueDate)}`
-                  } · Cuota {nextPayment.installmentNo}/{credit.installmentCount}
-                </p>
-              </div>
-              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextPayment.installmentNo}`}>
-                <Button className={`gap-2 ${
-                  nextPayment.isOverdue
-                    ? 'bg-error-600 text-white hover:bg-error-700'
-                    : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
-                }`}>
-                  <DollarSign className="w-4 h-4" />
-                  Pagar cuota
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* El CTA prominente de pago que había acá era una repetición literal de la alerta
+          de arriba (mismo monto, misma fecha, mismo destino). Se eliminó: dos llamados a
+          la acción idénticos separados por el bloque de progreso no aportaban nada. */}
 
       {/* ─── Cuotas + Calendario ─── */}
       {installments.length > 0 && (
@@ -393,7 +357,6 @@ export default function CreditoDetallePage() {
                   installments={installments}
                   selectedId={selectedInstallment?.id}
                   onSelect={handleSelectInstallment}
-                  creditId={credit.id}
                 />
               </div>
 
@@ -544,16 +507,25 @@ export default function CreditoDetallePage() {
 
 // ─── Mini lista de cuotas (inline en la página de detalle) ────────────────────
 
+/** Colores de cada fila de la mini-lista, indexados por estado VISIBLE. */
+const MINI_ROW_STYLES: Record<InstallmentViewStatus, { row: string; dot: string }> = {
+  PAID: { row: 'bg-accent-50/50 border-accent-200', dot: 'bg-accent-500' },
+  UNDER_REVIEW: { row: 'bg-primary-50/50 border-primary-200', dot: 'bg-primary-400' },
+  OVERDUE: { row: 'bg-error-50/50 border-error-200', dot: 'bg-error-500' },
+  PARTIALLY_PAID: { row: 'bg-warning-50/50 border-warning-200', dot: 'bg-warning-400' },
+  CURRENT: { row: 'bg-warning-50/50 border-warning-200', dot: 'bg-warning-400' },
+  NEGOTIATED: { row: 'bg-primary-50/50 border-primary-200', dot: 'bg-primary-500' },
+  PENDING: { row: 'border-border hover:bg-neutral-50', dot: 'bg-primary/20' },
+};
+
 function InstallmentListMini({
   installments,
   selectedId,
   onSelect,
-  creditId,
 }: {
   installments: Installment[];
   selectedId?: string | null;
   onSelect: (inst: Installment) => void;
-  creditId: string;
 }) {
   const maxHeight = 4 * 56;
 
@@ -565,28 +537,20 @@ function InstallmentListMini({
       <div className="space-y-2 overflow-y-auto pr-1" style={{ maxHeight: `${maxHeight}px` }}>
         {installments.map((inst) => {
           const isSelected = selectedId === inst.id;
-          const statusColor =
-            inst.status === 'PAID' ? 'bg-accent-50/50 border-accent-200'
-            : inst.status === 'OVERDUE' ? 'bg-error-50/50 border-error-200'
-            : inst.status === 'NEGOTIATED' ? 'bg-primary-50/50 border-primary-200'
-            : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-50/50 border-warning-200'
-            : 'border-border hover:bg-neutral-50';
+          // Estado visible: una cuota vencida con comprobante en revisión no se pinta de
+          // rojo — el cliente ya pagó y la mora está detenida.
+          const view = getInstallmentViewStatus(inst);
+          const statusColor = MINI_ROW_STYLES[view.status];
 
           return (
             <div key={inst.id} className="flex items-stretch gap-1.5">
               <button
                 onClick={() => onSelect(inst)}
-                className={`flex-1 flex items-center gap-3 rounded-lg px-3 py-2.5 border text-left transition-all hover:ring-1 hover:ring-primary/20 ${statusColor} ${
+                className={`flex-1 flex items-center gap-3 rounded-lg px-3 py-2.5 border text-left transition-all hover:ring-1 hover:ring-primary/20 ${statusColor.row} ${
                   isSelected ? 'ring-2 ring-primary' : ''
                 }`}
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                  inst.status === 'PAID' ? 'bg-accent-500'
-                  : inst.status === 'OVERDUE' ? 'bg-error-500'
-                  : inst.status === 'NEGOTIATED' ? 'bg-primary-500'
-                  : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-400'
-                  : 'bg-primary/20'
-                }`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${statusColor.dot}`}>
                   <span className="text-[9px] font-bold text-white">{inst.installmentNo}</span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -594,14 +558,16 @@ function InstallmentListMini({
                     Cuota {inst.installmentNo}
                   </p>
                   <p className="text-xs text-muted-foreground leading-tight">
-                    {inst.status === 'NEGOTIATED' ? 'Refinanciada' : formatDate(inst.dueDate)}
+                    {view.status === 'NEGOTIATED' ? 'Refinanciada'
+                      : view.status === 'UNDER_REVIEW' ? 'En revisión'
+                      : formatDate(inst.dueDate)}
                   </p>
                 </div>
                 <p className="text-sm font-bold text-foreground shrink-0">
                   {formatCurrencyShort(inst.amountDue)}
                 </p>
               </button>
-              {inst.status === 'NEGOTIATED' && inst.negotiationCreditId && (
+              {view.status === 'NEGOTIATED' && inst.negotiationCreditId && (
                 <Link
                   href={`/dashboard/creditos/${inst.negotiationCreditId}`}
                   className="flex items-center justify-center rounded-lg border border-primary-200 bg-primary-50 px-2 text-primary-700 hover:bg-primary-100 transition-colors"

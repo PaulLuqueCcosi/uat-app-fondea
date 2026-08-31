@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/progress';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
+import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
 
 interface Props {
   data: AdminCreditSummary;
@@ -12,14 +13,7 @@ interface Props {
   outstanding: number;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string }> = {
-  PENDING_DISBURSEMENT: { label: 'Por desembolsar', variant: 'outline', color: 'bg-neutral-400' },
-  ACTIVE: { label: 'Activo', variant: 'default', color: 'bg-emerald-500' },
-  OVERDUE: { label: 'Vencido', variant: 'secondary', color: 'bg-amber-500' },
-  SUSPENDED: { label: 'Suspendido', variant: 'secondary', color: 'bg-amber-600' },
-  WRITTEN_OFF: { label: 'Castigado', variant: 'destructive', color: 'bg-red-600' },
-  PAID_OFF: { label: 'Liquidado', variant: 'outline', color: 'bg-neutral-400' },
-};
+// Labels y color del indicador centralizados en `modules/admin/credit-status-labels`.
 
 function formatCurrency(value: number) {
   return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -33,7 +27,7 @@ function buildFullName(client: AdminCreditSummary['client']) {
 }
 
 export function CreditDetailHeader({ data, outstanding }: Props) {
-  const statusConfig = STATUS_CONFIG[data.status] ?? { label: data.status, variant: 'outline' as const, color: 'bg-neutral-400' };
+  const statusConfig = creditStatusInfo(data.status);
   const interestEarned = data.totalDue - data.principal;
   const progressPercent = data.totalDue > 0
     ? Math.min(100, Math.round(((data.totalDue - outstanding) / data.totalDue) * 100))
@@ -56,7 +50,9 @@ export function CreditDetailHeader({ data, outstanding }: Props) {
               <h1 className="text-xl font-bold text-foreground truncate">
                 {data.creditType === 'NEGOTIATION' ? 'Refinanciamiento' : 'Crédito'}
               </h1>
-              <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+              <Badge variant={statusConfig.variant} title={statusConfig.description}>
+                {statusConfig.label}
+              </Badge>
               {data.creditType === 'NEGOTIATION' && (
                 <Badge variant="secondary" className="gap-1">
                   <RefreshCw className="h-3 w-3" />
@@ -136,7 +132,7 @@ export function CreditDetailHeader({ data, outstanding }: Props) {
           value={`${progressPercent}%`}
           sub={`${data.status === 'PAID_OFF' ? 'Completado' : 'pagado'}`}
           progress={progressPercent}
-          progressColor={statusConfig.color}
+          progressColor={statusConfig.dotClass}
         />
         <KpiCard
           label={data.status === 'PAID_OFF' ? 'Cerrado' : 'Pendiente'}

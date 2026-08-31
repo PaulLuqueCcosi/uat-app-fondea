@@ -38,10 +38,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { getCreditsAction } from '@/app/actions/credit.actions';
 import {
   creditStatusLabels,
+  creditStatusVariants,
   creditTypeLabels,
   type Credit,
   type CreditStatus,
 } from '@/modules/credits';
+import { formatBackendDate, parseBackendDate } from '@/modules/shared/backend-date';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -53,25 +55,12 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-function formatDate(iso?: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-PE', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
+// Ver `modules/shared/backend-date`: los LocalDate del backend (maturityDate, dueDate)
+// parseados con `new Date()` muestran el día anterior en Perú.
+const formatDate = formatBackendDate;
 
-// ── Config de status ──────────────────────────────────────────────────────────
-
-const statusVariants: Record<CreditStatus, 'success' | 'completed' | 'error' | 'default' | 'warning' | 'destructive' | 'pending'> = {
-  PENDING_DISBURSEMENT: 'pending',
-  ACTIVE: 'success',
-  PAID_OFF: 'completed',
-  OVERDUE: 'error',
-  SUSPENDED: 'warning',
-  WRITTEN_OFF: 'destructive',
-};
+// Las variantes de badge vienen de `modules/credits` (`creditStatusVariants`) — estaban
+// duplicadas acá y en la página de detalle del crédito.
 
 // ── Filtros de estado ─────────────────────────────────────────────────────────
 
@@ -137,8 +126,8 @@ const columns: ColumnDef<Credit>[] = [
       </span>
     ),
     sortingFn: (rowA, rowB) => {
-      const a = new Date(rowA.original.disbursedAt).getTime();
-      const b = new Date(rowB.original.disbursedAt).getTime();
+      const a = parseBackendDate(rowA.original.disbursedAt).getTime();
+      const b = parseBackendDate(rowB.original.disbursedAt).getTime();
       return a - b;
     },
   },
@@ -175,7 +164,7 @@ const columns: ColumnDef<Credit>[] = [
     cell: ({ row }) => {
       const status = row.original.status;
       return (
-        <Badge variant={statusVariants[status]}>
+        <Badge variant={creditStatusVariants[status]}>
           {creditStatusLabels[status]}
         </Badge>
       );
@@ -214,7 +203,7 @@ function CreditMobileCard({ credit }: { credit: Credit }) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={statusVariants[credit.status]}>
+            <Badge variant={creditStatusVariants[credit.status]}>
               {creditStatusLabels[credit.status]}
             </Badge>
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />

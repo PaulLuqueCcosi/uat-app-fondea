@@ -6,8 +6,21 @@
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ApplicationStatus = 'SUBMITTED' | 'PROCESSING' | 'PRE_APPROVED' | 'APPROVED' | 'REJECTED' | 'REJECTED_BY_USER' | 'BLOCKED' | 'FAILED' | 'EXPIRED';
-export type CreditStatus = 'ACTIVE' | 'OVERDUE' | 'DEFAULTED' | 'PAID_OFF';
-export type InstallmentStatus = 'PENDING' | 'ACTIVE' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
+
+/**
+ * `CreditStatus` e `InstallmentStatus` viven en `credit-status-labels.ts` junto a sus
+ * etiquetas — ahí está la única definición y es espejo de los enums del backend.
+ *
+ * <p>Se reexportan desde acá porque estos tipos NO son solo para los mocks:
+ * `admin-lifecycle.service.ts` los usa para tipar `CreditSummary`, que viene del backend
+ * real. Antes estaban declarados en este archivo y decían
+ * `'ACTIVE' | 'OVERDUE' | 'DEFAULTED' | 'PAID_OFF'` — con `DEFAULTED` que no existe en el
+ * backend, y sin `PENDING_DISBURSEMENT`, `SUSPENDED` ni `WRITTEN_OFF` que sí existen.
+ */
+export type { CreditStatus, InstallmentStatus } from './credit-status-labels';
+
+import type { CreditStatus, InstallmentStatus } from './credit-status-labels';
+
 export type DocumentStatus = 'verified' | 'pending' | 'failed' | 'not_uploaded';
 export type IntentionSource = 'external' | 'internal';
 
@@ -138,20 +151,31 @@ export const mockUserForms: Record<string, UserExpedientes> = {
 
 // ── Créditos ──────────────────────────────────────────────────────────────────
 
-export const mockCredits = [
-  { id: 'crd_001', userId: 'usr_001', userName: 'María García López', status: 'ACTIVE' as CreditStatus, amount: 3000, totalToPay: 3450, installments: 6, disbursedAt: '2026-06-17T10:00:00Z', dueDate: '2026-12-17', pendingBalance: 2300, daysOverdue: 0 },
-  { id: 'crd_002', userId: 'usr_002', userName: 'Carlos Ruiz Mendoza', status: 'IN_ARREARS' as CreditStatus, amount: 2000, totalToPay: 2280, installments: 3, disbursedAt: '2026-04-01T10:00:00Z', dueDate: '2026-07-01', pendingBalance: 780, daysOverdue: 5 },
-  { id: 'crd_003', userId: 'usr_003', userName: 'Ana Flores Quispe', status: 'SETTLED' as CreditStatus, amount: 1000, totalToPay: 1120, installments: 2, disbursedAt: '2026-03-01T10:00:00Z', dueDate: '2026-05-01', pendingBalance: 0, daysOverdue: 0 },
-  { id: 'crd_004', userId: 'usr_004', userName: 'Pedro Huamán Torres', status: 'DEFAULTED' as CreditStatus, amount: 5000, totalToPay: 5900, installments: 12, disbursedAt: '2026-01-15T10:00:00Z', dueDate: '2027-01-15', pendingBalance: 4200, daysOverdue: 45 },
+// Los status van SIN `as CreditStatus`: el cast silenciaba el type-check y así se colaron
+// 'IN_ARREARS', 'SETTLED' y 'DEFAULTED', que no existen en el backend. Sin el cast,
+// cualquier valor inválido rompe la compilación.
+export const mockCredits: Array<{
+  id: string; userId: string; userName: string; status: CreditStatus;
+  amount: number; totalToPay: number; installments: number; disbursedAt: string;
+  dueDate: string; pendingBalance: number; daysOverdue: number;
+}> = [
+  { id: 'crd_001', userId: 'usr_001', userName: 'María García López', status: 'ACTIVE', amount: 3000, totalToPay: 3450, installments: 6, disbursedAt: '2026-06-17T10:00:00Z', dueDate: '2026-12-17', pendingBalance: 2300, daysOverdue: 0 },
+  { id: 'crd_002', userId: 'usr_002', userName: 'Carlos Ruiz Mendoza', status: 'OVERDUE', amount: 2000, totalToPay: 2280, installments: 3, disbursedAt: '2026-04-01T10:00:00Z', dueDate: '2026-07-01', pendingBalance: 780, daysOverdue: 5 },
+  { id: 'crd_003', userId: 'usr_003', userName: 'Ana Flores Quispe', status: 'PAID_OFF', amount: 1000, totalToPay: 1120, installments: 2, disbursedAt: '2026-03-01T10:00:00Z', dueDate: '2026-05-01', pendingBalance: 0, daysOverdue: 0 },
+  { id: 'crd_004', userId: 'usr_004', userName: 'Pedro Huamán Torres', status: 'WRITTEN_OFF', amount: 5000, totalToPay: 5900, installments: 12, disbursedAt: '2026-01-15T10:00:00Z', dueDate: '2027-01-15', pendingBalance: 4200, daysOverdue: 45 },
 ];
 
-export const mockInstallments = [
-  { number: 1, dueDate: '2026-07-17', amount: 575, paid: 575, mora: 0, moraPaid: 0, status: 'PAID' as InstallmentStatus, daysOverdue: 0, paidAt: '2026-07-15T10:00:00Z' },
-  { number: 2, dueDate: '2026-08-17', amount: 575, paid: 575, mora: 0, moraPaid: 0, status: 'PAID' as InstallmentStatus, daysOverdue: 0, paidAt: '2026-08-16T10:00:00Z' },
-  { number: 3, dueDate: '2026-09-17', amount: 575, paid: 0, mora: 0, moraPaid: 0, status: 'ACTIVE' as InstallmentStatus, daysOverdue: 0, paidAt: null },
-  { number: 4, dueDate: '2026-10-17', amount: 575, paid: 0, mora: 0, moraPaid: 0, status: 'PENDING' as InstallmentStatus, daysOverdue: 0, paidAt: null },
-  { number: 5, dueDate: '2026-11-17', amount: 575, paid: 0, mora: 0, moraPaid: 0, status: 'PENDING' as InstallmentStatus, daysOverdue: 0, paidAt: null },
-  { number: 6, dueDate: '2026-12-17', amount: 575, paid: 0, mora: 0, moraPaid: 0, status: 'PENDING' as InstallmentStatus, daysOverdue: 0, paidAt: null },
+export const mockInstallments: Array<{
+  number: number; dueDate: string; amount: number; paid: number; mora: number;
+  moraPaid: number; status: InstallmentStatus; daysOverdue: number; paidAt: string | null;
+}> = [
+  { number: 1, dueDate: '2026-07-17', amount: 575, paid: 575, mora: 0, moraPaid: 0, status: 'PAID', daysOverdue: 0, paidAt: '2026-07-15T10:00:00Z' },
+  { number: 2, dueDate: '2026-08-17', amount: 575, paid: 575, mora: 0, moraPaid: 0, status: 'PAID', daysOverdue: 0, paidAt: '2026-08-16T10:00:00Z' },
+  // CURRENT, no ACTIVE — así se llama en el backend la cuota en curso.
+  { number: 3, dueDate: '2026-09-17', amount: 575, paid: 0, mora: 0, moraPaid: 0, status: 'CURRENT', daysOverdue: 0, paidAt: null },
+  { number: 4, dueDate: '2026-10-17', amount: 575, paid: 0, mora: 0, moraPaid: 0, status: 'PENDING', daysOverdue: 0, paidAt: null },
+  { number: 5, dueDate: '2026-11-17', amount: 575, paid: 0, mora: 0, moraPaid: 0, status: 'PENDING', daysOverdue: 0, paidAt: null },
+  { number: 6, dueDate: '2026-12-17', amount: 575, paid: 0, mora: 0, moraPaid: 0, status: 'PENDING', daysOverdue: 0, paidAt: null },
 ];
 
 // ── Cobranza ──────────────────────────────────────────────────────────────────

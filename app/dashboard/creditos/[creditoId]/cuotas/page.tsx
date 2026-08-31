@@ -25,6 +25,7 @@ import {
   FileText,
   ChevronRight,
   TrendingUp,
+  Hourglass,
   RefreshCw as RefreshCwIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,8 @@ import {
   getCreditByIdAction,
 } from '@/app/actions/credit.actions';
 import type { Installment, InstallmentStatus, Credit } from '@/modules/credits';
-import { installmentStatusLabels } from '@/modules/credits';
+import { getInstallmentViewStatus } from '@/modules/credits';
+import { formatBackendDate, formatBackendDateShort } from '@/modules/shared/backend-date';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -63,34 +65,21 @@ function formatCurrencyShort(amount: number): string {
   }).format(amount);
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-PE', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function formatDateShort(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-PE', {
-    day: 'numeric',
-    month: 'short',
-  });
-}
+// Las fechas del backend se formatean con los helpers de `modules/shared/backend-date`:
+// `new Date('2026-07-21')` se parsea como medianoche UTC y en Perú muestra el 20.
+const formatDate = formatBackendDate;
+const formatDateShort = formatBackendDateShort;
 
 // ── Status config ─────────────────────────────────────────────────────────────
+//
+// Se indexa por el estado VISIBLE (getInstallmentViewStatus), no por el contable: una
+// cuota OVERDUE con comprobante en revisión se muestra como UNDER_REVIEW.
 
-const statusBadgeVariant: Record<InstallmentStatus, 'success' | 'warning' | 'error' | 'pending'> = {
-  PAID: 'success',
-  CURRENT: 'warning',
-  PARTIALLY_PAID: 'warning',
-  PENDING: 'pending',
-  OVERDUE: 'error',
-  NEGOTIATED: 'warning',
-};
+type ViewStatus = ReturnType<typeof getInstallmentViewStatus>['status'];
 
-const statusIconBg: Record<InstallmentStatus, string> = {
+const statusIconBg: Record<ViewStatus, string> = {
   PAID: 'bg-accent-500',
+  UNDER_REVIEW: 'bg-primary-400',
   CURRENT: 'bg-warning-400',
   PARTIALLY_PAID: 'bg-warning-400',
   PENDING: 'bg-neutral-200',
@@ -98,10 +87,12 @@ const statusIconBg: Record<InstallmentStatus, string> = {
   NEGOTIATED: 'bg-primary-500',
 };
 
-function StatusIcon({ status }: { status: InstallmentStatus }) {
+function StatusIcon({ status }: { status: ViewStatus }) {
   switch (status) {
     case 'PAID':
       return <CheckCircle className="w-3.5 h-3.5 text-white" />;
+    case 'UNDER_REVIEW':
+      return <Hourglass className="w-3.5 h-3.5 text-white" />;
     case 'CURRENT':
     case 'PARTIALLY_PAID':
       return <Clock className="w-3.5 h-3.5 text-warning-900" />;
@@ -125,6 +116,9 @@ const FILTER_LABELS: Record<CuotaFilter, string> = {
   OVERDUE: 'Vencidas',
 };
 
+// Se filtra por el estado CONTABLE (el que trae el backend) — "en revisión" no es un
+// estado del backend sino una lectura de `hasPendingDeclaration`, así que una cuota con
+// comprobante pendiente sigue apareciendo bajo el filtro que le corresponde por status.
 const FILTER_MAP: Record<CuotaFilter, InstallmentStatus[] | null> = {
   ALL: null,
   PAID: ['PAID'],
@@ -186,11 +180,21 @@ const columns: ColumnDef<Installment>[] = [
   {
     accessorKey: 'penaltyAccrued',
     header: 'Mora',
-    cell: ({ row }) => (
-      <span className={`text-sm ${row.original.penaltyAccrued > 0 ? 'text-error-600 font-medium' : 'text-muted-foreground'}`}>
-        {row.original.penaltyAccrued > 0 ? formatCurrency(row.original.penaltyAccrued) : '—'}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const { penaltyAccrued, hasPendingDeclaration } = row.original;
+      if (penaltyAccrued <= 0) {
+        return <span className="text-sm text-muted-foreground">—</span>;
+      }
+      // Con comprobante en revisión la mora está congelada en el backend: no sigue
+      // creciendo. Se muestra el monto pero sin el rojo de urgencia, porque el cliente
+      // ya pagó y lo más probable es que esa mora desaparezca al aprobarse.
+      return (
+        <span className={`text-sm ${hasPendingDeclaration ? 'text-muted-foreground' : 'text-error-600 font-medium'}`}>
+          {formatCurrency(penaltyAccrued)}
+          {hasPendingDeclaration && <span className="ml-1 text-[10px]">(detenida)</span>}
+        </span>
+      );
+    },
   },
   {
     accessorKey: 'outstanding',
@@ -204,18 +208,19 @@ const columns: ColumnDef<Installment>[] = [
   {
     accessorKey: 'status',
     header: 'Estado',
-    cell: ({ row }) => (
-      <div className="flex items-center gap-1.5">
-        <Badge variant={statusBadgeVariant[row.original.status]}>
-          {installmentStatusLabels[row.original.status]}
-        </Badge>
-        {row.original.status === 'OVERDUE' && row.original.daysOverdue > 0 && (
-          <span className="text-[10px] text-error-600 font-medium">
-            +{row.original.daysOverdue}d
-          </span>
-        )}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const view = getInstallmentViewStatus(row.original);
+      return (
+        <div className="flex items-center gap-1.5">
+          <Badge variant={view.variant}>{view.label}</Badge>
+          {view.status === 'OVERDUE' && row.original.daysOverdue > 0 && (
+            <span className="text-[10px] text-error-600 font-medium">
+              +{row.original.daysOverdue}d
+            </span>
+          )}
+        </div>
+      );
+    },
     filterFn: (row, _id, filterValue: InstallmentStatus[] | null) => {
       if (!filterValue) return true;
       return filterValue.includes(row.original.status);
@@ -226,25 +231,26 @@ const columns: ColumnDef<Installment>[] = [
     header: '',
     cell: ({ row }) => {
       const inst = row.original;
+      const view = getInstallmentViewStatus(inst);
       return (
         <div className="flex items-center gap-1.5 justify-end">
-          {(inst.status === 'CURRENT' || inst.status === 'OVERDUE' || inst.status === 'PARTIALLY_PAID') && (
-            <Button
-              size="sm"
-              className={`gap-1 text-xs ${
-                inst.status === 'OVERDUE'
-                  ? 'bg-error-600 text-white hover:bg-error-700'
-                  : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <DollarSign className="w-3 h-3" />
-              Pagar
-            </Button>
+          {/* La fila entera navega al detalle de la cuota, que es donde está el
+              formulario para subir el comprobante. Antes había acá un botón "Pagar" con
+              onClick={e => e.stopPropagation()}: no navegaba ni abría nada, el usuario
+              hacía clic y no pasaba absolutamente nada. */}
+          {view.canDeclarePayment && (
+            <span className={`text-[11px] font-medium ${
+              view.status === 'OVERDUE' ? 'text-error-600' : 'text-accent-800'
+            }`}>
+              Declarar pago
+            </span>
           )}
-          {inst.status === 'NEGOTIATED' && (
+          {view.status === 'UNDER_REVIEW' && (
+            <span className="text-[11px] text-primary-700 font-medium">Ver comprobante</span>
+          )}
+          {view.status === 'NEGOTIATED' && inst.negotiationCreditId && (
             <span className="text-[11px] text-primary-700 font-medium">
-              Ver crédito de refinanciamiento
+              Ver refinanciamiento
             </span>
           )}
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -263,22 +269,22 @@ function InstallmentMobileCard({
   inst: Installment;
   creditoId: string;
 }) {
+  const view = getInstallmentViewStatus(inst);
+
   return (
     <Link href={`/dashboard/creditos/${creditoId}/cuotas/${inst.installmentNo}`} className="block group">
       <div className="rounded-lg border border-border bg-card p-4 transition-all group-hover:border-primary/40 group-hover:shadow-sm group-active:scale-[0.98]">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center ${statusIconBg[inst.status]}`}>
-              <StatusIcon status={inst.status} />
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center ${statusIconBg[view.status]}`}>
+              <StatusIcon status={view.status} />
             </div>
             <span className="text-sm font-semibold text-foreground">
               Cuota {inst.installmentNo}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={statusBadgeVariant[inst.status]}>
-              {installmentStatusLabels[inst.status]}
-            </Badge>
+            <Badge variant={view.variant}>{view.label}</Badge>
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </div>
@@ -286,8 +292,11 @@ function InstallmentMobileCard({
         <div className="flex items-baseline justify-between mb-2">
           <p className="text-lg font-bold text-foreground">{formatCurrency(inst.outstanding > 0 ? inst.outstanding : inst.amountDue)}</p>
           {inst.penaltyAccrued > 0 && (
-            <span className="text-xs text-error-600 font-medium">
+            <span className={`text-xs font-medium ${
+              inst.hasPendingDeclaration ? 'text-muted-foreground' : 'text-error-600'
+            }`}>
               +{formatCurrencyShort(inst.penaltyAccrued)} mora
+              {inst.hasPendingDeclaration && ' (detenida)'}
             </span>
           )}
         </div>
@@ -303,27 +312,27 @@ function InstallmentMobileCard({
               Pagada: {formatDateShort(inst.paidAt)}
             </span>
           )}
-          {inst.status === 'OVERDUE' && inst.daysOverdue > 0 && (
+          {view.status === 'OVERDUE' && inst.daysOverdue > 0 && (
             <span className="text-error-600 font-medium">
               {inst.daysOverdue} días de atraso
             </span>
           )}
         </div>
 
-        {(inst.status === 'CURRENT' || inst.status === 'OVERDUE' || inst.status === 'PARTIALLY_PAID') && (
+        {/* El Link padre ya lleva al detalle, donde está el formulario de comprobante.
+            Antes había acá un <Button onClick={e => e.preventDefault()}> que BLOQUEABA
+            la navegación del Link: tocarlo no hacía nada. */}
+        {(view.canDeclarePayment || view.status === 'UNDER_REVIEW') && (
           <div className="mt-3 pt-2 border-t border-border/50">
-            <Button
-              size="sm"
-              className={`w-full gap-1.5 ${
-                inst.status === 'OVERDUE'
-                  ? 'bg-error-600 text-white hover:bg-error-700'
-                  : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
-              }`}
-              onClick={(e) => e.preventDefault()}
-            >
-              <DollarSign className="w-3.5 h-3.5" />
-              {inst.status === 'OVERDUE' ? 'Pagar ahora' : 'Pagar cuota'}
-            </Button>
+            <p className={`text-xs font-medium flex items-center gap-1.5 ${
+              view.status === 'OVERDUE' ? 'text-error-700'
+              : view.status === 'UNDER_REVIEW' ? 'text-primary-700'
+              : 'text-accent-800'
+            }`}>
+              {view.status === 'UNDER_REVIEW'
+                ? <><Hourglass className="w-3.5 h-3.5" />Comprobante en revisión</>
+                : <><DollarSign className="w-3.5 h-3.5" />Toca para declarar tu pago</>}
+            </p>
           </div>
         )}
       </div>
@@ -402,7 +411,15 @@ export default function CuotasPage() {
   });
 
   const paidCount = data.filter((i) => i.status === 'PAID').length;
-  const overdueCount = data.filter((i) => i.status === 'OVERDUE').length;
+  const underReviewCount = data.filter(
+    (i) => getInstallmentViewStatus(i).status === 'UNDER_REVIEW',
+  ).length;
+  // Vencidas SIN comprobante en revisión — son las que el cliente todavía tiene que
+  // resolver. Contar las que ya tienen comprobante subido como "vencidas" le diría que
+  // debe actuar cuando ya actuó.
+  const overdueCount = data.filter(
+    (i) => getInstallmentViewStatus(i).status === 'OVERDUE',
+  ).length;
 
   const filteredData = React.useMemo(() => {
     return table.getFilteredRowModel().rows.map((row) => row.original);
@@ -453,6 +470,11 @@ export default function CuotasPage() {
         <p className="text-sm text-muted-foreground mt-1">
           {credit && <span>{formatCurrencyShort(credit.principal)} · </span>}
           {paidCount} de {data.length} cuotas pagadas
+          {underReviewCount > 0 && (
+            <span className="text-primary-700 font-medium">
+              {' '}· {underReviewCount} en revisión
+            </span>
+          )}
           {overdueCount > 0 && (
             <span className="text-error-600 font-medium"> · {overdueCount} vencida{overdueCount > 1 ? 's' : ''}</span>
           )}

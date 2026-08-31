@@ -1,29 +1,36 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CreditCard, AlertCircle, ChevronDown, ChevronRight, FileText, ExternalLink, Download, ScrollText, Shield, Loader2 } from 'lucide-react';
+import { CreditCard, ChevronDown, ChevronRight, FileText, ExternalLink, Download, ScrollText, Shield, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   InstallmentCalendar,
   CalendarLegend,
   MonthSelector,
+  NextPaymentAlert,
 } from '@/components/credits';
 import { getContractInfoAction, getContractPdfUrlAction } from '@/app/actions/contract.actions';
-import type { Credit, Installment, NextPayment } from '@/modules/credits';
+import type { Credit, Installment, NextPayment, InstallmentViewStatus } from '@/modules/credits';
+import { getInstallmentViewStatus } from '@/modules/credits';
+import { formatBackendDate, parseBackendDate } from '@/modules/shared/backend-date';
+
+// ─── Estilos por estado visible ───────────────────────────────────────────────
+
+/** Colores de cada fila de la mini-lista, indexados por estado VISIBLE de la cuota. */
+const MINI_ROW_STYLES: Record<InstallmentViewStatus, { row: string; dot: string }> = {
+  PAID: { row: 'bg-accent-50/50 border-accent-200', dot: 'bg-accent-500' },
+  UNDER_REVIEW: { row: 'bg-primary-50/50 border-primary-200', dot: 'bg-primary-400' },
+  OVERDUE: { row: 'bg-error-50/50 border-error-200', dot: 'bg-error-500' },
+  PARTIALLY_PAID: { row: 'bg-warning-50/50 border-warning-200', dot: 'bg-warning-400' },
+  CURRENT: { row: 'bg-warning-50/50 border-warning-200', dot: 'bg-warning-400' },
+  NEGOTIATED: { row: 'bg-primary-50/50 border-primary-200', dot: 'bg-primary-500' },
+  PENDING: { row: 'border-border hover:bg-neutral-50', dot: 'bg-primary/20' },
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-PE', {
-    style: 'currency',
-    currency: 'PEN',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
 
 function formatCurrencyShort(amount: number): string {
   return new Intl.NumberFormat('es-PE', {
@@ -33,20 +40,9 @@ function formatCurrencyShort(amount: number): string {
   }).format(amount);
 }
 
-function formatDateLong(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-PE', {
-    day: 'numeric',
-    month: 'long',
-  });
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-PE', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
+// Ver `modules/shared/backend-date`: los LocalDate del backend parseados con `new Date()`
+// muestran el día anterior en Perú.
+const formatDate = formatBackendDate;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -71,7 +67,7 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
   const [selectedInstallment, setSelectedInstallment] = useState<Installment | null>(null);
   const initialMonth = installments.find((i) => i.status === 'OVERDUE' || i.status === 'CURRENT' || i.status === 'PENDING');
   const [calendarMonth, setCalendarMonth] = useState<Date>(
-    initialMonth ? new Date(initialMonth.dueDate) : new Date()
+    initialMonth ? parseBackendDate(initialMonth.dueDate) : new Date()
   );
   const [visibleMonths, setVisibleMonths] = useState(1);
 
@@ -108,7 +104,7 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
       return;
     }
     setSelectedInstallment(inst);
-    const instDate = new Date(inst.dueDate);
+    const instDate = parseBackendDate(inst.dueDate);
     const startMonth = calendarMonth.getMonth();
     const startYear = calendarMonth.getFullYear();
     let isVisible = false;
@@ -147,41 +143,15 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* ─── Alerta próximo pago ─── */}
+          {/* ─── Alerta próximo pago ───
+              Componente compartido con el detalle del crédito — antes este bloque estaba
+              duplicado en ambas vistas. */}
           {nextPayment && (
-            <div className={`flex items-center gap-3 rounded-lg border p-3 ${
-              nextPayment.isOverdue
-                ? 'border-error-200 bg-error-50'
-                : 'border-warning-200 bg-warning-50'
-            }`}>
-              <AlertCircle className={`w-5 h-5 shrink-0 ${
-                nextPayment.isOverdue ? 'text-error-600' : 'text-warning-600'
-              }`} />
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold ${
-                  nextPayment.isOverdue ? 'text-error-900' : 'text-warning-900'
-                }`}>
-                  Cuota {nextPayment.installmentNo} {nextPayment.isOverdue ? 'vencida' : 'pendiente'}
-                </p>
-                <p className={`text-xs ${
-                  nextPayment.isOverdue ? 'text-error-700' : 'text-warning-700'
-                }`}>
-                  {nextPayment.isOverdue
-                    ? `Venció el ${formatDateLong(nextPayment.dueDate)} · ${formatCurrency(nextPayment.totalToPay)} sin pagar`
-                    : `Vence el ${formatDateLong(nextPayment.dueDate)} · ${formatCurrency(nextPayment.totalToPay)}`
-                  }
-                </p>
-              </div>
-              <Link href={`/dashboard/creditos/${credit.id}/cuotas/${nextPayment.installmentNo}`}>
-                <Button size="sm" className={`text-xs shrink-0 ${
-                  nextPayment.isOverdue
-                    ? 'bg-error-600 text-white hover:bg-error-700'
-                    : 'bg-accent-500 text-accent-900 hover:bg-accent-400'
-                }`}>
-                  {nextPayment.isOverdue ? 'Pagar ahora' : 'Pagar cuota'}
-                </Button>
-              </Link>
-            </div>
+            <NextPaymentAlert
+              nextPayment={nextPayment}
+              installment={installments.find((i) => i.installmentNo === nextPayment.installmentNo)}
+              creditId={credit.id}
+            />
           )}
 
           {/* ─── Progreso del préstamo ─── */}
@@ -228,40 +198,37 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
                     Cuotas ({installments.length})
                   </p>
                   <div className="space-y-1.5 overflow-y-auto pr-1" style={{ maxHeight: '336px' }}>
-                    {installments.map((inst) => (
-                      <button
-                        key={inst.id}
-                        onClick={() => handleSelectInstallment(inst)}
-                        className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 border text-left transition-all hover:ring-1 hover:ring-primary/20 ${
-                          inst.status === 'PAID' ? 'bg-accent-50/50 border-accent-200'
-                          : inst.status === 'OVERDUE' ? 'bg-error-50/50 border-error-200'
-                          : inst.status === 'NEGOTIATED' ? 'bg-primary-50/50 border-primary-200'
-                          : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-50/50 border-warning-200'
-                          : 'border-border hover:bg-neutral-50'
-                        } ${selectedInstallment?.id === inst.id ? 'ring-2 ring-primary' : ''}`}
-                      >
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[8px] font-bold text-white ${
-                          inst.status === 'PAID' ? 'bg-accent-500'
-                          : inst.status === 'OVERDUE' ? 'bg-error-500'
-                          : inst.status === 'NEGOTIATED' ? 'bg-primary-500'
-                          : inst.status === 'CURRENT' || inst.status === 'PARTIALLY_PAID' ? 'bg-warning-400'
-                          : 'bg-primary/20'
-                        }`}>
-                          {inst.installmentNo}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground leading-tight">
-                            Cuota {inst.installmentNo}
+                    {installments.map((inst) => {
+                      // Estado visible: con comprobante en revisión no se pinta de rojo.
+                      const view = getInstallmentViewStatus(inst);
+                      const style = MINI_ROW_STYLES[view.status];
+                      return (
+                        <button
+                          key={inst.id}
+                          onClick={() => handleSelectInstallment(inst)}
+                          className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 border text-left transition-all hover:ring-1 hover:ring-primary/20 ${style.row} ${
+                            selectedInstallment?.id === inst.id ? 'ring-2 ring-primary' : ''
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[8px] font-bold text-white ${style.dot}`}>
+                            {inst.installmentNo}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground leading-tight">
+                              Cuota {inst.installmentNo}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground leading-tight">
+                              {view.status === 'NEGOTIATED' ? 'Refinanciada'
+                                : view.status === 'UNDER_REVIEW' ? 'En revisión'
+                                : formatDate(inst.dueDate)}
+                            </p>
+                          </div>
+                          <p className="text-xs font-bold text-foreground shrink-0">
+                            {formatCurrencyShort(inst.amountDue)}
                           </p>
-                          <p className="text-[10px] text-muted-foreground leading-tight">
-                            {inst.status === 'NEGOTIATED' ? 'Refinanciada' : formatDate(inst.dueDate)}
-                          </p>
-                        </div>
-                        <p className="text-xs font-bold text-foreground shrink-0">
-                          {formatCurrencyShort(inst.amountDue)}
-                        </p>
-                      </button>
-                    ))}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

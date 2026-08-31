@@ -2,7 +2,9 @@
 
 import { Calendar } from '@/components/ui/calendar';
 import { es } from 'react-day-picker/locale';
-import type { Installment } from '@/modules/credits';
+import type { Installment, InstallmentViewStatus } from '@/modules/credits';
+import { getInstallmentViewStatus, installmentViewStatusLabels } from '@/modules/credits';
+import { parseBackendDate } from '@/modules/shared/backend-date';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -13,6 +15,10 @@ function isSameDay(d1: Date, d2: Date): boolean {
     d1.getDate() === d2.getDate()
   );
 }
+
+// Ver `modules/shared/backend-date`: sin este parseo el calendario marcaba el día anterior
+// al vencimiento y `onDayClick` no encontraba la cuota al tocar el día correcto.
+const parseDueDate = parseBackendDate;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -37,27 +43,25 @@ export function InstallmentCalendar({
   onDayClick,
   numberOfMonths,
 }: InstallmentCalendarProps) {
-  const paidDates = installments
-    .filter((i) => i.status === 'PAID')
-    .map((i) => new Date(i.dueDate));
-  const currentDates = installments
-    .filter((i) => i.status === 'CURRENT' || i.status === 'PARTIALLY_PAID')
-    .map((i) => new Date(i.dueDate));
-  const pendingDates = installments
-    .filter((i) => i.status === 'PENDING')
-    .map((i) => new Date(i.dueDate));
-  const overdueDates = installments
-    .filter((i) => i.status === 'OVERDUE')
-    .map((i) => new Date(i.dueDate));
-  const negotiatedDates = installments
-    .filter((i) => i.status === 'NEGOTIATED')
-    .map((i) => new Date(i.dueDate));
+  // Se agrupa por estado VISIBLE: una cuota vencida con comprobante en revisión se pinta
+  // como "en revisión", no en rojo — el cliente ya pagó y la mora está detenida.
+  const datesByStatus = (target: InstallmentViewStatus) =>
+    installments
+      .filter((i) => getInstallmentViewStatus(i).status === target)
+      .map((i) => parseDueDate(i.dueDate));
+
+  const paidDates = datesByStatus('PAID');
+  const underReviewDates = datesByStatus('UNDER_REVIEW');
+  const currentDates = [...datesByStatus('CURRENT'), ...datesByStatus('PARTIALLY_PAID')];
+  const pendingDates = datesByStatus('PENDING');
+  const overdueDates = datesByStatus('OVERDUE');
+  const negotiatedDates = datesByStatus('NEGOTIATED');
   const selectedDate = selectedInstallment
-    ? [new Date(selectedInstallment.dueDate)]
+    ? [parseDueDate(selectedInstallment.dueDate)]
     : [];
 
   const handleDayClick = (day: Date) => {
-    const found = installments.find((inst) => isSameDay(new Date(inst.dueDate), day));
+    const found = installments.find((inst) => isSameDay(parseDueDate(inst.dueDate), day));
     if (found) onDayClick(found);
   };
 
@@ -69,6 +73,7 @@ export function InstallmentCalendar({
       onMonthChange={onMonthChange}
       modifiers={{
         paid: paidDates,
+        underReview: underReviewDates,
         current: currentDates,
         pending: pendingDates,
         overdue: overdueDates,
@@ -77,6 +82,7 @@ export function InstallmentCalendar({
       }}
       modifiersClassNames={{
         paid: 'bg-accent-500 text-accent-900 hover:bg-accent-400 font-bold cursor-pointer',
+        underReview: 'bg-primary-400 text-white hover:bg-primary-500 font-bold cursor-pointer',
         current: 'bg-warning-400 text-warning-900 hover:bg-warning-500 font-bold cursor-pointer',
         pending: 'bg-primary-200 text-primary-900 hover:bg-primary-300 font-bold cursor-pointer',
         overdue: 'bg-error-500 text-white hover:bg-error-600 font-bold cursor-pointer',
@@ -91,29 +97,33 @@ export function InstallmentCalendar({
 
 // ─── Leyenda ──────────────────────────────────────────────────────────────────
 
+/**
+ * Los textos salen de `installmentViewStatusLabels` — la misma fuente que los badges de
+ * las cuotas. Antes estaban escritos a mano acá y ya habían divergido: la leyenda decía
+ * "Próxima" para el mismo estado que el badge llamaba "Por pagar".
+ *
+ * <p>El color acompaña al `modifiersClassNames` de arriba, así que se mantiene explícito.
+ */
+const LEGEND_ITEMS: Array<{ status: InstallmentViewStatus; dot: string }> = [
+  { status: 'PAID', dot: 'bg-accent-500' },
+  { status: 'OVERDUE', dot: 'bg-error-500' },
+  { status: 'UNDER_REVIEW', dot: 'bg-primary-400' },
+  { status: 'CURRENT', dot: 'bg-warning-400' },
+  { status: 'PENDING', dot: 'bg-primary-200' },
+  { status: 'NEGOTIATED', dot: 'bg-primary-600' },
+];
+
 export function CalendarLegend() {
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      <div className="flex items-center gap-1.5">
-        <div className="w-2.5 h-2.5 rounded-full bg-accent-500" />
-        <span className="text-xs text-muted-foreground">Pagada</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-2.5 h-2.5 rounded-full bg-error-500" />
-        <span className="text-xs text-muted-foreground">Vencida</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-2.5 h-2.5 rounded-full bg-warning-400" />
-        <span className="text-xs text-muted-foreground">Próxima</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-2.5 h-2.5 rounded-full bg-primary-200" />
-        <span className="text-xs text-muted-foreground">Futura</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-2.5 h-2.5 rounded-full bg-primary-600" />
-        <span className="text-xs text-muted-foreground">Refinanciada</span>
-      </div>
+      {LEGEND_ITEMS.map(({ status, dot }) => (
+        <div key={status} className="flex items-center gap-1.5">
+          <div className={`w-2.5 h-2.5 rounded-full ${dot}`} />
+          <span className="text-xs text-muted-foreground">
+            {installmentViewStatusLabels[status]}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

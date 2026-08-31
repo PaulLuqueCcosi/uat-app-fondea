@@ -18,18 +18,16 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { getDepartments, getProvinces, getDistricts } from 'ubigeo-fns';
-import type { AdminCreditRow, CreditStatus } from '@/modules/admin/admin-credits.service';
+import type { AdminCreditRow } from '@/modules/admin/admin-credits.service';
+import {
+  CREDIT_STATUS_INFO,
+  CREDIT_STATUS_ORDER,
+  creditStatusInfo,
+} from '@/modules/admin/credit-status-labels';
 
-// ── Status config ──────────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<CreditStatus, { label: string; bg: string; text: string; border: string }> = {
-  PENDING_DISBURSEMENT: { label: 'Por desembolsar', bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
-  ACTIVE: { label: 'Activo', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  OVERDUE: { label: 'Vencido', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-  SUSPENDED: { label: 'Suspendido', bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-300' },
-  WRITTEN_OFF: { label: 'Castigado', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
-  PAID_OFF: { label: 'Liquidado', bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
-};
+// Labels y colores centralizados en `modules/admin/credit-status-labels` — el Record que
+// estaba acá usaba colores arbitrarios (emerald/amber/gray) en vez de los tokens de la
+// paleta, y las etiquetas ya diferían de las otras vistas de admin.
 
 // ── Ubigeo resolver ────────────────────────────────────────────────────────
 
@@ -123,14 +121,25 @@ const columns = [
     },
   },
   {
+    // `days_remaining` del backend es solo `maturityDate − hoy` (ver
+    // PortfolioCreditListService.calculateDaysRemaining). NO es mora: la mora es a nivel
+    // de cuota (`days_overdue`) y el estado del crédito ya la refleja. Antes esta celda
+    // decía "10d mora" en créditos ACTIVE sin ninguna cuota vencida — contradecía al badge
+    // de estado de la fila de al lado.
     accessorKey: 'daysRemaining',
-    header: 'Días',
+    header: 'Al vencimiento',
     cell: ({ row }: { row: { original: AdminCreditRow } }) => {
       const days = row.original.daysRemaining;
-      if (days === 0 && !row.original.maturityDate) return <span className="text-xs text-muted-foreground">—</span>;
-      if (days > 0) return <span className="text-xs text-emerald-600 font-medium">{days}d</span>;
-      if (days === 0) return <span className="text-xs text-amber-600 font-medium">Hoy</span>;
-      return <span className="text-xs text-red-600 font-medium">{Math.abs(days)}d mora</span>;
+      const status = row.original.status;
+      if (!row.original.maturityDate) return <span className="text-xs text-muted-foreground">—</span>;
+      if (status === 'PAID_OFF') return <span className="text-xs text-muted-foreground">Cerrado</span>;
+      if (days > 0) return <span className="text-xs text-success-700 font-medium">Faltan {days}d</span>;
+      if (days === 0) return <span className="text-xs text-warning-700 font-medium">Vence hoy</span>;
+      return (
+        <span className="text-xs text-error-700 font-medium">
+          Venció hace {Math.abs(days)}d
+        </span>
+      );
     },
   },
   {
@@ -146,9 +155,12 @@ const columns = [
     accessorKey: 'status',
     header: 'Estado',
     cell: ({ row }: { row: { original: AdminCreditRow } }) => {
-      const cfg = STATUS_CONFIG[row.original.status];
+      const cfg = creditStatusInfo(row.original.status);
       return (
-        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+        <span
+          title={cfg.description}
+          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${cfg.chipClass}`}
+        >
           {cfg.label}
         </span>
       );
@@ -337,11 +349,13 @@ export function CreditsTableClient({ data, pagination, paramPrefix = '' }: Credi
           disabled={isPending}
         >
           <NativeSelectOption value="">Todos</NativeSelectOption>
-          <NativeSelectOption value="ACTIVE">Activo</NativeSelectOption>
-          <NativeSelectOption value="OVERDUE">Vencido</NativeSelectOption>
-          <NativeSelectOption value="SUSPENDED">Suspendido</NativeSelectOption>
-          <NativeSelectOption value="WRITTEN_OFF">Castigado</NativeSelectOption>
-          <NativeSelectOption value="PAID_OFF">Liquidado</NativeSelectOption>
+          {/* Derivado del enum — antes faltaba PENDING_DISBURSEMENT, así que los créditos
+              sin desembolsar no se podían filtrar. */}
+          {CREDIT_STATUS_ORDER.map((status) => (
+            <NativeSelectOption key={status} value={status}>
+              {CREDIT_STATUS_INFO[status].label}
+            </NativeSelectOption>
+          ))}
         </NativeSelect>
 
         <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>

@@ -22,6 +22,10 @@ import {
   MessageSquareWarning,
   UserMinus,
   Handshake,
+  Megaphone,
+  ShieldAlert,
+  Receipt,
+  Cpu,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -45,6 +49,7 @@ const kpisNav = [
 const carteraNav = [
   { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
   { path: '/admin/portfolio', label: 'Cartera', icon: PieChart },
+  { path: '/admin/payment-declarations', label: 'Depósitos', icon: Receipt },
 ];
 
 const cobranzaNav = [
@@ -62,6 +67,18 @@ const clientesNav = [
   { path: '/admin/complaints', label: 'Reclamaciones', icon: MessageSquareWarning },
   { path: '/admin/customers/churn', label: 'Riesgo de Churn', icon: UserMinus },
   { path: '/admin/customers/segmentation', label: 'Segmentación', icon: PieChart },
+];
+
+const marketingNav = [
+  { path: '/admin/marketing', label: 'Marketing y Adquisición', icon: Megaphone },
+];
+
+const riskNav = [
+  { path: '/admin/risk-analytics', label: 'Scoring y Riesgo', icon: ShieldAlert },
+];
+
+const techNav = [
+  { path: '/admin/tech', label: 'Tecnología y APIs', icon: Cpu },
 ];
 
 const businessRulesNav = [
@@ -224,6 +241,87 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
           <SidebarGroupLabel>M4 - Clientes</SidebarGroupLabel>
           <SidebarMenu>
             {clientesNav.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.path ||
+                pathname?.startsWith(item.path);
+
+              return (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    tooltip={item.label}
+                    render={<Link href={item.path} />}
+                  >
+                    <Icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>M5 - Marketing y Adquisición</SidebarGroupLabel>
+          <SidebarMenu>
+            {marketingNav.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.path ||
+                pathname?.startsWith(item.path);
+
+              return (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    tooltip={item.label}
+                    render={<Link href={item.path} />}
+                  >
+                    <Icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>M6 - Scoring y Riesgo</SidebarGroupLabel>
+          <SidebarMenu>
+            {riskNav.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.path ||
+                pathname?.startsWith(item.path);
+
+              return (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    tooltip={item.label}
+                    render={<Link href={item.path} />}
+                  >
+                    <Icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>M8 - Tecnología y APIs</SidebarGroupLabel>
+          <SidebarMenu>
+            {techNav.map((item) => {
               const Icon = item.icon;
               const isActive =
                 pathname === item.path ||
