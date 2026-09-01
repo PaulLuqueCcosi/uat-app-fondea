@@ -26,6 +26,7 @@ import {
   ShieldAlert,
   Receipt,
   Cpu,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -50,6 +51,7 @@ const carteraNav = [
   { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
   { path: '/admin/portfolio', label: 'Cartera', icon: PieChart },
   { path: '/admin/payment-declarations', label: 'Depósitos', icon: Receipt },
+  { path: '/admin/constancias', label: 'Constancias No Adeudo', icon: ShieldCheck },
 ];
 
 const cobranzaNav = [
