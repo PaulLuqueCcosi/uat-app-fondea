@@ -15,13 +15,13 @@ import {
   previewContractTemplateAction,
 } from '@/app/actions/contracts.actions';
 import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
-import { LexicalEditor, type LexicalEditorRef } from './LexicalEditor';
-import { cleanLexicalHtml } from './html-cleaner';
+import { LexicalEditor, type LexicalEditorRef } from '../shared/editor/LexicalEditor';
+import { cleanLexicalHtml } from '../shared/editor/html-cleaner';
 import type { ContractVariable } from '@/modules/admin/admin-contracts.service';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import './contract-document.css';
+import '../shared/editor/document-page.css';
 
 interface TemplateEditorClientProps {
   documentTypeId: string;
