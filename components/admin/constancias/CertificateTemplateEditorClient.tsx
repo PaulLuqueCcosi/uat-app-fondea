@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import {
   Save, Eye, Loader2, Variable, Pencil, X, Maximize2, Minimize2, AlertTriangle, FileText, History,
 } from 'lucide-react';
+
 import {
   createCertificateTemplateVersionAction,
   activateCertificateTemplateAction,
@@ -17,7 +18,7 @@ import {
 import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
 import { LexicalEditor, type LexicalEditorRef } from '@/components/admin/shared/editor/LexicalEditor';
 import { cleanLexicalHtml } from '@/components/admin/shared/editor/html-cleaner';
-import type { CertificateTemplateVersion, CertificateVariable } from '@/modules/admin/admin-constancias.types';
+import type { CertificateTemplateVersion, CertificateVariable, TemplateValidationProblem } from '@/modules/admin/admin-constancias.types';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -48,7 +49,11 @@ export function CertificateTemplateEditorClient({ versions, variables }: Certifi
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewProblems, setPreviewProblems] = useState<TemplateValidationProblem[] | undefined>(undefined);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  // Errores de guardar (mismo detalle que el preview: qué variable/etiqueta falló)
+  const [saveProblems, setSaveProblems] = useState<TemplateValidationProblem[] | undefined>(undefined);
 
   const editorRef = useRef<LexicalEditorRef>(null);
   const hasChanges = htmlContent !== initialHtml;
@@ -63,15 +68,17 @@ export function CertificateTemplateEditorClient({ versions, variables }: Certifi
     setPreviewOpen(true);
     setLoadingPreview(true);
     setPreviewError(null);
+    setPreviewProblems(undefined);
     setPreviewHtml(null);
     const cleaned = cleanLexicalHtml(htmlContent);
-    const html = await previewCertificateTemplateAction({ htmlContent: cleaned });
+    const result = await previewCertificateTemplateAction({ htmlContent: cleaned });
     setLoadingPreview(false);
-    if (html === null) {
-      setPreviewError('El HTML no es válido — revisa que no uses variables o etiquetas no permitidas.');
+    if (!result.ok) {
+      setPreviewError(result.error ?? 'No se pudo generar la vista previa.');
+      setPreviewProblems(result.problems);
       return;
     }
-    setPreviewHtml(html);
+    setPreviewHtml(result.html ?? '');
   }, [htmlContent]);
 
   // ── Guardar (limpia el HTML de Lexical antes de enviar) ──
@@ -83,21 +90,23 @@ export function CertificateTemplateEditorClient({ versions, variables }: Certifi
     }
 
     setSaving(true);
+    setSaveProblems(undefined);
     const result = await createCertificateTemplateVersionAction({
       code: TEMPLATE_CODE,
       name: 'Constancia de No Adeudo',
       htmlContent: cleaned,
     });
 
-    if (!result) {
+    if (!result.ok || !result.version) {
       setSaving(false);
-      toast.error('No se pudo guardar la plantilla. Revisa que las variables usadas existan en el catálogo.');
+      setSaveProblems(result.problems);
+      toast.error(result.error ?? 'No se pudo guardar la plantilla.');
       return;
     }
 
-    await activateCertificateTemplateAction(result.id);
+    await activateCertificateTemplateAction(result.version.id);
     setSaving(false);
-    toast.success(isNewTemplate ? 'Plantilla creada y activada' : `v${result.version} guardada y activada`);
+    toast.success(isNewTemplate ? 'Plantilla creada y activada' : `v${result.version.version} guardada y activada`);
     setFullscreen(false);
     setEditMode(false);
     startTransition(() => router.refresh());
@@ -144,6 +153,7 @@ export function CertificateTemplateEditorClient({ versions, variables }: Certifi
           onOpenChange={setPreviewOpen}
           loading={loadingPreview}
           error={previewError}
+          problems={previewProblems}
           html={previewHtml}
         />
       </div>
@@ -198,7 +208,10 @@ export function CertificateTemplateEditorClient({ versions, variables }: Certifi
 
       {/* Grid: editor + sidebar de variables */}
       <div className={`grid gap-4 flex-1 min-h-0 ${fullscreen ? 'grid-cols-[1fr_240px]' : 'grid-cols-1 lg:grid-cols-[1fr_260px]'}`}>
-        <div className="min-h-0">
+        <div className="min-h-0 flex flex-col gap-3">
+          {saveProblems && saveProblems.length > 0 && (
+            <SaveProblemsAlert problems={saveProblems} />
+          )}
           <LexicalEditor
             ref={editorRef}
             value={htmlContent}
@@ -258,6 +271,7 @@ export function CertificateTemplateEditorClient({ versions, variables }: Certifi
         onOpenChange={setPreviewOpen}
         loading={loadingPreview}
         error={previewError}
+        problems={previewProblems}
         html={previewHtml}
       />
     </div>
@@ -298,15 +312,39 @@ function VersionHistory({ versions }: { versions: CertificateTemplateVersion[] }
   );
 }
 
+// ── Alerta de errores al guardar (qué variable/etiqueta no está permitida) ───
+
+function SaveProblemsAlert({ problems }: { problems: TemplateValidationProblem[] }) {
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1.5 shrink-0">
+      <div className="flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <h3 className="text-xs font-medium text-amber-800">
+          No se pudo guardar — corrige lo siguiente:
+        </h3>
+      </div>
+      <ul className="text-xs text-amber-700 space-y-1 pl-6">
+        {problems.map((p, i) => (
+          <li key={i} className="list-disc">
+            {p.message}
+            {p.detail && <span className="font-mono text-[11px]"> ({p.detail})</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // ── Modal de preview del PDF ──────────────────────────────────────────────────
 
 function PdfPreviewDialog({
-  open, onOpenChange, loading, error, html,
+  open, onOpenChange, loading, error, problems, html,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   loading: boolean;
   error: string | null;
+  problems?: TemplateValidationProblem[];
   html: string | null;
 }) {
   // El backend devuelve el HTML renderizado con datos de ejemplo; lo mostramos dentro de
@@ -342,6 +380,19 @@ function PdfPreviewDialog({
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center px-6 overflow-auto py-6">
               <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
               <p className="text-sm font-medium text-amber-700 max-w-md">{error}</p>
+              {problems && problems.length > 0 && (
+                <ul className="text-left text-xs text-muted-foreground bg-white rounded-md border p-3 max-w-lg w-full space-y-1.5">
+                  {problems.map((p, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="text-amber-600">•</span>
+                      <span>
+                        {p.message}
+                        {p.detail && <span className="font-mono text-[11px] text-error-600"> ({p.detail})</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
           {!loading && !error && html && (

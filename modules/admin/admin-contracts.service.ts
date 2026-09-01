@@ -122,23 +122,48 @@ export async function getTemplateById(id: string): Promise<ContractTemplateVersi
   return res.json();
 }
 
+export interface CreateTemplateVersionResult {
+  ok: boolean;
+  version?: ContractTemplateVersion;
+  /** Mensaje legible del problema (si !ok). */
+  error?: string;
+  /** Detalle de cada problema de validación, si vino del validador (422) — ej. qué key no existe. */
+  problems?: { code: string; message: string; detail?: string }[];
+}
+
 export async function createTemplateVersion(data: {
   documentTypeId: string;
   code: string;
   htmlContent: string;
   cssContent?: string;
-}): Promise<ContractTemplateVersion | null> {
+}): Promise<CreateTemplateVersionResult> {
   const res = await backendFetch('/api/v1/admin/contracts/templates', {
     method: 'POST',
     body: JSON.stringify(data),
     context: 'ADMIN_CONTRACTS',
   });
-  if (!res.ok) {
-    const errorBody = await res.text().catch(() => '');
-    console.error(`[ADMIN_CONTRACTS] Error ${res.status} al crear template:`, errorBody);
-    return null;
+
+  if (res.ok) {
+    return { ok: true, version: await res.json() };
   }
-  return res.json();
+
+  let error = `Error ${res.status} al guardar la plantilla.`;
+  let problems: CreateTemplateVersionResult['problems'];
+  try {
+    const body = await res.json();
+    if (body.detail) error = body.detail;
+    if (Array.isArray(body.errors)) {
+      problems = body.errors;
+      error = 'El documento tiene variables o etiquetas que no están permitidas.';
+    }
+  } catch {
+    /* body no era JSON */
+  }
+  console.error(
+    `[ADMIN_CONTRACTS] Error ${res.status} al crear template: ${error}`
+    + (problems && problems.length > 0 ? ` | problems=${JSON.stringify(problems)}` : ''),
+  );
+  return { ok: false, error, problems };
 }
 
 export async function activateTemplate(id: string): Promise<boolean> {

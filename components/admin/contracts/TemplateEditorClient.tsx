@@ -58,6 +58,9 @@ export function TemplateEditorClient({
   const [previewProblems, setPreviewProblems] = useState<{ code: string; message: string; detail?: string }[] | undefined>(undefined);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
+  // Errores de guardar (mismo detalle que el preview: qué variable/etiqueta falló)
+  const [saveProblems, setSaveProblems] = useState<{ code: string; message: string; detail?: string }[] | undefined>(undefined);
+
   const editorRef = useRef<LexicalEditorRef>(null);
 
   const hasChanges = htmlContent !== initialHtml;
@@ -99,21 +102,23 @@ export function TemplateEditorClient({
     }
 
     setSaving(true);
+    setSaveProblems(undefined);
     const result = await createTemplateVersionAction({
       documentTypeId,
       code: templateCode,
       htmlContent: cleaned,
     });
 
-    if (!result) {
+    if (!result.ok || !result.version) {
       setSaving(false);
-      toast.error('No se pudo guardar. Revisa que las variables usadas existan en el catálogo y apliquen a este documento.');
+      setSaveProblems(result.problems);
+      toast.error(result.error ?? 'No se pudo guardar la plantilla.');
       return;
     }
 
-    await activateTemplateAction(result.id);
+    await activateTemplateAction(result.version.id);
     setSaving(false);
-    toast.success(isNewTemplate ? 'Plantilla creada y activada' : `v${result.version} guardada y activada`);
+    toast.success(isNewTemplate ? 'Plantilla creada y activada' : `v${result.version.version} guardada y activada`);
     setFullscreen(false);
     setEditMode(false);
     startTransition(() => router.refresh());
@@ -210,7 +215,10 @@ export function TemplateEditorClient({
 
       {/* Grid: editor + sidebar de variables */}
       <div className={`grid gap-4 flex-1 min-h-0 ${fullscreen ? 'grid-cols-[1fr_240px]' : 'grid-cols-1 lg:grid-cols-[1fr_260px]'}`}>
-        <div className="min-h-0">
+        <div className="min-h-0 flex flex-col gap-3">
+          {saveProblems && saveProblems.length > 0 && (
+            <SaveProblemsAlert problems={saveProblems} />
+          )}
           <LexicalEditor
             ref={editorRef}
             value={htmlContent}
@@ -293,6 +301,29 @@ export function TemplateEditorClient({
   }
 
   return editorContent;
+}
+
+// ── Alerta de errores al guardar (qué variable/etiqueta no está permitida) ───
+
+function SaveProblemsAlert({ problems }: { problems: { code: string; message: string; detail?: string }[] }) {
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1.5 shrink-0">
+      <div className="flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <h3 className="text-xs font-medium text-amber-800">
+          No se pudo guardar — corrige lo siguiente:
+        </h3>
+      </div>
+      <ul className="text-xs text-amber-700 space-y-1 pl-6">
+        {problems.map((p, i) => (
+          <li key={i} className="list-disc">
+            {p.message}
+            {p.detail && <span className="font-mono text-[11px]"> ({p.detail})</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 // ── Modal de preview del PDF ──────────────────────────────────────────────────

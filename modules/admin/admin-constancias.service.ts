@@ -12,6 +12,7 @@ import type {
   Pagination,
   PayoffCertificate,
   SpringPage,
+  TemplateValidationProblem,
 } from './admin-constancias.types';
 
 // ── Constancias ───────────────────────────────────────────────────────────────
@@ -131,23 +132,48 @@ export async function getCertificateTemplateVersions(code: string = TEMPLATE_COD
   return res.json();
 }
 
+export interface CreateTemplateVersionResult {
+  ok: boolean;
+  version?: CertificateTemplateVersion;
+  /** Mensaje legible del problema (si !ok). */
+  error?: string;
+  /** Detalle de cada problema de validación, si vino del validador (422) — ej. qué key no existe. */
+  problems?: TemplateValidationProblem[];
+}
+
 export async function createCertificateTemplateVersion(data: {
   code: string;
   name?: string;
   htmlContent: string;
   cssContent?: string;
-}): Promise<CertificateTemplateVersion | null> {
+}): Promise<CreateTemplateVersionResult> {
   const res = await backendFetch('/api/v1/admin/constancias/templates', {
     method: 'POST',
     body: JSON.stringify(data),
     context: 'ADMIN_CONSTANCIAS',
   });
-  if (!res.ok) {
-    const errorBody = await res.text().catch(() => '');
-    console.error(`[ADMIN_CONSTANCIAS] Error ${res.status} al crear versión de template:`, errorBody);
-    return null;
+
+  if (res.ok) {
+    return { ok: true, version: await res.json() };
   }
-  return res.json();
+
+  let error = `Error ${res.status} al guardar la plantilla.`;
+  let problems: TemplateValidationProblem[] | undefined;
+  try {
+    const body = await res.json();
+    if (body.detail) error = body.detail;
+    if (Array.isArray(body.errors)) {
+      problems = body.errors;
+      error = 'El documento tiene variables o etiquetas que no están permitidas.';
+    }
+  } catch {
+    /* body no era JSON */
+  }
+  console.error(
+    `[ADMIN_CONSTANCIAS] Error ${res.status} al crear versión de template: ${error}`
+    + (problems && problems.length > 0 ? ` | problems=${JSON.stringify(problems)}` : ''),
+  );
+  return { ok: false, error, problems };
 }
 
 export async function activateCertificateTemplate(id: string): Promise<boolean> {
@@ -158,17 +184,48 @@ export async function activateCertificateTemplate(id: string): Promise<boolean> 
   return res.ok;
 }
 
+export interface CertificatePreviewResult {
+  ok: boolean;
+  /** HTML renderizado (si ok). */
+  html?: string;
+  /** Mensaje legible del problema (si !ok). */
+  error?: string;
+  /** Detalle de cada problema de validación, si vino del validador (422) — ej. qué key no existe. */
+  problems?: TemplateValidationProblem[];
+}
+
+/**
+ * Renderiza HTML arbitrario con datos de ejemplo, pasando por el mismo validador que guardar.
+ * Devuelve un resultado tipado con el detalle del error para que la UI pueda explicarle al
+ * admin exactamente qué corregir (ej. qué variable {{key}} no existe en el catálogo).
+ */
 export async function previewCertificateTemplate(data: {
   htmlContent: string;
   cssContent?: string;
-}): Promise<string | null> {
+}): Promise<CertificatePreviewResult> {
   const res = await backendFetch('/api/v1/admin/constancias/templates/preview', {
     method: 'POST',
     body: JSON.stringify(data),
     context: 'ADMIN_CONSTANCIAS',
   });
-  if (!res.ok) return null;
-  return res.text();
+
+  if (res.ok) {
+    return { ok: true, html: await res.text() };
+  }
+
+  let error = `Error ${res.status} al generar la vista previa.`;
+  let problems: TemplateValidationProblem[] | undefined;
+  try {
+    const body = await res.json();
+    if (body.detail) error = body.detail;
+    if (Array.isArray(body.errors)) {
+      problems = body.errors;
+      error = 'El documento tiene variables o etiquetas que no están permitidas.';
+    }
+  } catch {
+    /* body no era JSON */
+  }
+  return { ok: false, error, problems };
 }
 
 export async function getCertificateVariables(): Promise<CertificateVariable[]> {

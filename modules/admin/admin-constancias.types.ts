@@ -86,6 +86,13 @@ export interface CertificateTemplateVersion {
 
 export type CertificateVariableFormat = 'TEXT' | 'NUMBER' | 'CURRENCY' | 'DATE' | 'BOOLEAN';
 
+/** Un problema concreto de validación del HTML, tal como lo devuelve el backend (422 errors[]). */
+export interface TemplateValidationProblem {
+  code: string;
+  message: string;
+  detail?: string;
+}
+
 export interface CertificateVariable {
   key: string;
   label: string;

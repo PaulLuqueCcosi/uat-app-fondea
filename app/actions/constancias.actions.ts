@@ -15,6 +15,8 @@ import {
   previewCertificateTemplate as _previewCertificateTemplate,
   getCertificateVariables as _getCertificateVariables,
   type SearchCertificatesResult,
+  type CreateTemplateVersionResult,
+  type CertificatePreviewResult,
 } from '@/modules/admin/admin-constancias.service';
 import type {
   CertificateSearchParams,
@@ -74,7 +76,7 @@ export async function createCertificateTemplateVersionAction(data: {
   name?: string;
   htmlContent: string;
   cssContent?: string;
-}): Promise<CertificateTemplateVersion | null> {
+}): Promise<CreateTemplateVersionResult> {
   await requireValidSession();
   return _createCertificateTemplateVersion(data);
 }
@@ -87,7 +89,7 @@ export async function activateCertificateTemplateAction(id: string): Promise<boo
 export async function previewCertificateTemplateAction(data: {
   htmlContent: string;
   cssContent?: string;
-}): Promise<string | null> {
+}): Promise<CertificatePreviewResult> {
   await requireValidSession();
   return _previewCertificateTemplate(data);
 }
