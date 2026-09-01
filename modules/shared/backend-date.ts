@@ -72,3 +72,15 @@ export function formatBackendDayMonth(iso: string | null | undefined): string {
     month: 'long',
   });
 }
+
+/** Ej. "21 jul. 2026, 14:30" — para timestamps de auditoría y configuraciones. */
+export function formatBackendDateTime(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  return parseBackendDate(iso).toLocaleString('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

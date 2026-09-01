@@ -20,6 +20,7 @@ import { CircleDollarSign, FileText, Bell, Pencil } from 'lucide-react';
 import { PenaltyConfigCard } from './PenaltyConfigCard';
 import { FormEditPoliciesCard } from './FormEditPoliciesCard';
 import { PassportRangesCard } from './PassportRangesCard';
+import { DepositAccountCard } from './DepositAccountCard';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,10 @@ export function AdminSettingsClient() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ═══ CUENTA DE DEPÓSITO (conectado al backend) ═══
+          Primero porque sin esto el cliente no puede pagar ninguna cuota. */}
+      <DepositAccountCard />
+
       {/* ═══ MORA (conectado al backend) ═══ */}
       <PenaltyConfigCard />
 

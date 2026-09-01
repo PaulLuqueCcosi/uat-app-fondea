@@ -44,6 +44,9 @@ import type {
 import { getInstallmentViewStatus } from '@/modules/credits';
 import { formatBackendDateLong } from '@/modules/shared/backend-date';
 import type { PaymentDeclaration } from '@/modules/payment-declarations';
+import { getActiveDepositAccountAction } from '@/app/actions/deposit-account.actions';
+import type { DepositAccountConfig, DepositAccountError } from '@/modules/deposit-account';
+import { DepositAccountCard } from '@/components/credits/DepositAccountCard';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -226,6 +229,12 @@ export default function CuotaDetallePage() {
   // Declaración de pago existente para esta cuota (la más reciente, si hay alguna)
   const [existingDeclaration, setExistingDeclaration] = useState<PaymentDeclaration | null>(null);
 
+  // Cuenta a la que el cliente tiene que transferir. Se guarda también el error para
+  // poder explicarle por qué no la ve (ej. el admin no configuró ninguna) en vez de
+  // mostrarle el formulario sin decirle a dónde depositar.
+  const [depositAccount, setDepositAccount] = useState<DepositAccountConfig | null>(null);
+  const [depositAccountError, setDepositAccountError] = useState<DepositAccountError | null>(null);
+
   // Payment declaration state
   const [paymentStep, setPaymentStep] = useState<PaymentStep>('declare');
   const [submittedDeclaration, setSubmittedDeclaration] = useState<PaymentDeclaration | null>(null);
@@ -239,10 +248,11 @@ export default function CuotaDetallePage() {
   useEffect(() => {
     async function fetchDetail() {
       setLoading(true);
-      const [cuotaRes, creditRes, declarationsRes] = await Promise.all([
+      const [cuotaRes, creditRes, declarationsRes, depositAccountRes] = await Promise.all([
         getInstallmentByNoAction(creditoId, cuotaNo),
         getCreditByIdAction(creditoId),
         listMyPaymentDeclarationsAction(0, 50),
+        getActiveDepositAccountAction(),
       ]);
       if (cuotaRes.ok) {
         setCuota(cuotaRes.data);
@@ -258,6 +268,11 @@ export default function CuotaDetallePage() {
           (d) => d.creditId === creditoId && d.installmentNo === cuotaNo,
         );
         setExistingDeclaration(match ?? null);
+      }
+      if (depositAccountRes.ok) {
+        setDepositAccount(depositAccountRes.data);
+      } else {
+        setDepositAccountError(depositAccountRes.error);
       }
       setLoading(false);
     }
@@ -508,6 +523,10 @@ export default function CuotaDetallePage() {
                 </Card>
               )}
 
+              {/* Datos para depositar — va ANTES del formulario porque es el paso previo:
+                  primero transfiere, después sube el comprobante. */}
+              <DepositAccountCard config={depositAccount} error={depositAccountError} />
+
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
@@ -515,8 +534,8 @@ export default function CuotaDetallePage() {
                     Declarar pago con comprobante
                   </CardTitle>
                   <CardDescription>
-                    Transfiere a la cuenta de Fondea y sube la foto de tu comprobante. Un administrador
-                    validará el pago manualmente.
+                    ¿Ya transferiste? Sube la foto de tu comprobante. Un administrador validará
+                    el pago manualmente.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
