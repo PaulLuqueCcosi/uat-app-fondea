@@ -7,6 +7,7 @@ import {
   getAdminCreditTransactions,
   getAdminCreditTimeline,
 } from '@/modules/admin/admin-credit-detail.service';
+import { getCertificatesByCredit } from '@/modules/admin/admin-constancias.service';
 import { CreditDetailHeader } from '@/components/admin/credits/detail/CreditDetailHeader';
 import { CreditOverviewTab } from '@/components/admin/credits/detail/CreditOverviewTab';
 import { CreditInstallmentsSection } from '@/components/admin/credits/detail/CreditInstallmentsSection';
@@ -22,13 +23,17 @@ interface Props {
 export default async function AdminCreditDetailPage({ params }: Props) {
   const { id } = await params;
 
-  const [summary, detail, installments, transactions, timeline] = await Promise.all([
+  const [summary, detail, installments, transactions, timeline, certificates] = await Promise.all([
     getAdminCreditSummary(id),
     getAdminCreditDetail(id),
     getAdminCreditInstallments(id),
     getAdminCreditTransactions(id),
     getAdminCreditTimeline(id),
+    getCertificatesByCredit(id),
   ]);
+
+  // A lo sumo una constancia por crédito (credit_id es UNIQUE en la tabla) — ver PayoffCertificate.
+  const certificate = certificates[0] ?? null;
 
   if (!summary) {
     notFound();
@@ -66,7 +71,7 @@ export default async function AdminCreditDetailPage({ params }: Props) {
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <CreditOverviewTab data={summary} />
+          <CreditOverviewTab data={summary} certificate={certificate} />
         </TabsContent>
 
         <TabsContent value="installments" className="mt-6">

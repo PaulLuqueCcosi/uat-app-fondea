@@ -7,9 +7,13 @@ import {
 } from 'lucide-react';
 import { getDepartment, getProvince, getDistrict } from 'ubigeo-fns';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
+import type { PayoffCertificate } from '@/modules/admin/admin-constancias.types';
+import { CreditCertificateCard } from './CreditCertificateCard';
 
 interface Props {
   data: AdminCreditSummary;
+  /** Null si el crédito no tiene constancia (no PAID_OFF, no STANDARD, o aún no se emitió). */
+  certificate: PayoffCertificate | null;
 }
 
 function formatCurrency(value: number) {
@@ -55,7 +59,7 @@ function resolveUbigeoNames(region: string | null, province: string | null, dist
   return { region, province, district };
 }
 
-export function CreditOverviewTab({ data }: Props) {
+export function CreditOverviewTab({ data, certificate }: Props) {
   const ubigeoNames = resolveUbigeoNames(data.ubigeoRegion, data.ubigeoProvince, data.ubigeoDistrict);
 
   return (
@@ -140,6 +144,9 @@ export function CreditOverviewTab({ data }: Props) {
 
       {/* Col 3: Sidebar */}
       <div className="space-y-4">
+        {/* Constancia de No Adeudo — solo relevante si el crédito ya se liquidó */}
+        {data.status === 'PAID_OFF' && <CreditCertificateCard certificate={certificate} />}
+
         {/* Cliente */}
         {data.client && (
           <Card>
