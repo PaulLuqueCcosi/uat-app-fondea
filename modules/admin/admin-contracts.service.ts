@@ -161,21 +161,49 @@ export async function getContractVariables(documentTypeId: string): Promise<Cont
   return res.json();
 }
 
+export interface PreviewResult {
+  ok: boolean;
+  /** HTML renderizado (si ok). */
+  html?: string;
+  /** Mensaje legible del problema (si !ok). */
+  error?: string;
+  /** Detalle de cada problema de validación, si vino del validador (422). */
+  problems?: { code: string; message: string; detail?: string }[];
+  status?: number;
+}
+
 /**
  * Renderiza HTML arbitrario con datos de ejemplo, pasando por el mismo validador que guardar
- * (incluye el filtro por documentTypeCode). Devuelve null si el HTML no pasa la validación —
- * el detalle del error queda en el body de la respuesta (ProblemDetail con `errors`).
+ * (incluye el filtro por documentTypeCode). Devuelve un resultado tipado con el detalle del
+ * error para que la UI pueda explicarle al admin exactamente qué corregir.
  */
 export async function previewContractTemplate(data: {
   htmlContent: string;
   cssContent?: string;
   documentTypeCode: string;
-}): Promise<string | null> {
+}): Promise<PreviewResult> {
   const res = await backendFetch('/api/v1/admin/contracts/templates/preview', {
     method: 'POST',
     body: JSON.stringify(data),
     context: 'ADMIN_CONTRACTS',
   });
-  if (!res.ok) return null;
-  return res.text();
+
+  if (res.ok) {
+    return { ok: true, html: await res.text() };
+  }
+
+  // Intentar leer el ProblemDetail del backend (422 con errors[], u otro error)
+  let error = `Error ${res.status} al generar la vista previa.`;
+  let problems: PreviewResult['problems'];
+  try {
+    const body = await res.json();
+    if (body.detail) error = body.detail;
+    if (Array.isArray(body.errors)) {
+      problems = body.errors;
+      error = 'El documento tiene problemas de validación.';
+    }
+  } catch {
+    /* body no era JSON */
+  }
+  return { ok: false, error, problems, status: res.status };
 }

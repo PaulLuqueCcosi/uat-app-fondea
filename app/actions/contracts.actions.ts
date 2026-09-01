@@ -10,7 +10,7 @@ import {
   getContractVariables as _getContractVariables,
   previewContractTemplate as _previewContractTemplate,
 } from '@/modules/admin/admin-contracts.service';
-import type { ContractTemplateVersion, ContractVariable, DocumentTypeRow } from '@/modules/admin/admin-contracts.service';
+import type { ContractTemplateVersion, ContractVariable, DocumentTypeRow, PreviewResult } from '@/modules/admin/admin-contracts.service';
 
 // ── Templates ─────────────────────────────────────────────────────────────────
 
@@ -73,7 +73,7 @@ export async function previewContractTemplateAction(data: {
   htmlContent: string;
   cssContent?: string;
   documentTypeCode: string;
-}): Promise<string | null> {
+}): Promise<PreviewResult> {
   await requireValidSession();
   return _previewContractTemplate(data);
 }
