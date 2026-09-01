@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
   Save,
@@ -16,45 +17,38 @@ import {
   X,
   Maximize2,
   Minimize2,
+  AlertTriangle,
 } from 'lucide-react';
-import { createTemplateVersionAction, activateTemplateAction } from '@/app/actions/contracts.actions';
+import {
+  createTemplateVersionAction,
+  activateTemplateAction,
+  previewContractTemplateAction,
+} from '@/app/actions/contracts.actions';
 import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
 import { JoditEditor, type JoditEditorRef } from './JoditEditor';
-
-// ── Variables del sistema (botones insertables) ───────────────────────────────
-
-const SYSTEM_VARIABLES = [
-  { label: 'Nombre completo', value: '{{userName}}' },
-  { label: 'DNI', value: '{{userDni}}' },
-  { label: 'Monto prestado', value: '{{currency principal}}' },
-  { label: 'Plazo (días)', value: '{{termDays}}' },
-  { label: 'N° cuotas', value: '{{installmentCount}}' },
-  { label: 'Cuota mensual', value: '{{currency monthlyPayment}}' },
-  { label: 'Total a pagar', value: '{{currency totalToPay}}' },
-  { label: '1ra cuota (fecha)', value: '{{date firstDueDate}}' },
-  { label: 'Fecha de firma', value: '{{date signatureDate}}' },
-  { label: 'Cronograma de pagos', value: '{{cronograma schedule}}' },
-  { label: 'Bloque de firma', value: '{{firma}}' },
-] as const;
+import type { ContractVariable } from '@/modules/admin/admin-contracts.service';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface TemplateEditorClientProps {
   documentTypeId: string;
+  documentTypeCode: string;
   templateCode: string;
   documentTypeName: string;
   initialHtml: string;
   initialCss: string;
   currentVersion: number;
+  /** Catálogo cerrado de variables permitidas para este documento — viene del backend. */
+  variables: ContractVariable[];
 }
 
 export function TemplateEditorClient({
   documentTypeId,
+  documentTypeCode,
   templateCode,
-  documentTypeName,
   initialHtml,
-  initialCss,
   currentVersion,
+  variables,
 }: TemplateEditorClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -64,6 +58,9 @@ export function TemplateEditorClient({
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
   const [htmlContent, setHtmlContent] = useState(initialHtml);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const editorRef = useRef<JoditEditorRef>(null);
 
@@ -84,6 +81,26 @@ export function TemplateEditorClient({
     return () => { document.body.style.overflow = ''; };
   }, [fullscreen]);
 
+  // ── Preview (renderiza contra el backend real, con la misma validación que guardar) ──
+
+  const loadPreview = useCallback(async () => {
+    setLoadingPreview(true);
+    setPreviewError(null);
+    const html = await previewContractTemplateAction({ htmlContent, documentTypeCode });
+    setLoadingPreview(false);
+    if (html === null) {
+      setPreviewError('El HTML no es válido — revisa que solo uses variables de la lista disponible.');
+      setPreviewHtml(null);
+      return;
+    }
+    setPreviewHtml(html);
+  }, [htmlContent, documentTypeCode]);
+
+  const handleTogglePreview = () => {
+    if (!showPreview) loadPreview();
+    setShowPreview(!showPreview);
+  };
+
   // ── Save ────────────────────────────────────────────────────────────────
 
   const handleSave = useCallback(async () => {
@@ -101,7 +118,7 @@ export function TemplateEditorClient({
 
     if (!result) {
       setSaving(false);
-      toast.error('No se pudo guardar la plantilla.');
+      toast.error('No se pudo guardar la plantilla. Revisa que las variables usadas existan en el catálogo y apliquen a este tipo de documento.');
       return;
     }
 
@@ -113,9 +130,9 @@ export function TemplateEditorClient({
     startTransition(() => router.refresh());
   }, [htmlContent, documentTypeId, templateCode, isNewTemplate, router]);
 
-  // ── Preview HTML ────────────────────────────────────────────────────────
+  // ── Preview crudo (solo para el modo vista, sin llamar al backend) ────────
 
-  const previewHtml = useMemo(() => {
+  const rawPreviewHtml = useMemo(() => {
     const content = editMode ? htmlContent : initialHtml;
     return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="padding:20px;font-family:sans-serif;">${content}</body></html>`;
   }, [htmlContent, initialHtml, editMode]);
@@ -139,7 +156,7 @@ export function TemplateEditorClient({
 
         <div className="border rounded-lg overflow-hidden bg-white">
           <iframe
-            srcDoc={previewHtml}
+            srcDoc={rawPreviewHtml}
             title="Vista previa del template"
             className="w-full border-0"
             style={{ height: '600px' }}
@@ -168,7 +185,7 @@ export function TemplateEditorClient({
               variant="ghost"
               size="sm"
               className="h-8 gap-2 text-xs"
-              onClick={() => { setHtmlContent(initialHtml); setEditMode(false); setFullscreen(false); }}
+              onClick={() => { setHtmlContent(initialHtml); setEditMode(false); setFullscreen(false); setShowPreview(false); }}
             >
               <X className="h-3.5 w-3.5" />
               Cancelar
@@ -180,9 +197,16 @@ export function TemplateEditorClient({
             variant="outline"
             size="sm"
             className="h-8 gap-2"
-            onClick={() => setShowPreview(!showPreview)}
+            onClick={handleTogglePreview}
+            disabled={loadingPreview}
           >
-            {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {loadingPreview ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : showPreview ? (
+              <EyeOff className="h-3.5 w-3.5" />
+            ) : (
+              <Eye className="h-3.5 w-3.5" />
+            )}
             {showPreview ? 'Ocultar' : 'Preview'}
           </Button>
           <Button
@@ -207,23 +231,42 @@ export function TemplateEditorClient({
       </div>
 
       {/* Grid */}
-      <div className={`grid gap-4 flex-1 min-h-0 ${fullscreen ? 'grid-cols-[1fr_200px]' : 'grid-cols-1 lg:grid-cols-[1fr_220px]'}`}>
+      <div className={`grid gap-4 flex-1 min-h-0 ${fullscreen ? 'grid-cols-[1fr_240px]' : 'grid-cols-1 lg:grid-cols-[1fr_260px]'}`}>
         <div className="space-y-4 overflow-y-auto">
           {/* Editor */}
           <JoditEditor ref={editorRef} value={htmlContent} onChange={setHtmlContent} height={fullscreen ? 'calc(100vh - 150px)' : 700} />
 
-          {/* Preview inline */}
+          {/* Preview inline — renderizado real del backend, con validación */}
           {showPreview && (
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Vista previa</Label>
+              <Label className="text-xs text-muted-foreground">
+                Vista previa (renderizada con datos de ejemplo, vía backend)
+              </Label>
               <div className="border rounded-lg overflow-hidden bg-white">
-                <iframe srcDoc={previewHtml} title="Preview" className="w-full border-0" style={{ height: '400px' }} sandbox="allow-same-origin" />
+                {previewError ? (
+                  <div className="h-24 flex flex-col items-center justify-center gap-1.5 text-center px-4">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <p className="text-xs text-amber-700">{previewError}</p>
+                  </div>
+                ) : previewHtml ? (
+                  <iframe
+                    srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="padding:20px;font-family:serif;">${previewHtml}</body></html>`}
+                    title="Preview"
+                    className="w-full border-0"
+                    style={{ height: '450px' }}
+                    sandbox="allow-same-origin"
+                  />
+                ) : (
+                  <div className="h-24 flex items-center justify-center text-xs text-muted-foreground">
+                    {loadingPreview ? 'Generando vista previa...' : 'Sin datos de vista previa'}
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Sidebar — Botones de variables */}
+        {/* Sidebar — variables permitidas para ESTE tipo de documento */}
         <div className="space-y-3 overflow-y-auto">
           <div className="rounded-lg border bg-card p-3 space-y-3">
             <div className="flex items-center gap-2">
@@ -231,20 +274,33 @@ export function TemplateEditorClient({
               <h3 className="text-xs font-medium">Insertar variable</h3>
             </div>
             <p className="text-[10px] text-muted-foreground">
-              Click para insertar en la posición del cursor:
+              Solo estos keys están permitidos para este documento. Click para insertar en el cursor:
             </p>
             <div className="flex flex-col gap-1.5">
-              {SYSTEM_VARIABLES.map((v) => (
+              {variables.map((v) => (
                 <button
-                  key={v.value}
+                  key={v.key}
                   type="button"
                   className="text-left px-2 py-1.5 rounded-md text-[11px] border border-border hover:bg-primary/5 hover:border-primary/30 transition-colors"
-                  onClick={() => editorRef.current?.insertText(v.value)}
+                  onClick={() => editorRef.current?.insertText(v.usage)}
+                  title={v.description}
                 >
-                  <span className="font-medium text-foreground">{v.label}</span>
-                  <span className="block font-mono text-[9px] text-muted-foreground mt-0.5">{v.value}</span>
+                  <span className="flex items-center gap-1 font-medium text-foreground">
+                    {v.label}
+                    {v.universal && (
+                      <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 leading-none">
+                        universal
+                      </Badge>
+                    )}
+                  </span>
+                  <span className="block font-mono text-[9px] text-muted-foreground mt-0.5">{v.usage}</span>
                 </button>
               ))}
+              {variables.length === 0 && (
+                <p className="text-[10px] text-muted-foreground italic">
+                  No hay variables definidas para este tipo de documento todavía.
+                </p>
+              )}
             </div>
           </div>
         </div>

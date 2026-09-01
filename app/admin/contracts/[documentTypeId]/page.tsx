@@ -1,7 +1,7 @@
 import { ArrowLeft, FileCode2 } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getDocumentTypeById, getTemplateVersions } from '@/modules/admin/admin-contracts.service';
+import { getDocumentTypeById, getTemplateVersions, getContractVariables } from '@/modules/admin/admin-contracts.service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TemplateEditorClient } from '@/components/admin/contracts/TemplateEditorClient';
@@ -17,7 +17,10 @@ export default async function DocumentTypeDetailPage({ params }: Props) {
   if (!documentType) return notFound();
 
   // Obtener la versión activa (la más reciente activa, o la primera si no hay activa)
-  const templates = await getTemplateVersions(documentTypeId);
+  const [templates, variables] = await Promise.all([
+    getTemplateVersions(documentTypeId),
+    getContractVariables(documentTypeId),
+  ]);
   const activeTemplate = templates.find((t) => t.active) ?? templates[0] ?? null;
 
   return (
@@ -70,11 +73,13 @@ export default async function DocumentTypeDetailPage({ params }: Props) {
       {/* Editor del template actual */}
       <TemplateEditorClient
         documentTypeId={documentType.id}
+        documentTypeCode={documentType.code}
         templateCode={activeTemplate?.code ?? documentType.code.toLowerCase().replace(/_/g, '-')}
         documentTypeName={documentType.name}
         initialHtml={activeTemplate?.htmlContent ?? ''}
         initialCss={activeTemplate?.cssContent ?? ''}
         currentVersion={activeTemplate?.version ?? 0}
+        variables={variables}
       />
     </div>
   );

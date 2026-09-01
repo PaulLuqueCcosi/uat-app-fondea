@@ -32,6 +32,18 @@ export interface ContractTemplateVersion {
   createdAt: string;
 }
 
+export type ContractVariableFormat = 'TEXT' | 'NUMBER' | 'CURRENCY' | 'DATE' | 'SCHEDULE' | 'SIGNATURE_BLOCK';
+
+export interface ContractVariable {
+  key: string;
+  label: string;
+  description: string;
+  format: ContractVariableFormat;
+  usage: string;
+  /** true si aplica a cualquier tipo de documento, no solo al consultado. */
+  universal: boolean;
+}
+
 // ── Document Types ────────────────────────────────────────────────────────────
 
 export async function getDocumentTypes(): Promise<DocumentTypeRow[]> {
@@ -135,4 +147,35 @@ export async function activateTemplate(id: string): Promise<boolean> {
     context: 'ADMIN_CONTRACTS',
   });
   return res.ok;
+}
+
+// ── Variables ─────────────────────────────────────────────────────────────────
+
+/** Catálogo cerrado de variables permitidas para este documentTypeId (universales + propias). */
+export async function getContractVariables(documentTypeId: string): Promise<ContractVariable[]> {
+  const res = await backendFetch(
+    `/api/v1/admin/contracts/templates/variables?documentTypeId=${encodeURIComponent(documentTypeId)}`,
+    { context: 'ADMIN_CONTRACTS' },
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+/**
+ * Renderiza HTML arbitrario con datos de ejemplo, pasando por el mismo validador que guardar
+ * (incluye el filtro por documentTypeCode). Devuelve null si el HTML no pasa la validación —
+ * el detalle del error queda en el body de la respuesta (ProblemDetail con `errors`).
+ */
+export async function previewContractTemplate(data: {
+  htmlContent: string;
+  cssContent?: string;
+  documentTypeCode: string;
+}): Promise<string | null> {
+  const res = await backendFetch('/api/v1/admin/contracts/templates/preview', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    context: 'ADMIN_CONTRACTS',
+  });
+  if (!res.ok) return null;
+  return res.text();
 }

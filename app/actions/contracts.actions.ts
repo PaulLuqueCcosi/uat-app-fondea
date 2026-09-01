@@ -7,8 +7,10 @@ import {
   createDocumentType as _createDocumentType,
   updateDocumentType as _updateDocumentType,
   setDocumentTypeActive as _setDocumentTypeActive,
+  getContractVariables as _getContractVariables,
+  previewContractTemplate as _previewContractTemplate,
 } from '@/modules/admin/admin-contracts.service';
-import type { ContractTemplateVersion, DocumentTypeRow } from '@/modules/admin/admin-contracts.service';
+import type { ContractTemplateVersion, ContractVariable, DocumentTypeRow } from '@/modules/admin/admin-contracts.service';
 
 // ── Templates ─────────────────────────────────────────────────────────────────
 
@@ -58,4 +60,20 @@ export async function updateDocumentTypeAction(
 export async function setDocumentTypeActiveAction(id: string, active: boolean): Promise<boolean> {
   await requireValidSession();
   return _setDocumentTypeActive(id, active);
+}
+
+// ── Variables ─────────────────────────────────────────────────────────────────
+
+export async function getContractVariablesAction(documentTypeId: string): Promise<ContractVariable[]> {
+  await requireValidSession();
+  return _getContractVariables(documentTypeId);
+}
+
+export async function previewContractTemplateAction(data: {
+  htmlContent: string;
+  cssContent?: string;
+  documentTypeCode: string;
+}): Promise<string | null> {
+  await requireValidSession();
+  return _previewContractTemplate(data);
 }
