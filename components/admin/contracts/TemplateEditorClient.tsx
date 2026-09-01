@@ -25,7 +25,7 @@ import {
   previewContractTemplateAction,
 } from '@/app/actions/contracts.actions';
 import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
-import { JoditEditor, type JoditEditorRef } from './JoditEditor';
+import { TiptapEditor, type TiptapEditorRef } from './TiptapEditor';
 import type { ContractVariable } from '@/modules/admin/admin-contracts.service';
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ export function TemplateEditorClient({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [saving, setSaving] = useState(false);
-  const editorRef = useRef<JoditEditorRef>(null);
+  const editorRef = useRef<TiptapEditorRef>(null);
 
   const hasChanges = htmlContent !== initialHtml;
   const isNewTemplate = currentVersion === 0;
@@ -234,7 +234,7 @@ export function TemplateEditorClient({
       <div className={`grid gap-4 flex-1 min-h-0 ${fullscreen ? 'grid-cols-[1fr_240px]' : 'grid-cols-1 lg:grid-cols-[1fr_260px]'}`}>
         <div className="space-y-4 overflow-y-auto">
           {/* Editor */}
-          <JoditEditor ref={editorRef} value={htmlContent} onChange={setHtmlContent} height={fullscreen ? 'calc(100vh - 150px)' : 700} />
+          <TiptapEditor ref={editorRef} value={htmlContent} onChange={setHtmlContent} height={fullscreen ? 'calc(100vh - 220px)' : 700} />
 
           {/* Preview inline — renderizado real del backend, con validación */}
           {showPreview && (

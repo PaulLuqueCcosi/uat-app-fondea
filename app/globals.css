@@ -295,3 +295,6 @@
     background: var(--color-primary-300);
   }
 }
+
+/* Los estilos del editor Tiptap ("modo documento" A4) viven en
+   components/admin/contracts/tiptap-editor.css, importado por el componente. */

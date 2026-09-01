@@ -1,0 +1,110 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Editor de contratos (Tiptap) — "modo documento" tipo Google Docs.
+
+   La hoja simula A4 (210mm de ancho, margen 2cm) con la MISMA tipografía y estilos
+   que el PDF final que genera el backend (ver LocalPdfRenderingAdapter.wrapHtml),
+   para que editar sea WYSIWYG fiel a lo impreso:
+     - A4: 210mm ≈ 794px @96dpi
+     - Margen: 2cm ≈ 76px  (área de texto ≈ 170mm ≈ 642px, igual que el PDF)
+
+   Importado directamente por TiptapEditor.tsx para no depender del orden de capas
+   de Tailwind en globals.css.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.ProseMirror.fondea-doc-sheet {
+  width: 794px;
+  max-width: 100%;
+  min-height: 1123px;            /* alto de una hoja A4 @96dpi */
+  margin: 32px auto;
+  padding: 76px;                 /* 2cm — igual que @page margin del PDF */
+  background: #ffffff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  outline: none;
+}
+
+.ProseMirror.fondea-doc-sheet:focus,
+.ProseMirror.fondea-doc-sheet:focus-visible {
+  outline: none;
+}
+
+.ProseMirror.fondea-doc-sheet h1 {
+  font-size: 1.6rem;
+  color: #1a1a1a;
+  line-height: 1.3;
+  margin: 0 0 16px 0;
+}
+
+.ProseMirror.fondea-doc-sheet h2 {
+  font-size: 1.3rem;
+  color: #1a1a1a;
+  line-height: 1.3;
+  margin: 22px 0 12px 0;
+}
+
+.ProseMirror.fondea-doc-sheet h3 {
+  font-size: 1.05rem;
+  color: #1a1a1a;
+  line-height: 1.3;
+  margin: 20px 0 10px 0;
+}
+
+.ProseMirror.fondea-doc-sheet p {
+  margin: 0 0 14px 0;
+}
+
+.ProseMirror.fondea-doc-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  table-layout: fixed;
+}
+
+.ProseMirror.fondea-doc-sheet th,
+.ProseMirror.fondea-doc-sheet td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.ProseMirror.fondea-doc-sheet th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.ProseMirror.fondea-doc-sheet hr {
+  border: none;
+  border-top: 1px solid #999;
+  margin: 20px 0;
+}
+
+.ProseMirror.fondea-doc-sheet ul,
+.ProseMirror.fondea-doc-sheet ol {
+  margin: 0 0 14px 0;
+  padding-left: 28px;
+}
+
+.ProseMirror.fondea-doc-sheet ul {
+  list-style: disc;
+}
+
+.ProseMirror.fondea-doc-sheet ol {
+  list-style: decimal;
+}
+
+/* Selección de celdas de tabla (Tiptap) */
+.ProseMirror.fondea-doc-sheet .selectedCell:after {
+  background: rgba(0, 161, 205, 0.12);
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ProseMirror.fondea-doc-sheet td,
+.ProseMirror.fondea-doc-sheet th {
+  position: relative;
+}
