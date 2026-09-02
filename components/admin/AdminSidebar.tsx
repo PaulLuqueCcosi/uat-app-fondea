@@ -42,6 +42,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  SidebarSeparator,
   useSidebar,
 } from '@/components/ui/sidebar';
 import {
@@ -77,12 +78,41 @@ type NavItem = {
   url?: string;
   exact?: boolean;
   items?: NavSubItem[];
+  /** Inserta un separador visual antes de este item. */
+  separatorBefore?: boolean;
 };
 
 const navMain: NavItem[] = [
   {
+    title: 'Principal',
+    icon: Target,
+    items: [
+      { title: 'Intenciones', url: '/admin/intentions', icon: Target },
+      { title: 'Solicitudes', url: '/admin/applications', icon: FileText },
+    ],
+  },
+  {
+    title: 'Reglas de Negocio',
+    icon: Sliders,
+    items: [
+      { title: 'Calculadora', url: '/admin/calculator', icon: Calculator },
+      { title: 'Reglas Motor', url: '/admin/evaluation-rules', icon: Shield },
+      { title: 'Scorecard', url: '/admin/scoring', icon: Sliders },
+      { title: 'Contratos', url: '/admin/contracts', icon: FileCode2 },
+    ],
+  },
+  {
+    title: 'Configuración',
+    icon: Settings,
+    items: [
+      { title: 'Fondo de Capital', url: '/admin/fund', icon: Wallet },
+      { title: 'Configuración', url: '/admin/settings', icon: Settings, exact: true },
+    ],
+  },
+  {
     title: 'M1 - KPIs Globales',
     icon: TrendingUp,
+    separatorBefore: true,
     items: [
       { title: 'KPIs Globales', url: '/admin/analytics', icon: TrendingUp },
       { title: 'NPS', url: '/admin/nps', icon: BarChart },
@@ -104,14 +134,6 @@ const navMain: NavItem[] = [
     items: [
       { title: 'Cobranza', url: '/admin/collections', icon: BarChart3 },
       { title: 'Negociaciones', url: '/admin/negotiation-offers', icon: Handshake },
-    ],
-  },
-  {
-    title: 'Principal',
-    icon: Target,
-    items: [
-      { title: 'Intenciones', url: '/admin/intentions', icon: Target },
-      { title: 'Solicitudes', url: '/admin/applications', icon: FileText },
     ],
   },
   {
@@ -139,24 +161,6 @@ const navMain: NavItem[] = [
     icon: Cpu,
     url: '/admin/tech',
   },
-  {
-    title: 'Reglas de Negocio',
-    icon: Sliders,
-    items: [
-      { title: 'Calculadora', url: '/admin/calculator', icon: Calculator },
-      { title: 'Reglas Motor', url: '/admin/evaluation-rules', icon: Shield },
-      { title: 'Scorecard', url: '/admin/scoring', icon: Sliders },
-      { title: 'Contratos', url: '/admin/contracts', icon: FileCode2 },
-    ],
-  },
-  {
-    title: 'Configuración',
-    icon: Settings,
-    items: [
-      { title: 'Fondo de Capital', url: '/admin/fund', icon: Wallet },
-      { title: 'Configuración', url: '/admin/settings', icon: Settings, exact: true },
-    ],
-  },
 ];
 
 /** `/admin` es la home de KPIs. */
@@ -179,13 +183,16 @@ function NavMain({ items }: { items: NavItem[] }) {
   return (
     <SidebarGroup>
       <SidebarMenu>
-        {items.map((item) =>
-          item.items?.length ? (
-            <NavGroupItem key={item.title} item={item} />
-          ) : (
-            <NavLinkItem key={item.title} item={item} />
-          )
-        )}
+        {items.map((item) => (
+          <React.Fragment key={item.title}>
+            {item.separatorBefore && <SidebarSeparator className="my-1" />}
+            {item.items?.length ? (
+              <NavGroupItem item={item} />
+            ) : (
+              <NavLinkItem item={item} />
+            )}
+          </React.Fragment>
+        ))}
       </SidebarMenu>
     </SidebarGroup>
   );
@@ -254,7 +261,7 @@ function NavGroupItem({ item }: { item: NavItem }) {
                     className="gap-2 focus:bg-sidebar-accent focus:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground"
                     render={<Link href={sub.url} />}
                   >
-                    <SubIcon className="text-muted-foreground" />
+                    <SubIcon />
                     <span>{sub.title}</span>
                   </DropdownMenuItem>
                 );
@@ -287,6 +294,7 @@ function NavGroupItem({ item }: { item: NavItem }) {
                 <SidebarMenuSubButton
                   isActive={isUrlActive(pathname, sub.url, sub.exact)}
                   render={<Link href={sub.url} />}
+                  className="[&>svg]:text-sidebar-foreground hover:[&>svg]:text-sidebar-accent-foreground data-active:[&>svg]:text-sidebar-accent-foreground"
                 >
                   <SubIcon />
                   <span>{sub.title}</span>
