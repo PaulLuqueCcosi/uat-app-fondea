@@ -81,7 +81,7 @@ export const CREDIT_STATUS_FLOW: CreditStatusFlowInfo[] = [
   {
     code: 'WRITTEN_OFF',
     triggeredBy:
-      'Solo por acción manual de un admin — es el castigo contable (se reconoce la pérdida y sale del balance activo). A diferencia de Suspendido, SÍ puede recuperarse solo, sin que un admin intervenga: si el cliente paga voluntariamente, vuelve a Vencido o Liquidado según cuánto pague. No se puede negociar mientras está en este estado.',
+      'Solo por acción manual de un admin — es el castigo contable (se reconoce la pérdida y sale del balance activo). A diferencia de Suspendido, SÍ puede recuperarse solo, sin que un admin intervenga: si el cliente paga voluntariamente, vuelve a Vencido o Liquidado según cuánto pague, y la parte de la pérdida que corresponda se revierte automáticamente en el fondo de capital. No se puede negociar mientras está en este estado.',
   },
   {
     code: 'PAID_OFF',
@@ -99,7 +99,7 @@ export const CREDIT_STATUS_ACTIONS_NOTE =
   'Suspender, reactivar y castigar un crédito son operaciones manuales, disponibles solo desde el detalle de un crédito específico (no desde la tabla ni en bulk) — cada una pide confirmación explícita y queda registrada en el Timeline con el admin que la ejecutó.\n' +
   '- Suspender: disponible salvo si el crédito ya está Liquidado o Suspendido. Requiere motivo obligatorio.\n' +
   '- Reactivar: solo disponible si el crédito está Suspendido.\n' +
-  '- Castigar: solo disponible si el crédito está Vencido. Reporta la pérdida al fondo de capital de inmediato — si el crédito se recupera después con pagos del cliente, ese ajuste NO se revierte solo, hay que corregirlo a mano en Fondo de Capital.';
+  '- Castigar: solo disponible si el crédito está Vencido. Reporta la pérdida al fondo de capital de inmediato. Si el crédito se recupera después con pagos del cliente, la parte de esa pérdida que corresponda se revierte automáticamente en el fondo — no requiere ajuste manual.';
 
 // ─── Cuotas ────────────────────────────────────────────────────────────────────
 

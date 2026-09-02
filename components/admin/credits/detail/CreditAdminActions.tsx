@@ -231,9 +231,9 @@ function WriteOffAction({ creditId }: { creditId: string }) {
               operación.
             </span>
             <span className="block font-medium text-foreground">
-              Si el cliente paga después de forma voluntaria, el crédito puede
-              recuperarse, pero el ajuste de esa pérdida en el fondo NO se revierte
-              solo — hay que corregirlo a mano desde Fondo de Capital.
+              Si el cliente paga después de forma voluntaria, el crédito se recupera y
+              el sistema revierte automáticamente la parte de esa pérdida que
+              corresponda en el fondo — no requiere ajuste manual.
             </span>
             <span className="block">Esta acción queda registrada en auditoría con tu usuario.</span>
           </AlertDialogDescription>
@@ -246,8 +246,7 @@ function WriteOffAction({ creditId }: { creditId: string }) {
             disabled={isPending}
             className="mt-0.5"
           />
-          Entiendo que esta acción reporta una pérdida real al fondo y que su reversión,
-          si aplica, no es automática.
+          Entiendo que esta acción reporta una pérdida real al fondo de capital.
         </label>
 
         <AlertDialogFooter>
