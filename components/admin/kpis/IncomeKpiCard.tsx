@@ -48,6 +48,7 @@ export function IncomeKpiCard({ days: initialDays = 30 }: { days?: number }) {
     <MetricCard
       icon={DollarSign}
       title="Ingresos brutos acumulados"
+      metricKey="income"
       description={`desde hace ${data.days_period} días`}
       onRefresh={() => fetchData(days)}
       isRefreshing={loading && !!data}

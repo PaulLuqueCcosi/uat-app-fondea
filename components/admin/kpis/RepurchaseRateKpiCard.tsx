@@ -48,6 +48,7 @@ export function RepurchaseRateKpiCard({ days: initialDays = 30 }: { days?: numbe
     <MetricCard
       icon={Repeat}
       title="Tasa de recompra"
+      metricKey="repurchaseRate"
       description={`${data.repeat_clients} de ${data.active_clients} clientes repitieron en los últimos ${days} días`}
       onRefresh={() => fetchData(days)}
       isRefreshing={loading && !!data}

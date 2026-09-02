@@ -50,6 +50,7 @@ export function CashflowKpiCard({ days: initialDays = 30 }: { days?: number }) {
     <MetricCard
       icon={Coins}
       title="Ingresos a caja (total)"
+      metricKey="cashflow"
       description={`desde hace ${data.days_period} días`}
       onRefresh={() => fetchData(days)}
       isRefreshing={loading && !!data}

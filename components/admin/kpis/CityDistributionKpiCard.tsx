@@ -81,6 +81,7 @@ export function CityDistributionKpiCard() {
     <MetricCard
       icon={MapPin}
       title="Distribución Geográfica"
+      metricKey="cityDistribution"
       description={`${data.total_loans.toLocaleString()} préstamos activos · ${data.departments.length} departamentos`}
       onRefresh={fetchData}
       isRefreshing={loading && !!data}

@@ -74,6 +74,7 @@ export function NplKpiCard({ termDaysOptions }: NplKpiCardProps) {
     <MetricCard
       icon={AlertTriangle}
       title="Tasa de Mora (NPL)"
+      metricKey="npl"
       description={`${money(npl.overdue_capital)} / ${money(npl.active_capital)}`}
       onRefresh={() => fetchNpl(selectedTermDays)}
       isRefreshing={loading}

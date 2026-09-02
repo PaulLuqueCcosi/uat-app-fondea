@@ -47,6 +47,7 @@ export function ActiveClientsKpiCard({ days: initialDays = 30 }: { days?: number
     <MetricCard
       icon={Users}
       title="Clientes activos"
+      metricKey="activeClients"
       description={`Con al menos 1 préstamo activo en los últimos ${data.days_period} días`}
       onRefresh={() => fetchData(days)}
       isRefreshing={loading && !!data}

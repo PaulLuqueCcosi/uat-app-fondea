@@ -107,6 +107,7 @@ export function FunnelKpiCard({ days: initialDays = 30 }: { days?: number }) {
     <MetricCard
       icon={Filter}
       title="Funnel de Conversión"
+      metricKey="funnel"
       description={`Conversión: ${data.overall_conversion_rate}%`}
       onRefresh={() => fetchData(days)}
       isRefreshing={loading && !!data}

@@ -111,6 +111,7 @@ export function NplTranchesKpiCard() {
     <MetricCard
       icon={ShieldAlert}
       title="NPL por Etapa de Cobranza"
+      metricKey="nplTranches"
       description={`${data.total_overdue_installments} cuotas en mora — ${money(data.total_overdue_amount)}`}
       onRefresh={fetchData}
       isRefreshing={loading}

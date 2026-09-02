@@ -42,6 +42,7 @@ export function ActiveLoansKpiCard() {
     <MetricCard
       icon={TrendingUp}
       title="Préstamos activos"
+      metricKey="activeLoans"
       onRefresh={fetchData}
       isRefreshing={loading && !!data}
     >

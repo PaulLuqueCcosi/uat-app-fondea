@@ -43,6 +43,7 @@ export function UtilizacionKpiCard() {
     <MetricCard
       icon={Gauge}
       title="Tasa de utilización"
+      metricKey="utilizacion"
       onRefresh={fetchData}
       isRefreshing={loading && !!data}
     >

@@ -2,11 +2,15 @@ import { ReactNode } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RotateCcw, Loader2, LucideIcon } from 'lucide-react';
+import { MetricInfoButton } from './MetricInfoButton';
+import type { MetricKey } from './metric-info';
 
 interface MetricCardProps {
   icon?: LucideIcon;
   title: string;
   description?: string;
+  /** Clave de la métrica en metric-info.ts. Si se pasa, muestra la "i" con la explicación. */
+  metricKey?: MetricKey;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   footer?: ReactNode;
@@ -18,6 +22,7 @@ export function MetricCard({
   icon: Icon,
   title,
   description,
+  metricKey,
   onRefresh,
   isRefreshing = false,
   footer,
@@ -35,7 +40,10 @@ export function MetricCard({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-sm leading-tight">{title}</CardTitle>
+              <div className="flex items-center gap-1.5">
+                <CardTitle className="text-sm leading-tight">{title}</CardTitle>
+                {metricKey && <MetricInfoButton metricKey={metricKey} />}
+              </div>
               {description && (
                 <CardDescription className="text-[11px]">{description}</CardDescription>
               )}

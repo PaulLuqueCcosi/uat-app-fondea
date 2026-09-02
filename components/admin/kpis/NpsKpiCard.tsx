@@ -76,6 +76,7 @@ export function NpsKpiCard({ days = 30 }: { days?: number }) {
     <MetricCard
       icon={Smile}
       title="NPS"
+      metricKey="nps"
       description={data.month_label}
       onRefresh={() => fetchData(selectedOption.year, selectedOption.month)}
       isRefreshing={loading && !!data}

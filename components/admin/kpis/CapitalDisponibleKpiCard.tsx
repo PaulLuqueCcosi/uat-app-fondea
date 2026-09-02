@@ -59,6 +59,7 @@ export function CapitalDisponibleKpiCard() {
     <MetricCard
       icon={Wallet}
       title="Capital disponible"
+      metricKey="capitalDisponible"
       onRefresh={fetchData}
       isRefreshing={loading && !!data}
     >
