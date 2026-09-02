@@ -382,7 +382,9 @@ export default function CuotaDetallePage() {
           <h1 className="text-xl font-bold text-foreground">
             Cuota {cuota.installmentNo} de {totalInstallments}
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Crédito #{creditoId.slice(-6)}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 font-mono">
+            {cuota.installmentCode ?? credit?.creditCode ?? `Crédito #${creditoId.slice(-6)}`}
+          </p>
         </div>
         <Badge variant={view.variant}>{view.label}</Badge>
       </div>

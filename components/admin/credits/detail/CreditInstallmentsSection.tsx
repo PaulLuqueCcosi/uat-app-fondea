@@ -48,8 +48,12 @@ export function CreditInstallmentsSection({ data, totalOutstanding }: Props) {
   const columns: DataTableColumnDef<InstallmentItem>[] = [
     {
       accessorKey: 'installment_no',
-      header: '#',
-      cell: ({ row }) => <span className="font-mono text-primary font-bold">{row.original.installment_no}</span>,
+      header: 'Cuota',
+      cell: ({ row }) => (
+        <span className="font-mono text-primary font-bold text-xs">
+          {row.original.installment_code ?? `#${row.original.installment_no}`}
+        </span>
+      ),
     },
     {
       accessorKey: 'due_date',

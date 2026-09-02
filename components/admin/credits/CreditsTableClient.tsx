@@ -24,6 +24,8 @@ import {
   CREDIT_STATUS_ORDER,
   creditStatusInfo,
 } from '@/modules/admin/credit-status-labels';
+import { InfoPopover } from '@/components/admin/shared/InfoPopover';
+import { INTEREST_RATE_INFO } from './credits-help-content';
 
 // Labels y colores centralizados en `modules/admin/credit-status-labels` — el Record que
 // estaba acá usaba colores arbitrarios (emerald/amber/gray) en vez de los tokens de la
@@ -59,14 +61,14 @@ function resolveUbigeoName(region?: string | null, province?: string | null, dis
 
 const columns = [
   {
-    accessorKey: 'id',
-    header: 'ID',
+    accessorKey: 'creditCode',
+    header: 'Código',
     cell: ({ row }: { row: { original: AdminCreditRow } }) => (
       <Link
         href={`/admin/credits/${row.original.id}`}
         className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors"
       >
-        #{row.original.id.slice(0, 6)}
+        {row.original.creditCode ?? `#${row.original.id.slice(0, 6)}`}
       </Link>
     ),
   },
@@ -199,7 +201,12 @@ const columns = [
   },
   {
     accessorKey: 'interestRate',
-    header: 'Tasa',
+    header: () => (
+      <div className="flex items-center gap-1">
+        <span>Tasa</span>
+        <InfoPopover {...INTEREST_RATE_INFO} />
+      </div>
+    ),
     cell: ({ row }: { row: { original: AdminCreditRow } }) => (
       <span className="text-[11px] font-mono">{row.original.interestRate}%</span>
     ),

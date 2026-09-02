@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, CalendarDays, Handshake, AlertCircle } from 'lucide-react';
-import { getAdminInstallmentDetail } from '@/modules/admin/admin-credit-detail.service';
+import { getAdminInstallmentDetail, getAdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
 import { InstallmentTransactionsCard } from '@/components/admin/credits/detail/InstallmentTransactionsCard';
 
@@ -37,7 +37,10 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
 
   if (isNaN(no)) notFound();
 
-  const data = await getAdminInstallmentDetail(id, no);
+  const [data, creditSummary] = await Promise.all([
+    getAdminInstallmentDetail(id, no),
+    getAdminCreditSummary(id),
+  ]);
   if (!data) notFound();
 
   const sc = installmentStatusInfo(data.status);
@@ -71,11 +74,16 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">Cuota #{data.installmentNo}</h1>
+              <h1 className="text-xl font-bold font-mono">
+                {data.installmentCode ?? `Cuota #${data.installmentNo}`}
+              </h1>
               <Badge variant={sc.variant}>{sc.label}</Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Crédito <Link href={`/admin/credits/${id}`} className="font-mono text-primary hover:underline">#{id.slice(0, 8)}</Link>
+              Crédito{' '}
+              <Link href={`/admin/credits/${id}`} className="font-mono text-primary hover:underline">
+                {creditSummary?.creditCode ?? `#${id.slice(0, 8)}`}
+              </Link>
               {' · '}Vence {formatDate(data.dueDate)}
             </p>
           </div>

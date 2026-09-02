@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
-import { getAdminCreditInstallments } from '@/modules/admin/admin-credit-detail.service';
+import { getAdminCreditInstallments, getAdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { installmentStatusInfo, INSTALLMENT_STATUS_INFO } from '@/modules/admin/credit-status-labels';
 import { getNegotiationOffersByInstallmentAction } from '@/app/actions/negotiation-offer.actions';
 import { NegotiationOfferForm } from '@/components/admin/credits/negotiate/NegotiationOfferForm';
@@ -21,7 +21,10 @@ export default async function NegotiateInstallmentPage({ params }: Props) {
 
   if (isNaN(no)) notFound();
 
-  const installmentsData = await getAdminCreditInstallments(id);
+  const [installmentsData, creditSummary] = await Promise.all([
+    getAdminCreditInstallments(id),
+    getAdminCreditSummary(id),
+  ]);
   if (!installmentsData) notFound();
 
   const installment = installmentsData.installments.find((i) => i.installment_no === no);
@@ -48,8 +51,10 @@ export default async function NegotiateInstallmentPage({ params }: Props) {
             <Handshake className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Negociar cuota #{installment.installment_no}</h1>
-            <p className="text-xs text-muted-foreground font-mono">Crédito #{id.slice(0, 8)}</p>
+            <h1 className="text-xl font-bold">Negociar {installment.installment_code ?? `cuota #${installment.installment_no}`}</h1>
+            <p className="text-xs text-muted-foreground font-mono">
+              {creditSummary?.creditCode ?? `Crédito #${id.slice(0, 8)}`}
+            </p>
           </div>
         </div>
       </div>

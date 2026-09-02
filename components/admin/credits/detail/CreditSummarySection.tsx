@@ -57,7 +57,7 @@ export function CreditSummarySection({ data }: Props) {
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground">Detalle del Crédito</h1>
-            <p className="text-xs text-muted-foreground font-mono">#{data.id.slice(0, 8)}</p>
+            <p className="text-xs text-muted-foreground font-mono">{data.creditCode ?? `#${data.id.slice(0, 8)}`}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

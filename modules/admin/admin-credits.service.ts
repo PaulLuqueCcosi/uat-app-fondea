@@ -17,6 +17,8 @@ export type CreditTypeFilter = 'STANDARD' | 'NEGOTIATION';
 
 export interface AdminCreditRow {
   id: string;
+  /** Código legible del crédito (ej. "CRD-2026-09-A7F3K9") — mostrar en vez de `id` en la tabla. */
+  creditCode: string | null;
   userId: string;
   // Cliente
   clientName: string | null;
@@ -111,6 +113,7 @@ export async function getAdminCredits(
   // Mapear snake_case del backend a camelCase
   const data: AdminCreditRow[] = (body.content || []).map((row: any) => ({
     id: row.id,
+    creditCode: row.credit_code ?? null,
     userId: row.user_id,
     clientName: row.client_name,
     clientDocument: row.client_document,

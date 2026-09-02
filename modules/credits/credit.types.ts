@@ -43,6 +43,8 @@ export type TransactionType = 'DISBURSEMENT' | 'REPAYMENT' | 'PENALTY_ACCRUAL' |
 /** Crédito del usuario — CreditDetailResponse del backend */
 export interface Credit {
   id: string;
+  /** Código legible del crédito (ej. "CRD-2026-09-A7F3K9") — mostrar en vez de `id` en la UI. */
+  creditCode: string | null;
   status: CreditStatus;
   /** Tipo de crédito — distingue el préstamo natural de los de negociación */
   creditType: CreditType;
@@ -109,6 +111,8 @@ export interface PenaltyRangeInfo {
 /** Cuota de un crédito — InstallmentItem del backend */
 export interface Installment {
   id: string;
+  /** Código legible de la cuota (ej. "CRD-2026-09-A7F3K9-03") — mostrar en vez de `id` en la UI. */
+  installmentCode: string | null;
   /** Número de cuota (1-indexed) */
   installmentNo: number;
   /** Fecha de vencimiento (ISO date) */

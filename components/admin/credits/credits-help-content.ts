@@ -169,3 +169,16 @@ export const MORA_STAGES: MoraStageInfo[] = [
 export const MORA_STAGES_NOTE =
   'Estas 7 etapas se miden a nivel de CUOTA, no de crédito completo: cada cuota vencida cae en exactamente una etapa según sus propios días de atraso. Un crédito puede tener cuotas en distintas etapas a la vez.\n' +
   '"Castigo" acá es solo la etapa de días (91+) — NO es lo mismo que el estado "Castigado" (Written Off) del crédito. Una cuota puede llevar más de 91 días de atraso y el crédito seguir en estado Vencido: el castigo contable real requiere que un admin lo marque manualmente.';
+
+// ─── Tasa (columna de la tabla) ────────────────────────────────────────────────
+
+/** Contenido del popover "i" de la columna Tasa — mismo formato que metric-info.ts. */
+export const INTEREST_RATE_INFO = {
+  title: 'Tasa',
+  what: 'Cuánto pagó el cliente de más sobre el monto que se le prestó.',
+  calculation:
+    '(Total a pagar − Monto prestado) / Monto prestado × 100\n' +
+    'Ejemplo: si se prestaron S/500 y en total se pagan S/560, la tasa es 12%.',
+  notes:
+    'Es la tasa de todo el préstamo (no anual), y ya incluye cualquier descuento aplicado al cliente, como el de primer préstamo.',
+};

@@ -65,6 +65,8 @@ export type CreditType = 'STANDARD' | 'NEGOTIATION';
 
 export interface AdminCreditSummary {
   id: string;
+  /** Código legible del crédito (ej. "CRD-2026-09-A7F3K9") — mostrar en vez de `id` en la UI. */
+  creditCode: string | null;
   userId: string;
   applicationId: string | null;
   status: CreditStatus;
@@ -105,6 +107,8 @@ export interface ApprovalSnapshot {
 
 export interface InstallmentItem {
   id: string;
+  /** Código legible de la cuota (ej. "CRD-2026-09-A7F3K9-03") — mostrar en vez de `id`. */
+  installment_code: string | null;
   installment_no: number;
   due_date: string;
   amount_due: number;
@@ -187,6 +191,7 @@ export interface CreditAuditEntry {
 function mapAdminCreditSummaryFromBackend(raw: any): AdminCreditSummary {
   return {
     id: raw.id ?? '',
+    creditCode: raw.credit_code ?? null,
     userId: raw.user_id ?? '',
     applicationId: raw.application_id ?? null,
     status: raw.status ?? 'ACTIVE',
@@ -435,6 +440,8 @@ export interface InstallmentAuditEventDetail {
 export interface AdminInstallmentDetail {
   id: string;
   loanId: string;
+  /** Código legible de la cuota (ej. "CRD-2026-09-A7F3K9-03") — mostrar en vez de `id`. */
+  installmentCode: string | null;
   installmentNo: number;
   dueDate: string;
   amountDue: number;
@@ -477,6 +484,7 @@ function mapAdminInstallmentDetailFromBackend(raw: any): AdminInstallmentDetail 
   return {
     id: raw.id ?? '',
     loanId: raw.loan_id ?? raw.loanId ?? '',
+    installmentCode: raw.installment_code ?? raw.installmentCode ?? null,
     installmentNo: raw.installment_no ?? raw.installmentNo ?? 0,
     dueDate: raw.due_date ?? raw.dueDate ?? '',
     amountDue: raw.amount_due ?? raw.amountDue ?? 0,

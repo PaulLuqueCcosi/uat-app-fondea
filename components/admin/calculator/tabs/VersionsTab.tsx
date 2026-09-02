@@ -38,7 +38,17 @@ export function VersionsTab({ configType, activeVersion }: VersionsTabProps) {
   const handleActivate = async (id: string) => {
     const result = await activateVersionAction(configType, id);
     if (result.ok) {
-      toast.success('Versión activada');
+      if (result.warning) {
+        // Se activó, pero dejó a Reglas de Pricing incompatible y el backend la
+        // desactivó en cascada — el simulador de préstamos quedó sin reglas activas.
+        // Esto NO puede ser un toast que desaparece: es un aviso de "algo se rompió".
+        toast.warning(result.warning, {
+          description: result.pricingValidationErrors?.join(' · '),
+          duration: 15000,
+        });
+      } else {
+        toast.success('Versión activada');
+      }
       fetchVersions();
     } else {
       toast.error(result.error ?? 'Error al activar');

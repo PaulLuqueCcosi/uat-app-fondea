@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Layers, Receipt, Tag, FlaskConical, Loader2 } from 'lucide-react';
+import { Layers, Receipt, Tag, FlaskConical, Loader2, AlertTriangle } from 'lucide-react';
 import { VersionsTab } from './tabs/VersionsTab';
 import { SimulatorTab } from './tabs/SimulatorTab';
 import { getActiveSummaryAction } from '@/app/actions/calculator-admin.actions';
@@ -46,7 +46,22 @@ export function CalculatorAdminClient() {
   }
 
   return (
-    <Tabs value={activeTab} onValueChange={(v) => { if (v) setActiveTab(v); }} className="w-full">
+    <div className="flex flex-col gap-4">
+      {summary.validation?.pricingRulesCompatible === false && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+          <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-medium text-destructive">
+              Las Reglas de Pricing activas ya no son compatibles con la Disponibilidad o Tarifas actuales.
+            </p>
+            {summary.validation.pricingRulesErrors.map((err, i) => (
+              <p key={i} className="text-[11px] text-destructive/80">• {err}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Tabs value={activeTab} onValueChange={(v) => { if (v) setActiveTab(v); }} className="w-full">
       <TabsList className="h-9 p-1">
         <TabsTrigger value="availability" className="gap-1.5 text-xs px-3">
           <Layers className="h-3.5 w-3.5" />
@@ -81,6 +96,7 @@ export function CalculatorAdminClient() {
       <TabsContent value="simulator" className="mt-4">
         <SimulatorTab />
       </TabsContent>
-    </Tabs>
+      </Tabs>
+    </div>
   );
 }

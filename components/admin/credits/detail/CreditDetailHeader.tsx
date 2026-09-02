@@ -62,7 +62,7 @@ export function CreditDetailHeader({ data, outstanding }: Props) {
               )}
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-              <span className="font-mono">#{data.id.slice(0, 8)}</span>
+              <span className="font-mono">{data.creditCode ?? `#${data.id.slice(0, 8)}`}</span>
               {clientName && (
                 <>
                   <span>·</span>

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, Play, Copy, Eye, Loader2 } from 'lucide-react';
+import { Plus, Play, Copy, Eye, Loader2, AlertTriangle } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable, type DataTablePagination } from '@/components/admin/DataTable';
 import { ConfirmAction } from './ConfirmAction';
@@ -181,6 +181,19 @@ export function ConfigVersionsTable({
 
   return (
     <div className="space-y-3">
+      {/* Sin versión activa: puede pasar tras una desactivación en cascada por
+          incompatibilidad (ver adminPricingRoutes.ts) — sin este aviso, la fila
+          "Versión activa:" de abajo simplemente desaparece sin explicar nada, y
+          si es Reglas de Pricing, TODO el simulador de préstamos queda caído. */}
+      {!activeVersion && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+          <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+          <p className="text-xs text-destructive">
+            No hay ninguna versión activa{label ? ` de ${label}` : ''}. Activa una versión para que el simulador de préstamos vuelva a funcionar.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="text-xs text-muted-foreground">

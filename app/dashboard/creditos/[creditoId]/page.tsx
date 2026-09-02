@@ -463,9 +463,9 @@ export default function CreditoDetallePage() {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground mb-0.5">ID del crédito</p>
+              <p className="text-xs text-muted-foreground mb-0.5">Código del crédito</p>
               <p className="text-sm font-medium text-foreground font-mono">
-                #{credit.id.slice(-8)}
+                {credit.creditCode ?? `#${credit.id.slice(-8)}`}
               </p>
             </div>
             <div>

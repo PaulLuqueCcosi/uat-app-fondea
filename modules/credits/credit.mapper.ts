@@ -24,6 +24,7 @@ import type {
 export function mapCreditFromBackend(raw: any): Credit {
   return {
     id: raw.id ?? '',
+    creditCode: raw.credit_code ?? null,
     status: mapCreditStatus(raw.status),
     creditType: mapCreditType(raw.credit_type),
     principal: raw.principal ?? 0,
@@ -81,6 +82,7 @@ function mapPenaltyRangeFromBackend(raw: any): PenaltyRangeInfo {
 export function mapInstallmentFromBackend(raw: any): Installment {
   return {
     id: raw.id ?? '',
+    installmentCode: raw.installment_code ?? null,
     installmentNo: raw.installment_no ?? 0,
     dueDate: raw.due_date ?? '',
     amountDue: raw.amount_due ?? 0,

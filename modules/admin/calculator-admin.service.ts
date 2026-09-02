@@ -48,6 +48,15 @@ export interface ActiveSummary {
   PRICING_RULES: ConfigVersion | null;
   FEE_GROUPS: ConfigVersion | null;
   AVAILABILITY: ConfigVersion | null;
+  /**
+   * El backend valida en cada carga si la versión activa de PRICING_RULES sigue
+   * siendo compatible con las de AVAILABILITY/FEE_GROUPS activas — antes este
+   * campo llegaba en el body pero el tipo no lo declaraba, así que nada lo leía.
+   */
+  validation?: {
+    pricingRulesCompatible: boolean | null;
+    pricingRulesErrors: string[];
+  };
 }
 
 // ── Availability types ────────────────────────────────────────────────────────
@@ -218,11 +227,19 @@ export async function updateVersion(
   }
 }
 
-/** Activar un DRAFT (DRAFT→ACTIVE, la anterior→ARCHIVED) */
+/**
+ * Activar un DRAFT (DRAFT→ACTIVE, la anterior→ARCHIVED).
+ *
+ * Si se activa AVAILABILITY o FEE_GROUPS y eso deja a PRICING_RULES incompatible,
+ * el backend la desactiva en cascada y devuelve `warning` + `pricingValidationErrors`
+ * en el body (status 200 igual, porque la activación en sí SÍ se completó) — antes
+ * este service ignoraba el body entero y el admin nunca se enteraba de que el
+ * simulador de préstamos se acababa de quedar sin reglas activas.
+ */
 export async function activateVersion(
   type: ConfigType,
   id: string
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; warning?: string; pricingValidationErrors?: string[] }> {
   try {
     const res = await adminFetch(`/api/admin/pricing/versions/${type}/${id}/activate`, {
       method: 'POST',
@@ -232,7 +249,8 @@ export async function activateVersion(
       const body = await res.json().catch(() => ({}));
       return { ok: false, error: body.message ?? `Error ${res.status}` };
     }
-    return { ok: true };
+    const body = await res.json().catch(() => ({}));
+    return { ok: true, warning: body.warning, pricingValidationErrors: body.pricingValidationErrors };
   } catch {
     return { ok: false, error: 'Error de conexión' };
   }
