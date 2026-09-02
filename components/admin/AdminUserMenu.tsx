@@ -45,9 +45,9 @@ export function AdminUserMenu({ user, onSignOut }: AdminUserMenuProps) {
 
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem
+          variant="destructive"
           onClick={handleSignOut}
           disabled={isPending}
-          className="text-error-600 focus:text-error-600"
         >
           <LogOut className="h-4 w-4 mr-2" />
           {isPending ? 'Cerrando...' : 'Cerrar sesión'}

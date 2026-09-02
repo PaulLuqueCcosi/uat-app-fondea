@@ -4,103 +4,311 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Users,
-  FileText,
-  CreditCard,
-  Settings,
-  BarChart3,
-  BarChart,
   ArrowLeftRight,
-  Target,
-  Wallet,
-  TrendingUp,
-  PieChart,
-  Shield,
+  BarChart,
+  BarChart3,
   Calculator,
-  Sliders,
+  ChevronRight,
+  Cpu,
+  CreditCard,
   FileCode2,
-  MessageSquareWarning,
-  UserMinus,
+  FileText,
   Handshake,
   Megaphone,
-  ShieldAlert,
+  MessageSquareWarning,
+  PieChart,
   Receipt,
-  Cpu,
+  Settings,
+  Shield,
+  ShieldAlert,
   ShieldCheck,
+  Sliders,
+  Target,
+  TrendingUp,
+  UserMinus,
+  Users,
+  Wallet,
 } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarGroup,
-  SidebarGroupLabel,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
-  SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-const kpisNav = [
-  { path: '/admin/analytics', label: 'KPIs Globales', icon: TrendingUp },
-  { path: '/admin/nps', label: 'NPS', icon: BarChart },
+// ─────────────────────────────────────────────────────────────
+// Data — 2 niveles
+// Nivel 1: módulo. Nivel 2: páginas del módulo.
+// Un item sin `items` es un enlace directo de nivel 1.
+// ─────────────────────────────────────────────────────────────
+
+type NavSubItem = {
+  title: string;
+  url: string;
+  icon: React.ElementType;
+  exact?: boolean;
+};
+
+type NavItem = {
+  title: string;
+  icon: React.ElementType;
+  url?: string;
+  exact?: boolean;
+  items?: NavSubItem[];
+};
+
+const navMain: NavItem[] = [
+  {
+    title: 'M1 - KPIs Globales',
+    icon: TrendingUp,
+    items: [
+      { title: 'KPIs Globales', url: '/admin/analytics', icon: TrendingUp },
+      { title: 'NPS', url: '/admin/nps', icon: BarChart },
+    ],
+  },
+  {
+    title: 'M2 - Cartera y Préstamos',
+    icon: CreditCard,
+    items: [
+      { title: 'Créditos', url: '/admin/credits', icon: CreditCard },
+      { title: 'Cartera', url: '/admin/portfolio', icon: PieChart },
+      { title: 'Depósitos', url: '/admin/payment-declarations', icon: Receipt },
+      { title: 'Constancias No Adeudo', url: '/admin/constancias', icon: ShieldCheck },
+    ],
+  },
+  {
+    title: 'M3 - Cobranza y Mora',
+    icon: BarChart3,
+    items: [
+      { title: 'Cobranza', url: '/admin/collections', icon: BarChart3 },
+      { title: 'Negociaciones', url: '/admin/negotiation-offers', icon: Handshake },
+    ],
+  },
+  {
+    title: 'Principal',
+    icon: Target,
+    items: [
+      { title: 'Intenciones', url: '/admin/intentions', icon: Target },
+      { title: 'Solicitudes', url: '/admin/applications', icon: FileText },
+    ],
+  },
+  {
+    title: 'M4 - Clientes',
+    icon: Users,
+    items: [
+      { title: 'Usuarios', url: '/admin/users', icon: Users },
+      { title: 'Reclamaciones', url: '/admin/complaints', icon: MessageSquareWarning },
+      { title: 'Riesgo de Churn', url: '/admin/customers/churn', icon: UserMinus },
+      { title: 'Segmentación', url: '/admin/customers/segmentation', icon: PieChart },
+    ],
+  },
+  {
+    title: 'M5 - Marketing y Adquisición',
+    icon: Megaphone,
+    url: '/admin/marketing',
+  },
+  {
+    title: 'M6 - Scoring y Riesgo',
+    icon: ShieldAlert,
+    url: '/admin/risk-analytics',
+  },
+  {
+    title: 'M8 - Tecnología y APIs',
+    icon: Cpu,
+    url: '/admin/tech',
+  },
+  {
+    title: 'Reglas de Negocio',
+    icon: Sliders,
+    items: [
+      { title: 'Calculadora', url: '/admin/calculator', icon: Calculator },
+      { title: 'Reglas Motor', url: '/admin/evaluation-rules', icon: Shield },
+      { title: 'Scorecard', url: '/admin/scoring', icon: Sliders },
+      { title: 'Contratos', url: '/admin/contracts', icon: FileCode2 },
+    ],
+  },
+  {
+    title: 'Configuración',
+    icon: Settings,
+    items: [
+      { title: 'Fondo de Capital', url: '/admin/fund', icon: Wallet },
+      { title: 'Configuración', url: '/admin/settings', icon: Settings, exact: true },
+    ],
+  },
 ];
 
-const carteraNav = [
-  { path: '/admin/credits', label: 'Créditos', icon: CreditCard },
-  { path: '/admin/portfolio', label: 'Cartera', icon: PieChart },
-  { path: '/admin/payment-declarations', label: 'Depósitos', icon: Receipt },
-  { path: '/admin/constancias', label: 'Constancias No Adeudo', icon: ShieldCheck },
-];
+/** `/admin` es la home de KPIs. */
+function isUrlActive(pathname: string | null, url: string, exact?: boolean) {
+  if (!pathname) return false;
+  if (pathname === '/admin') return url === '/admin/analytics';
+  if (exact) return pathname === url;
+  return pathname === url || pathname.startsWith(`${url}/`);
+}
 
-const cobranzaNav = [
-  { path: '/admin/collections', label: 'Cobranza', icon: BarChart3 },
-  { path: '/admin/negotiation-offers', label: 'Negociaciones', icon: Handshake },
-];
+// ─────────────────────────────────────────────────────────────
+// NavMain — patrón sidebar-07 (Collapsible) cuando el sidebar
+// está expandido, patrón sidebar-06 (DropdownMenu lateral)
+// cuando está en modo icono. SidebarMenuSub trae
+// `group-data-[collapsible=icon]:hidden` de fábrica, así que el
+// dropdown es la única vía nativa para navegar colapsado.
+// ─────────────────────────────────────────────────────────────
 
-const mainNav = [
-  { path: '/admin/intentions', label: 'Intenciones', icon: Target },
-  { path: '/admin/applications', label: 'Solicitudes', icon: FileText },
-];
+function NavMain({ items }: { items: NavItem[] }) {
+  return (
+    <SidebarGroup>
+      <SidebarMenu>
+        {items.map((item) =>
+          item.items?.length ? (
+            <NavGroupItem key={item.title} item={item} />
+          ) : (
+            <NavLinkItem key={item.title} item={item} />
+          )
+        )}
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+}
 
-const clientesNav = [
-  { path: '/admin/users', label: 'Usuarios', icon: Users },
-  { path: '/admin/complaints', label: 'Reclamaciones', icon: MessageSquareWarning },
-  { path: '/admin/customers/churn', label: 'Riesgo de Churn', icon: UserMinus },
-  { path: '/admin/customers/segmentation', label: 'Segmentación', icon: PieChart },
-];
+function NavLinkItem({ item }: { item: NavItem }) {
+  const pathname = usePathname();
+  const Icon = item.icon;
 
-const marketingNav = [
-  { path: '/admin/marketing', label: 'Marketing y Adquisición', icon: Megaphone },
-];
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        isActive={isUrlActive(pathname, item.url!, item.exact)}
+        tooltip={item.title}
+        render={<Link href={item.url!} />}
+      >
+        <Icon />
+        <span>{item.title}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
 
-const riskNav = [
-  { path: '/admin/risk-analytics', label: 'Scoring y Riesgo', icon: ShieldAlert },
-];
+function NavGroupItem({ item }: { item: NavItem }) {
+  const pathname = usePathname();
+  const { state, isMobile } = useSidebar();
+  const Icon = item.icon;
 
-const techNav = [
-  { path: '/admin/tech', label: 'Tecnología y APIs', icon: Cpu },
-];
+  const isActive = item.items!.some((sub) =>
+    isUrlActive(pathname, sub.url, sub.exact)
+  );
 
-const businessRulesNav = [
-  { path: '/admin/calculator', label: 'Calculadora', icon: Calculator },
-  { path: '/admin/evaluation-rules', label: 'Reglas Motor', icon: Shield },
-  { path: '/admin/scoring', label: 'Scorecard', icon: Sliders },
-  { path: '/admin/contracts', label: 'Contratos', icon: FileCode2 },
-];
+  // Modo icono en desktop: submenú como dropdown.
+  if (state === 'collapsed' && !isMobile) {
+    return (
+      <DropdownMenu>
+        <SidebarMenuItem>
+          <DropdownMenuTrigger
+            render={
+              <SidebarMenuButton
+                isActive={isActive}
+                aria-label={item.title}
+                className="aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
+              />
+            }
+          >
+            <Icon />
+            <span>{item.title}</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="right"
+            align="start"
+            sideOffset={4}
+            className="min-w-56 rounded-lg"
+          >
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>{item.title}</DropdownMenuLabel>
+              {item.items!.map((sub) => {
+                const SubIcon = sub.icon;
+                return (
+                  <DropdownMenuItem
+                    key={sub.url}
+                    data-active={
+                      isUrlActive(pathname, sub.url, sub.exact) || undefined
+                    }
+                    className="gap-2 focus:bg-sidebar-accent focus:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground"
+                    render={<Link href={sub.url} />}
+                  >
+                    <SubIcon className="text-muted-foreground" />
+                    <span>{sub.title}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </SidebarMenuItem>
+      </DropdownMenu>
+    );
+  }
 
-const configNav = [
-  { path: '/admin/fund', label: 'Fondo de Capital', icon: Wallet },
-  { path: '/admin/settings', label: 'Configuración', icon: Settings, exact: true },
-];
+  // Expandido (y móvil): acordeón.
+  return (
+    <Collapsible
+      defaultOpen={isActive}
+      className="group/collapsible"
+      render={<SidebarMenuItem />}
+    >
+      <CollapsibleTrigger render={<SidebarMenuButton tooltip={item.title} />}>
+        <Icon />
+        <span>{item.title}</span>
+        <ChevronRight className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <SidebarMenuSub>
+          {item.items!.map((sub) => {
+            const SubIcon = sub.icon;
+            return (
+              <SidebarMenuSubItem key={sub.url}>
+                <SidebarMenuSubButton
+                  isActive={isUrlActive(pathname, sub.url, sub.exact)}
+                  render={<Link href={sub.url} />}
+                >
+                  <SubIcon />
+                  <span>{sub.title}</span>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            );
+          })}
+        </SidebarMenuSub>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Sidebar
+// ─────────────────────────────────────────────────────────────
 
 interface AdminSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user?: { name: string; avatar?: string | null };
 }
 
 export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
-  const pathname = usePathname();
   const initials = user?.name
     ? user.name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('')
     : 'A';
@@ -130,274 +338,7 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
 
       {/* Navegación */}
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>M1 - KPIs Globales</SidebarGroupLabel>
-          <SidebarMenu>
-            {kpisNav.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.path ||
-                (pathname === '/admin' && item.path === '/admin/analytics') ||
-                pathname?.startsWith(item.path);
-
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    tooltip={item.label}
-                    render={<Link href={item.path} />}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>M2 - Cartera y Préstamos</SidebarGroupLabel>
-          <SidebarMenu>
-            {carteraNav.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.path ||
-                pathname?.startsWith(item.path);
-
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    tooltip={item.label}
-                    render={<Link href={item.path} />}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>M3 - Cobranza y Mora</SidebarGroupLabel>
-          <SidebarMenu>
-            {cobranzaNav.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.path ||
-                pathname?.startsWith(item.path);
-
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    tooltip={item.label}
-                    render={<Link href={item.path} />}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Principal</SidebarGroupLabel>
-          <SidebarMenu>
-            {mainNav.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.path ||
-                pathname?.startsWith(item.path);
-
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    tooltip={item.label}
-                    render={<Link href={item.path} />}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>M4 - Clientes</SidebarGroupLabel>
-          <SidebarMenu>
-            {clientesNav.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.path ||
-                pathname?.startsWith(item.path);
-
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    tooltip={item.label}
-                    render={<Link href={item.path} />}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>M5 - Marketing y Adquisición</SidebarGroupLabel>
-          <SidebarMenu>
-            {marketingNav.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.path ||
-                pathname?.startsWith(item.path);
-
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    tooltip={item.label}
-                    render={<Link href={item.path} />}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>M6 - Scoring y Riesgo</SidebarGroupLabel>
-          <SidebarMenu>
-            {riskNav.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.path ||
-                pathname?.startsWith(item.path);
-
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    tooltip={item.label}
-                    render={<Link href={item.path} />}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>M8 - Tecnología y APIs</SidebarGroupLabel>
-          <SidebarMenu>
-            {techNav.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.path ||
-                pathname?.startsWith(item.path);
-
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    tooltip={item.label}
-                    render={<Link href={item.path} />}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Reglas de Negocio</SidebarGroupLabel>
-          <SidebarMenu>
-            {businessRulesNav.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.path ||
-                pathname?.startsWith(item.path);
-
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    tooltip={item.label}
-                    render={<Link href={item.path} />}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Configuración</SidebarGroupLabel>
-          <SidebarMenu>
-            {configNav.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.exact
-                ? pathname === item.path
-                : pathname === item.path || pathname?.startsWith(item.path);
-
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    tooltip={item.label}
-                    render={<Link href={item.path} />}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
+        <NavMain items={navMain} />
       </SidebarContent>
 
       <SidebarFooter>
