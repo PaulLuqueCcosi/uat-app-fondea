@@ -305,6 +305,20 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
     ));
   };
 
+  const updateDiscountCondition = (ruleIdx: number, dIdx: number, isFirstLoan: boolean | undefined) => {
+    updateRules(rules.map((r, i) =>
+      i === ruleIdx ? {
+        ...r,
+        package: {
+          ...r.package,
+          discounts: r.package.discounts.map((d, di) =>
+            di === dIdx ? { ...d, conditions: isFirstLoan === undefined ? undefined : { isFirstLoan } } : d
+          ),
+        },
+      } : r
+    ));
+  };
+
   const removeDiscount = (ruleIdx: number, dIdx: number) => {
     updateRules(rules.map((r, i) =>
       i === ruleIdx ? {
@@ -560,6 +574,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                             <span className="w-20 text-center">Tipo</span>
                             <span className="w-14 text-center">Valor</span>
                             <span className="w-10 text-center">Orden</span>
+                            <span className="w-28 text-center">Aplica a</span>
                             <span className="w-5"></span>
                           </div>
                         )}
@@ -610,6 +625,19 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                                 min={1}
                                 title="Orden de aplicación"
                               />
+                              <select
+                                value={d.conditions?.isFirstLoan === true ? 'true' : d.conditions?.isFirstLoan === false ? 'false' : 'any'}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  updateDiscountCondition(actualIdx, dIdx, v === 'any' ? undefined : v === 'true');
+                                }}
+                                title="A qué tipo de crédito aplica este descuento"
+                                className="h-6 text-[10px] w-28 rounded border border-input bg-background px-1"
+                              >
+                                <option value="any">Cualquiera</option>
+                                <option value="true">Solo 1er préstamo</option>
+                                <option value="false">Solo recurrentes</option>
+                              </select>
                               <Button variant="ghost" size="sm" onClick={() => removeDiscount(actualIdx, dIdx)} className="h-5 w-5 p-0 text-destructive">
                                 <X className="h-3 w-3" />
                               </Button>
@@ -626,6 +654,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                                 <th className="text-center px-2.5 py-1.5 font-medium text-muted-foreground">Tipo</th>
                                 <th className="text-right px-2.5 py-1.5 font-medium text-muted-foreground">Valor</th>
                                 <th className="text-right px-2.5 py-1.5 font-medium text-muted-foreground">Orden</th>
+                                <th className="text-center px-2.5 py-1.5 font-medium text-muted-foreground">Aplica a</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -639,6 +668,15 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                                     {d.calculationType === 'PERCENTAGE' ? `${d.value}%` : `S/ ${d.value}`}
                                   </td>
                                   <td className="px-2.5 py-1.5 text-right font-mono text-muted-foreground">{d.order}</td>
+                                  <td className="px-2.5 py-1.5 text-center">
+                                    <Badge variant="outline" className="text-[9px]">
+                                      {d.conditions?.isFirstLoan === true
+                                        ? '1er préstamo'
+                                        : d.conditions?.isFirstLoan === false
+                                          ? 'Recurrentes'
+                                          : 'Cualquiera'}
+                                    </Badge>
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>

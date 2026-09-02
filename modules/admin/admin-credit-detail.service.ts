@@ -523,3 +523,81 @@ function mapAdminInstallmentDetailFromBackend(raw: any): AdminInstallmentDetail 
       : [],
   };
 }
+
+// ── Acciones administrativas manuales (suspender / reactivar / castigar) ────
+
+/**
+ * Resultado de una acción administrativa manual sobre el crédito. `message` viene
+ * del campo `detail` del ProblemDetail (RFC 9457) que devuelve el backend en 400/409,
+ * para mostrar al admin el motivo exacto (ej. "Solo se puede castigar desde OVERDUE").
+ */
+export interface CreditActionResult {
+  ok: boolean;
+  message: string;
+}
+
+/** Lee el `detail` del ProblemDetail (RFC 9457) que devuelve GlobalExceptionHandler. */
+async function extractProblemDetail(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json();
+    return body?.detail ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Suspende un crédito (congela mora, bloquea pagos y negociaciones).
+ * Válido desde cualquier estado excepto PAID_OFF y SUSPENDED (dominio: Credit.markSuspended).
+ * `reason` es obligatorio — el backend devuelve 400 si viene vacío.
+ */
+export async function suspendCredit(creditId: string, reason: string): Promise<CreditActionResult> {
+  const res = await backendFetch(
+    `/api/v1/admin/credits/${creditId}/suspend?reason=${encodeURIComponent(reason)}`,
+    { method: 'POST', context: 'ADMIN_CREDIT_SUSPEND' },
+  );
+
+  if (!res.ok) {
+    const message = await extractProblemDetail(res, `No se pudo suspender el crédito (${res.status}).`);
+    return { ok: false, message };
+  }
+  return { ok: true, message: 'Crédito suspendido correctamente.' };
+}
+
+/**
+ * Reactiva un crédito suspendido. Solo válido desde SUSPENDED (dominio: Credit.markReactivated).
+ * El backend decide si vuelve a ACTIVE u OVERDUE según si tiene cuotas vencidas.
+ */
+export async function reactivateCredit(creditId: string): Promise<CreditActionResult> {
+  const res = await backendFetch(`/api/v1/admin/credits/${creditId}/reactivate`, {
+    method: 'POST',
+    context: 'ADMIN_CREDIT_REACTIVATE',
+  });
+
+  if (!res.ok) {
+    const message = await extractProblemDetail(res, `No se pudo reactivar el crédito (${res.status}).`);
+    return { ok: false, message };
+  }
+  return { ok: true, message: 'Crédito reactivado correctamente.' };
+}
+
+/**
+ * Castiga un crédito (WRITTEN_OFF) — decisión contable grave, sale del balance activo.
+ * Solo válido desde OVERDUE (dominio: Credit.markWrittenOff). Reporta automáticamente
+ * la pérdida al fondo de capital en la misma transacción (CreditLossReporter). Si el
+ * crédito se recupera después con pagos voluntarios, el ajuste inverso en el fondo NO es
+ * automático — requiere un movimiento manual del admin en /admin/fund.
+ */
+export async function writeOffCredit(creditId: string, writtenOffDate?: string): Promise<CreditActionResult> {
+  const query = writtenOffDate ? `?writtenOffDate=${writtenOffDate}` : '';
+  const res = await backendFetch(`/api/v1/admin/credits/${creditId}/write-off${query}`, {
+    method: 'POST',
+    context: 'ADMIN_CREDIT_WRITE_OFF',
+  });
+
+  if (!res.ok) {
+    const message = await extractProblemDetail(res, `No se pudo castigar el crédito (${res.status}).`);
+    return { ok: false, message };
+  }
+  return { ok: true, message: 'Crédito castigado correctamente.' };
+}

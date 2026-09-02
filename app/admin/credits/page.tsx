@@ -2,6 +2,7 @@ import { CreditCard, Handshake } from 'lucide-react';
 import { getAdminCredits } from '@/modules/admin/admin-credits.service';
 import type { CreditStatus } from '@/modules/admin/admin-credits.service';
 import { CreditsTableClient } from '@/components/admin/credits/CreditsTableClient';
+import { CreditsHelpDialog } from '@/components/admin/credits/CreditsHelpDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Props {
@@ -80,16 +81,19 @@ export default async function AdminCreditsPage({ searchParams }: Props) {
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <CreditCard className="h-5 w-5 text-primary" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <CreditCard className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Cartera de Préstamos</h1>
+            <p className="text-sm text-muted-foreground">
+              {pagination.totalItems} préstamos registrados — tabla maestra M2
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Cartera de Préstamos</h1>
-          <p className="text-sm text-muted-foreground">
-            {pagination.totalItems} préstamos registrados — tabla maestra M2
-          </p>
-        </div>
+        <CreditsHelpDialog />
       </div>
 
       <Tabs defaultValue={tab} className="w-full">

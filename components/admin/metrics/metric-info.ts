@@ -115,7 +115,8 @@ export const METRIC_INFO: Record<MetricKey, MetricInfo> = {
       'income_today = igual, pero solo lo cobrado hoy.\n' +
       'interestRatio = promedio de (totalDue − principal) / totalDue entre los créditos activos: una ESTIMACIÓN de qué % de cada pago recibido es interés vs. capital devuelto.',
     notes:
-      'Es una estimación por ratio promedio, no usa el desglose real por cuota (interest_amount / principal_amount) aunque ese dato ya exista en el dominio. Distinto de "Ingresos a caja", que cuenta todo lo cobrado sin filtrar interés.',
+      'Es una estimación por ratio promedio, no usa el desglose real por cuota (interest_amount / principal_amount) aunque ese dato ya exista en el dominio. Distinto de "Ingresos a caja", que cuenta todo lo cobrado sin filtrar interés.\n' +
+      'A diferencia de Préstamos activos/NPL/Capital (que excluyen NEGOCIACIÓN), tanto el monto cobrado como el interestRatio de este KPI SÍ incluyen pagos de créditos de NEGOCIACIÓN — no hay filtro credit_type acá.',
   },
 
   cashflow: {
@@ -125,7 +126,8 @@ export const METRIC_INFO: Record<MetricKey, MetricInfo> = {
       'accumulated = SUM(cuotas pagadas en los últimos N días) — TODO lo cobrado (capital e interés juntos).\n' +
       'today = igual, pero solo lo cobrado hoy (fecha del servidor).',
     notes:
-      'Indicador de salud diaria de caja: cuánta plata entró, sin distinguir devolución de capital de ganancia real. A diferencia de "Ingresos brutos", que solo cuenta la porción de interés.',
+      'Indicador de salud diaria de caja: cuánta plata entró, sin distinguir devolución de capital de ganancia real. A diferencia de "Ingresos brutos", que solo cuenta la porción de interés.\n' +
+      'Igual que en Ingresos brutos, esta suma incluye pagos de créditos de NEGOCIACIÓN (no hay filtro credit_type) — a diferencia de Préstamos activos/NPL/Capital, que sí excluyen NEGOCIACIÓN.',
   },
 
   nps: {

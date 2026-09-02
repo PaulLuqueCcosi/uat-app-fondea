@@ -101,6 +101,12 @@ export interface Discount {
   value: number;
   appliesTo: string;
   order: number;
+  /**
+   * Mismo mecanismo que PricingRule.conditions: sin definir, el descuento se
+   * aplica siempre; con isFirstLoan definido, solo aplica cuando coincide con
+   * el request (primer préstamo vs. recurrente).
+   */
+  conditions?: { isFirstLoan?: boolean };
 }
 
 export interface PricingRulePackage {

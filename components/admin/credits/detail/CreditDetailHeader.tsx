@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/progress';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
+import { CreditAdminActions } from './CreditAdminActions';
 
 interface Props {
   data: AdminCreditSummary;
@@ -92,6 +93,7 @@ export function CreditDetailHeader({ data, outstanding }: Props) {
               </Button>
             </Link>
           )}
+          <CreditAdminActions creditId={data.id} status={data.status} />
         </div>
       </div>
 

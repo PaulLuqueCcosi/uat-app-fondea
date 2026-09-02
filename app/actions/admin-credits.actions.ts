@@ -1,6 +1,11 @@
 'use server';
 
 import { backendFetch } from '@/lib/backend-fetch';
+import {
+  suspendCredit,
+  reactivateCredit,
+  writeOffCredit,
+} from '@/modules/admin/admin-credit-detail.service';
 
 /**
  * [DEV] Elimina un crédito y todo lo relacionado.
@@ -80,4 +85,30 @@ export async function retryCreditCreationAction(
       : (data.message ?? 'Crédito creado correctamente'),
     creditId: data.credit_id ?? undefined,
   };
+}
+
+// ── Operaciones de estado manual (suspender / reactivar / castigar) ─────────
+//
+// Operaciones críticas y poco frecuentes — se ejecutan SOLO desde la vista de
+// detalle de un crédito (/admin/credits/[id]), nunca en bulk desde la tabla.
+// Cada una queda registrada en el timeline de auditoría del crédito con el
+// admin que la ejecutó (ver CreditAdminOperationsService en el backend).
+
+/** Suspende un crédito. Requiere motivo — el backend rechaza reason vacío con 400. */
+export async function suspendCreditAction(creditId: string, reason: string) {
+  return suspendCredit(creditId, reason);
+}
+
+/** Reactiva un crédito suspendido. Solo válido si el crédito está en SUSPENDED. */
+export async function reactivateCreditAction(creditId: string) {
+  return reactivateCredit(creditId);
+}
+
+/**
+ * Castiga un crédito (WRITTEN_OFF). Solo válido desde OVERDUE. Reporta la pérdida
+ * al fondo de capital automáticamente — si el crédito se recupera después, ese
+ * ajuste NO se revierte solo, requiere un movimiento manual en /admin/fund.
+ */
+export async function writeOffCreditAction(creditId: string, writtenOffDate?: string) {
+  return writeOffCredit(creditId, writtenOffDate);
 }

@@ -6,6 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { FormattedBlock } from '@/components/admin/shared/FormattedBlock';
 import { METRIC_INFO, type MetricKey } from './metric-info';
 
 /**
@@ -43,7 +44,7 @@ export function MetricInfoButton({ metricKey }: { metricKey: MetricKey }) {
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Cómo se calcula
             </p>
-            <FormattedText text={info.calculation} />
+            <FormattedBlock text={info.calculation} />
           </div>
 
           {/* Notas */}
@@ -52,37 +53,11 @@ export function MetricInfoButton({ metricKey }: { metricKey: MetricKey }) {
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Notas
               </p>
-              <FormattedText text={info.notes} muted />
+              <FormattedBlock text={info.notes} muted />
             </div>
           )}
         </div>
       </PopoverContent>
     </Popover>
-  );
-}
-
-/**
- * Renderiza texto con saltos de línea (`\n`) y viñetas (líneas que empiezan
- * con `- `). Las viñetas se muestran con un bullet; el resto como párrafos.
- */
-function FormattedText({ text, muted = false }: { text: string; muted?: boolean }) {
-  const color = muted ? 'text-muted-foreground' : 'text-foreground/90';
-  const lines = text.split('\n');
-
-  return (
-    <div className={`flex flex-col gap-1 text-xs leading-relaxed ${color}`}>
-      {lines.map((line, i) => {
-        const trimmed = line.trimStart();
-        if (trimmed.startsWith('- ')) {
-          return (
-            <div key={i} className="flex gap-1.5 pl-1">
-              <span className="text-muted-foreground">•</span>
-              <span>{trimmed.slice(2)}</span>
-            </div>
-          );
-        }
-        return <p key={i}>{line}</p>;
-      })}
-    </div>
   );
 }
