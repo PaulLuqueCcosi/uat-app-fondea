@@ -256,6 +256,37 @@ export async function activateVersion(
   }
 }
 
+export type ActivationImpact = 'NONE' | 'SELF' | 'PRICING_RULES';
+
+/**
+ * Previsualiza el impacto de activar una versión, ANTES de activarla — mismo cálculo
+ * que hace el backend al activar (adminPricingRoutes.ts), expuesto acá como lectura
+ * pura para poder advertir en el modal de confirmación:
+ * - SELF: el candidato mismo no es compatible con lo activo, no podrá activarse.
+ * - PRICING_RULES: activar esto dejaría incompatible (y desactivaría en cascada)
+ *   la versión de Reglas de Pricing actualmente activa.
+ * - NONE: nada con qué chocar.
+ */
+export async function previewActivationImpact(
+  type: ConfigType,
+  id: string
+): Promise<{ ok: boolean; valid?: boolean; errors?: string[]; impact?: ActivationImpact; error?: string }> {
+  try {
+    const res = await adminFetch(`/api/admin/pricing/versions/${type}/${id}/validate`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: body.message ?? `Error ${res.status}` };
+    }
+    const body = await res.json();
+    return { ok: true, valid: body.valid, errors: body.errors ?? [], impact: body.impact ?? 'NONE' };
+  } catch {
+    return { ok: false, error: 'Error de conexión' };
+  }
+}
+
 /** Duplicar cualquier versión como nuevo DRAFT (Prototype) */
 export async function duplicateVersion(
   type: ConfigType,

@@ -9,6 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DiscountCodeSelector, type DiscountCatalogItem } from './DiscountCodeSelector';
 import { Plus, Trash2, X, ChevronDown, ChevronRight, AlertCircle, Info } from 'lucide-react';
+import { InfoPopover } from '@/components/admin/shared/InfoPopover';
+import {
+  PRICING_RULES_INTRO_INFO,
+  PRICING_RULE_FEE_GROUPS_INFO,
+  PRICING_RULE_DISCOUNTS_INFO,
+} from '../calculator-field-info';
 import type { PricingRulesConfig, PricingRule, Discount } from '@/modules/admin/calculator-admin.service';
 
 // ── Context types (loaded from active availability + fee_groups) ───────────
@@ -344,6 +350,12 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Título + ayuda — visible en modo edición y en detalle de versión */}
+      <div className="flex items-center gap-1.5">
+        <p className="text-sm font-semibold">Reglas de Pricing</p>
+        <InfoPopover {...PRICING_RULES_INTRO_INFO} />
+      </div>
+
       {/* Info banner */}
       {!readonly && !availCtx && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -511,7 +523,10 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                   {/* Fee Groups */}
                   <div className="rounded-lg border p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium">Grupos de tarifas</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-medium">Grupos de tarifas</p>
+                        <InfoPopover {...PRICING_RULE_FEE_GROUPS_INFO} />
+                      </div>
                       {!readonly && (
                         <select
                           value=""
@@ -580,7 +595,10 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                   {/* Discounts */}
                   <div className="rounded-lg border p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium">Descuentos</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-medium">Descuentos</p>
+                        <InfoPopover {...PRICING_RULE_DISCOUNTS_INFO} />
+                      </div>
                       {!readonly && (
                         <Button variant="ghost" size="sm" onClick={() => addDiscount(actualIdx)} className="h-6 text-[10px]">
                           <Plus className="h-3 w-3 mr-0.5" /> Descuento

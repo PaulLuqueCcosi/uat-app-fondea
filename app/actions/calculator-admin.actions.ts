@@ -38,6 +38,11 @@ export async function activateVersionAction(type: ConfigType, id: string) {
   return service.activateVersion(type, id);
 }
 
+export async function previewActivationImpactAction(type: ConfigType, id: string) {
+  await requireAdminRole();
+  return service.previewActivationImpact(type, id);
+}
+
 export async function duplicateVersionAction(type: ConfigType, id: string, newName?: string) {
   await requireAdminRole();
   return service.duplicateVersion(type, id, newName);

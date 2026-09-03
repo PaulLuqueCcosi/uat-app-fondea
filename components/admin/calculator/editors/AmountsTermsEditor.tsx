@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Plus, Trash2, X, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { TagNumberInput } from './TagNumberInput';
+import { InfoPopover } from '@/components/admin/shared/InfoPopover';
+import { AVAILABILITY_GROUPS_INFO } from '../calculator-field-info';
 import type { AvailabilityGroup } from '@/modules/admin/calculator-admin.service';
 
 interface Props {
@@ -170,7 +172,10 @@ export function AmountsTermsEditor({ availability, onChange, readonly }: Props) 
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">Montos y Plazos Disponibles</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-sm">Montos y Plazos Disponibles</CardTitle>
+            <InfoPopover {...AVAILABILITY_GROUPS_INFO} />
+          </div>
           {!readonly && (
             <Button variant="outline" size="sm" onClick={addGroup}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Grupo

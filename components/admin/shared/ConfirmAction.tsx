@@ -22,6 +22,8 @@ interface ConfirmActionProps {
   cancelLabel?: string;
   onConfirm: () => void | Promise<void>;
   variant?: 'default' | 'destructive';
+  /** Contenido extra (ej. un banner de advertencia) entre la descripción y los botones. */
+  children?: React.ReactNode;
 }
 
 /**
@@ -36,6 +38,7 @@ export function ConfirmAction({
   cancelLabel = 'Cancelar',
   onConfirm,
   variant = 'default',
+  children,
 }: ConfirmActionProps) {
   const [loading, setLoading] = useState(false);
 
@@ -53,6 +56,7 @@ export function ConfirmAction({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>{cancelLabel}</AlertDialogCancel>
           <AlertDialogAction

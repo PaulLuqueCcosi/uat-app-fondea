@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { FeeCodeSelector, type FeeCatalogItem } from './FeeCodeSelector';
+import { InfoPopover } from '@/components/admin/shared/InfoPopover';
+import { FEE_GROUPS_INFO } from '../calculator-field-info';
 import type { FeeGroup, FeeSplit } from '@/modules/admin/calculator-admin.service';
 
 interface Props {
@@ -132,7 +134,10 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">Grupos de Tarifas</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-sm">Grupos de Tarifas</CardTitle>
+            <InfoPopover {...FEE_GROUPS_INFO} />
+          </div>
           {!readonly && (
             <Button variant="outline" size="sm" onClick={addGroup}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Grupo

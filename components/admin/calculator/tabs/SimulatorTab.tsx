@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { FlaskConical, Layers, Receipt, Tag } from 'lucide-react';
 import { getVersionsAction, getVersionByIdAction } from '@/app/actions/calculator-admin.actions';
+import { InfoPopover } from '@/components/admin/shared/InfoPopover';
+import { SIMULATOR_VERSIONS_INFO } from '../calculator-field-info';
 import type { ConfigVersion, AvailabilityConfig } from '@/modules/admin/calculator-admin.service';
 import { LoanCalculatorProvider } from '@/components/LoanCalculator/core';
 import { LoanCalculator } from '@/components/LoanCalculator/ui';
@@ -49,6 +51,10 @@ export function SimulatorTab() {
 
   // ── Primer préstamo toggle ──────────────────────────────────────────────
   const [isFirstLoan, setIsFirstLoan] = useState(true);
+
+  // ── Errores de simulación por rango — algunos rangos pueden fallar (ej.
+  // versiones incompatibles entre sí) mientras otros calculan bien. ────────
+  const [rangeErrors, setRangeErrors] = useState<{ range: string; message: string }[]>([]);
 
   // ── Cargar versiones al montar ──────────────────────────────────────────
   useEffect(() => {
@@ -105,6 +111,10 @@ export function SimulatorTab() {
         return { productId: data.product?.id ?? PRODUCT_ID, amounts: data.amounts ?? [], creditScoreRanges: ranges };
       },
       fetchCalculation: async (amt, term, inst, config, signal): Promise<LoanCalculation> => {
+        // Limpiar los errores de la simulación anterior al arrancar una nueva —
+        // el wrapper de más abajo se remonta con un `key` por selector, así que
+        // esto corre de nuevo con cada cambio de versión o de isFirstLoan.
+        setRangeErrors([]);
         const res = await fetch('/api/admin/simulate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -120,7 +130,10 @@ export function SimulatorTab() {
           }),
           signal,
         });
-        if (!res.ok) throw new Error(`simulate: ${res.status}`);
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.message || body?.error || `simulate: ${res.status}`);
+        }
         const data = await res.json();
 
         const scores: Record<string, any> = {};
@@ -130,9 +143,18 @@ export function SimulatorTab() {
           { color: '#10B981', lightBg: 'rgba(16,185,129,0.08)' },
         ];
 
+        // Cada rango (Bajo/Medio/Alto) se calcula por separado — uno puede fallar
+        // (ej. su regla apunta a un grupo de tarifas que no existe en la versión de
+        // Tarifas elegida) sin que los demás se vean afectados. Antes esto se perdía
+        // en silencio (el rango simplemente desaparecía); ahora se junta y se muestra.
+        const failedRanges: { range: string; message: string }[] = [];
+
         if (Array.isArray(data)) {
           for (const item of data) {
-            if (!item.simulation) continue;
+            if (!item.simulation) {
+              failedRanges.push({ range: item.rangeLabel ?? item.rangeCode, message: item.error ?? 'Error desconocido' });
+              continue;
+            }
             const sim = item.simulation;
             const idx = config.creditScoreRanges.findIndex(
               (r) => r.code.toLowerCase() === item.rangeCode.toLowerCase()
@@ -189,6 +211,13 @@ export function SimulatorTab() {
             };
           }
         }
+
+        setRangeErrors(failedRanges);
+
+        if (Object.keys(scores).length === 0 && failedRanges.length > 0) {
+          throw new Error(failedRanges.map((f) => `${f.range}: ${f.message}`).join(' · '));
+        }
+
         return { scores };
       },
       createIntention: async (_data: IntentionRequest): Promise<IntentionResponse> => {
@@ -198,7 +227,13 @@ export function SimulatorTab() {
     };
   }, [selectedAvailability, selectedFeeGroups, selectedPricingRules, availabilityData, isFirstLoan]);
 
-  const visualApi = createVisualApi();
+  // useMemo (no solo llamar a createVisualApi() directo) importa acá: fetchCalculation
+  // llama setRangeErrors, lo que re-renderiza este componente. Sin memoizar el objeto
+  // en sí (solo la función interna estaba memoizada con useCallback), cada render
+  // producía un `api` con identidad nueva -> el efecto de LoanCalculator (que depende
+  // de `api`) se disparaba de nuevo -> volvía a llamar fetchCalculation -> loop infinito
+  // ("Maximum update depth exceeded", confirmado en vivo con Playwright).
+  const visualApi = useMemo(() => createVisualApi(), [createVisualApi]);
 
   // ── Helper badges ───────────────────────────────────────────────────────
   const getStatusBadge = (versions: VersionOption[], selectedId: string) => {
@@ -230,7 +265,10 @@ export function SimulatorTab() {
       {/* Selectores de versiones + primer préstamo */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Configuración a simular</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-sm">Configuración a simular</CardTitle>
+            <InfoPopover {...SIMULATOR_VERSIONS_INFO} />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -287,6 +325,21 @@ export function SimulatorTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Falla parcial: algunos rangos calcularon, otros no — si NINGUNO calculó,
+          el error ya se muestra dentro de la propia calculadora más abajo. */}
+      {rangeErrors.length > 0 && rangeErrors.length < 3 && (
+        <div className="rounded-lg border border-error-400 bg-error-50 px-3 py-2 space-y-1">
+          <p className="text-xs font-medium text-error-900">
+            No se pudo calcular para {rangeErrors.length === 1 ? 'este rango' : 'estos rangos'}:
+          </p>
+          {rangeErrors.map((e) => (
+            <p key={e.range} className="text-[11px] text-error-700">
+              <span className="font-medium">{e.range}:</span> {e.message}
+            </p>
+          ))}
+        </div>
+      )}
 
       {/* Calculadora */}
       {visualApi ? (

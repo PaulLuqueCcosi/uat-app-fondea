@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertCircle } from 'lucide-react';
+import { InfoPopover } from '@/components/admin/shared/InfoPopover';
+import { SCORE_RANGES_INFO } from '../calculator-field-info';
 import type { ScoreRange } from '@/modules/admin/calculator-admin.service';
 
 interface Props {
@@ -77,7 +79,10 @@ export function ScoreRangesEditor({ scoreRanges, onChange, readonly }: Props) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm">Rangos de Score Crediticio</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-sm">Rangos de Score Crediticio</CardTitle>
+          <InfoPopover {...SCORE_RANGES_INFO} />
+        </div>
         {!readonly && (
           <p className="text-xs text-muted-foreground">
             Los 3 rangos deben cubrir de {SCORE_MIN} a {SCORE_MAX} sin solaparse ni dejar huecos.

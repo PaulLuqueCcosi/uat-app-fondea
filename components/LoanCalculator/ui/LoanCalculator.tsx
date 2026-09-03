@@ -41,6 +41,7 @@ export default function LoanCalculator({
   const [detailKey, setDetailKey] = useState<string | null>(null);
   const [calc, setCalc] = useState<LoanCalculation | null>(null);
   const [calculating, setCalculating] = useState(false);
+  const [calcError, setCalcError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
   const [requestError, setRequestError] = useState<false | 'generic' | 'limit'>(false);
 
@@ -124,11 +125,18 @@ export default function LoanCalculator({
     if (!config || plazo === null || cuotas === null || monto <= 0) return;
     const controller = new AbortController();
     setCalculating(true);
+    setCalcError(null);
     api.fetchCalculation(monto, plazo, cuotas, config, controller.signal)
       .then((res) => {
         if (!controller.signal.aborted) setCalc(res);
       })
-      .catch((err) => { if (err.name !== "AbortError") console.error(err); })
+      .catch((err) => {
+        if (err.name === "AbortError" || controller.signal.aborted) return;
+        console.error(err);
+        // Antes esto se tragaba en silencio (solo console.error) — un backend roto
+        // se veía igual que "todavía no terminó de calcular", sin ningún aviso.
+        setCalcError(err.message || "No se pudo calcular. Intenta de nuevo.");
+      })
       .finally(() => { if (!controller.signal.aborted) setCalculating(false); });
     return () => controller.abort();
   }, [monto, plazo, cuotas, config, api]);
@@ -228,6 +236,14 @@ export default function LoanCalculator({
             schedule={activeCalc?.schedule ?? null}
             calculating={calculating}
           />
+
+          {/* Error de cálculo — antes se tragaba en silencio (solo console.error) */}
+          {calcError && !calculating && (
+            <div className="mb-3 rounded-lg border border-error-400 bg-error-50 px-3 py-2 text-center">
+              <p className="text-xs font-medium text-error-900">No se pudo calcular</p>
+              <p className="text-[11px] text-error-700 mt-0.5">{calcError}</p>
+            </div>
+          )}
 
           {/* Perfiles: gauge + pills */}
           <div className="mb-3 sm:mb-4">

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ConfigVersionsTable, type ConfigVersionItem } from '@/components/admin/shared/ConfigVersionsTable';
+import { ConfigVersionsTable, type ConfigVersionItem, type ActivationPreview } from '@/components/admin/shared/ConfigVersionsTable';
 import {
   getVersionsAction,
   activateVersionAction,
+  previewActivationImpactAction,
 } from '@/app/actions/calculator-admin.actions';
 import { toast } from 'sonner';
 import type { ConfigType, ConfigVersion } from '@/modules/admin/calculator-admin.service';
@@ -59,6 +60,28 @@ export function VersionsTab({ configType, activeVersion }: VersionsTabProps) {
     router.push(`/admin/calculator/${configType.toLowerCase()}/new?from=${id}`);
   };
 
+  // Antes de confirmar activar, reutiliza la MISMA validación que ya corre al activar
+  // (validatePricingRules en el backend) para avisar el impacto real, no una aproximación.
+  const handlePreviewActivate = async (id: string): Promise<ActivationPreview | null> => {
+    const result = await previewActivationImpactAction(configType, id);
+    if (!result.ok || !result.impact || result.impact === 'NONE') return null;
+
+    if (result.impact === 'SELF') {
+      return {
+        impact: 'SELF',
+        message: 'Esta versión no es compatible con la Disponibilidad/Tarifas activas y no podrá activarse.',
+        errors: result.errors ?? [],
+      };
+    }
+
+    // impact === 'PRICING_RULES'
+    return {
+      impact: 'OTHER',
+      message: 'Esto desactivará la versión activa de Reglas de Pricing porque dejaría de ser compatible.',
+      errors: result.errors ?? [],
+    };
+  };
+
   const handleView = (id: string) => {
     router.push(`/admin/calculator/${configType.toLowerCase()}/${id}`);
   };
@@ -95,6 +118,7 @@ export function VersionsTab({ configType, activeVersion }: VersionsTabProps) {
       onDuplicate={handleDuplicate}
       onActivate={handleActivate}
       onCreate={handleCreate}
+      onPreviewActivate={handlePreviewActivate}
       label={TYPE_LABELS[configType]}
     />
   );
