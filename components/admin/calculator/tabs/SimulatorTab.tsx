@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { FlaskConical, Layers, Receipt, Tag } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { FlaskConical, Layers, Receipt, Tag, Loader2 } from 'lucide-react';
 import { getVersionsAction, getVersionByIdAction } from '@/app/actions/calculator-admin.actions';
 import { InfoPopover } from '@/components/admin/shared/InfoPopover';
 import { SIMULATOR_VERSIONS_INFO } from '../calculator-field-info';
 import type { ConfigVersion, AvailabilityConfig } from '@/modules/admin/calculator-admin.service';
 import { LoanCalculatorProvider } from '@/components/LoanCalculator/core';
-import { LoanCalculator } from '@/components/LoanCalculator/ui';
+import { LoanCalculator, CalculatorSkeleton } from '@/components/LoanCalculator/ui';
 import type { LoanCalculatorApi, LoanConfig, LoanCalculation, IntentionRequest, IntentionResponse, LoanCalculatorTheme } from '@/components/LoanCalculator/core';
 
 interface VersionOption {
@@ -48,6 +49,7 @@ export function SimulatorTab() {
 
   // ── Opciones dinámicas de la disponibilidad ─────────────────────────────
   const [availabilityData, setAvailabilityData] = useState<AvailabilityConfig | null>(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
 
   // ── Primer préstamo toggle ──────────────────────────────────────────────
   const [isFirstLoan, setIsFirstLoan] = useState(true);
@@ -87,9 +89,10 @@ export function SimulatorTab() {
   useEffect(() => {
     if (!selectedAvailability) return;
     async function loadAvailability() {
+      setLoadingAvailability(true);
       const ver = await getVersionByIdAction('AVAILABILITY', selectedAvailability);
-      if (!ver?.data) return;
-      setAvailabilityData(ver.data as AvailabilityConfig);
+      if (ver?.data) setAvailabilityData(ver.data as AvailabilityConfig);
+      setLoadingAvailability(false);
     }
     loadAvailability();
   }, [selectedAvailability]);
@@ -243,11 +246,45 @@ export function SimulatorTab() {
     return null;
   };
 
+  // Replica la forma real de la pantalla (tarjeta de selectores + calculadora) en
+  // vez de 2 barras genéricas — así el admin ve de entrada qué está por cargar,
+  // no solo "algo está pasando".
   if (loadingVersions) {
     return (
-      <div className="space-y-4">
-        <div className="h-8 w-64 rounded bg-muted animate-pulse" />
-        <div className="h-48 rounded-lg bg-muted animate-pulse" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+          <FlaskConical className="h-4 w-4 text-primary shrink-0" />
+          <p className="text-sm text-foreground">
+            Elige qué versión de cada configuración usar y simula el resultado.
+          </p>
+        </div>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <Skeleton className="h-4 w-40" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[Layers, Receipt, Tag].map((Icon, i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <Skeleton className="h-3.5 w-20" />
+                  </div>
+                  <Skeleton className="h-8 w-full rounded" />
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 pt-2 border-t">
+              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-3.5 w-40" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-center">
+          <CalculatorSkeleton />
+        </div>
       </div>
     );
   }
@@ -343,14 +380,33 @@ export function SimulatorTab() {
 
       {/* Calculadora */}
       {visualApi ? (
-        <div key={`${selectedAvailability}-${selectedFeeGroups}-${selectedPricingRules}-${isFirstLoan}`}>
-          <LoanCalculatorProvider api={visualApi} theme={ADMIN_THEME}>
-            <LoanCalculator
-              submitLabel=""
-              dedicated={false}
-              detailMode="modal"
-            />
-          </LoanCalculatorProvider>
+        <div className="relative">
+          {/* Cambiar de versión de Disponibilidad recarga sus montos/plazos/cuotas —
+              sin esto, la calculadora de abajo quedaba con datos de la versión anterior
+              hasta que terminara el fetch, sin ningún aviso. */}
+          {loadingAvailability && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          <div key={`${selectedAvailability}-${selectedFeeGroups}-${selectedPricingRules}-${isFirstLoan}`}>
+            <LoanCalculatorProvider api={visualApi} theme={ADMIN_THEME}>
+              <LoanCalculator
+                submitLabel=""
+                dedicated={false}
+                detailMode="modal"
+              />
+            </LoanCalculatorProvider>
+          </div>
+        </div>
+      ) : selectedAvailability && selectedFeeGroups && selectedPricingRules ? (
+        // Las 3 versiones YA están seleccionadas (ej. al entrar al tab, se auto-
+        // seleccionan las activas) — lo que falta es el fetch de availabilityData,
+        // no la selección del admin. Antes esto mostraba "Selecciona las 3
+        // versiones...", que parecía que no había pasado nada aunque sí las 3
+        // estaban marcadas — confuso. Ahora se ve como lo que realmente es: cargando.
+        <div className="flex justify-center">
+          <CalculatorSkeleton />
         </div>
       ) : (
         <Card>

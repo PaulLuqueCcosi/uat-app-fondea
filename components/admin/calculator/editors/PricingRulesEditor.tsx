@@ -6,9 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { DiscountCodeSelector, type DiscountCatalogItem } from './DiscountCodeSelector';
-import { Plus, Trash2, X, ChevronDown, ChevronRight, AlertCircle, Info } from 'lucide-react';
+import { Plus, Trash2, X, ChevronDown, ChevronRight, AlertCircle, Info, Loader2 } from 'lucide-react';
 import { InfoPopover } from '@/components/admin/shared/InfoPopover';
 import {
   PRICING_RULES_INTRO_INFO,
@@ -36,6 +35,18 @@ interface Props {
   data: PricingRulesConfig;
   onChange: (data: PricingRulesConfig) => void;
   readonly: boolean;
+}
+
+// ── Etiqueta amigable de una regla ──────────────────────────────────────────────
+// Única fuente de verdad para "cómo se llama esta regla ante el admin" — usada tanto
+// para la fila en pantalla como para los mensajes de validación, así nunca pueden
+// mostrar cosas distintas (antes el error mostraba el ruleId interno crudo, ej.
+// "RULE-MTMOE5PX", en vez de "Sin nombre" como la propia fila).
+function getRuleLabel(rule: PricingRule): string {
+  if (rule.name?.trim()) return rule.name;
+  if (rule.isDefault) return 'Regla por defecto';
+  if (rule.selectors.scoreRanges.length > 0) return `Rango: ${rule.selectors.scoreRanges.join(', ')}`;
+  return 'Sin nombre';
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -71,19 +82,20 @@ export function validatePricingRules(rules: PricingRule[]): string[] {
 
   const ids = new Set<string>();
   for (const rule of rules) {
+    const label = getRuleLabel(rule);
     if (!rule.ruleId?.trim()) errors.push('Una regla no tiene ID');
-    if (ids.has(rule.ruleId)) errors.push(`ID "${rule.ruleId}" duplicado`);
+    if (ids.has(rule.ruleId)) errors.push(`Regla "${label}": ID interno "${rule.ruleId}" duplicado`);
     ids.add(rule.ruleId);
-    if (!rule.name?.trim()) errors.push(`Regla "${rule.ruleId}": debe tener un nombre`);
+    if (!rule.name?.trim()) errors.push(`Regla "${label}": debe tener un nombre`);
     if (rule.package.feeGroups.length === 0) {
-      errors.push(`Regla "${rule.name || rule.ruleId}": debe tener al menos un grupo de tarifas`);
+      errors.push(`Regla "${label}": debe tener al menos un grupo de tarifas`);
     }
     for (const fg of rule.package.feeGroups) {
-      if (!fg.groupCode) errors.push(`Regla "${rule.ruleId}": grupo sin código`);
-      if (fg.value <= 0) errors.push(`Regla "${rule.ruleId}": grupo "${fg.groupCode}" sin valor`);
+      if (!fg.groupCode) errors.push(`Regla "${label}": grupo sin código`);
+      if (fg.value <= 0) errors.push(`Regla "${label}": grupo "${fg.groupCode}" sin valor`);
     }
     for (const d of rule.package.discounts ?? []) {
-      if (!d.label?.trim()) errors.push(`Regla "${rule.ruleId}": un descuento no tiene nombre`);
+      if (!d.label?.trim()) errors.push(`Regla "${label}": un descuento no tiene nombre`);
     }
   }
   return errors;
@@ -136,7 +148,9 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
   const rules = data.rules ?? [];
   const [availCtx, setAvailCtx] = useState<AvailabilityContext | null>(null);
   const [feeGroupOptions, setFeeGroupOptions] = useState<FeeGroupOption[]>([]);
+  const [loadingFeeGroups, setLoadingFeeGroups] = useState(true);
   const [discountCatalog, setDiscountCatalog] = useState<DiscountCatalogItem[]>([]);
+  const [loadingDiscounts, setLoadingDiscounts] = useState(true);
   const [openRules, setOpenRules] = useState<Set<number>>(new Set([0]));
   const errors = !readonly ? validatePricingRules(rules) : [];
 
@@ -182,7 +196,8 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
           })));
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoadingFeeGroups(false));
   }, []);
 
   // Load discount catalog
@@ -190,7 +205,8 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
     fetch('/api/admin/discount-catalog')
       .then((r) => r.json())
       .then((items) => { if (Array.isArray(items)) setDiscountCatalog(items); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoadingDiscounts(false));
   }, []);
 
   const toggleRule = (idx: number) => {
@@ -218,11 +234,17 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
     setOpenRules(new Set([...openRules, rules.length]));
   };
 
+  // Solo puede haber una regla DEFAULT — pero SÍ debe poder desmarcarse (quedando
+  // en 0 defaults temporalmente mientras se edita). Antes esto forzaba isDefault=true
+  // siempre en la fila clickeada, sin importar su estado — imposible de desmarcar.
+  // La validación de "debe haber exactamente una" ya vive en validatePricingRules()
+  // y se muestra al guardar, no hace falta bloquearlo acá.
   const toggleDefault = (idx: number) => {
-    updateRules(rules.map((r, i) => ({
-      ...r,
-      isDefault: i === idx ? true : false,
-    })));
+    const willBeDefault = !rules[idx].isDefault;
+    updateRules(rules.map((r, i) => {
+      if (i === idx) return { ...r, isDefault: willBeDefault };
+      return willBeDefault ? { ...r, isDefault: false } : r;
+    }));
   };
 
   const removeRule = (idx: number) => {
@@ -384,16 +406,13 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
       <div className="space-y-3">
         {rules.map((rule, actualIdx) => {
           const isOpen = openRules.has(actualIdx);
-          const ruleLabel = rule.name?.trim()
-            ? rule.name
-            : rule.isDefault
-              ? 'Regla por defecto'
-              : rule.selectors.scoreRanges.length > 0
-                ? `Rango: ${rule.selectors.scoreRanges.join(', ')}`
-                : 'Sin nombre';
+          const ruleLabel = getRuleLabel(rule);
 
           return (
-            <Card key={rule.ruleId}>
+            <Card
+              key={rule.ruleId}
+              className={rule.isDefault ? 'border-l-4 border-l-amber-400' : 'border-l-4 border-l-transparent'}
+            >
               {/* Rule header — collapsible */}
               <div
                 className="flex items-center justify-between px-4 py-3 cursor-pointer"
@@ -405,7 +424,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                   {rule.isDefault && (
                     <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[9px]">DEFAULT</Badge>
                   )}
-                  {!rule.isDefault && <Badge variant="outline" className="text-[9px] font-mono">P{rule.priority}</Badge>}
+                  {!rule.isDefault && <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[9px] font-mono">P{rule.priority}</Badge>}
                   {!isOpen && rule.package.feeGroups.length > 0 && (
                     <span className="text-[10px] text-muted-foreground">
                       {rule.package.feeGroups
@@ -416,13 +435,19 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                 </div>
                 <div className="flex items-center gap-2">
                   {!readonly && (
-                    <label className="flex items-center gap-1.5 cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={!!rule.isDefault}
-                        onCheckedChange={() => toggleDefault(actualIdx)}
-                      />
-                      <span className="text-[10px] text-muted-foreground select-none">Default</span>
-                    </label>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleDefault(actualIdx); }}
+                      title="Marca esta regla como la que atrapa todo lo que ninguna otra cubre. Solo puede haber una — al guardar se valida que exista exactamente una."
+                      className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                        rule.isDefault
+                          ? 'bg-amber-100 border-amber-300 text-amber-800'
+                          : 'bg-muted/40 border-transparent text-muted-foreground hover:border-muted-foreground/30'
+                      }`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${rule.isDefault ? 'bg-amber-500' : 'bg-muted-foreground/40'}`} />
+                      Default
+                    </button>
                   )}
                   {!readonly && (
                     <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); removeRule(actualIdx); }} className="h-7 px-2 text-destructive">
@@ -480,7 +505,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                   )}
 
                   {/* Selectors */}
-                  <div className={`rounded-lg border p-3 space-y-2 ${rule.isDefault ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <div className={`rounded-lg border border-l-4 border-l-slate-300 p-3 space-y-2 ${rule.isDefault ? 'opacity-50 pointer-events-none' : ''}`}>
                     <p className="text-xs font-medium">
                       Selectores {rule.isDefault && <span className="text-muted-foreground italic">(no aplica — el default atrapa todo)</span>}
                     </p>
@@ -521,31 +546,37 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                   </div>
 
                   {/* Fee Groups */}
-                  <div className="rounded-lg border p-3 space-y-2">
+                  <div className="rounded-lg border border-l-4 border-l-blue-300 p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-medium">Grupos de tarifas</p>
                         <InfoPopover {...PRICING_RULE_FEE_GROUPS_INFO} />
                       </div>
                       {!readonly && (
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              addFeeGroup(actualIdx, e.target.value);
-                            }
-                          }}
-                          className="h-6 text-[10px] w-48 rounded border border-input bg-background px-1"
-                        >
-                          <option value="">+ Agregar grupo...</option>
-                          {feeGroupOptions
-                            .filter((fg) => !rule.package.feeGroups.some((existing) => existing.groupCode === fg.groupCode))
-                            .map((fg) => (
-                              <option key={fg.groupCode} value={fg.groupCode}>
-                                {fg.name} ({fg.groupCode})
-                              </option>
-                            ))}
-                        </select>
+                        loadingFeeGroups ? (
+                          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" /> Cargando grupos...
+                          </span>
+                        ) : (
+                          <select
+                            value=""
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                addFeeGroup(actualIdx, e.target.value);
+                              }
+                            }}
+                            className="h-6 text-[10px] w-48 rounded border border-input bg-background px-1"
+                          >
+                            <option value="">+ Agregar grupo...</option>
+                            {feeGroupOptions
+                              .filter((fg) => !rule.package.feeGroups.some((existing) => existing.groupCode === fg.groupCode))
+                              .map((fg) => (
+                                <option key={fg.groupCode} value={fg.groupCode}>
+                                  {fg.name} ({fg.groupCode})
+                                </option>
+                              ))}
+                          </select>
+                        )
                       )}
                     </div>
                     {rule.package.feeGroups.length === 0 && (
@@ -593,7 +624,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                   </div>
 
                   {/* Discounts */}
-                  <div className="rounded-lg border p-3 space-y-2">
+                  <div className="rounded-lg border border-l-4 border-l-green-300 p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-medium">Descuentos</p>
@@ -642,6 +673,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                                 }}
                                 catalog={discountCatalog}
                                 onCatalogUpdate={(item) => setDiscountCatalog((prev) => [...prev, item])}
+                                loading={loadingDiscounts}
                               />
                               <select
                                 value={d.calculationType}

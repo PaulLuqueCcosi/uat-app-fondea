@@ -38,6 +38,8 @@ interface Props {
   catalog: DiscountCatalogItem[];
   onCatalogUpdate: (item: DiscountCatalogItem) => void;
   disabled?: boolean;
+  /** El catálogo todavía se está trayendo del backend — deshabilita y avisa en vez de mostrar un select vacío. */
+  loading?: boolean;
 }
 
 /** Build display text: "Label (description)" or just "Label" */
@@ -45,7 +47,7 @@ function displayText(item: DiscountCatalogItem): string {
   return item.description ? `${item.label} (${item.description})` : item.label;
 }
 
-export function DiscountCodeSelector({ value, onChange, catalog, onCatalogUpdate, disabled }: Props) {
+export function DiscountCodeSelector({ value, onChange, catalog, onCatalogUpdate, disabled, loading }: Props) {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const handleChange = (code: string) => {
@@ -63,8 +65,14 @@ export function DiscountCodeSelector({ value, onChange, catalog, onCatalogUpdate
     <>
       <div className="flex items-center gap-1 flex-1">
         <Select value={value || undefined} onValueChange={(v) => v && handleChange(v)}>
-          <SelectTrigger className="h-6 text-[11px] flex-1" disabled={disabled}>
-            <SelectValue placeholder="Seleccionar descuento..." />
+          <SelectTrigger className="h-6 text-[11px] flex-1" disabled={disabled || loading}>
+            {loading ? (
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" /> Cargando descuentos...
+              </span>
+            ) : (
+              <SelectValue placeholder="Seleccionar descuento..." />
+            )}
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -77,7 +85,7 @@ export function DiscountCodeSelector({ value, onChange, catalog, onCatalogUpdate
             </SelectGroup>
           </SelectContent>
         </Select>
-        {!disabled && (
+        {!disabled && !loading && (
           <Button
             variant="ghost"
             size="sm"

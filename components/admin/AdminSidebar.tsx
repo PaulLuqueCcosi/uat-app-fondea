@@ -92,10 +92,14 @@ const navMain: NavItem[] = [
     ],
   },
   {
+    title: 'Calculadora',
+    icon: Calculator,
+    url: '/admin/calculator',
+  },
+  {
     title: 'Reglas de Negocio',
     icon: Sliders,
     items: [
-      { title: 'Calculadora', url: '/admin/calculator', icon: Calculator },
       { title: 'Reglas Motor', url: '/admin/evaluation-rules', icon: Shield },
       { title: 'Scorecard', url: '/admin/scoring', icon: Sliders },
       { title: 'Contratos', url: '/admin/contracts', icon: FileCode2 },

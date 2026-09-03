@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, MoreVertical, Eye, Play, Copy, Loader2, AlertTriangle, XCircle } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable, type DataTablePagination } from '@/components/admin/DataTable';
@@ -58,6 +59,12 @@ interface ConfigVersionsTableProps {
    * se hace ningún chequeo y el modal de confirmación se ve como siempre.
    */
   onPreviewActivate?: (id: string) => Promise<ActivationPreview | null>;
+  /**
+   * Todavía se está trayendo `versions` del backend — muestra el skeleton de fila
+   * de DataTable (con las columnas reales) en vez de tratar el array vacío como
+   * "no hay versiones".
+   */
+  isLoading?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -73,6 +80,7 @@ export function ConfigVersionsTable({
   pageSize = PAGE_SIZE_DEFAULT,
   label,
   onPreviewActivate,
+  isLoading = false,
 }: ConfigVersionsTableProps) {
   const [page, setPage] = useState(1);
   const [activatingId, setActivatingId] = useState<string | null>(null);
@@ -205,8 +213,11 @@ export function ConfigVersionsTable({
   };
 
   // ── Empty state ─────────────────────────────────────────────────────────
+  // Mientras isLoading, versions llega vacío igual que "no hay versiones" — sin
+  // este chequeo se mostraba por un instante el cartel de "crea la primera"
+  // antes de que llegaran los datos reales.
 
-  if (versions.length === 0) {
+  if (versions.length === 0 && !isLoading) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
@@ -232,7 +243,7 @@ export function ConfigVersionsTable({
           incompatibilidad (ver adminPricingRoutes.ts) — sin este aviso, la fila
           "Versión activa:" de abajo simplemente desaparece sin explicar nada, y
           si es Reglas de Pricing, TODO el simulador de préstamos queda caído. */}
-      {!activeVersion && (
+      {!isLoading && !activeVersion && (
         <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
           <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
           <p className="text-xs text-destructive">
@@ -244,7 +255,9 @@ export function ConfigVersionsTable({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="text-xs text-muted-foreground">
-          {activeVersion && (
+          {isLoading ? (
+            <Skeleton className="h-4 w-40" />
+          ) : activeVersion && (
             <span className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
               Versión activa:
@@ -257,13 +270,14 @@ export function ConfigVersionsTable({
             </span>
           )}
         </div>
-        <Button size="sm" onClick={onCreate}>
+        <Button size="sm" onClick={onCreate} disabled={isLoading}>
           <Plus className="h-3.5 w-3.5 mr-1.5" />
           Nueva versión
         </Button>
       </div>
 
-      {/* DataTable (TanStack) */}
+      {/* DataTable (TanStack) — con isLoading muestra el skeleton de fila real
+          (mismas columnas: Versión/Nombre/Fecha/Acciones), no barras genéricas. */}
       <DataTable
         columns={columns}
         data={paged}
@@ -274,6 +288,7 @@ export function ConfigVersionsTable({
         enableExport={false}
         pageSizeOptions={[5]}
         onRowClick={(row) => onView(row.id)}
+        isLoading={isLoading}
       />
 
       {/* Confirm Activate Modal — con el impacto real, si el caller lo provee */}

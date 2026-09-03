@@ -19,6 +19,14 @@ const TYPE_LABELS: Record<string, string> = {
   pricing_rules: 'Reglas de Pricing',
 };
 
+/** Explicación en lenguaje natural de qué configura esta versión — visible sin clics,
+ * a diferencia de los popovers ⓘ de cada sección (que dan el detalle campo por campo). */
+const TYPE_EXPLANATION: Record<string, string> = {
+  availability: 'Esta versión define qué existe para el cliente: los Score Ranges (Bajo/Medio/Alto) y qué montos, plazos y cuotas se pueden ofrecer.',
+  fee_groups: 'Esta versión define grupos de tarifas: cómo se reparte, entre distintos cargos (comisión, seguro, gestión...), el total que decida cobrar una Regla de Pricing.',
+  pricing_rules: 'Esta versión define qué grupo de tarifas y qué descuentos aplican según el monto, plazo, score y si es primer préstamo o no.',
+};
+
 export default function CalculatorVersionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -101,6 +109,12 @@ export default function CalculatorVersionDetailPage() {
         )}
         <span><span className="text-muted-foreground">Fecha creación:</span> {new Date(version.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
       </div>
+
+      {TYPE_EXPLANATION[type] && (
+        <p className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+          {TYPE_EXPLANATION[type]}
+        </p>
+      )}
 
       {/* Visual Editor — READONLY */}
       {version.data && configType === 'AVAILABILITY' && (

@@ -27,24 +27,28 @@ const SCORE_MAX = 1000;
 function validateRanges(ranges: ScoreRange[]): string | null {
   const sorted = [...ranges].sort((a, b) => a.minScore - b.minScore);
 
+  // Mismo fallback que la propia fila del rango — evita mensajes con comillas
+  // vacías `""` si el admin borró el nombre antes de terminar de editar.
+  const labelOf = (range: ScoreRange) => range.label?.trim() || 'Sin nombre';
+
   for (let i = 0; i < sorted.length; i++) {
     const r = sorted[i];
     if (r.minScore > r.maxScore) {
-      return `"${r.label}": el mínimo (${r.minScore}) no puede ser mayor al máximo (${r.maxScore})`;
+      return `"${labelOf(r)}": el mínimo (${r.minScore}) no puede ser mayor al máximo (${r.maxScore})`;
     }
     if (r.minScore < SCORE_MIN) {
-      return `"${r.label}": el mínimo no puede ser menor a ${SCORE_MIN}`;
+      return `"${labelOf(r)}": el mínimo no puede ser menor a ${SCORE_MIN}`;
     }
     if (r.maxScore > SCORE_MAX) {
-      return `"${r.label}": el máximo no puede ser mayor a ${SCORE_MAX}`;
+      return `"${labelOf(r)}": el máximo no puede ser mayor a ${SCORE_MAX}`;
     }
     if (i > 0) {
       const prev = sorted[i - 1];
       if (r.minScore <= prev.maxScore) {
-        return `"${prev.label}" y "${r.label}" se solapan (${prev.maxScore} y ${r.minScore})`;
+        return `"${labelOf(prev)}" y "${labelOf(r)}" se solapan (${prev.maxScore} y ${r.minScore})`;
       }
       if (r.minScore > prev.maxScore + 1) {
-        return `Hay un hueco entre "${prev.label}" (hasta ${prev.maxScore}) y "${r.label}" (desde ${r.minScore})`;
+        return `Hay un hueco entre "${labelOf(prev)}" (hasta ${prev.maxScore}) y "${labelOf(r)}" (desde ${r.minScore})`;
       }
     }
   }

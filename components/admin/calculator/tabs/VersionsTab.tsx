@@ -90,15 +90,6 @@ export function VersionsTab({ configType, activeVersion }: VersionsTabProps) {
     router.push(`/admin/calculator/${configType.toLowerCase()}/new`);
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-48 rounded bg-muted animate-pulse" />
-        <div className="h-32 rounded-lg bg-muted animate-pulse" />
-      </div>
-    );
-  }
-
   // Map to shared component format
   const items: ConfigVersionItem[] = versions.map((v) => ({
     id: v.id,
@@ -120,6 +111,7 @@ export function VersionsTab({ configType, activeVersion }: VersionsTabProps) {
       onCreate={handleCreate}
       onPreviewActivate={handlePreviewActivate}
       label={TYPE_LABELS[configType]}
+      isLoading={loading}
     />
   );
 }

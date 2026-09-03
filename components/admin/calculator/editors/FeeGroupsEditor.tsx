@@ -25,22 +25,26 @@ export function validateFeeGroups(groups: FeeGroup[]): string[] {
   const allCodes = new Set<string>();
 
   for (const group of groups) {
+    // Mismo criterio que muestra la propia fila del grupo (group.name || 'Sin nombre') —
+    // así el mensaje de error siempre coincide con lo que el admin ve en pantalla, en vez
+    // de mostrar comillas vacías `""` cuando todavía no le puso nombre.
+    const label = group.name?.trim() || 'Sin nombre';
     if (!group.name?.trim()) errors.push(`Un grupo no tiene nombre`);
     if (!group.groupCode?.trim()) errors.push(`Un grupo no tiene código`);
-    if (allCodes.has(group.groupCode)) errors.push(`Código "${group.groupCode}" duplicado`);
+    if (allCodes.has(group.groupCode)) errors.push(`Grupo "${label}": código "${group.groupCode}" duplicado`);
     allCodes.add(group.groupCode);
 
-    if (group.splits.length === 0) errors.push(`"${group.name}" no tiene cargos`);
+    if (group.splits.length === 0) errors.push(`"${label}" no tiene cargos`);
 
     const total = group.splits.reduce((sum, s) => sum + s.percentage, 0);
-    if (total !== 100) errors.push(`"${group.name}": los porcentajes suman ${total}% (debe ser 100%)`);
+    if (total !== 100) errors.push(`"${label}": los porcentajes suman ${total}% (debe ser 100%)`);
 
     const splitCodes = new Set<string>();
     for (const split of group.splits) {
-      if (!split.feeCode?.trim()) errors.push(`"${group.name}" tiene un cargo sin código`);
-      if (splitCodes.has(split.feeCode)) errors.push(`"${group.name}": cargo "${split.feeCode}" duplicado`);
+      if (!split.feeCode?.trim()) errors.push(`"${label}" tiene un cargo sin código`);
+      if (splitCodes.has(split.feeCode)) errors.push(`"${label}": cargo "${split.feeCode}" duplicado`);
       splitCodes.add(split.feeCode);
-      if (split.percentage < 0) errors.push(`"${group.name}": porcentaje no puede ser negativo`);
+      if (split.percentage < 0) errors.push(`"${label}": porcentaje no puede ser negativo`);
     }
   }
 
@@ -49,6 +53,7 @@ export function validateFeeGroups(groups: FeeGroup[]): string[] {
 
 export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
   const [catalog, setCatalog] = useState<FeeCatalogItem[]>([]);
+  const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [openGroups, setOpenGroups] = useState<Set<number>>(new Set([0]));
   const feeGroups = data ?? [];
   const errors = !readonly ? validateFeeGroups(feeGroups) : [];
@@ -58,7 +63,8 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
     fetch('/api/admin/fee-catalog')
       .then((r) => r.json())
       .then((items) => { if (Array.isArray(items)) setCatalog(items); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoadingCatalog(false));
   }, []);
 
   const toggleGroup = (idx: number) => {
@@ -230,6 +236,7 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
                               }}
                               catalog={catalog}
                               onCatalogUpdate={handleCatalogUpdate}
+                              loading={loadingCatalog}
                             />
                             <Input
                               type="number"

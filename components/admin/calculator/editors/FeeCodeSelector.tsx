@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { CreateFeeModal } from './CreateFeeModal';
 
 export interface FeeCatalogItem {
@@ -27,6 +27,8 @@ interface Props {
   catalog: FeeCatalogItem[];
   onCatalogUpdate: (item: FeeCatalogItem) => void;
   disabled?: boolean;
+  /** El catálogo todavía se está trayendo del backend — deshabilita y avisa en vez de mostrar un select vacío. */
+  loading?: boolean;
 }
 
 /** Build display text: "Label (description)" or just "Label" */
@@ -37,7 +39,7 @@ function displayText(item: FeeCatalogItem): string {
 /**
  * Selector de cargo del catálogo usando Select de shadcn + botón crear nuevo.
  */
-export function FeeCodeSelector({ value, onChange, catalog, onCatalogUpdate, disabled }: Props) {
+export function FeeCodeSelector({ value, onChange, catalog, onCatalogUpdate, disabled, loading }: Props) {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const handleChange = (code: string) => {
@@ -55,8 +57,14 @@ export function FeeCodeSelector({ value, onChange, catalog, onCatalogUpdate, dis
     <>
       <div className="flex items-center gap-1 flex-1">
         <Select value={value || undefined} onValueChange={(v) => v && handleChange(v)}>
-          <SelectTrigger className="h-7 text-[11px] flex-1" disabled={disabled}>
-            <SelectValue placeholder="Seleccionar cargo..." />
+          <SelectTrigger className="h-7 text-[11px] flex-1" disabled={disabled || loading}>
+            {loading ? (
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" /> Cargando cargos...
+              </span>
+            ) : (
+              <SelectValue placeholder="Seleccionar cargo..." />
+            )}
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -69,7 +77,7 @@ export function FeeCodeSelector({ value, onChange, catalog, onCatalogUpdate, dis
             </SelectGroup>
           </SelectContent>
         </Select>
-        {!disabled && (
+        {!disabled && !loading && (
           <Button
             variant="ghost"
             size="sm"

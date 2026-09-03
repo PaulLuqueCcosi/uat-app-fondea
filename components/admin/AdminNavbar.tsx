@@ -30,20 +30,33 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
     analytics: 'Analítica',
     roles: 'Roles y Permisos',
     settings: 'Configuración',
+    calculator: 'Calculadora',
+    availability: 'Disponibilidad',
+    fee_groups: 'Tarifas',
+    pricing_rules: 'Reglas de Pricing',
   };
+
+  // Segmentos que son parte de una ruta dinámica (ej. /admin/calculator/fee_groups/:id)
+  // pero NO tienen página propia sin el id/acción que sigue — antes su breadcrumb
+  // apuntaba a esa URL inexistente y caía en "Sección no disponible". Su link ahora
+  // apunta al ancestro válido más cercano (el listado con tabs) en vez de a sí mismo.
+  const NON_NAVIGABLE_SEGMENTS = new Set(['availability', 'fee_groups', 'pricing_rules']);
 
   const crumbs: { label: string; href?: string }[] = [
     { label: 'Admin', href: '/admin' },
   ];
 
   let path = '/admin';
+  let lastValidPath = '/admin';
   segments.forEach((seg, i) => {
     path += `/${seg}`;
     const isLast = i === segments.length - 1;
+    const isNavigable = !NON_NAVIGABLE_SEGMENTS.has(seg);
     crumbs.push({
       label: labelMap[seg] || seg,
-      href: isLast ? undefined : path,
+      href: isLast ? undefined : (isNavigable ? path : lastValidPath),
     });
+    if (isNavigable) lastValidPath = path;
   });
 
   return crumbs;
