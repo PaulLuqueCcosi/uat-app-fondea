@@ -270,6 +270,18 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
     ));
   };
 
+  const updateFeeGroupCalculationType = (ruleIdx: number, fgIdx: number, calculationType: 'PERCENTAGE' | 'FIXED_AMOUNT') => {
+    updateRules(rules.map((r, i) =>
+      i === ruleIdx ? {
+        ...r,
+        package: {
+          ...r.package,
+          feeGroups: r.package.feeGroups.map((fg, fi) => fi === fgIdx ? { ...fg, calculationType } : fg),
+        },
+      } : r
+    ));
+  };
+
   // ── Discount operations ─────────────────────────────────────────────────
 
   const addDiscount = (ruleIdx: number) => {
@@ -384,7 +396,9 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                   {!rule.isDefault && <Badge variant="outline" className="text-[9px] font-mono">P{rule.priority}</Badge>}
                   {!isOpen && rule.package.feeGroups.length > 0 && (
                     <span className="text-[10px] text-muted-foreground">
-                      {rule.package.feeGroups.map((fg) => `${fg.groupCode} ${fg.value}%`).join(' + ')}
+                      {rule.package.feeGroups
+                        .map((fg) => `${fg.groupCode} ${fg.calculationType === 'PERCENTAGE' ? `${fg.value}%` : `S/ ${fg.value}`}`)
+                        .join(' + ')}
                     </span>
                   )}
                 </div>
@@ -524,6 +538,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                     )}
                     {rule.package.feeGroups.map((fg, fgIdx) => {
                       const groupInfo = feeGroupOptions.find((o) => o.groupCode === fg.groupCode);
+                      const isPercentage = fg.calculationType === 'PERCENTAGE';
                       return (
                         <div key={fg.groupCode} className="flex items-center gap-2 p-2 rounded border bg-muted/20">
                           <div className="flex-1">
@@ -532,21 +547,30 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                           </div>
                           {!readonly ? (
                             <>
+                              <select
+                                value={fg.calculationType}
+                                onChange={(e) => updateFeeGroupCalculationType(actualIdx, fgIdx, e.target.value as 'PERCENTAGE' | 'FIXED_AMOUNT')}
+                                className="h-6 text-[11px] w-16 rounded border border-input bg-background px-1"
+                                title="% del monto prestado, o un monto fijo en soles"
+                              >
+                                <option value="PERCENTAGE">%</option>
+                                <option value="FIXED_AMOUNT">S/</option>
+                              </select>
                               <Input
                                 type="number"
                                 value={fg.value}
                                 onChange={(e) => updateFeeGroupValue(actualIdx, fgIdx, Number(e.target.value))}
                                 className="h-6 w-16 text-[11px] font-mono text-right"
                                 min={0}
-                                max={100}
+                                max={isPercentage ? 100 : undefined}
+                                title={isPercentage ? 'Porcentaje del monto prestado' : 'Monto fijo en soles'}
                               />
-                              <span className="text-[11px] text-muted-foreground">%</span>
                               <Button variant="ghost" size="sm" onClick={() => removeFeeGroup(actualIdx, fgIdx)} className="h-5 w-5 p-0 text-destructive">
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </>
                           ) : (
-                            <Badge className="font-mono">{fg.value}%</Badge>
+                            <Badge className="font-mono">{isPercentage ? `${fg.value}%` : `S/ ${fg.value}`}</Badge>
                           )}
                         </div>
                       );
