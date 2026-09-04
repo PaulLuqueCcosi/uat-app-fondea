@@ -1,0 +1,28 @@
+import { MapPinOff, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { AvailabilityConfigPage } from '@/components/admin/settings/AvailabilityConfigPage';
+
+export default async function AdminAvailabilitySettingsPage() {
+  return (
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      {/* Back */}
+      <Link href="/admin/settings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground w-fit">
+        <ArrowLeft className="h-4 w-4" /> Configuración
+      </Link>
+
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <MapPinOff className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Ciudades y Horario de Solicitudes</h1>
+          <p className="text-sm text-muted-foreground">
+            Pausa ciudades y define el horario en el que se aceptan nuevas solicitudes
+          </p>
+        </div>
+      </div>
+
+      <AvailabilityConfigPage />
+    </div>
+  );
+}

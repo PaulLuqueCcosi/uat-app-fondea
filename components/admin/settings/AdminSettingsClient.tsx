@@ -21,6 +21,7 @@ import { PenaltyConfigCard } from './PenaltyConfigCard';
 import { FormEditPoliciesCard } from './FormEditPoliciesCard';
 import { PassportRangesCard } from './PassportRangesCard';
 import { DepositAccountCard } from './DepositAccountCard';
+import { AvailabilityCard } from './AvailabilityCard';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -95,6 +96,9 @@ export function AdminSettingsClient() {
 
       {/* ═══ RANGOS DEL PASAPORTE (conectado al backend) ═══ */}
       <PassportRangesCard />
+
+      {/* ═══ CIUDADES Y HORARIO ACTIVOS — M1 #58 (conectado al backend) ═══ */}
+      <AvailabilityCard />
 
       {/* ═══ INTENTOS DE FORMULARIOS ═══ */}
       <FormAttemptsCard config={config} onSave={(formAttempts) => setConfig((p) => ({ ...p, formAttempts }))} />
