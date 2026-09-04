@@ -282,10 +282,15 @@ export default function LoanCalculator({
           <SubmitButton
             calculating={calculating}
             requesting={requesting}
-            disabled={calculating || !calc || requesting || exceedsLimit}
+            // !activeCalc cubre el caso donde `calc` llegó (algún rango sí calculó)
+            // pero el rango que el usuario tiene seleccionado en el gauge es justo
+            // el que falló — sin este chequeo, calc siendo truthy (un objeto con
+            // 1-2 rangos adentro) dejaba el botón habilitado sobre un perfil sin
+            // datos.
+            disabled={calculating || !calc || !activeCalc || requesting || exceedsLimit}
             label={submitLabel}
             onClick={async () => {
-              if (calculating || !calc || requesting || !config) return;
+              if (calculating || !calc || !activeCalc || requesting || !config) return;
               setRequestError(false);
               setRequesting(true);
               try {

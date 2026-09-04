@@ -96,6 +96,10 @@ export function validatePricingRules(rules: PricingRule[]): string[] {
     }
     for (const d of rule.package.discounts ?? []) {
       if (!d.label?.trim()) errors.push(`Regla "${label}": un descuento no tiene nombre`);
+      // Un valor negativo invierte el signo del cálculo (calculationService.ts resta
+      // discountAmount de las comisiones) — en vez de descontar, "descuento" pasaría a
+      // SUMAR al monto que paga el cliente. Nada más en la UI lo impedía antes de esto.
+      if (d.value < 0) errors.push(`Regla "${label}": descuento "${d.label || d.code}" no puede tener un valor negativo`);
     }
   }
   return errors;

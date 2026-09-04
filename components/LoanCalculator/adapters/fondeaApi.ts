@@ -118,7 +118,12 @@ async function fetchCalculation(
   const scores: Record<string, ScoreResult> = {};
 
   for (const item of data) {
+    // El backend degrada por rango: si la regla de UN score falla (ej. apunta a un
+    // grupo de tarifas que no existe), esa entrada llega con simulation: null y las
+    // demás siguen bien. Sin este guard, el .fees de abajo tira un TypeError que
+    // tumba el cálculo COMPLETO — los 2 rangos que sí funcionaron también se pierden.
     const sim = item.simulation;
+    if (!sim) continue;
     const idx = config.creditScoreRanges.findIndex(
       (r) => r.code.toLowerCase() === item.rangeCode.toLowerCase()
     );

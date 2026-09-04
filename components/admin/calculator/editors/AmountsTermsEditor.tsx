@@ -88,6 +88,23 @@ export function validateAvailabilityGroups(groups: AvailabilityGroup[]): Validat
         }
       }
 
+      // 8b. El plazo debe alcanzar para las cuotas — el backend exige termDays >=
+      // installmentCount (mínimo 1 día por cuota, ver scheduleService.ts). Sin este
+      // chequeo, un admin podía configurar ej. "1 día" + "5 cuotas" — el combo pasaba
+      // esta validación, pero se rompía recién cuando un cliente real lo elegía en la
+      // calculadora (todas las simulaciones de ese combo fallan, sin explicación clara).
+      for (const t of combo.terms) {
+        for (const i of combo.installments) {
+          if (t < i) {
+            errors.push({
+              groupIdx: gi,
+              combIdx: ci,
+              message: `El plazo ${t}d no alcanza para ${i} cuotas (mínimo 1 día por cuota)`,
+            });
+          }
+        }
+      }
+
       // 9. Plazos no repetidos entre combinaciones del mismo grupo
       for (const t of combo.terms) {
         if (allTermsInGroup.has(t)) {

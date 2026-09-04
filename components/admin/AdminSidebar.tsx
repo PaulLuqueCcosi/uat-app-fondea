@@ -97,12 +97,16 @@ const navMain: NavItem[] = [
     url: '/admin/calculator',
   },
   {
+    title: 'Contratos',
+    icon: FileCode2,
+    url: '/admin/contracts',
+  },
+  {
     title: 'Reglas de Negocio',
     icon: Sliders,
     items: [
       { title: 'Reglas Motor', url: '/admin/evaluation-rules', icon: Shield },
       { title: 'Scorecard', url: '/admin/scoring', icon: Sliders },
-      { title: 'Contratos', url: '/admin/contracts', icon: FileCode2 },
     ],
   },
   {
