@@ -13,6 +13,7 @@ import {
   CreditCard,
   FileCode2,
   FileText,
+  GraduationCap,
   Handshake,
   Megaphone,
   MessageSquareWarning,
@@ -168,6 +169,11 @@ const navMain: NavItem[] = [
     title: 'M8 - Tecnología y APIs',
     icon: Cpu,
     url: '/admin/tech',
+  },
+  {
+    title: 'M10 - Educación Financiera',
+    icon: GraduationCap,
+    url: '/admin/education',
   },
 ];
 

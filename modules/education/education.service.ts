@@ -1,8 +1,10 @@
 /**
- * Service de Educación — la ÚNICA puerta a los datos de este módulo.
+ * Service de Educación — conectado al backend real (antes leía data estática).
  *
- * Hoy: lee data estática de education.data.ts
- * Mañana: fetch a CMS. Solo se toca ESTE archivo, nada más.
+ * Endpoints:
+ * - GET  /api/v1/education/modules              → resúmenes (listado/grid)
+ * - GET  /api/v1/education/modules/{id}          → detalle completo
+ * - POST /api/v1/education/modules/{id}/access   → registrar que el usuario lo abrió
  *
  * Retorna Result<T> — los componentes nunca ven errores crudos.
  */
@@ -11,90 +13,47 @@ import type { Result } from '@/modules/shared/result';
 import type { EducationModule, EducationModuleSummary } from './education.types';
 import type { EducationError } from './education.errors';
 import { errors } from './education.errors';
-import { educationData } from './education.data';
-import { getSimulatedError } from '@/lib/error-simulation';
+import { backendFetch } from '@/lib/backend-fetch';
+import { mapModuleFromBackend, mapModuleToSummary } from './education.mapper';
 
-// Re-tipamos Result con nuestro error específico
 type EducationResult<T> = Result<T> & (
   | { ok: true; data: T }
   | { ok: false; error: EducationError }
 );
 
-/**
- * Verifica si hay un error siendo simulado y lo retorna.
- * Usado para testing/debugging sin modificar la data real.
- */
-function checkSimulatedError(): EducationError | null {
-  const simulated = getSimulatedError();
-  
-  switch (simulated) {
-    case 'MODULES_EMPTY':
-      console.log('🧪 [TEST] Simulando: MODULES_EMPTY');
-      return errors.modulesEmpty();
-    case 'CMS_UNAVAILABLE':
-      console.log('🧪 [TEST] Simulando: CMS_UNAVAILABLE');
-      return errors.cmsUnavailable('Test error simulation');
-    case 'INVALID_MODULE_DATA':
-      console.log('🧪 [TEST] Simulando: INVALID_MODULE_DATA');
-      return errors.invalidData('Test error simulation');
-    case 'MODULE_NOT_FOUND':
-      console.log('🧪 [TEST] Simulando: MODULE_NOT_FOUND');
-      return errors.moduleNotFound('test-id');
-    default:
-      return null;
-  }
-}
+const CTX = 'EDUCATION';
+
+// ─── Listado (resúmenes) ────────────────────────────────────────────────────
 
 /**
- * Obtiene todos los módulos completos, ordenados.
+ * Obtiene los resúmenes de los módulos, ordenados.
+ * GET /api/v1/education/modules
  */
-export async function getModules(): Promise<EducationResult<EducationModule[]>> {
+export async function getModuleSummaries(): Promise<EducationResult<EducationModuleSummary[]>> {
   try {
-    // Verifica si hay un error siendo simulado
-    const simulatedError = checkSimulatedError();
-    if (simulatedError) {
-      return { ok: false, error: simulatedError };
-    }
+    const res = await backendFetch('/api/v1/education/modules', { context: CTX });
 
-    const data = educationData.sort((a, b) => a.order - b.order);
+    if (res.status === 401) return { ok: false, error: errors.cmsUnavailable('Sesión expirada') };
+    if (!res.ok) return { ok: false, error: errors.cmsUnavailable(`HTTP ${res.status}`) };
 
-    if (data.length === 0) {
-      return { ok: false, error: errors.modulesEmpty() };
-    }
+    const raw = await res.json();
+    const modules: EducationModuleSummary[] = (Array.isArray(raw) ? raw : [])
+      .map((r: Record<string, unknown>) => mapModuleToSummary(mapModuleFromBackend(r)))
+      .sort((a, b) => a.order - b.order);
 
-    return { ok: true, data };
+    if (modules.length === 0) return { ok: false, error: errors.modulesEmpty() };
+
+    return { ok: true, data: modules };
   } catch (err) {
     return { ok: false, error: errors.cmsUnavailable(String(err)) };
   }
 }
 
-/**
- * Obtiene resúmenes (para grids/carousels — menos payload por item).
- */
-export async function getModuleSummaries(): Promise<EducationResult<EducationModuleSummary[]>> {
-  const result = await getModules();
-  if (!result.ok) return result;
-
-  const summaries: EducationModuleSummary[] = result.data.map(m => ({
-    id: m.id,
-    order: m.order,
-    title: m.title,
-    mascot: m.mascot,
-    description: m.description,
-    thumbnail: m.thumbnail,
-    videoDuration: m.videoDuration,
-    videoUrl: m.videoUrl,
-    downloadUrl: m.downloadUrl,
-    externalLinks: m.externalLinks,
-  }));
-
-  return { ok: true, data: summaries };
-}
+// ─── Detalle de un módulo ────────────────────────────────────────────────────
 
 /**
- * Obtiene un módulo por ID.
- * - ok + data → encontrado
- * - !ok + MODULE_NOT_FOUND → no existe
+ * Obtiene el detalle completo de un módulo.
+ * GET /api/v1/education/modules/{id}
  */
 export async function getModuleById(id: string): Promise<EducationResult<EducationModule>> {
   if (!id?.trim()) {
@@ -102,46 +61,55 @@ export async function getModuleById(id: string): Promise<EducationResult<Educati
   }
 
   try {
-    // Verifica si hay un error siendo simulado
-    const simulatedError = checkSimulatedError();
-    if (simulatedError) {
-      return { ok: false, error: simulatedError };
-    }
+    const res = await backendFetch(`/api/v1/education/modules/${encodeURIComponent(id)}`, { context: CTX });
 
-    const found = educationData.find(m => m.id === id);
+    if (res.status === 404) return { ok: false, error: errors.moduleNotFound(id) };
+    if (res.status === 401) return { ok: false, error: errors.cmsUnavailable('Sesión expirada') };
+    if (!res.ok) return { ok: false, error: errors.cmsUnavailable(`HTTP ${res.status}`) };
 
-    if (!found) {
-      return { ok: false, error: errors.moduleNotFound(id) };
-    }
-
-    return { ok: true, data: found };
+    const raw = await res.json();
+    return { ok: true, data: mapModuleFromBackend(raw) };
   } catch (err) {
     return { ok: false, error: errors.cmsUnavailable(String(err)) };
   }
 }
 
-/**
- * IDs disponibles (para generateStaticParams en build time).
- */
-export async function getAllModuleIds(): Promise<string[]> {
-  return educationData.map(m => m.id);
-}
+// ─── Registrar acceso ────────────────────────────────────────────────────────
 
 /**
- * Obtiene los módulos adyacentes (prev/next) dado un ID.
- * Útil para la navegación en la página de detalle.
+ * Registra que el usuario autenticado abrió este módulo.
+ * POST /api/v1/education/modules/{id}/access
+ * Fire-and-forget: nunca lanza — si falla, solo se pierde ese registro de KPI, no debe
+ * afectar la experiencia del usuario leyendo el módulo.
  */
-export function getAdjacentModules(moduleId: string): {
-  prev: EducationModule | null;
-  next: EducationModule | null;
-  total: number;
-} {
-  const sorted = educationData.sort((a, b) => a.order - b.order);
-  const currentIndex = sorted.findIndex(m => m.id === moduleId);
+export async function recordModuleAccess(id: string): Promise<void> {
+  try {
+    await backendFetch(`/api/v1/education/modules/${encodeURIComponent(id)}/access`, {
+      context: CTX,
+      method: 'POST',
+    });
+  } catch {
+    // swallow — ver comentario arriba
+  }
+}
+
+// ─── Módulos adyacentes (prev/next) ──────────────────────────────────────────
+
+/**
+ * Calcula el módulo anterior/siguiente dado un ID, a partir de una lista de resúmenes YA
+ * obtenida (no hace I/O). Antes operaba sobre el array estático completo — ahora recibe los
+ * resúmenes que la page ya pidió, para no duplicar el fetch.
+ */
+export function getAdjacentModules(
+  summaries: EducationModuleSummary[],
+  moduleId: string,
+): { prev: EducationModuleSummary | null; next: EducationModuleSummary | null; total: number } {
+  const sorted = [...summaries].sort((a, b) => a.order - b.order);
+  const currentIndex = sorted.findIndex((m) => m.id === moduleId);
 
   return {
     prev: currentIndex > 0 ? sorted[currentIndex - 1] : null,
-    next: currentIndex < sorted.length - 1 ? sorted[currentIndex + 1] : null,
+    next: currentIndex >= 0 && currentIndex < sorted.length - 1 ? sorted[currentIndex + 1] : null,
     total: sorted.length,
   };
 }

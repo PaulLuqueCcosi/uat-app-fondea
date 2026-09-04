@@ -34,7 +34,9 @@ export type MetricKey =
   | 'funnel'
   | 'activeClients'
   | 'repurchaseRate'
-  | 'cityDistribution';
+  | 'cityDistribution'
+  | 'educationAccessRate'
+  | 'educationMoraCorrelation';
 
 export const METRIC_INFO: Record<MetricKey, MetricInfo> = {
   activeLoans: {
@@ -186,5 +188,29 @@ export const METRIC_INFO: Record<MetricKey, MetricInfo> = {
       'percentage = préstamos del departamento / total_loans × 100.',
     notes:
       'Solo aparecen créditos credit_type = STANDARD con ubigeo_region / ubigeo_province cargado. En dev la mayoría de créditos de prueba no tienen ubigeo, así que es normal ver pocos departamentos.',
+  },
+
+  educationAccessRate: {
+    title: 'Tasa de acceso a módulos',
+    what: 'Porcentaje de clientes activos que abrieron un módulo de "Fondea Aprende" en el mes elegido.',
+    calculation:
+      'access_rate = accedieron_activos / clientes_activos_totales × 100, calculado por separado para cada módulo.\n' +
+      '- clientes_activos_totales = clientes con al menos un crédito status IN (ACTIVE, OVERDUE).\n' +
+      '- accedieron_activos = de esos, cuántos tienen al menos un registro de acceso al módulo dentro del mes elegido (usuarios DISTINTOS).\n' +
+      '"Acceso" = abrir la página de detalle del módulo (ver el video/leer el resumen), no requiere completarlo ni descargar el material.',
+    notes:
+      'Cada apertura genera un registro nuevo (no se deduplica al guardar); el conteo siempre usa clientes DISTINTOS, así que abrir el mismo módulo varias veces no infla la tasa.',
+  },
+
+  educationMoraCorrelation: {
+    title: 'Correlación educación - mora',
+    what: 'Compara la tasa de mora entre clientes activos que alguna vez accedieron a "Fondea Aprende" y los que nunca accedieron.',
+    calculation:
+      'Para cada grupo (accedieron / no accedieron):\n' +
+      '- clientes_totales = clientes activos (mismo universo que "Tasa de acceso a módulos") en ese grupo.\n' +
+      '- clientes_en_mora = de esos, cuántos tienen al menos un crédito con status = OVERDUE.\n' +
+      'tasa_mora = clientes_en_mora / clientes_totales × 100.',
+    notes:
+      'Por defecto es acumulado (no filtra por mes): "accedió alguna vez" se mide desde el primer registro que exista. Si se elige un mes, ese mes SOLO acota el criterio de "ya accedió" — la mora que se muestra sigue siendo la ACTUAL, no una serie histórica. No implica causalidad: es una correlación descriptiva para validar el impacto del programa educativo.',
   },
 };

@@ -1,9 +1,9 @@
 /**
- * Mapper de Educación — transforma datos del backend/CMS al formato del frontend.
+ * Mapper de Educación — transforma datos del backend al formato del frontend.
  *
- * Hoy: no se usa porque la data es estática (education.data.ts).
- * Mañana: cuando se conecte un CMS (Supabase, Strapi, Sanity), este archivo
- * transformará la respuesta del CMS al tipo EducationModule.
+ * Usado por education.service.ts, que llama a `pe.com.fondea.backend.education`
+ * (módulo nuevo — el contenido hoy vive como una lista estática en el backend, no en BD, pero
+ * el contrato/JSON no cambia si eso migra a una tabla más adelante).
  *
  * Regla: el mapper NUNCA lanza excepciones. Si un campo falta, usa valor default.
  */

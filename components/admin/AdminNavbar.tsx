@@ -34,6 +34,7 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
     availability: 'Disponibilidad',
     fee_groups: 'Tarifas',
     pricing_rules: 'Reglas de Pricing',
+    education: 'Educación Financiera',
   };
 
   // Segmentos que son parte de una ruta dinámica (ej. /admin/calculator/fee_groups/:id)

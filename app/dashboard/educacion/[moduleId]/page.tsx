@@ -16,13 +16,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { getModuleById, getAllModuleIds, getAdjacentModules } from '@/modules/education';
+import { getAdjacentModules } from '@/modules/education';
 import type { Mascot } from '@/modules/education';
+import { getEducationModule, getEducationModules } from '@/app/actions/education.actions';
+import { RecordModuleAccess } from '@/components/education/RecordModuleAccess';
 
-export async function generateStaticParams() {
-  const ids = await getAllModuleIds();
-  return ids.map((moduleId) => ({ moduleId }));
-}
+// El contenido ya no se conoce en build time (viene del backend) — página siempre dinámica.
+export const dynamic = 'force-dynamic';
 
 function MascotBanner({ mascot }: { mascot: Mascot }) {
   const isBuho = mascot === 'buho';
@@ -53,17 +53,23 @@ export default async function EducacionModulePage({
   params: Promise<{ moduleId: string }>;
 }) {
   const { moduleId } = await params;
-  const result = await getModuleById(moduleId);
+  const [result, summariesResult] = await Promise.all([
+    getEducationModule(moduleId),
+    getEducationModules(),
+  ]);
 
   if (!result.ok) {
     notFound();
   }
 
   const mod = result.data;
-  const { prev: prevModule, next: nextModule, total } = getAdjacentModules(moduleId);
+  const summaries = summariesResult.ok ? summariesResult.data : [];
+  const { prev: prevModule, next: nextModule, total } = getAdjacentModules(summaries, moduleId);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">
+      <RecordModuleAccess moduleId={moduleId} />
+
       {/* Navegación superior */}
       <div className="flex items-center justify-between gap-4">
         <Link

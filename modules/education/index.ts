@@ -1,9 +1,8 @@
 // ── Service (lo que consumen las pages) ──────────────────────────────────────
 export {
-  getModules,
   getModuleSummaries,
   getModuleById,
-  getAllModuleIds,
+  recordModuleAccess,
   getAdjacentModules,
 } from './education.service';
 

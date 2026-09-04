@@ -6,7 +6,7 @@ import { Play, FileText, ExternalLink, Search, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { EducationModule, Mascot } from '@/modules/education';
+import type { EducationModuleSummary, Mascot } from '@/modules/education';
 
 type FilterOption = 'todos' | 'buho' | 'ardilla';
 
@@ -21,7 +21,7 @@ function MascotIcon({ mascot }: { mascot: Mascot }) {
 }
 
 interface EducationGridProps {
-  modules: EducationModule[];
+  modules: EducationModuleSummary[];
 }
 
 export function EducationGrid({ modules }: EducationGridProps) {

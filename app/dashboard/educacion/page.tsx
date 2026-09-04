@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { getModules } from '@/modules/education';
+import { getEducationModules } from '@/app/actions/education.actions';
 import { PageTitle } from '@/components/ui/page-title';
 import { EducationGrid } from '@/components/education/EducationGrid';
 import { EducationGridSkeleton } from '@/components/education/EducationGridSkeleton';
@@ -8,12 +8,12 @@ import { EducationErrorRouter } from '@/components/education/EducationErrorState
 export const dynamic = 'force-dynamic';
 
 async function EducationModulesLoader() {
-  const result = await getModules();
-  
+  const result = await getEducationModules();
+
   if (!result.ok) {
     return <EducationErrorRouter error={result.error} />;
   }
-  
+
   return <EducationGrid modules={result.data} />;
 }
 
