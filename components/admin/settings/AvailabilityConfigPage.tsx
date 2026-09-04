@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger,
 } from '@/components/ui/dialog';
-import { MapPinOff, Clock, Plus, Pencil, Loader2, AlertCircle } from 'lucide-react';
+import { MapPinOff, Clock, Plus, Pencil, Loader2, AlertCircle, Search, MapPin, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getAdminCitiesAction,
@@ -19,8 +20,10 @@ import {
   activateAdminCityAction,
   getAdminBusinessHoursAction,
   updateAdminBusinessHoursAction,
+  getAllProvincesAction,
 } from '@/app/actions/admin-availability.actions';
 import type { AdminCityAvailability, AdminBusinessHours } from '@/modules/admin/admin-availability.service';
+import type { ProvinceOption } from '@/app/actions/admin-availability.actions';
 
 /** "08:00:00" → "8:00 AM" */
 function formatHour(time: string): string {
@@ -50,11 +53,11 @@ export function AvailabilityConfigPage() {
 function CitiesSection() {
   const [isPending, startTransition] = useTransition();
   const [cities, setCities] = useState<AdminCityAvailability[] | null>(null);
+  const [search, setSearch] = useState('');
   const [pauseDialogCity, setPauseDialogCity] = useState<AdminCityAvailability | null>(null);
   const [pauseReason, setPauseReason] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newCode, setNewCode] = useState('');
-  const [newName, setNewName] = useState('');
+  const [selectedProvince, setSelectedProvince] = useState<ProvinceOption | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { loadCities(); }, []);
@@ -63,6 +66,13 @@ function CitiesSection() {
     const data = await getAdminCitiesAction();
     setCities(data.sort((a, b) => a.cityName.localeCompare(b.cityName)));
   }
+
+  const filteredCities = useMemo(() => {
+    if (!cities) return null;
+    const q = search.trim().toLowerCase();
+    if (!q) return cities;
+    return cities.filter((c) => c.cityName.toLowerCase().includes(q));
+  }, [cities, search]);
 
   function handleToggle(city: AdminCityAvailability, nextActive: boolean) {
     if (!nextActive) {
@@ -97,13 +107,16 @@ function CitiesSection() {
   }
 
   function handleCreate() {
+    if (!selectedProvince) return;
     setError(null);
     startTransition(async () => {
-      const result = await createAdminCityAction({ ubigeoProvinceCode: newCode.trim(), cityName: newName.trim() });
+      const result = await createAdminCityAction({
+        ubigeoProvinceCode: selectedProvince.code,
+        cityName: selectedProvince.name,
+      });
       if (result.ok) {
         setCreateDialogOpen(false);
-        setNewCode('');
-        setNewName('');
+        setSelectedProvince(null);
         toast.success(`${result.data.cityName} registrada`);
         await loadCities();
       } else {
@@ -126,19 +139,36 @@ function CitiesSection() {
           </div>
           <Button
             variant="outline" size="sm" className="gap-1.5"
-            onClick={() => { setError(null); setCreateDialogOpen(true); }}
+            onClick={() => { setError(null); setSelectedProvince(null); setCreateDialogOpen(true); }}
           >
             <Plus className="h-3.5 w-3.5" /> Agregar ciudad
           </Button>
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        {cities !== null && cities.length > 0 && (
+          <div className="px-4 pb-3">
+            <div className="relative max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar ciudad..."
+                className="h-8 pl-8 text-sm"
+              />
+            </div>
+          </div>
+        )}
         {cities === null ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : cities.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">Sin ciudades registradas</p>
+        ) : filteredCities && filteredCities.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Ninguna ciudad coincide con &quot;{search}&quot;
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -151,7 +181,7 @@ function CitiesSection() {
                 </tr>
               </thead>
               <tbody>
-                {cities.map((city) => (
+                {(filteredCities ?? []).map((city) => (
                   <tr key={city.id} className="border-b last:border-0">
                     <td className="px-4 py-2.5">
                       <div className="flex flex-col">
@@ -215,26 +245,15 @@ function CitiesSection() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Registrar ciudad</DialogTitle>
-            <DialogDescription>Código ubigeo de provincia (4 dígitos, catálogo INEI)</DialogDescription>
+            <DialogDescription>Busca la provincia por nombre — el código se asigna automáticamente</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Código ubigeo (provincia)</Label>
-              <Input
-                value={newCode}
-                onChange={(e) => setNewCode(e.target.value)}
-                placeholder="Ej: 1301"
-                maxLength={4}
-                className="h-9 font-mono"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Nombre</Label>
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Ej: Trujillo"
-                className="h-9"
+              <Label className="text-xs font-medium text-muted-foreground">Provincia</Label>
+              <ProvinceSearchCombobox
+                value={selectedProvince}
+                onChange={setSelectedProvince}
+                excludeCodes={cities?.map((c) => c.ubigeoProvinceCode) ?? []}
               />
             </div>
             {error && (
@@ -246,7 +265,7 @@ function CitiesSection() {
           </div>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>Cancelar</DialogClose>
-            <Button onClick={handleCreate} disabled={isPending || !newCode.trim() || !newName.trim()}>
+            <Button onClick={handleCreate} disabled={isPending || !selectedProvince}>
               {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
               Registrar
             </Button>
@@ -254,6 +273,111 @@ function CitiesSection() {
         </DialogContent>
       </Dialog>
     </Card>
+  );
+}
+
+// ── Combobox de búsqueda de provincia ─────────────────────────────────────────
+
+interface ProvinceSearchComboboxProps {
+  value: ProvinceOption | null;
+  onChange: (province: ProvinceOption | null) => void;
+  /** Códigos ubigeo ya registrados — se ocultan de los resultados para no duplicar. */
+  excludeCodes?: string[];
+}
+
+/**
+ * Buscador con autocompletado sobre las 196 provincias del Perú (catálogo INEI,
+ * vía ubigeo-fns) — mismo catálogo que usa AddressShadcn.tsx para el formulario
+ * de dirección del cliente. El admin nunca ve ni escribe un código ubigeo.
+ */
+function ProvinceSearchCombobox({ value, onChange, excludeCodes = [] }: ProvinceSearchComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [allProvinces, setAllProvinces] = useState<ProvinceOption[] | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (allProvinces === null) {
+      getAllProvincesAction().then(setAllProvinces);
+    }
+  }, [allProvinces]);
+
+  const results = useMemo(() => {
+    if (!allProvinces) return [];
+    const q = query.trim().toLowerCase();
+    const excluded = new Set(excludeCodes);
+    const candidates = allProvinces.filter((p) => !excluded.has(p.code));
+    if (!q) return candidates.slice(0, 8);
+    return candidates.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [allProvinces, query, excludeCodes]);
+
+  function handleSelect(province: ProvinceOption) {
+    onChange(province);
+    setQuery('');
+    setOpen(false);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            className="w-full h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm flex items-center justify-between gap-2 hover:bg-muted/50 transition-colors"
+            onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 0); }}
+          />
+        }
+      >
+        {value ? (
+          <span className="flex items-center gap-1.5 truncate">
+            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="truncate">{value.name}</span>
+            <span className="text-muted-foreground text-xs shrink-0">— {value.departmentName}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground flex items-center gap-1.5">
+            <Search className="h-3.5 w-3.5" /> Buscar provincia...
+          </span>
+        )}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-72 p-1.5">
+        <Input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Ej: Trujillo"
+          className="h-8 mb-1.5"
+          autoFocus
+        />
+        {allProvinces === null ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : results.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-3">Sin resultados</p>
+        ) : (
+          <div className="max-h-56 overflow-y-auto space-y-0.5">
+            {results.map((p) => (
+              <button
+                key={p.code}
+                type="button"
+                onClick={() => handleSelect(p)}
+                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-muted text-left"
+              >
+                <span className="flex items-center gap-1.5 truncate">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">{p.name}</span>
+                </span>
+                <span className="flex items-center gap-1 shrink-0">
+                  <span className="text-xs text-muted-foreground">{p.departmentName}</span>
+                  {value?.code === p.code && <Check className="h-3.5 w-3.5 text-primary" />}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
