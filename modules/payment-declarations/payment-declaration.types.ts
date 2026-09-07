@@ -70,14 +70,18 @@ export interface VoucherDetail extends VoucherSummary {
 export interface PaymentResultDistribution {
   installmentNo: number;
   appliedToPenalty: number;
+  appliedToInterest: number;
+  appliedToPrincipal: number;
+  /** Suma de appliedToInterest + appliedToPrincipal (todo lo que no es mora). */
   appliedToInstallment: number;
   /** Estado resultante de la cuota tras aplicar el pago (enum de `credit`, ej. PAID/PARTIALLY_PAID) */
   resultingStatus: string;
 }
 
 /**
- * A dónde fue el dinero tras aprobar la declaración — DTO de `credit`, viene en
- * camelCase plano (a diferencia del resto del payload que es snake_case).
+ * A dónde fue el dinero tras aprobar la declaración — DTO de `credit`. Igual que el
+ * resto del payload, viene en snake_case (@JsonProperty explícito en
+ * PaymentResultResponse.java) — el mapper lo traduce a camelCase acá.
  * Solo presente si status === 'APPROVED'.
  */
 export interface PaymentResult {
@@ -97,6 +101,10 @@ export interface PaymentDeclarationDetail {
   status: PaymentDeclarationStatus;
   declaredAmount: number;
   appliedAmount: number | null;
+  /** Cuota a la que realmente se aplicó el pago — difiere de installmentNo si el admin la redirigió al aprobar */
+  appliedInstallmentNo: number | null;
+  /** Motivo que dejó el admin al redirigir el pago a una cuota distinta a la declarada */
+  targetChangeReason: string | null;
   clientMessage: string | null;
   /** Nota solo visible para admins — null si no fue revisada o no se dejó nota */
   internalNote: string | null;

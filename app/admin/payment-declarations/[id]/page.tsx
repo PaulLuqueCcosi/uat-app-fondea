@@ -94,7 +94,10 @@ function DebtComparison({ detail }: { detail: PaymentDeclarationDetail }) {
           <span className="text-sm font-medium">Deuda total del crédito</span>
           <span className="text-base font-bold">{formatCurrency(detail.creditOutstandingTotal)}</span>
         </div>
-        {detail.exceedsTotalDebt && (
+        {/* Solo es una advertencia accionable mientras sigue PENDING — una vez aprobada o
+            rechazada, la deuda ya cambió (o llegó a 0) y "ajusta antes de aprobar" no
+            aplica más. Sin este filtro quedaba mostrándose para siempre en el historial. */}
+        {detail.exceedsTotalDebt && detail.status === 'PENDING' && (
           <Alert variant="destructive" className="mt-2">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>El monto declarado excede la deuda total</AlertTitle>
@@ -193,6 +196,22 @@ function ReviewedResult({ detail }: { detail: PaymentDeclarationDetail }) {
               {detail.appliedAmount != null ? formatCurrency(detail.appliedAmount) : '—'}
             </span>
           </div>
+          {/* Solo se muestra si el admin redirigió el pago a una cuota distinta a la
+              declarada — si no, appliedInstallmentNo === installmentNo y no hay nada que
+              aclarar. Antes esta reasignación (y su motivo) quedaba en la BD pero era
+              invisible en la UI para siempre. */}
+          {detail.appliedInstallmentNo != null && detail.appliedInstallmentNo !== detail.installmentNo && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <p className="text-[11px] text-amber-800 mb-1">Cuota reasignada</p>
+              <p className="text-sm text-amber-900">
+                El cliente declaró la cuota #{detail.installmentNo}, pero el pago se aplicó a la
+                cuota #{detail.appliedInstallmentNo}.
+              </p>
+              {detail.targetChangeReason && (
+                <p className="text-xs text-amber-800 mt-1">Motivo: {detail.targetChangeReason}</p>
+              )}
+            </div>
+          )}
           {detail.internalNote && (
             <div className="rounded-lg border bg-muted/30 p-3">
               <p className="text-[11px] text-muted-foreground mb-1">Nota interna</p>
@@ -211,6 +230,7 @@ function ReviewedResult({ detail }: { detail: PaymentDeclarationDetail }) {
                       <tr className="border-b">
                         <th className="text-left py-1.5 font-medium text-muted-foreground">Cuota</th>
                         <th className="text-right py-1.5 font-medium text-muted-foreground">A mora</th>
+                        <th className="text-right py-1.5 font-medium text-muted-foreground">A interés</th>
                         <th className="text-right py-1.5 font-medium text-muted-foreground">A capital</th>
                         <th className="text-right py-1.5 font-medium text-muted-foreground">Estado resultante</th>
                       </tr>
@@ -220,7 +240,8 @@ function ReviewedResult({ detail }: { detail: PaymentDeclarationDetail }) {
                         <tr key={d.installmentNo} className="border-b last:border-0">
                           <td className="py-1.5 font-mono text-primary">#{d.installmentNo}</td>
                           <td className="py-1.5 text-right font-mono">{formatCurrency(d.appliedToPenalty)}</td>
-                          <td className="py-1.5 text-right font-mono">{formatCurrency(d.appliedToInstallment)}</td>
+                          <td className="py-1.5 text-right font-mono">{formatCurrency(d.appliedToInterest)}</td>
+                          <td className="py-1.5 text-right font-mono">{formatCurrency(d.appliedToPrincipal)}</td>
                           <td className="py-1.5 text-right">
                             <Badge variant="outline" className="text-[10px]">{d.resultingStatus}</Badge>
                           </td>

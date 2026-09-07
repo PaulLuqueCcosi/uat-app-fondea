@@ -70,25 +70,27 @@ function mapVoucherDetailFromBackend(raw: any): VoucherDetail {
   };
 }
 
-// El sub-objeto payment_result viene en camelCase plano (DTO de `credit`),
-// a diferencia del resto del payload que es snake_case.
+// El sub-objeto payment_result viene en snake_case, igual que el resto del payload
+// (PaymentResultResponse.java lo anota explícitamente con @JsonProperty).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapPaymentResultDistribution(raw: any): PaymentResultDistribution {
   return {
-    installmentNo: raw.installmentNo ?? 0,
-    appliedToPenalty: raw.appliedToPenalty ?? 0,
-    appliedToInstallment: raw.appliedToInstallment ?? 0,
-    resultingStatus: raw.resultingStatus ?? '',
+    installmentNo: raw.installment_no ?? 0,
+    appliedToPenalty: raw.applied_to_penalty ?? 0,
+    appliedToInterest: raw.applied_to_interest ?? 0,
+    appliedToPrincipal: raw.applied_to_principal ?? 0,
+    appliedToInstallment: raw.applied_to_installment ?? 0,
+    resultingStatus: raw.installment_status ?? '',
   };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapPaymentResultFromBackend(raw: any): PaymentResult {
   return {
-    creditId: raw.creditId ?? '',
-    totalApplied: raw.totalApplied ?? 0,
+    creditId: raw.credit_id ?? '',
+    totalApplied: raw.total_applied ?? 0,
     remaining: raw.remaining ?? 0,
-    creditStatus: raw.creditStatus ?? '',
+    creditStatus: raw.credit_status ?? '',
     distributions: Array.isArray(raw.distributions) ? raw.distributions.map(mapPaymentResultDistribution) : [],
   };
 }
@@ -107,6 +109,8 @@ export function mapPaymentDeclarationDetailFromBackend(raw: any): PaymentDeclara
     status: mapPaymentDeclarationStatus(raw.status),
     declaredAmount: raw.declared_amount ?? 0,
     appliedAmount: raw.applied_amount ?? null,
+    appliedInstallmentNo: raw.applied_installment_no ?? null,
+    targetChangeReason: raw.target_change_reason ?? null,
     clientMessage: raw.client_message ?? null,
     internalNote: raw.internal_note ?? null,
     reviewedBy: raw.reviewed_by ?? null,
