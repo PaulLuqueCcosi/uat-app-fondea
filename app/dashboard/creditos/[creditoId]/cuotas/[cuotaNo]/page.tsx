@@ -464,14 +464,6 @@ export default function CuotaDetallePage() {
                   <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>Mora de {formatCurrency(cuota.penaltyAccrued)} acumulada por {cuota.daysOverdue} días de atraso</span>
                 </div>
-                <div className="flex items-start gap-2 text-xs text-error-700">
-                  <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                  <span>A los 5 días se reporta a centrales de riesgo</span>
-                </div>
-                <div className="flex items-start gap-2 text-xs text-error-700">
-                  <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                  <span>A los 15 días se bloquea tu línea de crédito</span>
-                </div>
               </CardContent>
             </Card>
           )}

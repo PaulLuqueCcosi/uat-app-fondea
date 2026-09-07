@@ -22,6 +22,7 @@ import { FormEditPoliciesCard } from './FormEditPoliciesCard';
 import { PassportRangesCard } from './PassportRangesCard';
 import { DepositAccountCard } from './DepositAccountCard';
 import { AvailabilityCard } from './AvailabilityCard';
+import { NotificationRecipientsCard } from './NotificationRecipientsCard';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -99,6 +100,9 @@ export function AdminSettingsClient() {
 
       {/* ═══ CIUDADES Y HORARIO ACTIVOS — M1 #58 (conectado al backend) ═══ */}
       <AvailabilityCard />
+
+      {/* ═══ DESTINATARIOS DE ALERTAS (conectado al backend) ═══ */}
+      <NotificationRecipientsCard />
 
       {/* ═══ INTENTOS DE FORMULARIOS ═══ */}
       <FormAttemptsCard config={config} onSave={(formAttempts) => setConfig((p) => ({ ...p, formAttempts }))} />

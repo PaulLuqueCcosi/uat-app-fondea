@@ -27,6 +27,7 @@ export function getNotificationRoute(notification: Notification): string | null 
     case 'PAYMENT_REMINDER':
     case 'PAYMENT_OVERDUE':
     case 'PAYMENT_CONFIRMED':
+    case 'PAYMENT_REJECTED':
       return meta.creditId
         ? `/dashboard/creditos/${meta.creditId}`
         : '/dashboard/creditos';
@@ -54,6 +55,14 @@ export function getNotificationRoute(notification: Notification): string | null 
         : '/dashboard/loans';
 
     case 'DISBURSEMENT_COMPLETED':
+      return meta.creditId
+        ? `/dashboard/creditos/${meta.creditId}`
+        : '/dashboard/creditos';
+
+    // ── Constancias ──
+    // TODO: no hay vista de cliente para descargar su propia constancia todavía — navega al
+    // crédito de origen como mejor aproximación hasta que exista esa pantalla.
+    case 'DEBT_CERTIFICATE_READY':
       return meta.creditId
         ? `/dashboard/creditos/${meta.creditId}`
         : '/dashboard/creditos';

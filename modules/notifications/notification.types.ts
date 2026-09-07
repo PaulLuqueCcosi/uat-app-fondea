@@ -14,6 +14,7 @@ export type NotificationType =
   | 'PAYMENT_REMINDER'          // Recordatorio de pago próximo
   | 'PAYMENT_OVERDUE'           // Pago vencido
   | 'PAYMENT_CONFIRMED'         // Pago confirmado
+  | 'PAYMENT_REJECTED'          // Comprobante de pago rechazado
   | 'SCORE_UPDATED'             // Puntaje actualizado (subió/bajó de nivel)
   | 'LEVEL_UP'                  // Subió de nivel en pasaporte
   | 'REFERRAL_COMPLETED'        // Un referido completó su préstamo
@@ -23,6 +24,7 @@ export type NotificationType =
   | 'KYC_REJECTED'              // KYC rechazado
   | 'CONTRACT_READY'            // Contrato listo para firmar
   | 'DISBURSEMENT_COMPLETED'    // Desembolso realizado
+  | 'DEBT_CERTIFICATE_READY'    // Constancia de no adeudo lista
   | 'SYSTEM_ANNOUNCEMENT';      // Anuncio del sistema (mantenimiento, etc.)
 
 // ── Prioridad ─────────────────────────────────────────────────────────────────
@@ -84,6 +86,7 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   PAYMENT_REMINDER: 'Recordatorio de pago',
   PAYMENT_OVERDUE: 'Pago vencido',
   PAYMENT_CONFIRMED: 'Pago confirmado',
+  PAYMENT_REJECTED: 'Comprobante rechazado',
   SCORE_UPDATED: 'Puntaje actualizado',
   LEVEL_UP: 'Subiste de nivel',
   REFERRAL_COMPLETED: 'Referido completado',
@@ -93,6 +96,7 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   KYC_REJECTED: 'Verificación rechazada',
   CONTRACT_READY: 'Contrato listo',
   DISBURSEMENT_COMPLETED: 'Desembolso realizado',
+  DEBT_CERTIFICATE_READY: 'Constancia lista',
   SYSTEM_ANNOUNCEMENT: 'Aviso del sistema',
 };
 
