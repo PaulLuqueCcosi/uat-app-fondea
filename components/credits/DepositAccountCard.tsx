@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Landmark, Copy, Check, AlertCircle, Info } from 'lucide-react';
 import type { DepositAccountConfig, DepositAccountError } from '@/modules/deposit-account';
 
@@ -41,47 +40,48 @@ export function DepositAccountCard({ config, error }: DepositAccountCardProps) {
   }
 
   return (
-    <Card className="border-primary-200 bg-primary-50/40">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2 text-primary-900">
-          <Landmark className="w-4 h-4 text-primary-600" />
+        <CardTitle className="text-base flex items-center gap-2">
+          <Landmark className="w-4 h-4 text-muted-foreground" />
           Deposita a esta cuenta
         </CardTitle>
-        <CardDescription className="text-primary-700">
+        <CardDescription>
           Transfiere el monto y luego sube tu comprobante acá abajo.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="space-y-1">
-          <CopyableRow label="Banco" value={config.bankName} copyable={false} />
-          <CopyableRow label="Número de cuenta" value={config.accountNumber} mono />
-          {config.cci && <CopyableRow label="CCI (otros bancos)" value={config.cci} mono />}
-          <CopyableRow label="Titular" value={config.holderName} copyable={false} />
-          {config.accountType && (
-            <CopyableRow label="Tipo de cuenta" value={config.accountType} copyable={false} />
-          )}
-        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4">
+          <div className="divide-y divide-border rounded-lg border border-border">
+            <CopyableRow label="Banco" value={config.bankName} copyable={false} />
+            <CopyableRow label="Número de cuenta" value={config.accountNumber} mono />
+            {config.cci && <CopyableRow label="CCI (otros bancos)" value={config.cci} mono />}
+            <CopyableRow label="Titular" value={config.holderName} copyable={false} />
+            {config.accountType && (
+              <CopyableRow label="Tipo de cuenta" value={config.accountType} copyable={false} />
+            )}
+          </div>
 
-        {config.qrImageUrl && (
-          <>
-            <Separator />
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-xs font-medium text-primary-900">O escanea el QR</p>
+          {config.qrImageUrl && (
+            <div className="flex flex-row items-center gap-3 sm:flex-col sm:items-center sm:justify-center sm:border-l sm:border-border sm:pl-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={config.qrImageUrl}
                 alt={`Código QR para depositar a la cuenta de ${config.holderName}`}
-                className="w-40 h-40 object-contain rounded-lg border bg-white p-2"
+                className="w-24 h-24 object-contain rounded-lg border border-border bg-white p-1.5"
               />
+              <p className="text-[11px] font-medium text-muted-foreground text-center sm:max-w-24">
+                Escanea el QR
+              </p>
             </div>
-          </>
-        )}
+          )}
+        </div>
 
         {config.description && (
-          <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-primary-100 p-3">
-            <Info className="w-4 h-4 text-primary-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-primary-900">{config.description}</p>
+          <div className="flex items-start gap-2 rounded-lg bg-muted/40 border border-border p-3">
+            <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">{config.description}</p>
           </div>
         )}
       </CardContent>
@@ -117,10 +117,10 @@ function CopyableRow({
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 py-1.5">
-      <span className="text-xs text-primary-700 shrink-0">{label}</span>
+    <div className="flex items-center justify-between gap-2 px-3 py-2">
+      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
       <div className="flex items-center gap-1.5 min-w-0">
-        <span className={`text-sm font-medium text-primary-900 truncate ${mono ? 'font-mono' : ''}`}>
+        <span className={`text-sm font-medium text-foreground truncate ${mono ? 'font-mono' : ''}`}>
           {value}
         </span>
         {copyable && (
@@ -128,7 +128,7 @@ function CopyableRow({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 shrink-0 text-primary-600 hover:text-primary-900"
+            className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-foreground"
             onClick={handleCopy}
             aria-label={copied ? `${label} copiado` : `Copiar ${label}`}
           >

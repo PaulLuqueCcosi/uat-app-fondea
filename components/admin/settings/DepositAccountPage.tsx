@@ -268,7 +268,7 @@ export function DepositAccountPage() {
                 <textarea
                   value={draft.description}
                   onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                  placeholder="Ej: Coloca tu DNI en el detalle de la transferencia."
+                  placeholder="Ej: Verifica que el comprobante muestre el número de operación y el monto."
                   rows={3}
                   maxLength={500}
                   className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"

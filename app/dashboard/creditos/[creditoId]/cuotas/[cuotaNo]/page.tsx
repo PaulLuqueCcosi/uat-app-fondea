@@ -313,6 +313,10 @@ export default function CuotaDetallePage() {
 
   const canSubmitDeclaration = voucherRows.every(isVoucherRowValid);
 
+  // Feedback en vivo del formulario: cuánto falta o sobra vs. el pendiente de esta cuota.
+  const declaredVsOutstandingDiff = declaredTotal - (cuota?.outstanding ?? 0);
+  const isExactDeclaredMatch = Math.abs(declaredVsOutstandingDiff) < 0.01;
+
   // ─── Submit handler ───────────────────────────────────────────────────────
 
   async function handleSubmitDeclaration() {
@@ -398,9 +402,14 @@ export default function CuotaDetallePage() {
         <StatusBanner view={view} cuota={cuota} />
       )}
 
-      {/* ─── Layout 2 columnas ─── */}
+      {/* ─── Layout 2 columnas ───
+          Izquierda = info para leer (cuánto debo, dónde deposito). Derecha = la acción
+          (el formulario). Antes DepositAccountCard estaba en la columna derecha, pegado
+          al formulario — dejaba la izquierda (solo Desglose) mucho más corta que la
+          derecha, con un hueco grande debajo. Moviéndola a la izquierda ambas columnas
+          quedan con una altura parecida. */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ── Columna izquierda: Desglose ── */}
+        {/* ── Columna izquierda: qué debo y dónde depositar ── */}
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
@@ -450,18 +459,32 @@ export default function CuotaDetallePage() {
                   Consecuencias del atraso
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <ul className="text-xs text-error-700 space-y-1">
-                  <li>• Mora de {formatCurrency(cuota.penaltyAccrued)} por {cuota.daysOverdue} días</li>
-                  <li>• A los 5 días se reporta a centrales de riesgo</li>
-                  <li>• A los 15 días se bloquea tu línea de crédito</li>
-                </ul>
+              <CardContent className="space-y-2">
+                <div className="flex items-start gap-2 text-xs text-error-700">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>Mora de {formatCurrency(cuota.penaltyAccrued)} acumulada por {cuota.daysOverdue} días de atraso</span>
+                </div>
+                <div className="flex items-start gap-2 text-xs text-error-700">
+                  <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>A los 5 días se reporta a centrales de riesgo</span>
+                </div>
+                <div className="flex items-start gap-2 text-xs text-error-700">
+                  <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>A los 15 días se bloquea tu línea de crédito</span>
+                </div>
               </CardContent>
             </Card>
           )}
+
+          {/* Datos para depositar — solo si hay algo que pagar ahora. Va en la misma
+              columna que el Desglose porque es info que el cliente lee antes de actuar,
+              no parte del formulario en sí. */}
+          {needsPayment && paymentStep === 'declare' && (
+            <DepositAccountCard config={depositAccount} error={depositAccountError} />
+          )}
         </div>
 
-        {/* ── Columna derecha: Declaración de pago ── */}
+        {/* ── Columna derecha: declarar el pago ── */}
         <div className="flex flex-col gap-6">
           {/* STEP: declare — comprobante en revisión (en lugar del formulario).
               Se muestra según `isUnderReview` (que viene de hasPendingDeclaration del
@@ -525,10 +548,6 @@ export default function CuotaDetallePage() {
                 </Card>
               )}
 
-              {/* Datos para depositar — va ANTES del formulario porque es el paso previo:
-                  primero transfiere, después sube el comprobante. */}
-              <DepositAccountCard config={depositAccount} error={depositAccountError} />
-
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
@@ -544,7 +563,12 @@ export default function CuotaDetallePage() {
                   {voucherRows.map((row, idx) => (
                     <div key={row.key} className="rounded-lg border border-border p-3 space-y-3">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-foreground">Comprobante {idx + 1}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold shrink-0">
+                            {idx + 1}
+                          </span>
+                          <p className="text-xs font-semibold text-foreground">Comprobante {idx + 1}</p>
+                        </div>
                         {voucherRows.length > 1 && (
                           <button
                             type="button"
@@ -620,13 +644,39 @@ export default function CuotaDetallePage() {
 
                   <Separator />
 
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Total declarado</span>
-                    <span className="font-medium text-foreground">{formatCurrency(declaredTotal)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Pendiente de esta cuota</span>
-                    <span className="font-medium text-foreground">{formatCurrency(cuota.outstanding)}</span>
+                  <div
+                    className={`rounded-lg border p-3 space-y-1.5 transition-colors ${
+                      declaredTotal > 0 && isExactDeclaredMatch
+                        ? 'border-success-200 bg-success-50/50'
+                        : 'border-border bg-muted/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Total declarado</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(declaredTotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Pendiente de esta cuota</span>
+                      <span className="font-medium text-foreground">{formatCurrency(cuota.outstanding)}</span>
+                    </div>
+                    {declaredTotal > 0 && (
+                      <p
+                        className={`text-xs flex items-center gap-1 pt-0.5 ${
+                          isExactDeclaredMatch ? 'text-success-700' : 'text-muted-foreground'
+                        }`}
+                      >
+                        {isExactDeclaredMatch ? (
+                          <>
+                            <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                            Cubre el total pendiente de esta cuota
+                          </>
+                        ) : declaredVsOutstandingDiff < 0 ? (
+                          <>Quedaría un saldo de {formatCurrency(Math.abs(declaredVsOutstandingDiff))} sin declarar</>
+                        ) : (
+                          <>Supera el pendiente de esta cuota en {formatCurrency(declaredVsOutstandingDiff)}</>
+                        )}
+                      </p>
+                    )}
                   </div>
 
                   <Button
