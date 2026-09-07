@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { ChevronDown, ChevronUp, Loader2, Play } from 'lucide-react';
 import { simulateEvaluationAction } from '@/app/actions/admin-evaluation-rules.actions';
 import type { EvaluationResponse, RuleSetVersionResponse } from '@/modules/admin/admin-evaluation-rules.service';
+import { YEARS_OF_ACTIVITY_OPTIONS } from '@/lib/constants';
 
 interface SimulationPanelProps {
   versions: RuleSetVersionResponse[];
@@ -24,7 +25,7 @@ export function SimulationPanel({ versions }: SimulationPanelProps) {
   const [age, setAge] = useState('30');
   const [dni, setDni] = useState('12345678');
   const [situation, setSituation] = useState('EMPLEADO_DEPENDIENTE');
-  const [yearsOfActivity, setYearsOfActivity] = useState('5');
+  const [yearsOfActivity, setYearsOfActivity] = useState('MAS_DE_3_ANIOS');
   const [monthlyIncome, setMonthlyIncome] = useState('3500');
   const [incomeMethod, setIncomeMethod] = useState('CUENTA_BANCARIA');
   const [hasAdditionalIncome, setHasAdditionalIncome] = useState(false);
@@ -58,7 +59,7 @@ export function SimulationPanel({ versions }: SimulationPanelProps) {
       },
       labor: {
         situation,
-        details: { industry: 'TECNOLOGIA', yearsOfActivity: Number(yearsOfActivity), businessRuc: null },
+        details: { industry: 'TECNOLOGIA', yearsOfActivity, businessRuc: null },
         income: { monthlyIncome: Number(monthlyIncome), incomeReceiptMethod: incomeMethod, hasAdditionalIncome, additionalIncomes: [] },
       },
       economic: {
@@ -151,7 +152,7 @@ export function SimulationPanel({ versions }: SimulationPanelProps) {
                 { value: 'EMPRESARIO', label: 'Empresario' },
                 { value: 'FREELANCE', label: 'Freelance' },
               ]} />
-              <Field label="Años de actividad" value={yearsOfActivity} onChange={setYearsOfActivity} type="number" />
+              <SelectField label="Años de actividad" value={yearsOfActivity} onChange={setYearsOfActivity} options={[...YEARS_OF_ACTIVITY_OPTIONS]} />
               <Field label="Ingreso mensual (S/)" value={monthlyIncome} onChange={setMonthlyIncome} type="number" />
               <SelectField label="Método de cobro" value={incomeMethod} onChange={setIncomeMethod} options={[
                 { value: 'CUENTA_BANCARIA', label: 'Cuenta bancaria' },
