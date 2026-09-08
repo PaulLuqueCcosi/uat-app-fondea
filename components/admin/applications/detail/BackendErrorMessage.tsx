@@ -19,7 +19,7 @@ interface ParsedBackendError {
 function parseBackendError(raw: string): ParsedBackendError | null {
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object') return parsed as ParsedEvaluationError;
+    if (parsed && typeof parsed === 'object') return parsed as ParsedBackendError;
     return null;
   } catch {
     return null;
