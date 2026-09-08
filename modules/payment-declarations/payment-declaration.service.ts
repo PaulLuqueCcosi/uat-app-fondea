@@ -11,6 +11,7 @@ import type { Result } from '@/modules/shared/result';
 import type {
   AdminPaymentDeclarationListParams,
   ApprovePaymentDeclarationRequest,
+  MyPaymentDeclarationDetail,
   PaymentDeclaration,
   PaymentDeclarationDetail,
   PaymentQuote,
@@ -22,6 +23,7 @@ import { backendFetch } from '@/lib/backend-fetch';
 import {
   mapPaymentDeclarationFromBackend,
   mapPaymentDeclarationDetailFromBackend,
+  mapMyPaymentDeclarationDetailFromBackend,
   mapPaymentQuoteFromBackend,
 } from './payment-declaration.mapper';
 
@@ -115,12 +117,14 @@ export async function listMyPaymentDeclarations(
 }
 
 /**
- * Detalle de una declaración propia.
+ * Detalle de una declaración propia — incluye la foto de cada comprobante (URL prefirmada,
+ * temporal). Antes usaba el mismo mapper que el listado (sin fotos): el cliente podía ver
+ * que había declarado un pago pero nunca volver a ver la foto que subió.
  * GET /api/v1/payment-declarations/{id}
  */
 export async function getMyPaymentDeclarationById(
   id: string,
-): Promise<PaymentDeclarationResult<PaymentDeclaration>> {
+): Promise<PaymentDeclarationResult<MyPaymentDeclarationDetail>> {
   try {
     const res = await backendFetch(`/api/v1/payment-declarations/${id}`, { context: CTX });
 
@@ -130,7 +134,7 @@ export async function getMyPaymentDeclarationById(
     if (!res.ok) return { ok: false, error: errors.serverError(res.status) };
 
     const raw = await res.json();
-    return { ok: true, data: mapPaymentDeclarationFromBackend(raw) };
+    return { ok: true, data: mapMyPaymentDeclarationDetailFromBackend(raw) };
   } catch {
     return { ok: false, error: errors.networkError() };
   }

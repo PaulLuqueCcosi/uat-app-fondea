@@ -7,6 +7,7 @@
 
 import type {
   InstallmentQuote,
+  MyPaymentDeclarationDetail,
   PaymentDeclaration,
   PaymentDeclarationDetail,
   PaymentDeclarationStatus,
@@ -61,7 +62,7 @@ function mapPaymentDeclarationStatus(raw: unknown): PaymentDeclarationStatus {
 // ─── Admin — detalle ──────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapVoucherDetailFromBackend(raw: any): VoucherDetail {
+export function mapVoucherDetailFromBackend(raw: any): VoucherDetail {
   return {
     id: raw.id ?? '',
     operationNumber: raw.operation_number ?? '',
@@ -123,6 +124,29 @@ export function mapPaymentDeclarationDetailFromBackend(raw: any): PaymentDeclara
     possibleDuplicate: raw.possible_duplicate ?? false,
     duplicateDeclarationIds: Array.isArray(raw.duplicate_declaration_ids) ? raw.duplicate_declaration_ids : [],
     paymentResult: raw.payment_result ? mapPaymentResultFromBackend(raw.payment_result) : null,
+  };
+}
+
+// ─── Cliente — detalle propio (con fotos) ──────────────────────────────────────
+
+/**
+ * Detalle propio con fotos — MyPaymentDeclarationDetailResponse.
+ * NUNCA lanza excepciones — si un campo falta, usa valor default seguro.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapMyPaymentDeclarationDetailFromBackend(raw: any): MyPaymentDeclarationDetail {
+  return {
+    id: raw.id ?? '',
+    creditId: raw.credit_id ?? '',
+    installmentNo: raw.installment_no ?? 0,
+    appliedInstallmentNo: raw.applied_installment_no ?? null,
+    status: mapPaymentDeclarationStatus(raw.status),
+    declaredAmount: raw.declared_amount ?? 0,
+    appliedAmount: raw.applied_amount ?? null,
+    clientMessage: raw.client_message ?? null,
+    reviewedAt: raw.reviewed_at ?? null,
+    createdAt: raw.created_at ?? '',
+    vouchers: Array.isArray(raw.vouchers) ? raw.vouchers.map(mapVoucherDetailFromBackend) : [],
   };
 }
 

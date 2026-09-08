@@ -20,6 +20,7 @@ export type {
   PaymentResult,
   PaymentResultDistribution,
   PaymentDeclarationDetail,
+  MyPaymentDeclarationDetail,
   AdminPaymentDeclarationListParams,
   ApprovePaymentDeclarationRequest,
   RejectPaymentDeclarationRequest,
@@ -36,4 +37,5 @@ export type { PaymentDeclarationError, PaymentDeclarationErrorCode } from './pay
 export {
   mapPaymentDeclarationFromBackend,
   mapPaymentDeclarationDetailFromBackend,
+  mapMyPaymentDeclarationDetailFromBackend,
 } from './payment-declaration.mapper';

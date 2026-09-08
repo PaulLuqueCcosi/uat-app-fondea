@@ -66,6 +66,29 @@ export interface VoucherDetail extends VoucherSummary {
   photoUrl: string;
 }
 
+// ─── Cliente — detalle propio (con fotos) ──────────────────────────────────────
+
+/**
+ * Detalle de UNA declaración propia del cliente, con las fotos de los comprobantes —
+ * MyPaymentDeclarationDetailResponse del backend. Distinto de {@link PaymentDeclarationDetail}
+ * (admin-only: incluye nota interna, deuda en vivo, posibles duplicados — nada de eso es
+ * para el cliente). El listado (`PaymentDeclaration`) sigue sin fotos por costo/rendimiento;
+ * esto es solo para cuando el cliente abre el detalle de una declaración puntual.
+ */
+export interface MyPaymentDeclarationDetail {
+  id: string;
+  creditId: string;
+  installmentNo: number;
+  appliedInstallmentNo: number | null;
+  status: PaymentDeclarationStatus;
+  declaredAmount: number;
+  appliedAmount: number | null;
+  clientMessage: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  vouchers: VoucherDetail[];
+}
+
 /** Una cuota dentro del resultado de aplicación del pago — parte de PaymentResult */
 export interface PaymentResultDistribution {
   installmentNo: number;

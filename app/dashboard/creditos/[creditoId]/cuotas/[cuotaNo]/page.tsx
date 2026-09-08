@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -21,8 +21,12 @@ import {
   Send,
   Hourglass,
   RefreshCw,
+  ChevronDown,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +38,7 @@ import {
 import {
   submitPaymentDeclarationAction,
   listMyPaymentDeclarationsAction,
+  getMyPaymentDeclarationByIdAction,
 } from '@/app/actions/payment-declaration.actions';
 import type {
   Installment,
@@ -43,7 +48,7 @@ import type {
 } from '@/modules/credits';
 import { getInstallmentViewStatus } from '@/modules/credits';
 import { formatBackendDateLong } from '@/modules/shared/backend-date';
-import type { PaymentDeclaration } from '@/modules/payment-declarations';
+import type { PaymentDeclaration, MyPaymentDeclarationDetail } from '@/modules/payment-declarations';
 import { getActiveDepositAccountAction } from '@/app/actions/deposit-account.actions';
 import type { DepositAccountConfig, DepositAccountError } from '@/modules/deposit-account';
 import { DepositAccountCard } from '@/components/credits/DepositAccountCard';
@@ -99,7 +104,14 @@ function isVoucherRowValid(row: VoucherRow): boolean {
 
 // ─── Payment flow steps ───────────────────────────────────────────────────────
 
-type PaymentStep = 'declare' | 'submitting' | 'submitted' | 'error';
+type PaymentStep = 'declare' | 'submitting' | 'error';
+
+/** Badge por status de una declaración, para el historial de comprobantes. */
+const DECLARATION_STATUS_BADGE: Record<PaymentDeclaration['status'], { label: string; variant: 'success' | 'error' | 'pending' }> = {
+  APPROVED: { label: 'Aprobado', variant: 'success' },
+  REJECTED: { label: 'Rechazado', variant: 'error' },
+  PENDING: { label: 'En revisión', variant: 'pending' },
+};
 
 // ─── Banner de estado ─────────────────────────────────────────────────────────
 
@@ -228,8 +240,30 @@ export default function CuotaDetallePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Declaración de pago existente para esta cuota (la más reciente, si hay alguna)
-  const [existingDeclaration, setExistingDeclaration] = useState<PaymentDeclaration | null>(null);
+  // TODAS las declaraciones de pago hechas para esta cuota (no solo la última) — más
+  // recientes primero, según el orden que ya trae el backend. Antes solo se guardaba la más
+  // reciente, así que una vez que la cuota quedaba PAGADA (o la declaración vigente pasaba a
+  // ser otra) el historial completo de comprobantes enviados — incluidos los rechazados —
+  // desaparecía por completo de la vista, sin ningún lugar donde volver a verlo.
+  const [installmentDeclarations, setInstallmentDeclarations] = useState<PaymentDeclaration[]>([]);
+  // Detalle CON las fotos de cada comprobante, por id de declaración — se pide aparte porque
+  // el listado nunca trae fotos (evita generar URLs prefirmadas para cada fila de una lista
+  // paginada). Antes el cliente veía "1 comprobante, S/300" sin poder volver a ver la foto.
+  const [declarationDetails, setDeclarationDetails] = useState<Record<string, MyPaymentDeclarationDetail>>({});
+  const [loadingDeclarationDetails, setLoadingDeclarationDetails] = useState(false);
+
+  // La declaración PENDING (si hay una) es la que gatilla la vista "en revisión" del
+  // formulario. La más reciente de TODAS (independiente del status) es la que se usa para
+  // el banner de "tu comprobante anterior fue rechazado" antes del formulario.
+  const pendingDeclaration = installmentDeclarations.find((d) => d.status === 'PENDING') ?? null;
+  const mostRecentDeclaration = installmentDeclarations[0] ?? null;
+
+  // Historial de comprobantes: la tarjeta siempre muestra poco por defecto (la última
+  // declaración si la cuota sigue activa, o solo las aprobadas si ya cerró). El botón "Ver
+  // todo el historial" abre un modal aparte con TODAS las declaraciones, cada una colapsada
+  // (se expande individualmente para ver sus fotos) — en vez de desparramar todo inline en
+  // la misma tarjeta, que se volvía ilegible con varios comprobantes por declaración.
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
 
   // Cuenta a la que el cliente tiene que transferir. Se guarda también el error para
   // poder explicarle por qué no la ve (ej. el admin no configuró ninguna) en vez de
@@ -239,7 +273,6 @@ export default function CuotaDetallePage() {
 
   // Payment declaration state
   const [paymentStep, setPaymentStep] = useState<PaymentStep>('declare');
-  const [submittedDeclaration, setSubmittedDeclaration] = useState<PaymentDeclaration | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const nextVoucherKeyRef = useRef(1);
@@ -247,39 +280,71 @@ export default function CuotaDetallePage() {
     { key: 0, file: null, fileError: null, operationNumber: '', amount: '' },
   ]);
 
-  useEffect(() => {
-    async function fetchDetail() {
-      setLoading(true);
-      const [cuotaRes, creditRes, declarationsRes, depositAccountRes] = await Promise.all([
-        getInstallmentByNoAction(creditoId, cuotaNo),
-        getCreditByIdAction(creditoId),
-        listMyPaymentDeclarationsAction(0, 50),
-        getActiveDepositAccountAction(),
-      ]);
-      if (cuotaRes.ok) {
-        setCuota(cuotaRes.data);
-      } else {
-        setError(cuotaRes.error.message);
-      }
-      if (creditRes.ok) {
-        setCredit(creditRes.data);
-      }
-      if (declarationsRes.ok) {
-        // Más reciente primero según el backend — el primer match es el vigente.
-        const match = declarationsRes.data.items.find(
-          (d) => d.creditId === creditoId && d.installmentNo === cuotaNo,
-        );
-        setExistingDeclaration(match ?? null);
-      }
-      if (depositAccountRes.ok) {
-        setDepositAccount(depositAccountRes.data);
-      } else {
-        setDepositAccountError(depositAccountRes.error);
-      }
-      setLoading(false);
+  // Extraído del useEffect para poder llamarlo también después de declarar un pago — así la
+  // vista de "recién declarado" es EXACTAMENTE la misma que la de "recargué la página", en
+  // vez de una tarjeta de éxito aparte que se veía distinta a lo que quedaba tras el reload.
+  const fetchDetail = useCallback(async () => {
+    setLoading(true);
+    setHistoryDialogOpen(false);
+    const [cuotaRes, creditRes, declarationsRes, depositAccountRes] = await Promise.all([
+      getInstallmentByNoAction(creditoId, cuotaNo),
+      getCreditByIdAction(creditoId),
+      listMyPaymentDeclarationsAction(0, 50),
+      getActiveDepositAccountAction(),
+    ]);
+    if (cuotaRes.ok) {
+      setCuota(cuotaRes.data);
+    } else {
+      setError(cuotaRes.error.message);
     }
-    fetchDetail();
+    if (creditRes.ok) {
+      setCredit(creditRes.data);
+    }
+    if (declarationsRes.ok) {
+      // TODAS las declaraciones de esta cuota, no solo la vigente — para poder mostrar el
+      // historial completo (incluidos rechazos previos) independientemente del estado
+      // actual de la cuota. Ya vienen más recientes primero desde el backend.
+      const matches = declarationsRes.data.items.filter(
+        (d) => d.creditId === creditoId && d.installmentNo === cuotaNo,
+      );
+      setInstallmentDeclarations(matches);
+    }
+    if (depositAccountRes.ok) {
+      setDepositAccount(depositAccountRes.data);
+    } else {
+      setDepositAccountError(depositAccountRes.error);
+    }
+    setLoading(false);
   }, [creditoId, cuotaNo]);
+
+  useEffect(() => {
+    fetchDetail();
+  }, [fetchDetail]);
+
+  // Fotos de los comprobantes — pedidas aparte (ver comentario en el estado), una por cada
+  // declaración de esta cuota, sin importar su status (PENDING/APPROVED/REJECTED): el
+  // historial se ve completo siempre, no solo mientras hay algo pendiente de revisar.
+  const declarationIds = installmentDeclarations.map((d) => d.id).join(',');
+  useEffect(() => {
+    if (!declarationIds) {
+      setDeclarationDetails({});
+      return;
+    }
+    let cancelled = false;
+    async function fetchPhotos() {
+      setLoadingDeclarationDetails(true);
+      const ids = declarationIds.split(',');
+      const results = await Promise.all(ids.map((id) => getMyPaymentDeclarationByIdAction(id)));
+      if (!cancelled) {
+        const map: Record<string, MyPaymentDeclarationDetail> = {};
+        results.forEach((res) => { if (res.ok) map[res.data.id] = res.data; });
+        setDeclarationDetails(map);
+        setLoadingDeclarationDetails(false);
+      }
+    }
+    fetchPhotos();
+    return () => { cancelled = true; };
+  }, [declarationIds]);
 
   // ─── Voucher row handlers ─────────────────────────────────────────────────
 
@@ -339,8 +404,15 @@ export default function CuotaDetallePage() {
     const result = await submitPaymentDeclarationAction(formData);
 
     if (result.ok) {
-      setSubmittedDeclaration(result.data);
-      setPaymentStep('submitted');
+      // Antes esto mostraba una tarjeta de "éxito" hecha aparte (monto, cantidad de
+      // comprobantes, un par de botones) — visualmente distinta de la vista "en revisión"
+      // que se ve al recargar la página. En vez de mantener dos vistas para el mismo estado,
+      // se vuelve a pedir todo (fetchDetail) para terminar exactamente en el mismo lugar que
+      // un reload: la tarjeta "Comprobante en revisión" + "Lo que enviaste" con las fotos.
+      toast.success('Declaración enviada — queda pendiente de revisión');
+      setVoucherRows([{ key: 0, file: null, fileError: null, operationNumber: '', amount: '' }]);
+      await fetchDetail();
+      setPaymentStep('declare');
     } else {
       setSubmitError(result.error.message);
       setPaymentStep('error');
@@ -486,40 +558,53 @@ export default function CuotaDetallePage() {
               declaraciones: si esa llamada falla, igual se le informa al cliente que
               tiene algo en revisión en vez de ofrecerle subir otro comprobante. */}
           {isUnderReview && paymentStep === 'declare' && (
-            <Card className="border-primary-200 bg-primary-50/50">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2 text-primary-900">
-                  <Hourglass className="w-4 h-4 text-primary-600" />
-                  Comprobante en revisión
-                </CardTitle>
-                <CardDescription className="text-primary-700">
-                  Estamos validando tu pago. La mora quedó detenida desde que lo enviaste —
-                  si todo está en orden, no vas a pagar nada extra por el tiempo de revisión.
-                </CardDescription>
-              </CardHeader>
-              {existingDeclaration && (
-                <CardContent className="space-y-2">
-                  <div className="flex items-center justify-between py-1.5">
-                    <span className="text-sm text-muted-foreground">Monto declarado</span>
-                    <span className="text-sm font-medium text-foreground">
-                      {formatCurrency(existingDeclaration.declaredAmount)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-1.5">
-                    <span className="text-sm text-muted-foreground">Comprobantes</span>
-                    <span className="text-sm font-medium text-foreground">
-                      {existingDeclaration.vouchers.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-1.5">
-                    <span className="text-sm text-muted-foreground">Enviado el</span>
-                    <span className="text-sm font-medium text-foreground">
-                      {formatDate(existingDeclaration.createdAt)}
-                    </span>
-                  </div>
-                </CardContent>
-              )}
-            </Card>
+            <>
+              {/* Fondo blanco liso, igual que el resto de tarjetas de la página — antes tenía
+                  bg-primary-50/50 (celeste), que el usuario pidió explícitamente sacar. El
+                  color queda solo en el ícono/título, como acento, no como fondo. */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2 text-primary-900">
+                    <Hourglass className="w-4 h-4 text-primary-600" />
+                    Comprobante en revisión
+                  </CardTitle>
+                  <CardDescription>
+                    Estamos validando tu pago. La mora quedó detenida desde que lo enviaste —
+                    si todo está en orden, no vas a pagar nada extra por el tiempo de revisión.
+                  </CardDescription>
+                </CardHeader>
+                {pendingDeclaration && (
+                  <CardContent className="space-y-2">
+                    {/* Monto y cantidad de comprobantes SOLO si hay más de uno — con un solo
+                        comprobante son el mismo dato que ya se ve en el historial de abajo,
+                        mostrarlos acá también era pura repetición. Con varios comprobantes
+                        sí aportan: son la SUMA y el conteo, no un dato de un voucher puntual. */}
+                    {pendingDeclaration.vouchers.length > 1 && (
+                      <>
+                        <div className="flex items-center justify-between py-1.5">
+                          <span className="text-sm text-muted-foreground">Monto declarado (total)</span>
+                          <span className="text-sm font-medium text-foreground">
+                            {formatCurrency(pendingDeclaration.declaredAmount)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between py-1.5">
+                          <span className="text-sm text-muted-foreground">Comprobantes</span>
+                          <span className="text-sm font-medium text-foreground">
+                            {pendingDeclaration.vouchers.length}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex items-center justify-between py-1.5">
+                      <span className="text-sm text-muted-foreground">Enviado el</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {formatDate(pendingDeclaration.createdAt)}
+                      </span>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            </>
           )}
 
           {/* STEP: declare — formulario (con banner de rechazo previo si aplica).
@@ -527,7 +612,7 @@ export default function CuotaDetallePage() {
               futuras — ver getInstallmentViewStatus.canDeclarePayment. */}
           {needsPayment && paymentStep === 'declare' && (
             <>
-              {existingDeclaration?.status === 'REJECTED' && (
+              {mostRecentDeclaration?.status === 'REJECTED' && (
                 <Card className="border-error-200 bg-error-50/50">
                   <CardHeader>
                     <CardTitle className="text-sm flex items-center gap-2 text-error-900">
@@ -535,7 +620,7 @@ export default function CuotaDetallePage() {
                       Tu comprobante anterior fue rechazado
                     </CardTitle>
                     <CardDescription className="text-error-700">
-                      {existingDeclaration.clientMessage ??
+                      {mostRecentDeclaration.clientMessage ??
                         'No cumplió con los requisitos. Puedes enviar un nuevo comprobante.'}
                     </CardDescription>
                   </CardHeader>
@@ -707,57 +792,6 @@ export default function CuotaDetallePage() {
             </Card>
           )}
 
-          {/* STEP: submitted */}
-          {paymentStep === 'submitted' && submittedDeclaration && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2 text-success-900">
-                  <CheckCircle className="w-5 h-5 text-success-700" />
-                  Declaración enviada
-                </CardTitle>
-                <CardDescription>
-                  Pendiente de revisión — un administrador va a validar tu comprobante pronto.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-lg border p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Monto declarado</span>
-                    <span className="text-sm font-bold text-success-700">
-                      {formatCurrency(submittedDeclaration.declaredAmount)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Comprobantes</span>
-                    <span className="text-sm font-medium text-foreground">
-                      {submittedDeclaration.vouchers.length}
-                    </span>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Estado</span>
-                    <Badge variant="pending">En revisión</Badge>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => router.push(`/dashboard/creditos/${creditoId}`)}
-                  >
-                    Ver crédito
-                  </Button>
-                  <Button
-                    className="flex-1 bg-accent-500 text-accent-900 hover:bg-accent-400"
-                    onClick={() => router.push('/dashboard/creditos')}
-                  >
-                    Mis créditos
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* STEP: error */}
           {paymentStep === 'error' && (
@@ -845,8 +879,177 @@ export default function CuotaDetallePage() {
               Tu comprobante se revisa manualmente. La mora se detiene desde que lo envías.
             </div>
           )}
+
+          {/* Historial de comprobantes — sección propia, independiente del status de la
+              cuota y de `paymentStep`: siempre que haya al menos una declaración, se ve.
+              La tarjeta inline muestra POCO (para no enterrar al cliente en intentos
+              viejos): solo lo aprobado si la cuota ya cerró, o solo la última declaración
+              si sigue activa. "Ver todo el historial" abre un modal aparte con TODAS,
+              cada una colapsada — se expande una por una para ver sus fotos, en vez de
+              desparramar todo inline (ilegible con varios comprobantes por declaración). */}
+          {(() => {
+            const isClosedInstallment = view.status === 'PAID';
+            const defaultDeclarations = isClosedInstallment
+              ? installmentDeclarations.filter((d) => d.status === 'APPROVED')
+              : mostRecentDeclaration ? [mostRecentDeclaration] : [];
+            const hasMoreToShow = installmentDeclarations.length > defaultDeclarations.length;
+            if (installmentDeclarations.length === 0) return null;
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-primary" />
+                    Historial de comprobantes
+                  </CardTitle>
+                  <CardDescription>
+                    {isClosedInstallment
+                      ? 'Comprobantes aprobados para esta cuota.'
+                      : 'Tu declaración más reciente para esta cuota.'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {loadingDeclarationDetails && Object.keys(declarationDetails).length === 0 && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Cargando comprobantes...
+                    </div>
+                  )}
+                  {defaultDeclarations.map((decl) => (
+                    <div key={decl.id} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">{formatDate(decl.createdAt)}</span>
+                        <Badge variant={DECLARATION_STATUS_BADGE[decl.status].variant}>
+                          {DECLARATION_STATUS_BADGE[decl.status].label}
+                        </Badge>
+                      </div>
+                      {decl.status === 'REJECTED' && decl.clientMessage && (
+                        <p className="text-xs text-error-700 bg-error-50/50 border border-error-200 rounded-md px-2.5 py-1.5">
+                          {decl.clientMessage}
+                        </p>
+                      )}
+                      <VoucherPhotos detail={declarationDetails[decl.id]} />
+                    </div>
+                  ))}
+
+                  {hasMoreToShow && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() => setHistoryDialogOpen(true)}
+                    >
+                      Ver todo el historial ({installmentDeclarations.length})
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
       </div>
+
+      {/* Modal con TODAS las declaraciones de esta cuota, cada una colapsada por defecto —
+          se expande individualmente para ver sus fotos. Separado de la tarjeta inline para
+          no desparramar potencialmente muchas fotos de golpe en medio de la página. */}
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        {/* Ancho: se deja la base mobile-safe del componente (`max-w-[calc(100%-2rem)]`, con
+            margen a los costados en pantallas chicas) y solo se ensancha desde `sm:` en
+            adelante — un `max-w-lg` a secas pisaría ese cap en mobile y el modal tocaría
+            los bordes de la pantalla sin margen. */}
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-4 pb-3 border-b shrink-0">
+            <DialogTitle className="text-base">Historial completo de comprobantes</DialogTitle>
+            <DialogDescription>
+              Cuota {cuota.installmentNo} — todas tus declaraciones, más reciente primero.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
+            {installmentDeclarations.map((decl, i) => (
+              <Collapsible key={decl.id} defaultOpen={i === 0} className="rounded-lg border border-border overflow-hidden">
+                <CollapsibleTrigger className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-neutral-50 transition-colors group">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs text-muted-foreground shrink-0">{formatDate(decl.createdAt)}</span>
+                    <Badge variant={DECLARATION_STATUS_BADGE[decl.status].variant}>
+                      {DECLARATION_STATUS_BADGE[decl.status].label}
+                    </Badge>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 transition-transform group-data-[panel-open]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-3 pb-3 space-y-3 border-t border-border">
+                  <div className="pt-3 space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      Monto declarado: <span className="font-medium text-foreground">{formatCurrency(decl.declaredAmount)}</span>
+                    </p>
+                    {decl.status === 'REJECTED' && decl.clientMessage && (
+                      <p className="text-xs text-error-700 bg-error-50/50 border border-error-200 rounded-md px-2.5 py-1.5">
+                        {decl.clientMessage}
+                      </p>
+                    )}
+                  </div>
+                  <VoucherPhotos detail={declarationDetails[decl.id]} />
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ─── Fotos de los comprobantes de una declaración ──────────────────────────────
+// Extraído porque se usa tanto en la tarjeta inline (resumen) como en el modal del
+// historial completo — antes estaba duplicado entre ambos lugares.
+
+function VoucherPhotos({ detail }: { detail: MyPaymentDeclarationDetail | undefined }) {
+  if (!detail) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        Cargando comprobantes...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {detail.vouchers.map((v, idx) => (
+        <div key={v.id} className="rounded-lg border border-border bg-card p-3 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold shrink-0">
+              {idx + 1}
+            </span>
+            <p className="text-xs font-semibold text-foreground">Comprobante {idx + 1}</p>
+          </div>
+
+          <a
+            href={v.photoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group block rounded-lg border border-border overflow-hidden bg-white hover:border-primary/40 transition-colors"
+            title="Abrir foto en tamaño completo"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- URL prefirmada temporal, no vale la pena el pipeline de optimización de next/image */}
+            <img
+              src={v.photoUrl}
+              alt={`Comprobante ${idx + 1} — operación ${v.operationNumber}`}
+              className="w-full max-h-80 object-contain mx-auto bg-white group-hover:opacity-90 transition-opacity"
+            />
+          </a>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">N° de operación</p>
+              <p className="text-sm font-mono text-foreground truncate">{v.operationNumber}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Monto</p>
+              <p className="text-sm font-semibold text-foreground">{formatCurrency(v.amount)}</p>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

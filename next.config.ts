@@ -84,6 +84,12 @@ const nextConfig: NextConfig = {
   experimental: {
     // Enable optimized package imports
     optimizePackageImports: ['lucide-react'],
+    serverActions: {
+      // Default de Next es 1MB — muy poco para submitPaymentDeclarationAction, que sube
+      // hasta 5 fotos de comprobante de hasta 10MB cada una (ver
+      // depositos.voucher.max-file-size-mb en el backend). 50mb cubre el peor caso real.
+      bodySizeLimit: '50mb',
+    },
   },
 };
 
