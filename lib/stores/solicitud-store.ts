@@ -81,8 +81,8 @@ function mapApplication(data: any): ApplicationRecord {
 function mapIntention(data: any): ApplicationIntention {
   return {
     amount: data.amount,
-    termDays: data.term_days,
-    installmentCount: data.installment_count,
+    termDays: data.termDays,
+    installmentCount: data.installmentCount,
   };
 }
 

@@ -317,7 +317,7 @@ function ScoringCard({ scoring }: { scoring: NonNullable<EvaluationSnapshotItem[
         {/* Barra visual del score */}
         <div className="relative h-3 bg-muted rounded-full overflow-hidden">
           <div
-            className={`absolute inset-y-0 left-0 rounded-full transition-all ${scoring.finalScore >= scoring.approvedMin ? 'bg-emerald-500' : 'bg-red-500'}`}
+            className={`absolute inset-y-0 left-0 rounded-full transition-all ${scoring.decision === 'APPROVED' ? 'bg-emerald-500' : 'bg-red-500'}`}
             style={{ width: `${Math.min(100, scoring.finalScore)}%` }}
           />
           <div
