@@ -6,6 +6,7 @@ import {
 import Link from 'next/link';
 import type { AdminApplicationCore } from '@/modules/admin/admin-application-detail.service';
 import { CreditCreationRetryButton } from './CreditCreationRetryButton';
+import { BackendErrorMessage } from './BackendErrorMessage';
 
 interface Props {
   data: AdminApplicationCore;
@@ -84,8 +85,8 @@ export function ApplicationOverviewTab({ data, dates }: Props) {
               )}
               {data.evaluationError && (
                 <div>
-                  <p className="text-[11px] text-muted-foreground">Error de evaluación</p>
-                  <p className="text-sm text-red-600">{data.evaluationError}</p>
+                  <p className="text-[11px] text-muted-foreground mb-1">Error de evaluación</p>
+                  <BackendErrorMessage raw={data.evaluationError} />
                 </div>
               )}
             </CardContent>
@@ -117,8 +118,8 @@ export function ApplicationOverviewTab({ data, dates }: Props) {
                 <>
                   {data.creditCreationError && (
                     <div>
-                      <p className="text-[11px] text-muted-foreground">Error</p>
-                      <p className="text-sm text-red-600">{data.creditCreationError}</p>
+                      <p className="text-[11px] text-muted-foreground mb-1">Error</p>
+                      <BackendErrorMessage raw={data.creditCreationError} />
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">

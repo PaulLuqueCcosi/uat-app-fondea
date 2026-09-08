@@ -247,21 +247,33 @@ export async function getProxyCheck(ip: string): Promise<ProxyCheckResult | null
   }
 }
 
+/**
+ * Señales "duras" — casi inequívocas de fraude, bloquean sin importar el
+ * risk_score. El resto de las señales de proxycheck (proxy/vpn/anonymous/
+ * hosting/scraper) son ruidosas: un ISP legítimo puede caer en un rango de
+ * IP marcado por asociarse a un proveedor de proxies residenciales (ej.
+ * Rayobyte) sin que el usuario esté usando nada raro. Para esas, exigimos
+ * que el propio risk_score agregado de proxycheck también sea alto — así
+ * confiamos en su score calibrado en vez de reaccionar a un flag suelto.
+ */
 function extractProxyCheckReasons(pc: ProxyCheckResult): string[] {
   const reasons: string[] = [];
-  if (pc.vpn) reasons.push('ProxyCheck: VPN detectado');
-  if (pc.proxy) reasons.push('ProxyCheck: Proxy detectado');
+
   if (pc.tor) reasons.push('ProxyCheck: Tor detectado');
-  if (pc.anonymous) reasons.push('ProxyCheck: Conexión anónima');
-  if (pc.hosting) reasons.push('ProxyCheck: IP de hosting/datacenter');
-  if (pc.scraper) reasons.push('ProxyCheck: Scraper detectado');
   if (pc.compromised) reasons.push('ProxyCheck: IP comprometida');
+
   if (pc.risk_score_high) {
+    if (pc.vpn) reasons.push('ProxyCheck: VPN detectado');
+    if (pc.proxy) reasons.push('ProxyCheck: Proxy detectado');
+    if (pc.anonymous) reasons.push('ProxyCheck: Conexión anónima');
+    if (pc.hosting) reasons.push('ProxyCheck: IP de hosting/datacenter');
+    if (pc.scraper) reasons.push('ProxyCheck: Scraper detectado');
     reasons.push(`ProxyCheck: Risk score alto (${pc.risk_score} >= ${pc.risk_score_threshold})`);
+    if (pc.operator_name) {
+      reasons.push(`ProxyCheck: Operador: ${pc.operator_name}`);
+    }
   }
-  if (pc.operator_name) {
-    reasons.push(`ProxyCheck: Operador: ${pc.operator_name}`);
-  }
+
   return reasons;
 }
 

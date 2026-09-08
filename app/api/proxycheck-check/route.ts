@@ -107,6 +107,27 @@ export async function GET(request: NextRequest) {
       risk_score: result.risk_score,
       risk_score_high: result.risk_score_high,
     });
+    // Detalle de POR QUÉ proxycheck.io clasificó esta IP así — útil para
+    // distinguir un falso positivo (ej. IP de datacenter/ISP corporativo)
+    // de un proxy/VPN real (ej. IP de NordVPN, Cloudflare WARP, etc.)
+    console.log('[ProxyCheck] Detalle de detección para', ip, ':', {
+      hosting: result.hosting,
+      anonymous: result.anonymous,
+      scraper: result.scraper,
+      compromised: result.compromised,
+      confidence: result.confidence,
+      network_type: result.network_type,
+      provider: result.provider,
+      organisation: result.organisation,
+      asn: result.asn,
+      operator_name: result.operator_name,
+      operator_anonymity: result.operator_anonymity,
+      country_code: result.country_code,
+      city: result.city,
+      region: result.region,
+      attack_history: result.attack_history,
+      detection_history: result.detection_history,
+    });
 
     return NextResponse.json(result);
   } catch (error) {

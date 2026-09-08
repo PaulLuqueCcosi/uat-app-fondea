@@ -8,6 +8,7 @@ import type {
   EvaluationModuleTrace,
   EvaluationRuleTrace,
 } from '@/modules/admin/admin-application-detail.service';
+import { BackendErrorMessage } from './BackendErrorMessage';
 
 interface Props {
   data: AdminApplicationEvaluation;
@@ -100,7 +101,7 @@ function PipelineStateCard({ data }: { data: AdminApplicationEvaluation }) {
         </div>
         {data.evaluationError && (
           <div className="mt-3 rounded-lg bg-red-50 border border-red-200 p-3">
-            <p className="text-xs text-red-700">{data.evaluationError}</p>
+            <BackendErrorMessage raw={data.evaluationError} />
           </div>
         )}
       </CardContent>

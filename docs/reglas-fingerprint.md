@@ -95,10 +95,14 @@ if (distance > 1500) → sospechoso
 
 ### Reglas proxycheck.io
 
-Cualquiera de estos campos en `true` → sospechoso:
-- `vpn`, `proxy`, `tor`, `anonymous`, `hosting`, `scraper`, `compromised`
-- `risk_score >= risk_score_threshold` (normalmente 65)
-- `operator_name` presente (indica operador VPN conocido)
+**Señales duras** (bloquean siempre, sin importar el `risk_score`):
+- `tor`, `compromised`
+
+**Señales blandas** (solo bloquean si además `risk_score_high` es `true`, umbral `risk_score_threshold` normalmente 65):
+- `vpn`, `proxy`, `anonymous`, `hosting`, `scraper`
+- `operator_name` presente (indica operador VPN/proxy conocido)
+
+**Por qué la distinción** (2026-09-08): un ISP legítimo puede caer en un rango de IP que proxycheck asocia a un proveedor de proxies residenciales (ej. Rayobyte) sin que el usuario esté usando nada raro — `proxy: true` con `risk_score: 0` es un falso positivo real observado en producción/dev (IP de "CALA SERVICIOS INTEGRALES E.I.R.L.", `network_type: Business`). Exigir `risk_score_high` para las señales blandas evita bloquear a esos usuarios reales, mientras que `tor`/`compromised` siguen siendo casi inequívocos de fraude y bloquean sin condición.
 
 ### Veredicto combinado
 
