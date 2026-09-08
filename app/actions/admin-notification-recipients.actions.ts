@@ -2,6 +2,7 @@
 
 import {
   addAdminAlertRecipient,
+  getAdminAlertRecipients,
   removeAdminAlertRecipient,
   setAdminAlertRecipientActive,
 } from '@/modules/admin/admin-notification-recipients.service';
@@ -10,6 +11,10 @@ import type { AddAdminAlertRecipientRequest } from '@/modules/admin/admin-notifi
 /**
  * Server Actions — correos que reciben alertas operativas del sistema.
  */
+
+export async function getAdminAlertRecipientsAction() {
+  return getAdminAlertRecipients();
+}
 
 export async function addAdminAlertRecipientAction(request: AddAdminAlertRecipientRequest) {
   return addAdminAlertRecipient(request);

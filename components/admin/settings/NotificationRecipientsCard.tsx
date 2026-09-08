@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Mail, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { getAdminAlertRecipients } from '@/modules/admin/admin-notification-recipients.service';
+import { getAdminAlertRecipientsAction } from '@/app/actions/admin-notification-recipients.actions';
 import type { AdminAlertRecipient } from '@/modules/admin/admin-notification-recipients.types';
 
 /**
@@ -17,7 +17,7 @@ export function NotificationRecipientsCard() {
   const [recipients, setRecipients] = useState<AdminAlertRecipient[] | undefined>(undefined);
 
   useEffect(() => {
-    getAdminAlertRecipients().then(setRecipients);
+    getAdminAlertRecipientsAction().then(setRecipients);
   }, []);
 
   const activeCount = recipients?.filter((r) => r.active).length ?? 0;

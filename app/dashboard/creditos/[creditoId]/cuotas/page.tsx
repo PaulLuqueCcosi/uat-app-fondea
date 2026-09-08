@@ -46,6 +46,7 @@ import {
 import type { Installment, InstallmentStatus, Credit } from '@/modules/credits';
 import { getInstallmentViewStatus } from '@/modules/credits';
 import { formatBackendDate, formatBackendDateShort } from '@/modules/shared/backend-date';
+import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -367,6 +368,7 @@ export default function CuotasPage() {
 
   const [data, setData] = React.useState<Installment[]>([]);
   const [credit, setCredit] = React.useState<Credit | null>(null);
+  useBreadcrumbLabel(creditoId, credit?.creditCode);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [statusFilter, setStatusFilter] = React.useState<CuotaFilter>('ALL');

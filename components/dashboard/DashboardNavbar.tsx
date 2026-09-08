@@ -26,11 +26,17 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { UserMenuDropdown } from '@/components/ui/user-menu-dropdown';
+import { useBreadcrumbLabelsStore } from '@/modules/shared/breadcrumb-labels';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Genera breadcrumbs desde el pathname */
-function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
+/** Genera breadcrumbs desde el pathname. `dynamicLabels` mapea un segmento
+ * (ej. el UUID de un crédito) a su label legible (ej. el creditCode) — lo
+ * registran las páginas de detalle vía `useBreadcrumbLabel`. */
+function getBreadcrumbs(
+  pathname: string,
+  dynamicLabels: Record<string, string>,
+): { label: string; href?: string }[] {
   const segments = pathname.replace('/dashboard', '').split('/').filter(Boolean);
 
   if (segments.length === 0) return [{ label: 'Dashboard' }];
@@ -55,7 +61,7 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
     path += `/${seg}`;
     const isLast = i === segments.length - 1;
     crumbs.push({
-      label: labelMap[seg] || seg,
+      label: dynamicLabels[seg] || labelMap[seg] || seg,
       href: isLast ? undefined : path,
     });
   });
@@ -248,7 +254,8 @@ function NotificationBell() {
 
 export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
   const pathname = usePathname();
-  const breadcrumbs = getBreadcrumbs(pathname);
+  const dynamicLabels = useBreadcrumbLabelsStore((s) => s.labels);
+  const breadcrumbs = getBreadcrumbs(pathname, dynamicLabels);
 
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center border-b border-border bg-white/90 backdrop-blur-md px-4">

@@ -42,6 +42,7 @@ import {
   getInstallmentViewStatus,
 } from '@/modules/credits';
 import { formatBackendDate, parseBackendDate } from '@/modules/shared/backend-date';
+import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -103,6 +104,7 @@ export default function CreditoDetallePage() {
   const creditoId = params.creditoId as string;
 
   const [credit, setCredit] = useState<Credit | null>(null);
+  useBreadcrumbLabel(creditoId, credit?.creditCode);
   const [summary, setSummary] = useState<CreditSummary | null>(null);
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [nextPayment, setNextPayment] = useState<NextPayment | null>(null);

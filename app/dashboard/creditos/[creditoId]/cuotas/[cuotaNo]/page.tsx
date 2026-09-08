@@ -47,6 +47,7 @@ import type { PaymentDeclaration } from '@/modules/payment-declarations';
 import { getActiveDepositAccountAction } from '@/app/actions/deposit-account.actions';
 import type { DepositAccountConfig, DepositAccountError } from '@/modules/deposit-account';
 import { DepositAccountCard } from '@/components/credits/DepositAccountCard';
+import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -223,6 +224,7 @@ export default function CuotaDetallePage() {
 
   const [cuota, setCuota] = useState<Installment | null>(null);
   const [credit, setCredit] = useState<Credit | null>(null);
+  useBreadcrumbLabel(creditoId, credit?.creditCode);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -707,18 +709,18 @@ export default function CuotaDetallePage() {
 
           {/* STEP: submitted */}
           {paymentStep === 'submitted' && submittedDeclaration && (
-            <Card className="border-success-200 bg-success-50/30">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2 text-success-900">
                   <CheckCircle className="w-5 h-5 text-success-700" />
                   Declaración enviada
                 </CardTitle>
-                <CardDescription className="text-success-700">
+                <CardDescription>
                   Pendiente de revisión — un administrador va a validar tu comprobante pronto.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="rounded-lg border border-success-200 bg-white p-4 space-y-2">
+                <div className="rounded-lg border p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Monto declarado</span>
                     <span className="text-sm font-bold text-success-700">
