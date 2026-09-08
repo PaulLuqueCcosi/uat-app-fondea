@@ -854,23 +854,6 @@ export default function CuotaDetallePage() {
             </Card>
           )}
 
-          {/* Cuota futura — no se puede adelantar el pago (lo rechaza el backend, ver
-              TargetInstallmentSelector). Antes acá se le decía al cliente "puedes
-              adelantar el pago si la cuota anterior está al día", que era incorrecto. */}
-          {view.status === 'PENDING' && paymentStep === 'declare' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  Todavía no vence
-                </CardTitle>
-                <CardDescription>
-                  Vas a poder declarar el pago de esta cuota cuando llegue su turno. Si
-                  querés adelantarte, primero se cobran las cuotas anteriores.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          )}
 
           {/* Cómo pagar — el cliente transfiere por su cuenta, no hay pasarela. */}
           {needsPayment && paymentStep === 'declare' && (

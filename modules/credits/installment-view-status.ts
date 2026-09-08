@@ -116,12 +116,15 @@ export function getInstallmentViewStatus(installment: Installment): InstallmentV
     };
   }
 
+  // Pagar una cuota futura por adelantado es válido (política de negocio) — el backend no
+  // lo bloquea (ver TargetInstallmentSelector), así que la UI tampoco debe hacerlo. Antes
+  // decía "no puedes adelantarte" cuando en realidad sí se podía.
   return {
     status: 'PENDING',
     label: 'Futura',
     variant: 'pending',
-    description: 'Todavía no vence. Te avisaremos cuando llegue su turno.',
-    canDeclarePayment: false,
+    description: 'Todavía no vence, pero puedes adelantar el pago si querés.',
+    canDeclarePayment: true,
   };
 }
 
