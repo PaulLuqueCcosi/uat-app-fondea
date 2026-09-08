@@ -8,28 +8,12 @@ import type {
   EvaluationModuleTrace,
   EvaluationRuleTrace,
 } from '@/modules/admin/admin-application-detail.service';
+import { EVALUATION_STEP_LABELS as STEP_LABELS } from '@/modules/admin/admin-application-detail.service';
 import { BackendErrorMessage } from './BackendErrorMessage';
 
 interface Props {
   data: AdminApplicationEvaluation;
 }
-
-const STEP_LABELS: Record<string, string> = {
-  VALIDATION_DISPATCHED: 'Validación enviada',
-  VALIDATION_COMPLETED: 'Validación completada',
-  VALIDATION_FAILED: 'Validación fallida',
-  SCORING_DISPATCHED: 'Scoring enviado',
-  SCORING_COMPLETED: 'Scoring completado',
-  SCORING_FAILED: 'Scoring fallido',
-  COMPLETED: 'Completado',
-  CALCULATION_COMPLETED: 'Cálculo completado',
-  CALCULATION_FAILED: 'Cálculo fallido',
-  CONTRACT_GENERATION_DISPATCHED: 'Contrato en proceso',
-  CONTRACT_GENERATED: 'Contrato generado',
-  CONTRACT_GENERATION_FAILED: 'Contrato falló',
-  PRE_APPROVED: 'Pre-aprobada',
-  SUBMITTED: 'Enviada',
-};
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '—';

@@ -56,7 +56,7 @@ export function ApplicationDetailClient({
       </Link>
 
       {/* Header angosto (siempre visible) */}
-      <ApplicationDetailHeader data={core} />
+      <ApplicationDetailHeader data={core} contract={contract} evaluation={evaluation} />
 
       {/* Tabs para el resto */}
       <Tabs defaultValue="overview">

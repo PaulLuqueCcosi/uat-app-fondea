@@ -70,7 +70,7 @@ export function ApplicationTimelineSection({ entries }: Props) {
   const ordered = [...entries].reverse();
 
   return (
-    <div className="rounded-lg border p-4 md:p-6">
+    <div className="rounded-lg border bg-card p-4 md:p-6">
       <div className="flex items-center gap-2 mb-4">
         <History className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-sm font-semibold">Línea de tiempo de auditoría</h3>

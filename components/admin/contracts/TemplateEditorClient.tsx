@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition, useCallback, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -291,12 +290,17 @@ export function TemplateEditorClient({
     </div>
   );
 
+  // Antes esto reparentaba a document.body con createPortal — pero PdfPreviewDialog
+  // (Base UI) también porta a document.body por su cuenta, y dos portales independientes
+  // escribiendo en el mismo nodo real (sobre todo cuando fullscreen/editMode cambian en el
+  // mismo tick, ej. al guardar) hacía que React perdiera la referencia de qué nodo insertar
+  // antes de cuál → "insertBefore ... not a child of this node". position:fixed no necesita
+  // estar en document.body para cubrir toda la pantalla, así que evitamos el portal entero.
   if (fullscreen) {
-    return createPortal(
+    return (
       <div className="fixed inset-0 z-50 bg-background overflow-y-auto p-4">
         {editorContent}
-      </div>,
-      document.body,
+      </div>
     );
   }
 

@@ -359,6 +359,7 @@ export default function CreditoDetallePage() {
                   installments={installments}
                   selectedId={selectedInstallment?.id}
                   onSelect={handleSelectInstallment}
+                  creditId={credit.id}
                 />
               </div>
 
@@ -524,10 +525,12 @@ function InstallmentListMini({
   installments,
   selectedId,
   onSelect,
+  creditId,
 }: {
   installments: Installment[];
   selectedId?: string | null;
   onSelect: (inst: Installment) => void;
+  creditId: string;
 }) {
   const maxHeight = 4 * 56;
 
@@ -543,6 +546,16 @@ function InstallmentListMini({
           // rojo — el cliente ya pagó y la mora está detenida.
           const view = getInstallmentViewStatus(inst);
           const statusColor = MINI_ROW_STYLES[view.status];
+
+          // "Ver detalle" (y "Declarar pago", si aplica) llevan al mismo lugar en toda la
+          // app: el detalle de la cuota, donde está el formulario de comprobante. El botón
+          // principal de la fila solo resalta el mes en el calendario de al lado — antes
+          // era la ÚNICA acción posible al hacer click, sin ninguna forma de ver el detalle
+          // o declarar el pago desde acá.
+          const detailHref = view.status === 'NEGOTIATED' && inst.negotiationCreditId
+            ? `/dashboard/creditos/${inst.negotiationCreditId}`
+            : `/dashboard/creditos/${creditId}/cuotas/${inst.installmentNo}`;
+          const detailTitle = view.status === 'NEGOTIATED' ? 'Ver crédito de refinanciamiento' : 'Ver detalle de la cuota';
 
           return (
             <div key={inst.id} className="flex items-stretch gap-1.5">
@@ -562,6 +575,7 @@ function InstallmentListMini({
                   <p className="text-xs text-muted-foreground leading-tight">
                     {view.status === 'NEGOTIATED' ? 'Refinanciada'
                       : view.status === 'UNDER_REVIEW' ? 'En revisión'
+                      : view.canDeclarePayment ? (view.status === 'OVERDUE' ? 'Vencida — declarar pago' : 'Declarar pago')
                       : formatDate(inst.dueDate)}
                   </p>
                 </div>
@@ -569,15 +583,13 @@ function InstallmentListMini({
                   {formatCurrencyShort(inst.amountDue)}
                 </p>
               </button>
-              {view.status === 'NEGOTIATED' && inst.negotiationCreditId && (
-                <Link
-                  href={`/dashboard/creditos/${inst.negotiationCreditId}`}
-                  className="flex items-center justify-center rounded-lg border border-primary-200 bg-primary-50 px-2 text-primary-700 hover:bg-primary-100 transition-colors"
-                  title="Ver crédito de refinanciamiento"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
-              )}
+              <Link
+                href={detailHref}
+                className="flex items-center justify-center rounded-lg border border-border px-2 text-muted-foreground hover:bg-neutral-50 hover:text-primary transition-colors"
+                title={detailTitle}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
           );
         })}

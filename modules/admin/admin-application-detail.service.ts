@@ -17,12 +17,41 @@ export type ApplicationStatus =
   | 'SUBMITTED' | 'PROCESSING' | 'PRE_APPROVED' | 'APPROVED'
   | 'REJECTED' | 'REJECTED_BY_USER' | 'BLOCKED' | 'FAILED' | 'EXPIRED';
 
+// Debe reflejar exactamente pe.com.fondea.backend.solicitud.core.domain.model.EvaluationStep
+// (backend) — no existe un valor "COMPLETED" ahí; antes este tipo lo inventaba y le faltaban
+// 7 de los 13 valores reales (SUBMITTED, CALCULATION_*, CONTRACT_GENERATION_*, PRE_APPROVED),
+// por eso el header mostraba el enum crudo sin traducir para la mayoría de solicitudes.
 export type EvaluationStep =
+  | 'SUBMITTED'
   | 'VALIDATION_DISPATCHED' | 'VALIDATION_COMPLETED' | 'VALIDATION_FAILED'
   | 'SCORING_DISPATCHED' | 'SCORING_COMPLETED' | 'SCORING_FAILED'
-  | 'COMPLETED';
+  | 'CALCULATION_COMPLETED' | 'CALCULATION_FAILED'
+  | 'CONTRACT_GENERATION_DISPATCHED' | 'CONTRACT_GENERATED' | 'CONTRACT_GENERATION_FAILED'
+  | 'PRE_APPROVED';
 
-export type ContractStatus = 'GENERATED' | 'SIGNED' | 'EXPIRED';
+export type ContractStatus = 'GENERATED' | 'SIGNED' | 'FINALIZED' | 'EXPIRED';
+
+/**
+ * Única fuente de verdad para las etiquetas de EvaluationStep — antes había dos mapas
+ * independientes (header y pestaña Evaluación) que se desincronizaron: al del header le
+ * faltaban 7 de los 13 valores reales, así que mostraba el enum crudo sin traducir para
+ * la mayoría de solicitudes (ej. "PRE_APPROVED" en vez de "Pre-aprobada").
+ */
+export const EVALUATION_STEP_LABELS: Record<EvaluationStep, string> = {
+  SUBMITTED: 'Enviada',
+  VALIDATION_DISPATCHED: 'Validación enviada',
+  VALIDATION_COMPLETED: 'Validación completada',
+  VALIDATION_FAILED: 'Validación fallida',
+  SCORING_DISPATCHED: 'Scoring enviado',
+  SCORING_COMPLETED: 'Scoring completado',
+  SCORING_FAILED: 'Scoring fallido',
+  CALCULATION_COMPLETED: 'Cálculo completado',
+  CALCULATION_FAILED: 'Cálculo fallido',
+  CONTRACT_GENERATION_DISPATCHED: 'Contrato en proceso',
+  CONTRACT_GENERATED: 'Contrato generado',
+  CONTRACT_GENERATION_FAILED: 'Contrato falló',
+  PRE_APPROVED: 'Pre-aprobada',
+};
 
 export type CreditCreationStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
