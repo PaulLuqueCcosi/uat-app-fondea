@@ -21,6 +21,8 @@ import type { FormEditMetadata } from './form-edit-policy';
  * - REJECTED: rechazada por scoring o validación de negocio
  * - FAILED: error técnico en el pipeline (puede reintentar)
  * - EXPIRED: solicitud expirada (7 días sin completar)
+ * - COMPLETED: el crédito que generó esta solicitud ya se pagó por completo — el usuario
+ *   puede solicitar un crédito nuevo (antes de esto, APPROVED sigue contando como vigente)
  */
 export type ApplicationStatus =
   | 'SUBMITTED'
@@ -33,7 +35,8 @@ export type ApplicationStatus =
   | 'REJECTED'
   | 'FAILED'
   | 'BLOCKED'
-  | 'EXPIRED';
+  | 'EXPIRED'
+  | 'COMPLETED';
 
 /**
  * Códigos de fallo técnico del pipeline.

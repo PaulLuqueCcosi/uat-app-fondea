@@ -15,7 +15,7 @@ import { backendFetch } from '@/lib/backend-fetch';
 
 export type ApplicationStatus =
   | 'SUBMITTED' | 'PROCESSING' | 'PRE_APPROVED' | 'APPROVED'
-  | 'REJECTED' | 'REJECTED_BY_USER' | 'BLOCKED' | 'FAILED' | 'EXPIRED';
+  | 'REJECTED' | 'REJECTED_BY_USER' | 'BLOCKED' | 'FAILED' | 'EXPIRED' | 'COMPLETED';
 
 // Debe reflejar exactamente pe.com.fondea.backend.solicitud.core.domain.model.EvaluationStep
 // (backend) — no existe un valor "COMPLETED" ahí; antes este tipo lo inventaba y le faltaban

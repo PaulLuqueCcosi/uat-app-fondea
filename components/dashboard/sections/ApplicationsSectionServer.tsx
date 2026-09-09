@@ -22,6 +22,7 @@ function getStatusLabel(status: string): string {
     APPROVED: 'Aprobada',
     MORE_INFO: 'Requiere información',
     REJECTED: 'Rechazada',
+    COMPLETED: 'Completada',
   };
   return statusMap[status.toUpperCase()] ?? status;
 }
@@ -29,7 +30,7 @@ function getStatusLabel(status: string): string {
 // Helper para obtener el variant del badge
 function getStatusVariant(status: string): 'completed' | 'pending' | 'error' | 'warning' {
   const statusUpper = status.toUpperCase();
-  if (statusUpper === 'APPROVED') return 'completed';
+  if (statusUpper === 'APPROVED' || statusUpper === 'COMPLETED') return 'completed';
   if (statusUpper === 'REJECTED') return 'error';
   if (statusUpper === 'MORE_INFO') return 'warning';
   return 'pending';

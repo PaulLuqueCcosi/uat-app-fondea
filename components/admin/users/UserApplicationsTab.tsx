@@ -17,6 +17,7 @@ const STATUS_CONFIG: Record<ApplicationStatus, { label: string; variant: 'succes
   BLOCKED: { label: 'Bloqueada', variant: 'error' },
   FAILED: { label: 'Fallida', variant: 'error' },
   EXPIRED: { label: 'Expirada', variant: 'secondary' },
+  COMPLETED: { label: 'Completada', variant: 'success' },
 };
 
 function formatDate(iso: string | null) {

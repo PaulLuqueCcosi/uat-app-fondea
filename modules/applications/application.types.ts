@@ -17,7 +17,8 @@ export type ApplicationStatus =
   | 'REJECTED'
   | 'FAILED'
   | 'BLOCKED'
-  | 'EXPIRED';
+  | 'EXPIRED'
+  | 'COMPLETED';
 
 export type ApplicationFailureCode =
   | 'BUSINESS_VALIDATION_FAILED'
@@ -51,6 +52,7 @@ export const applicationStatusLabels: Record<ApplicationStatus, string> = {
   FAILED: 'Fallida',
   BLOCKED: 'Bloqueada',
   EXPIRED: 'Expirada',
+  COMPLETED: 'Completada',
 };
 
 export type StatusVariant = 'success' | 'warning' | 'error' | 'pending';
@@ -67,4 +69,5 @@ export const applicationStatusVariants: Record<ApplicationStatus, StatusVariant>
   FAILED: 'error',
   BLOCKED: 'error',
   EXPIRED: 'error',
+  COMPLETED: 'success',
 };

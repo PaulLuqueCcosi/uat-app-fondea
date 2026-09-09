@@ -33,12 +33,15 @@ function getStatusLabel(status: ApplicationStatus): string {
     FAILED: 'Fallida',
     BLOCKED: 'Bloqueada',
     EXPIRED: 'Expirada',
+    COMPLETED: 'Completada',
   };
   return map[status] ?? status;
 }
 
 function getStatusVariant(status: ApplicationStatus): 'success' | 'completed' | 'warning' | 'pending' | 'error' {
   switch (status) {
+    case 'COMPLETED':
+      return 'completed';
     case 'APPROVED':
     case 'PRE_APPROVED':
       return 'success';
@@ -75,7 +78,7 @@ const FILTERS: FilterDef[] = [
     label: 'En curso',
     statuses: ['SUBMITTED', 'PROCESSING', 'PRE_APPROVED', 'PENDING_DOCUMENTS', 'PENDING_SIGNATURE'],
   },
-  { key: 'APPROVED', label: 'Aprobadas', statuses: ['APPROVED'] },
+  { key: 'APPROVED', label: 'Aprobadas', statuses: ['APPROVED', 'COMPLETED'] },
   {
     key: 'REJECTED',
     label: 'Rechazadas',

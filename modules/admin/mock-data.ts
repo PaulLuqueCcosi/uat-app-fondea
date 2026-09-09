@@ -5,7 +5,7 @@
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type ApplicationStatus = 'SUBMITTED' | 'PROCESSING' | 'PRE_APPROVED' | 'APPROVED' | 'REJECTED' | 'REJECTED_BY_USER' | 'BLOCKED' | 'FAILED' | 'EXPIRED';
+export type ApplicationStatus = 'SUBMITTED' | 'PROCESSING' | 'PRE_APPROVED' | 'APPROVED' | 'REJECTED' | 'REJECTED_BY_USER' | 'BLOCKED' | 'FAILED' | 'EXPIRED' | 'COMPLETED';
 
 /**
  * `CreditStatus` e `InstallmentStatus` viven en `credit-status-labels.ts` junto a sus

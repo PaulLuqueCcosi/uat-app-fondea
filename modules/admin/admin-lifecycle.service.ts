@@ -84,7 +84,8 @@ export type ApplicationStatus =
   | 'REJECTED_BY_USER'
   | 'FAILED'
   | 'BLOCKED'
-  | 'EXPIRED';
+  | 'EXPIRED'
+  | 'COMPLETED';
 
 export interface LoanDetail {
   product_id: string;
@@ -278,6 +279,7 @@ export const STATUS_LABELS: Record<ApplicationStatus, { label: string; color: st
   FAILED: { label: 'Fallida', color: 'destructive' },
   BLOCKED: { label: 'Bloqueada', color: 'destructive' },
   EXPIRED: { label: 'Expirada', color: 'secondary' },
+  COMPLETED: { label: 'Completada', color: 'success' },
 };
 
 export const EVENT_LABELS: Record<string, string> = {

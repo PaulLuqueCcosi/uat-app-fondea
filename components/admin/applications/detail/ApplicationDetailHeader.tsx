@@ -24,6 +24,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
   FAILED: { label: 'Fallida', variant: 'destructive' },
   BLOCKED: { label: 'Bloqueada', variant: 'destructive' },
   EXPIRED: { label: 'Expirada', variant: 'outline' },
+  COMPLETED: { label: 'Completada', variant: 'default' },
 };
 
 function buildFullName(client: AdminApplicationCore['client']) {

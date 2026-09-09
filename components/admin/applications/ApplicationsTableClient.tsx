@@ -31,6 +31,7 @@ const STATUS_CONFIG: Record<ApplicationStatus, { label: string; bg: string; text
   FAILED: { label: 'Fallida', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
   BLOCKED: { label: 'Bloqueada', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
   EXPIRED: { label: 'Expirada', bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
+  COMPLETED: { label: 'Completada', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
 };
 
 // ── Columnas ───────────────────────────────────────────────────────────────
