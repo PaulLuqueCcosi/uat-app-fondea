@@ -88,6 +88,12 @@ export interface AdminCreditSummary {
   ubigeoRegion: string | null;
   ubigeoProvince: string | null;
   ubigeoDistrict: string | null;
+  /** Ubicación GPS/IP capturada al momento del submit de la solicitud — distinta de ubigeo* de arriba (expediente). */
+  currentLocationLat: number | null;
+  currentLocationLng: number | null;
+  currentUbigeoRegion: string | null;
+  currentUbigeoProvince: string | null;
+  currentUbigeoDistrict: string | null;
   createdAt: string;
   updatedAt: string;
   client: ClientInfo | null;
@@ -212,6 +218,11 @@ function mapAdminCreditSummaryFromBackend(raw: any): AdminCreditSummary {
     ubigeoRegion: raw.ubigeo_region ?? null,
     ubigeoProvince: raw.ubigeo_province ?? null,
     ubigeoDistrict: raw.ubigeo_district ?? null,
+    currentLocationLat: raw.current_location_lat ?? null,
+    currentLocationLng: raw.current_location_lng ?? null,
+    currentUbigeoRegion: raw.current_ubigeo_region ?? null,
+    currentUbigeoProvince: raw.current_ubigeo_province ?? null,
+    currentUbigeoDistrict: raw.current_ubigeo_district ?? null,
     createdAt: raw.created_at ?? '',
     updatedAt: raw.updated_at ?? '',
     client: raw.client

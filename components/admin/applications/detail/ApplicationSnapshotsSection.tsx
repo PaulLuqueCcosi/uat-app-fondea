@@ -8,6 +8,7 @@ import { Database, ChevronDown, ChevronRight, User, Briefcase, DollarSign, MapPi
 import { getFieldLabel } from '@/modules/admin/admin-form-labels';
 import { AdminFormDataView } from '@/components/admin/users/AdminFormDataView';
 import type { AdminApplicationCore } from '@/modules/admin/admin-application-detail.service';
+import { resolveUbigeoName } from '@/lib/ubigeo-names';
 
 /** formKeys que AdminFormDataView sabe renderizar con sus labels/ubigeo/mapa reales
  *  (mismo componente que usa /admin/users) — evita reimplementar esa lógica acá. */
@@ -123,8 +124,9 @@ export function ApplicationSnapshotsSection({ data }: Props) {
   const intention = data.intentionSnapshot;
   const puntaje = data.puntajeSnapshot;
   const fingerprint = data.deviceFingerprintSnapshot;
+  const currentLocation = data.currentLocation;
 
-  const hasAnySnapshot = profile || intention || puntaje || fingerprint;
+  const hasAnySnapshot = profile || intention || puntaje || fingerprint || currentLocation;
 
   if (!hasAnySnapshot) {
     return (
@@ -161,6 +163,36 @@ export function ApplicationSnapshotsSection({ data }: Props) {
           </CardHeader>
           <CardContent>
             <DataGrid data={puntaje} formKey="puntaje" />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Ubicación actual — GPS/IP capturada al momento del submit. Distinta de la
+          dirección de expediente, que se ve dentro de "Perfil del usuario" → Dirección. */}
+      {currentLocation && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> Ubicación actual (GPS/IP)
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Ubicación real desde donde se envió la solicitud
+              {currentLocation.source && ` — fuente: ${currentLocation.source === 'GPS' ? 'GPS del dispositivo' : 'IP'}`}
+              . Distinta de la dirección de expediente (ver sección "Perfil del usuario" → Dirección).
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+              <InfoField label="Región" value={resolveUbigeoName('department', currentLocation.ubigeoRegion)} />
+              <InfoField label="Provincia" value={resolveUbigeoName('province', currentLocation.ubigeoProvince)} />
+              <InfoField label="Distrito" value={resolveUbigeoName('district', currentLocation.ubigeoDistrict)} />
+            </div>
+            {currentLocation.lat != null && currentLocation.lng != null && (
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm mt-3 pt-3 border-t">
+                <InfoField label="Latitud" value={currentLocation.lat.toFixed(5)} />
+                <InfoField label="Longitud" value={currentLocation.lng.toFixed(5)} />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -204,6 +236,15 @@ export function ApplicationSnapshotsSection({ data }: Props) {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function InfoField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[11px] text-muted-foreground leading-tight">{label}</span>
+      <span className="text-sm font-medium text-foreground">{value}</span>
     </div>
   );
 }

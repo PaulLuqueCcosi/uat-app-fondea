@@ -15,7 +15,7 @@ import { LOAN_PURPOSE_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/lib/constants/e
 import { ACCOUNT_TYPE_OPTIONS } from '@/lib/constants/bank-account';
 import { REFERRAL_SOURCE_OPTIONS } from '@/lib/constants/address';
 import { getYearsKnownLabel } from '@/lib/constants/references';
-import { getDepartments, getProvinces, getDistricts } from 'ubigeo-fns';
+import { resolveUbigeoName } from '@/lib/ubigeo-names';
 
 const LocationMapPicker = dynamic(
   () => import('@/components/forms/solicitar/LocationMapPicker').then((m) => m.LocationMapPicker),
@@ -39,29 +39,6 @@ function formatCurrency(amount: any): string {
 function boolLabel(val: any): string {
   if (val === null || val === undefined) return '—';
   return val ? 'Sí' : 'No';
-}
-
-function resolveUbigeoName(type: 'department' | 'province' | 'district', code: string | undefined | null): string {
-  if (!code) return '—';
-  try {
-    if (type === 'department') {
-      const deps = getDepartments();
-      return deps.find(d => d.code === code)?.name ?? code;
-    }
-    if (type === 'province') {
-      const regionCode = code.substring(0, 2);
-      const provs = getProvinces(regionCode);
-      return provs.find(p => p.code === code)?.name ?? code;
-    }
-    if (type === 'district') {
-      const provCode = code.substring(0, 4);
-      const dists = getDistricts(provCode);
-      return dists.find(d => d.code === code)?.name ?? code;
-    }
-  } catch {
-    return code;
-  }
-  return code;
 }
 
 const FAMILY_RELATIONS: Record<string, string> = {

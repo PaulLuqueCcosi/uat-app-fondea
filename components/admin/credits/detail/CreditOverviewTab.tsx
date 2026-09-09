@@ -61,6 +61,7 @@ function resolveUbigeoNames(region: string | null, province: string | null, dist
 
 export function CreditOverviewTab({ data, certificate }: Props) {
   const ubigeoNames = resolveUbigeoNames(data.ubigeoRegion, data.ubigeoProvince, data.ubigeoDistrict);
+  const currentUbigeoNames = resolveUbigeoNames(data.currentUbigeoRegion, data.currentUbigeoProvince, data.currentUbigeoDistrict);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -122,13 +123,14 @@ export function CreditOverviewTab({ data, certificate }: Props) {
           </Card>
         )}
 
-        {/* Ubicación */}
+        {/* Ubicación de expediente — dirección declarada por el usuario */}
         {(data.ubigeoRegion || data.ubigeoProvince || data.ubigeoDistrict) && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" /> Ubicación del cliente (snapshot)
+                <MapPin className="h-4 w-4 text-muted-foreground" /> Ubicación de expediente
               </CardTitle>
+              <p className="text-[11px] text-muted-foreground">Dirección declarada por el usuario (snapshot al desembolso)</p>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
@@ -136,6 +138,34 @@ export function CreditOverviewTab({ data, certificate }: Props) {
                 <DataField label="Provincia" value={ubigeoNames.province ?? '—'} />
                 <DataField label="Distrito" value={ubigeoNames.district ?? '—'} />
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Ubicación actual — GPS/IP capturada al momento del submit de la solicitud */}
+        {(data.currentUbigeoRegion || data.currentUbigeoProvince || data.currentUbigeoDistrict
+          || data.currentLocationLat != null) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" /> Ubicación actual (GPS/IP)
+              </CardTitle>
+              <p className="text-[11px] text-muted-foreground">
+                Ubicación real desde donde se envió la solicitud — distinta de la de expediente
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                <DataField label="Región" value={currentUbigeoNames.region ?? '—'} />
+                <DataField label="Provincia" value={currentUbigeoNames.province ?? '—'} />
+                <DataField label="Distrito" value={currentUbigeoNames.district ?? '—'} />
+              </div>
+              {data.currentLocationLat != null && data.currentLocationLng != null && (
+                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
+                  <DataField label="Latitud" value={data.currentLocationLat.toFixed(5)} mono />
+                  <DataField label="Longitud" value={data.currentLocationLng.toFixed(5)} mono />
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

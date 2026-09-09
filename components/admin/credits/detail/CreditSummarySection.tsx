@@ -6,6 +6,7 @@ import {
 import Link from 'next/link';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
+import { resolveUbigeoName } from '@/lib/ubigeo-names';
 
 interface Props {
   data: AdminCreditSummary;
@@ -134,20 +135,49 @@ export function CreditSummarySection({ data }: Props) {
             </CardContent>
           </Card>
 
-          {/* Ubicación */}
+          {/* Ubicación de expediente — dirección declarada por el usuario en el formulario */}
           {(data.ubigeoRegion || data.ubigeoProvince || data.ubigeoDistrict) && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <MapPin className="h-4 w-4" /> Ubicación (snapshot)
+                  <MapPin className="h-4 w-4" /> Ubicación de expediente
                 </CardTitle>
+                <p className="text-xs text-muted-foreground">Dirección declarada por el usuario (snapshot al desembolso)</p>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-4 text-sm">
-                  <InfoItem label="Región" value={data.ubigeoRegion ?? '—'} />
-                  <InfoItem label="Provincia" value={data.ubigeoProvince ?? '—'} />
-                  <InfoItem label="Distrito" value={data.ubigeoDistrict ?? '—'} />
+                  <InfoItem label="Región" value={resolveUbigeoName('department', data.ubigeoRegion)} />
+                  <InfoItem label="Provincia" value={resolveUbigeoName('province', data.ubigeoProvince)} />
+                  <InfoItem label="Distrito" value={resolveUbigeoName('district', data.ubigeoDistrict)} />
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Ubicación actual — GPS/IP capturada al momento del submit de la solicitud */}
+          {(data.currentUbigeoRegion || data.currentUbigeoProvince || data.currentUbigeoDistrict
+            || data.currentLocationLat != null) && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> Ubicación actual (GPS/IP)
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Ubicación real desde donde se envió la solicitud — distinta de la de expediente
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <InfoItem label="Región" value={resolveUbigeoName('department', data.currentUbigeoRegion)} />
+                  <InfoItem label="Provincia" value={resolveUbigeoName('province', data.currentUbigeoProvince)} />
+                  <InfoItem label="Distrito" value={resolveUbigeoName('district', data.currentUbigeoDistrict)} />
+                </div>
+                {data.currentLocationLat != null && data.currentLocationLng != null && (
+                  <div className="grid grid-cols-2 gap-4 text-sm mt-3 pt-3 border-t">
+                    <InfoItem label="Latitud" value={data.currentLocationLat.toFixed(5)} />
+                    <InfoItem label="Longitud" value={data.currentLocationLng.toFixed(5)} />
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

@@ -77,6 +77,20 @@ export interface EventItem {
   createdAt: string;
 }
 
+/**
+ * Ubicación GPS/IP capturada al momento del submit — distinta de la ubicación
+ * de expediente (dirección declarada), que viaja dentro de `profileSnapshot.address`.
+ */
+export interface CurrentLocationInfo {
+  lat: number | null;
+  lng: number | null;
+  /** 'GPS' si vino del navegador, 'IP' si fue fallback por geolocalización de IP. */
+  source: 'GPS' | 'IP' | null;
+  ubigeoRegion: string | null;
+  ubigeoProvince: string | null;
+  ubigeoDistrict: string | null;
+}
+
 export interface AdminApplicationCore {
   id: string;
   userId: string;
@@ -103,6 +117,7 @@ export interface AdminApplicationCore {
   intentionSnapshot: Record<string, any> | null;
   puntajeSnapshot: Record<string, any> | null;
   deviceFingerprintSnapshot: Record<string, any> | null;
+  currentLocation: CurrentLocationInfo | null;
   client: ClientInfo | null;
   events: EventItem[];
 }
