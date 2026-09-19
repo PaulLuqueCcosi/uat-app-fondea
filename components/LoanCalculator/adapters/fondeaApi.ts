@@ -25,7 +25,7 @@ import type {
 
 // ── Config desde env ──────────────────────────────────────────────────────────
 
-const PRODUCT_ID     = process.env.NEXT_PUBLIC_PRODUCT_ID         ?? "03d17890-251f-4946-bb91-49d35ff62800";
+const PRODUCT_ID     = process.env.NEXT_PUBLIC_PRODUCT_ID         ?? "550e8400-e29b-41d4-a716-446655440000";
 const CALCULATOR_URL = process.env.NEXT_PUBLIC_CALCULATOR_API_URL ?? "http://localhost:9599/api";
 const PORTAL_URL     = process.env.NEXT_PUBLIC_LOAN_REQUEST_URL   ?? "https://solicitar.fondea.pe";
 
