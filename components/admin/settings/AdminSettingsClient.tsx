@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,13 +16,16 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
-import { CircleDollarSign, FileText, Bell, Pencil } from 'lucide-react';
+import { CircleDollarSign, FileText, Bell, Pencil, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { PenaltyConfigCard } from './PenaltyConfigCard';
 import { FormEditPoliciesCard } from './FormEditPoliciesCard';
 import { PassportRangesCard } from './PassportRangesCard';
 import { DepositAccountCard } from './DepositAccountCard';
 import { AvailabilityCard } from './AvailabilityCard';
 import { NotificationRecipientsCard } from './NotificationRecipientsCard';
+import { getAllFormConfigsAction, updateFormConfigAction } from '@/app/actions/admin-form-config.actions';
+import type { AdminFormConfigResponse } from '@/modules/admin/admin-form-config.service';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,14 +38,6 @@ interface MoraRange {
   base: 'INSTALLMENT' | 'PRINCIPAL' | null;
 }
 
-interface FormAttemptConfig {
-  label: string;
-  key: string;
-  maxAttempts: number;
-  blockHours: number;
-}
-
-
 interface NotificationConfig {
   paymentReminderDaysBefore: number;
   overdueReminderIntervalDays: number;
@@ -51,7 +46,6 @@ interface NotificationConfig {
 
 interface SystemConfig {
   mora: MoraRange[];
-  formAttempts: FormAttemptConfig[];
   notifications: NotificationConfig;
 }
 
@@ -63,20 +57,23 @@ const defaultConfig: SystemConfig = {
     { label: '4 a 14 días', minDays: 4, maxDays: 14, penaltyPerDay: 7, type: 'FIXED', base: null },
     { label: '15+ días', minDays: 15, maxDays: null, penaltyPerDay: 10, type: 'FIXED', base: null },
   ],
-  formAttempts: [
-    { label: 'KYC (Identidad)', key: 'kyc', maxAttempts: 3, blockHours: 24 },
-    { label: 'Selfie / Biométrico', key: 'selfie', maxAttempts: 3, blockHours: 24 },
-    { label: 'Cuenta Bancaria', key: 'bank', maxAttempts: 3, blockHours: 24 },
-    { label: 'Datos Laborales', key: 'labor', maxAttempts: 3, blockHours: 24 },
-    { label: 'Datos Económicos', key: 'economic', maxAttempts: 3, blockHours: 24 },
-    { label: 'Referencias', key: 'references', maxAttempts: 3, blockHours: 24 },
-  ],
   notifications: {
     paymentReminderDaysBefore: 1,
     overdueReminderIntervalDays: 3,
     maxRemindersBeforeEscalation: 5,
   },
 };
+
+// Los 6 módulos reales de forms/ que tienen config de intentos/bloqueo en el backend
+// (ver AdminConfigController) — "bank-account" es el nombre real, no "bank".
+const FORM_MODULES: { key: string; label: string }[] = [
+  { key: 'kyc', label: 'KYC (Identidad)' },
+  { key: 'labor', label: 'Datos Laborales' },
+  { key: 'economic', label: 'Datos Económicos' },
+  { key: 'references', label: 'Referencias' },
+  { key: 'address', label: 'Dirección' },
+  { key: 'bank-account', label: 'Cuenta Bancaria' },
+];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -104,8 +101,8 @@ export function AdminSettingsClient() {
       {/* ═══ DESTINATARIOS DE ALERTAS (conectado al backend) ═══ */}
       <NotificationRecipientsCard />
 
-      {/* ═══ INTENTOS DE FORMULARIOS ═══ */}
-      <FormAttemptsCard config={config} onSave={(formAttempts) => setConfig((p) => ({ ...p, formAttempts }))} />
+      {/* ═══ INTENTOS DE FORMULARIOS (conectado al backend) ═══ */}
+      <FormAttemptsCard />
 
       {/* ═══ NOTIFICACIONES ═══ */}
       <NotificationsCard config={config} onSave={(notifications) => setConfig((p) => ({ ...p, notifications }))} />
@@ -181,13 +178,81 @@ function MoraCard({ config, onSave }: { config: SystemConfig; onSave: (v: MoraRa
   );
 }
 
-// ── Form Attempts Card ────────────────────────────────────────────────────────
+// ── Form Attempts Card (conectado al backend: GET/PUT /api/v1/admin/config) ───
 
-function FormAttemptsCard({ config, onSave }: { config: SystemConfig; onSave: (v: FormAttemptConfig[]) => void }) {
-  const [draft, setDraft] = useState<FormAttemptConfig[]>([]);
+function FormAttemptsCard() {
+  const [configs, setConfigs] = useState<AdminFormConfigResponse[]>([]);
+  const [draft, setDraft] = useState<AdminFormConfigResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      const data = await getAllFormConfigsAction();
+      setConfigs(data);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  function configFor(moduleKey: string): AdminFormConfigResponse {
+    return (
+      configs.find((c) => c.module === moduleKey) ?? {
+        id: null,
+        module: moduleKey,
+        maxAttempts: 3,
+        blockHours: 24,
+        validDurationDays: 90,
+        active: true,
+        description: null,
+        minAge: null,
+        maxAge: null,
+      }
+    );
+  }
 
   function openDraft() {
-    setDraft(config.formAttempts.map((f) => ({ ...f })));
+    setDraft(FORM_MODULES.map((m) => ({ ...configFor(m.key) })));
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const results = await Promise.all(
+        draft.map((form) =>
+          updateFormConfigAction(form.module, {
+            maxAttempts: form.maxAttempts,
+            blockHours: form.blockHours,
+            validDurationDays: form.validDurationDays,
+            active: form.active,
+          }),
+        ),
+      );
+
+      const failed = results.filter((r) => !r.ok);
+      if (failed.length > 0) {
+        toast.error(`No se pudo guardar ${failed.length} de ${draft.length} módulos`);
+      } else {
+        toast.success('Configuración de intentos actualizada');
+      }
+
+      // Recarga desde el backend en vez de confiar en el draft local — asegura que lo
+      // que se muestra sea lo que efectivamente quedó persistido.
+      const refreshed = await getAllFormConfigsAction();
+      setConfigs(refreshed);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-10">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -208,8 +273,10 @@ function FormAttemptsCard({ config, onSave }: { config: SystemConfig; onSave: (v
               </DialogHeader>
               <div className="space-y-4 py-2">
                 {draft.map((form, i) => (
-                  <div key={form.key} className="space-y-1.5">
-                    <Label className="text-sm font-medium">{form.label}</Label>
+                  <div key={form.module} className="space-y-1.5">
+                    <Label className="text-sm font-medium">
+                      {FORM_MODULES.find((m) => m.key === form.module)?.label ?? form.module}
+                    </Label>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5">
                         <Input
@@ -244,21 +311,27 @@ function FormAttemptsCard({ config, onSave }: { config: SystemConfig; onSave: (v
                 ))}
               </div>
               <DialogFooter>
-                <DialogClose render={<Button variant="outline" />}>Cancelar</DialogClose>
-                <DialogClose render={<Button onClick={() => onSave(draft)} />}>Guardar cambios</DialogClose>
+                <DialogClose render={<Button variant="outline" disabled={saving} />}>Cancelar</DialogClose>
+                <DialogClose render={<Button onClick={handleSave} disabled={saving} />}>
+                  {saving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                  Guardar cambios
+                </DialogClose>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
-        <CardDescription className="text-xs">3 intentos máximo, si falla se bloquea 24h</CardDescription>
+        <CardDescription className="text-xs">Intentos máximos antes de bloquear, y horas de bloqueo, por formulario</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        {config.formAttempts.map((form) => (
-          <div key={form.key} className="flex items-center justify-between py-1.5">
-            <span className="text-sm text-foreground">{form.label}</span>
-            <span className="text-xs text-muted-foreground">{form.maxAttempts} intentos · {form.blockHours}h bloqueo</span>
-          </div>
-        ))}
+        {FORM_MODULES.map((mod) => {
+          const cfg = configFor(mod.key);
+          return (
+            <div key={mod.key} className="flex items-center justify-between py-1.5">
+              <span className="text-sm text-foreground">{mod.label}</span>
+              <span className="text-xs text-muted-foreground">{cfg.maxAttempts} intentos · {cfg.blockHours}h bloqueo</span>
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );
