@@ -303,6 +303,15 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
           setVerified(true);
           setDocumentsVerification(verifyResult.documentsStatus);
           setDocumentUrl('selfie', selfiePreview);
+        } else if (selfieStatus === 'FAILED') {
+          // Fallo TÉCNICO del proveedor externo (no un rechazo real de la foto) — la foto está
+          // bien, no hace falta re-tomarla ni descontar intento. Se mantiene el archivo y se
+          // deja reintentar la verificación con la misma imagen.
+          setDocumentsVerification(verifyResult.documentsStatus);
+          setVerifyError(
+            verifyResult.documentsStatus.selfie.rejectionReason
+              || 'Tuvimos un problema técnico temporal verificando tu selfie. Esto no afecta tu perfil.'
+          );
         } else {
           // Backend respondió OK pero la selfie NO pasó la verificación
           setDocumentsVerification(verifyResult.documentsStatus);
@@ -394,6 +403,13 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
         if (selfieStatus === 'VERIFIED') {
           setDocumentsVerification(result.documentsStatus);
           setDocumentUrl('selfie', selfiePreview);
+        } else if (selfieStatus === 'FAILED') {
+          // Fallo TÉCNICO del proveedor externo — la foto está bien, se mantiene tal cual.
+          setDocumentsVerification(result.documentsStatus);
+          setVerifyError(
+            result.documentsStatus.selfie.rejectionReason
+              || 'Tuvimos un problema técnico temporal verificando tu selfie. Esto no afecta tu perfil.'
+          );
         } else {
           // No pasó la verificación
           setDocumentsVerification(result.documentsStatus);
@@ -597,6 +613,18 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                         </div>
                       )}
                     </div>
+
+                    {/* Fallo TÉCNICO del proveedor externo — tono naranja/neutro, nunca rojo de
+                        error del usuario: la foto está bien, el problema es nuestro. */}
+                    {verifyError && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-50 border border-warning-200 text-warning-900">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-warning-600" />
+                        <div className="text-sm">
+                          <p className="font-semibold">Problema técnico temporal</p>
+                          <p className="mt-0.5 text-warning-700">{verifyError}</p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Badge de resultado del análisis facial */}
                     {!analyzing && uploadStatus && (

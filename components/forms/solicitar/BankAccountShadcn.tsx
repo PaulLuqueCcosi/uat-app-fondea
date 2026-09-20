@@ -121,8 +121,13 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
     defaultValues: {
       bank_name: isReplaced ? '' : (initialData?.profile?.bank_name || ''),
       account_type: isReplaced ? '' : (initialData?.profile?.account_type || ''),
-      cci: isReplaced ? '' : (initialData?.profile?.cci || ''),
-      account_number: isReplaced ? '' : (initialData?.profile?.account_number || ''),
+      // account_number y cci NUNCA se precargan: initialData.profile los trae enmascarados
+      // ("**********8901") para mostrar en la vista resumen, no para reenviar como valor
+      // real. Precargarlos hacía que editar solo un campo (ej. el CCI) reenviara el otro
+      // enmascarado tal cual, fallando la validación "Solo se permiten números". Se pide
+      // reingreso explícito de ambos cada vez que se entra a editar.
+      cci: '',
+      account_number: '',
     },
   });
 

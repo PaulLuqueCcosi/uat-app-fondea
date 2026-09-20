@@ -2,7 +2,7 @@
 
 export type DocumentType = 'DNI_FRONT' | 'DNI_BACK' | 'SELFIE';
 
-export type DocumentVerificationStatus = 'PENDING' | 'UPLOADED' | 'VERIFIED' | 'REJECTED';
+export type DocumentVerificationStatus = 'PENDING' | 'UPLOADED' | 'VERIFIED' | 'REJECTED' | 'FAILED';
 
 export type DocumentsOverallStatus = 'PENDING' | 'UPLOADED' | 'VERIFIED' | 'REJECTED';
 

@@ -72,6 +72,21 @@ function VerificationStatusBadge({ item }: { item: DocumentItemStatus | undefine
           </p>
         </div>
       );
+    case 'FAILED':
+      // Fallo TÉCNICO (proveedor externo caído/con cuota agotada) — no es un rechazo real del
+      // documento, así que usa tono naranja/neutro en vez del rojo de error, y nunca descuenta
+      // intentos (ver DocumentVerificationService.TECHNICAL_ERROR_USER_MESSAGE).
+      return (
+        <div className="p-3 rounded-lg bg-warning-50 border border-warning-200 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-warning-600 shrink-0" />
+            <span className="text-sm font-semibold text-warning-900">Problema técnico temporal</span>
+          </div>
+          <p className="text-xs text-warning-700 ml-6">
+            {item.rejectionReason || 'Tuvimos un problema técnico verificando tu documento. Esto no afecta tu perfil.'}
+          </p>
+        </div>
+      );
     default:
       return null;
   }

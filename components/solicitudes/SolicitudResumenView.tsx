@@ -95,6 +95,14 @@ export function SolicitudResumenView({ application, fullDetail, documents, detai
     return <FailedView application={application} />;
   }
 
+  if (status === 'COMPLETED') {
+    return <CompletedView />;
+  }
+
+  if (status === 'BLOCKED') {
+    return <BlockedView />;
+  }
+
   return <FailedView application={application} />;
 }
 
@@ -474,6 +482,90 @@ function CancelledByUserView() {
       </div>
 
       {/* Botones */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:flex-1">
+          <Home className="w-4 h-4 mr-2" />
+          Ir al dashboard
+        </Button>
+        <Button onClick={() => router.push('/solicitar')} className="w-full sm:flex-1">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Nueva solicitud
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Vista: Crédito ya pagado (COMPLETED) ──────────────────────────────────────
+
+function CompletedView() {
+  const router = useRouter();
+
+  return (
+    <div className="w-full max-w-2xl mx-auto space-y-6">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-success-500 to-success-700 p-8 md:p-10">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
+
+        <div className="relative flex flex-col md:flex-row items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-10 h-10 text-white" />
+          </div>
+          <div className="text-center md:text-left flex-1">
+            <p className="text-sm font-medium text-white/70 uppercase tracking-wider mb-1">
+              Solicitud finalizada
+            </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              Esta solicitud ya se resolvió
+            </h1>
+            <p className="text-white/80 text-base">
+              El crédito de esta solicitud ya fue pagado por completo (o el proceso ya terminó).
+              Si necesitas un crédito nuevo, puedes solicitarlo desde tu dashboard.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button onClick={() => router.push('/dashboard')} className="w-full sm:flex-1">
+          <Home className="w-4 h-4 mr-2" />
+          Ir al dashboard
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Vista: Solicitud bloqueada por intentos agotados (BLOCKED) ────────────────
+
+function BlockedView() {
+  const router = useRouter();
+
+  return (
+    <div className="w-full max-w-2xl mx-auto space-y-6">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-error-500 to-error-700 p-8 md:p-10">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
+
+        <div className="relative flex flex-col md:flex-row items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <XCircle className="w-10 h-10 text-white" />
+          </div>
+          <div className="text-center md:text-left flex-1">
+            <p className="text-sm font-medium text-white/70 uppercase tracking-wider mb-1">
+              Verificación bloqueada
+            </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              Solicitud bloqueada
+            </h1>
+            <p className="text-white/80 text-base">
+              Se agotaron los intentos de verificación de tus documentos. Contacta a soporte
+              para revisar tu caso, o cancela esta solicitud para iniciar una nueva.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row gap-3">
         <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:flex-1">
           <Home className="w-4 h-4 mr-2" />
