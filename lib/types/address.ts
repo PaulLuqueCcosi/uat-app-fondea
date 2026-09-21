@@ -20,8 +20,7 @@ export interface AdditionalData {
 }
 
 export interface AddressProfile {
-  address_type: 'google' | 'manual';
-  google_address?: string;
+  address_type: 'manual';
   street_address?: string;
   region: string;
   province: string;

@@ -352,7 +352,7 @@ function ReferencesDataView({ data }: { data: Record<string, any> }) {
 // ── Address ───────────────────────────────────────────────────────────────────
 
 function AddressDataView({ data }: { data: Record<string, any> }) {
-  const streetAddress = data.streetAddress ?? data.street_address ?? data.google_address;
+  const streetAddress = data.streetAddress ?? data.street_address;
   const region = data.region;
   const province = data.province;
   const district = data.district;

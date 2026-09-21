@@ -165,22 +165,11 @@ export async function submitApplicationAction(
       body: JSON.stringify(body),
     });
 
-    // Log completo de la respuesta del backend
-    const resClone = res.clone();
-    const rawBody = await resClone.text();
-    console.log('[APPLICATION] Submit response:', {
-      status: res.status,
-      statusText: res.statusText,
-      body: rawBody,
-    });
-
     if (!isSuccess(res.status)) {
       return await parseBackendResponse(res) as Extract<ActionResult, { success: false }>;
     }
 
-    const data = JSON.parse(rawBody);
-
-    console.log('[APPLICATION] Submit parsed data:', data);
+    const data = await res.json();
 
     return {
       success: true,
@@ -473,53 +462,10 @@ export async function getApplicationDetailAction(applicationId: string): Promise
     if (!isSuccess(res.status)) return null;
 
     const data = await res.json();
-    console.log("data");
-    console.log(data);
     return mapApplicationFromBackend(data);
   } catch (error) {
     console.error('[APPLICATION] Error al obtener detalle:', error);
     return null;
-  }
-}
-
-// ── DELETE: Eliminar solicitud (admin) ───────────────────────────────────────
-// TODO: Esta acción es temporal para pruebas, debe eliminarse en producción
-
-export interface DeleteApplicationResult {
-  success: boolean;
-  error?: string;
-}
-
-/**
- * Elimina una solicitud específica (endpoint admin).
- * DELETE /api/v1/admin/applications/{applicationId}
- *
- * @param applicationId - ID de la solicitud a eliminar
- */
-export async function deleteApplicationAction(
-  applicationId: string
-): Promise<DeleteApplicationResult> {
-  await requireValidSession();
-
-  try {
-    const res = await backendFetch(`/api/v1/admin/applications/${applicationId}`, {
-      method: 'DELETE',
-    });
-
-    if (res.status === 204 || res.status === 200) {
-      return { success: true };
-    }
-
-    let json: any = {};
-    try { json = await res.json(); } catch { /* body vacío */ }
-
-    return {
-      success: false,
-      error: json.message ?? json.detail ?? 'No se pudo eliminar la solicitud',
-    };
-  } catch {
-    console.error('[APPLICATION] Error al eliminar solicitud');
-    return { success: false, error: 'Error de conexión al eliminar la solicitud' };
   }
 }
 

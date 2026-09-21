@@ -152,8 +152,9 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
 
   const handleFileSelect = (side: 'front' | 'back', file: File | null) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setError('Solo se permiten imágenes (JPEG, PNG)');
+    const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setError('Solo se permiten imágenes JPEG o PNG');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {

@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { MapPin, Map, CheckCircle2 } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { getCurrentStep } from '@/lib/funnel-steps';
 import dynamic from 'next/dynamic';
 const LocationMapPicker = dynamic(
@@ -35,9 +35,6 @@ import {
   getUbigeoCoordinates,
   type UbigeoOption,
 } from '@/app/actions/additional-address.actions';
-// COMENTADO: GoogleAddressAutocomplete — solo usaremos opción manual por ahora
-// import { GoogleAddressAutocomplete } from '@/components/forms/solicitar/GoogleAddressAutocomplete';
-// import type { AddressDetail } from '@/app/actions/additional-address.actions';
 import { saveAddressProfile, getAddressProfileStatus } from '@/app/actions/additional-address.actions';
 import type { AddressProfileStatus } from '@/lib/types';
 import { useAutoNavigate } from '@/hooks/use-auto-navigate';
@@ -73,8 +70,7 @@ function SectionHeader({ title, description }: { title: string; description: str
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 const addressFormSchema = z.object({
-  address_type: z.enum(['google', 'manual'] as const).optional(),
-  google_address: z.string().optional(),
+  address_type: z.literal('manual'),
   street_address: z.string().optional(),
   region: z.string().optional(),
   province: z.string().optional(),
@@ -82,18 +78,8 @@ const addressFormSchema = z.object({
   referral_source: z.string().min(1, 'Selecciona cómo nos conociste'),
   referral_other: z.string().optional(),
 }).superRefine((data, ctx) => {
-  if (!data.address_type) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecciona un método para ingresar tu dirección', path: ['address_type'] });
-  }
-  if (data.address_type === 'google') {
-    if (!data.google_address?.trim()) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ingresa tu dirección', path: ['google_address'] });
-    }
-  }
-  if (data.address_type === 'manual') {
-    if (!data.street_address?.trim()) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ingresa la calle y número', path: ['street_address'] });
-    }
+  if (!data.street_address?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ingresa la calle y número', path: ['street_address'] });
   }
   if (!data.region) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecciona el departamento', path: ['region'] });
@@ -148,8 +134,6 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
   const [departamentos,    setDepartamentos]    = useState<UbigeoOption[]>([]);
   const [provincias,       setProvincias]       = useState<UbigeoOption[]>([]);
   const [distritos,        setDistritos]        = useState<UbigeoOption[]>([]);
-  // COMENTADO: googlePrefilled — solo usaremos opción manual
-  // const [googlePrefilled,  setGooglePrefilled]  = useState(false);
 
   // Labels resueltos para la vista resumen (nombre legible del ubigeo)
   const [labelDep,  setLabelDep]  = useState<string>('');
@@ -215,8 +199,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressFormSchema),
     defaultValues: {
-      address_type:    isReplaced ? undefined : (initialData?.profile?.address_type    ?? undefined),
-      google_address:  isReplaced ? '' : (initialData?.profile?.google_address  ?? ''),
+      address_type:    'manual',
       street_address:  isReplaced ? '' : (initialData?.profile?.street_address  ?? ''),
       region:          isReplaced ? '' : (initialData?.profile?.region          ?? ''),
       province:        isReplaced ? '' : (initialData?.profile?.province        ?? ''),
@@ -233,8 +216,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
     if (editControl.isEditing && initialData?.profile && initialData?.status !== 'REPLACED') {
       const profile = initialData.profile;
       form.reset({
-        address_type:    profile.address_type    ?? undefined,
-        google_address:  profile.google_address  ?? '',
+        address_type:    'manual',
         street_address:  profile.street_address  ?? '',
         region:          profile.region          ?? '',
         province:        profile.province        ?? '',
@@ -247,7 +229,6 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
     }
   }, [editControl.isEditing, initialData, form]);
 
-  const addressType    = form.watch('address_type');
   const watchedRegion  = form.watch('region');
   const referralSource = form.watch('referral_source');
 
@@ -294,20 +275,11 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
 
   const doSubmit = async (data: AddressFormValues) => {
     errorHandler.clear();
-
-    // Validar que address_type esté definido (debería estarlo por el schema)
-    if (!data.address_type) {
-      toast.error('Selecciona un método para ingresar tu dirección');
-      return;
-    }
-
-    // Ubicación del mapa es opcional
     setLocationError(null);
 
     const result = await errorHandler.execute(
       () => saveAddressProfile({
-        address_type:    data.address_type!,
-        google_address:  data.google_address  || undefined,
+        address_type:    'manual',
         street_address:  data.street_address  || undefined,
         region:          data.region          ?? '',
         province:        data.province        ?? '',
@@ -330,8 +302,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
     if (dist) setLabelDist(dist.label);
 
     setSavedProfile({
-      address_type:    data.address_type!,
-      google_address:  data.google_address  || undefined,
+      address_type:    'manual',
       street_address:  data.street_address  || undefined,
       region:          data.region          ?? '',
       province:        data.province        ?? '',
@@ -366,16 +337,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
 
       {/* Datos */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <DataRow
-          label="Método"
-          value={savedProfile?.address_type === 'google' ? 'Con Google' : 'Manual'}
-        />
-        {savedProfile?.address_type === 'google' && (
-          <DataRow label="Dirección" value={savedProfile.google_address} />
-        )}
-        {savedProfile?.address_type === 'manual' && (
-          <DataRow label="Calle y número" value={savedProfile.street_address} />
-        )}
+        <DataRow label="Calle y número" value={savedProfile?.street_address} />
         <DataRow label="Departamento" value={labelDep || savedProfile?.region} />
         <DataRow label="Provincia"    value={labelProv || savedProfile?.province} />
         <DataRow label="Distrito"     value={labelDist || savedProfile?.district} />
@@ -437,186 +399,7 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
           </>
         )}
 
-        {/* Selector de tipo — COMENTADO: Solo mostrar opción Manual por ahora */}
-        {/* 
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-          <SectionHeader title="Método de ingreso" description="Elige cómo ingresar tu dirección" />
-          <div className="md:col-span-2">
-            <FormField
-              control={form.control}
-              name="address_type"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Selecciona el método</FormLabel>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        field.onChange('google');
-                        form.setValue('google_address', '');
-                        form.setValue('region', '');
-                        form.setValue('province', '');
-                        form.setValue('district', '');
-                        setProvincias([]);
-                        setDistritos([]);
-                        setGooglePrefilled(false);
-                      }}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${
-                        field.value === 'google' 
-                          ? 'border-primary bg-primary/5' 
-                          : fieldState.error 
-                            ? 'border-destructive hover:border-destructive/70' 
-                            : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <Map className="w-5 h-5 mb-2 text-primary" />
-                      <p className="font-medium text-sm">Con Google</p>
-                      <p className="text-xs text-muted-foreground mt-1">Autocompletado rápido</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        field.onChange('manual');
-                        const currentRegion   = form.getValues('region');
-                        const currentProvince = form.getValues('province');
-                        if (currentRegion && provincias.length === 0) {
-                          const provs = await getProvinciasAction(currentRegion);
-                          setProvincias(provs);
-                        }
-                        if (currentProvince && distritos.length === 0) {
-                          const dists = await getDistritosAction(currentProvince);
-                          setDistritos(dists);
-                        }
-                      }}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${
-                        field.value === 'manual' 
-                          ? 'border-primary bg-primary/5' 
-                          : fieldState.error 
-                            ? 'border-destructive hover:border-destructive/70' 
-                            : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <MapPin className="w-5 h-5 mb-2 text-primary" />
-                      <p className="font-medium text-sm">Manual</p>
-                      <p className="text-xs text-muted-foreground mt-1">Ingreso por campos</p>
-                    </button>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
-        <Separator className="my-10 bg-primary/20 h-px" />
-        */}
-
-        {/* Forzar address_type a 'manual' por defecto */}
-        {(() => {
-          if (!form.getValues('address_type')) {
-            form.setValue('address_type', 'manual');
-          }
-          return null;
-        })()}
-
-        {/* Campos según tipo — SOLO MOSTRAR MANUAL */}
-        {/* addressType === 'google' ? (
-          <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-            <SectionHeader title="Dirección" description="Busca tu dirección con Google" />
-            <div className="md:col-span-2 space-y-8">
-              {/* Aviso sobre precisión de Google */}
-              {/* <div className="flex gap-2.5 rounded-lg border border-primary/20 bg-primary-50/50 px-3.5 py-3">
-                <MapPin className="w-4 h-4 text-primary-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-neutral-600 leading-relaxed">
-                  Asegúrate de que la dirección sugerida sea exacta. Si no coincide con tu ubicación real, elige el método <span className="font-medium text-neutral-800">Manual</span> para ingresar los datos tú mismo.
-                </p>
-              </div>
-              <FormField
-                control={form.control}
-                name="google_address"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col gap-1">
-                    <FormLabel>Dirección completa</FormLabel>
-                    <GoogleAddressAutocomplete
-                      value={field.value ?? ''}
-                      onChange={(val) => {
-                        field.onChange(val);
-                        if (!val) {
-                          setGooglePrefilled(false);
-                          form.setValue('region', '');
-                          form.setValue('province', '');
-                          form.setValue('district', '');
-                          setProvincias([]);
-                          setDistritos([]);
-                        }
-                      }}
-                      onAddressSelected={async (detail: AddressDetail) => {
-                        setGooglePrefilled(false);
-                        if (detail.matched_departamento_id) {
-                          form.setValue('region', detail.matched_departamento_id);
-                          const provs = await getProvinciasAction(detail.matched_departamento_id);
-                          setProvincias(provs);
-                          if (detail.matched_provincia_id) {
-                            form.setValue('province', detail.matched_provincia_id);
-                            const dists = await getDistritosAction(detail.matched_provincia_id);
-                            setDistritos(dists);
-                            form.setValue('district', detail.matched_distrito_id ?? '');
-                          } else {
-                            form.setValue('province', '');
-                            form.setValue('district', '');
-                            setDistritos([]);
-                          }
-                          setGooglePrefilled(true);
-                        } else {
-                          form.setValue('region', '');
-                          form.setValue('province', '');
-                          form.setValue('district', '');
-                          setProvincias([]);
-                          setDistritos([]);
-                        }
-                      }}
-                      error={!!form.formState.errors.google_address}
-                    />
-                    <FormDescription>Escribe tu dirección y selecciona de las sugerencias</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Selects ubigeo — siempre visibles en modo Google */}
-              {/* <div className="space-y-4">
-                {googlePrefilled && (
-                  <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary">
-                    <span>✦</span>
-                    <span>Completado automáticamente. Verifica que los datos sean correctos y corrígelos si es necesario.</span>
-                  </div>
-                )}
-                {renderUbigeoSelects()}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-            <SectionHeader title="Dirección" description="Ingresa tu dirección manualmente" />
-            <div className="space-y-8 md:col-span-2">
-              <FormField
-                control={form.control}
-                name="street_address"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col gap-1">
-                    <FormLabel>Calle y número</FormLabel>
-                    <Input placeholder="Av. Javier Prado 1234, Dpto 501" {...field} className="w-full" />
-                    <FormDescription>Incluye referencia o número de departamento</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {renderUbigeoSelects()}
-            </div>
-          </div>
-        ) */}
-
-        {/* SOLO MOSTRAR OPCIÓN MANUAL */}
+        {/* Dirección manual */}
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
           <SectionHeader title="Dirección" description="Ingresa tu dirección manualmente" />
           <div className="space-y-8 md:col-span-2">
@@ -736,7 +519,6 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
                   form.setValue('district', '');
                   setProvincias([]);
                   setDistritos([]);
-                  // setGooglePrefilled(false); // COMENTADO: solo usaremos opción manual
                   if (e.target.value) getProvinciasAction(e.target.value).then(setProvincias);
                 }}
               >
@@ -764,7 +546,6 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
                     field.onChange(e);
                     form.setValue('district', '');
                     setDistritos([]);
-                    // setGooglePrefilled(false); // COMENTADO: solo usaremos opción manual
                     if (e.target.value) getDistritosAction(e.target.value).then(setDistritos);
                   }}
                 >
@@ -791,7 +572,6 @@ export function FunnelAddressShadcn({ dashboardMode = false, initialData, onClos
                   className="w-full"
                   onChange={(e) => {
                     field.onChange(e);
-                    // setGooglePrefilled(false); // COMENTADO: solo usaremos opción manual
                   }}
                 >
                   <NativeSelectOption value="">Selecciona el distrito</NativeSelectOption>

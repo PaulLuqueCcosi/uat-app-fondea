@@ -189,7 +189,6 @@ function buildPayload(form: FormState) {
 
   const address = JSON.stringify({
     address_type: 'MANUAL',
-    google_address: null,
     street_address: form.streetAddress,
     region: form.region, province: form.province, district: form.district,
     referral_source: form.referralSource, referral_other: null,

@@ -97,16 +97,8 @@ export async function backendFetch(
   const emoji   = res.ok ? '✅' : '⚠️';
   console.log(`${tag} ← ${emoji} ${res.status} ${res.statusText} (${elapsed}ms)`);
 
-  // Log extra para errores del backend (sin consumir el body)
   if (!res.ok && res.status >= 400) {
-    // Clonar para poder leer el body sin consumirlo
-    const clone = res.clone();
-    try {
-      const errorBody = await clone.text();
-      if (errorBody) {
-        console.warn(`${tag}    Body: ${errorBody.slice(0, 500)}`);
-      }
-    } catch { /* ignorar si no se puede leer */ }
+    console.warn(`${tag}    Error status: ${res.status}`);
   }
 
   return res;

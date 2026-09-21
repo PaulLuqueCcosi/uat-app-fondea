@@ -156,6 +156,7 @@ export function FunnelSummary({
 }: FunnelSummaryProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveErrorCategory, setSaveErrorCategory] = useState<import('@/lib/types').ErrorCategory | undefined>(undefined);
 
@@ -208,6 +209,8 @@ export function FunnelSummary({
   };
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setLoading(true);
     setSaveError(null);
     setSaveErrorCategory(undefined);
@@ -222,6 +225,7 @@ export function FunnelSummary({
       setSaveErrorCategory('validation');
       declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setLoading(false);
+      isSubmittingRef.current = false;
       return;
     }
 
@@ -232,6 +236,7 @@ export function FunnelSummary({
       setShowPepErrors(true);
       declarationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setLoading(false);
+      isSubmittingRef.current = false;
       return;
     }
 
@@ -243,6 +248,7 @@ export function FunnelSummary({
       setSaveError('Error al verificar tu conexión. Inténtalo nuevamente.');
       setSaveErrorCategory('network');
       setLoading(false);
+      isSubmittingRef.current = false;
       return;
     }
 
@@ -251,6 +257,7 @@ export function FunnelSummary({
       setPendingFingerprint({ fp, activeIntencion });
       setLocationModalOpen(true);
       setLoading(false);
+      isSubmittingRef.current = false;
       return;
     }
 
@@ -271,6 +278,7 @@ export function FunnelSummary({
       setVpnReasons(fp.vpnReasons);
       setVpnModalOpen(true);
       setLoading(false);
+      isSubmittingRef.current = false;
       return;
     }
 
@@ -353,6 +361,7 @@ export function FunnelSummary({
     }
 
     setLoading(false);
+    isSubmittingRef.current = false;
   };
 
   // Calcular totales basados en datos reales
@@ -871,9 +880,7 @@ export function FunnelSummary({
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Dirección completa</p>
                   <p className="font-medium text-foreground">
-                    {addressData.profile?.address_type === 'google'
-                      ? addressData.profile?.google_address
-                      : addressData.profile?.street_address || 'No especificado'}
+                    {addressData.profile?.street_address || 'No especificado'}
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-4">

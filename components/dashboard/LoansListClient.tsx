@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
-import { DeleteApplicationButton } from './sections/DeleteApplicationButton';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -203,7 +202,6 @@ export function LoansListClient({ applications }: LoansListClientProps) {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <DeleteApplicationButton applicationId={app.id} />
                   <Badge variant={getStatusVariant(app.status)}>
                     {getStatusLabel(app.status)}
                   </Badge>
