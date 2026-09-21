@@ -4,6 +4,7 @@ import { requireValidSession } from './auth.actions';
 import { ApplicationRecord, ApplicationStatus, PEPDeclarations, ActionResult } from '@/lib/types';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { parseBackendResponse, networkError } from '@/lib/action-utils';
+import { sanitizeErrorMessage } from '@/lib/error-sanitizer';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -358,7 +359,7 @@ export async function cancelApplicationAction(
 
     return {
       success: false,
-      error: json.message ?? json.detail ?? 'No se pudo cancelar la solicitud',
+      error: sanitizeErrorMessage(json, res.status),
     };
   } catch {
     console.error('[APPLICATION] Error al cancelar solicitud');

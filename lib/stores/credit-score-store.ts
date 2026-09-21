@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import type { ScoreRange } from '@/lib/types';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
     } catch (err) {
       console.error('[CreditScore] Network error:', err);
       set({ status: 'error', error: 'Network error' });
+      toast.error('No se pudo cargar el score crediticio.');
     }
   },
 
@@ -108,6 +110,7 @@ export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
     } catch (err) {
       console.error('[CreditScore] Network error:', err);
       set({ status: 'error', error: 'Network error' });
+      toast.error('No se pudo actualizar el score crediticio.');
     }
   },
 
@@ -143,6 +146,7 @@ export const useCreditScoreStore = create<CreditScoreStore>()((set, get) => ({
     } catch (err) {
       console.error('[CreditScore] Error fetching ranges:', err);
       set({ rangesStatus: 'error', rangesError: 'Network error' });
+      toast.error('No se pudo cargar los rangos de score.');
     }
   },
 }));

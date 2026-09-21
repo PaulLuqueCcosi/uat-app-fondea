@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import type { IntencionConfig } from '@/lib/types';
 import { getActiveIntencion } from '@/app/actions/intencion.actions';
 import type { StoreStatus } from './credit-score-store';
@@ -36,6 +37,7 @@ export const useIntencionStore = create<IntencionStore>()((set, get) => ({
     } catch (err) {
       console.error('[IntencionStore] Error fetching:', err);
       set({ status: 'error', error: 'Error al cargar intención' });
+      toast.error('No se pudo cargar la intención de crédito.');
     }
   },
 
@@ -51,6 +53,7 @@ export const useIntencionStore = create<IntencionStore>()((set, get) => ({
     } catch (err) {
       console.error('[IntencionStore] Error refetching:', err);
       set({ status: 'error', error: 'Error al cargar intención' });
+      toast.error('No se pudo actualizar la intención de crédito.');
     }
   },
 

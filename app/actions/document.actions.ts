@@ -3,6 +3,7 @@
 import { requireValidSession } from './auth.actions';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { parseBackendResponse, networkError } from '@/lib/action-utils';
+import { sanitizeErrorMessage } from '@/lib/error-sanitizer';
 import type { ActionResult } from '@/lib/types';
 import type {
   DocumentType,
@@ -269,13 +270,12 @@ export async function verifyDocumentAction(
     );
 
     if (!isSuccess(res.status)) {
-      let message = 'Error al verificar el documento.';
+      let json: any = {};
       try {
-        const json = await res.json();
-        message = json.detail ?? json.message ?? message;
+        json = await res.json();
       } catch {}
 
-      return { success: false, error: message };
+      return { success: false, error: sanitizeErrorMessage(json, res.status) };
     }
 
     const data = await res.json();

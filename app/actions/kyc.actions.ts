@@ -5,6 +5,7 @@ import { requireValidSession } from './auth.actions';
 import { backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
 import { getEditMetadata } from '@/lib/server/form-edit-policies';
+import { sanitizeErrorMessage } from '@/lib/error-sanitizer';
 
 // ── Respuesta pública al frontend ────────────────────────────────────────────
 
@@ -154,7 +155,7 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
         success: false,
         httpStatus: 503,
         errorCategory: 'server',
-        error: json.message ?? json.error ?? json.detail ?? 'Ocurrió un error con el servicio de verificación. Por favor, inténtalo más tarde.',
+        error: sanitizeErrorMessage(json, 503),
       };
     }
 
@@ -171,7 +172,7 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
         httpStatus: 429,
         errorCategory: 'rate_limit',
         blockedHoursLeft: hoursLeft,
-        error: json.message ?? `Demasiados intentos fallidos. Tu cuenta quedará bloqueada por ${hoursLeft} hora${hoursLeft !== 1 ? 's' : ''}.`,
+        error: sanitizeErrorMessage(json, 429),
       };
     }
 
@@ -182,7 +183,7 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
         httpStatus: 409,
         errorCategory: 'conflict',
         action: 're-login',
-        error: json.message ?? json.detail ?? 'No se encontró un documento registrado en tu cuenta. Por favor, cierra sesión e inicia sesión nuevamente.',
+        error: sanitizeErrorMessage(json, 409),
       };
     }
 
@@ -190,10 +191,6 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
     if (res.status === 422) {
       const attemptsLeft = json.attempts_left ?? json.attemptsLeft;
       const maxAttempts = json.max_attempts ?? 3;
-      const baseError = json.message ?? json.error ?? 'Los datos no coinciden con los registros de RENIEC.';
-
-      // Solo usar el mensaje del backend, sin agregar info de intentos
-      const error = baseError;
 
       return {
         success: false,
@@ -201,18 +198,17 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
         errorCategory: 'validation',
         attemptsLeft,
         maxAttempts,
-        error,
+        error: sanitizeErrorMessage(json, 422),
       };
     }
 
     // 400 — formato inválido o edad fuera de rango (Problem Detail, no consume intento)
     if (res.status === 400) {
-      const detail = json.message ?? json.detail ?? json.error ?? 'Los datos ingresados tienen un formato inválido. Verifica que sean exactamente como aparecen en tu DNI.';
       return {
         success: false,
         httpStatus: 400,
         errorCategory: 'validation',
-        error: detail,
+        error: sanitizeErrorMessage(json, 400),
       };
     }
 
@@ -231,7 +227,7 @@ export async function saveKYCData(data: KYCData): Promise<KYCSaveResult> {
       success: false,
       httpStatus: res.status,
       errorCategory: 'unknown',
-      error: json.message ?? json.error ?? json.detail ?? 'Error inesperado. Por favor, inténtalo nuevamente.',
+      error: sanitizeErrorMessage(json, res.status),
     };
 
   } catch {

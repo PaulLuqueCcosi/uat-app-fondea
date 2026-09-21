@@ -12,6 +12,7 @@ import { requireValidSession } from './auth.actions';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { networkError } from '@/lib/action-utils';
 import { getEditMetadata } from '@/lib/server/form-edit-policies';
+import { sanitizeErrorMessage } from '@/lib/error-sanitizer';
 
 const backendFetch = (path: string, options?: RequestInit) =>
   _backendFetch(path, { ...options, context: 'LABOR' });
@@ -53,7 +54,7 @@ async function parseLaborResponse(res: Response): Promise<LaborSaveResult> {
       success: false,
       httpStatus: 503,
       errorCategory: 'server',
-      error: json.message ?? json.detail ?? 'Servicio de validación temporalmente no disponible. No se consumió un intento. Inténtalo en unos minutos.',
+      error: sanitizeErrorMessage(json, 503),
     };
   }
 
@@ -65,7 +66,7 @@ async function parseLaborResponse(res: Response): Promise<LaborSaveResult> {
       httpStatus: 429,
       errorCategory: 'rate_limit',
       blockedHoursLeft: hoursLeft,
-      error: json.message ?? `Demasiados intentos fallidos. Tu cuenta quedará bloqueada por ${hoursLeft} hora${hoursLeft !== 1 ? 's' : ''}.`,
+      error: sanitizeErrorMessage(json, 429),
     };
   }
 
@@ -73,7 +74,6 @@ async function parseLaborResponse(res: Response): Promise<LaborSaveResult> {
   if (res.status === 422) {
     const attemptsLeft = json.attempts_left ?? json.attemptsLeft;
     const maxAttempts = json.max_attempts ?? 3;
-    const error = json.message ?? json.detail ?? 'Los datos laborales no son válidos.';
 
     return {
       success: false,
@@ -81,22 +81,17 @@ async function parseLaborResponse(res: Response): Promise<LaborSaveResult> {
       errorCategory: 'validation',
       attemptsLeft,
       maxAttempts,
-      error,
+      error: sanitizeErrorMessage(json, 422),
     };
   }
 
   // 400 — error de formato (no consume intento, ProblemDetail o Spring validation)
   if (res.status === 400) {
-    // Extraer el primer fieldError si existe, sino usar detail/message
-    const firstFieldError = json.fieldErrors
-      ? Object.values(json.fieldErrors)[0] as string
-      : undefined;
-    const message = firstFieldError ?? json.message ?? json.detail ?? 'Los datos ingresados tienen un formato inválido. Verifica que sean correctos.';
     return {
       success: false,
       httpStatus: 400,
       errorCategory: 'validation',
-      error: message,
+      error: sanitizeErrorMessage(json, 400),
     };
   }
 
@@ -115,7 +110,7 @@ async function parseLaborResponse(res: Response): Promise<LaborSaveResult> {
     success: false,
     httpStatus: res.status,
     errorCategory: 'unknown',
-    error: json.message ?? json.detail ?? json.error ?? 'Error inesperado. Por favor, inténtalo nuevamente.',
+    error: sanitizeErrorMessage(json, res.status),
   };
 }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
+import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,28 @@ import SignaturePad from '@/components/ui/signature-pad';
 
 interface FunnelContractProps {
   applicationId?: string;
+}
+
+// ── Helper: fetch con manejo de errores ────────────────────────────────────
+
+async function fetchContract<T>(url: string, init?: RequestInit): Promise<T | null> {
+  try {
+    const res = await fetch(url, init);
+    if (res.status === 401) {
+      toast.error('Tu sesión expiró. Por favor, vuelve a iniciar sesión.');
+      return null;
+    }
+    if (!res.ok) {
+      toast.error('Error al cargar el contrato. Intentá de nuevo.');
+      return null;
+    }
+    const contentType = res.headers.get('content-type') ?? '';
+    if (contentType.includes('application/json')) return res.json();
+    return await res.text() as unknown as T;
+  } catch {
+    toast.error('Error de conexión. Verificá tu red e intentá de nuevo.');
+    return null;
+  }
 }
 
 // ── Visor de contrato aislado (iframe) ──────────────────────────────────────
@@ -137,10 +160,8 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     async function loadContracts() {
       setLoadingContract(true);
       try {
-        const infoRes = await fetch(`/api/solicitudes/${solicitudId}/contract`, { cache: 'no-store' });
-        if (!infoRes.ok) { setLoadingContract(false); return; }
-        const rawList: any[] = await infoRes.json();
-        if (!Array.isArray(rawList)) { setLoadingContract(false); return; }
+        const rawList = await fetchContract<any[]>(`/api/solicitudes/${solicitudId}/contract`, { cache: 'no-store' });
+        if (!rawList || !Array.isArray(rawList)) { setLoadingContract(false); return; }
 
         const infos: ContractInfo[] = rawList.map((r: any) => ({
           contractId: r.contractId,
@@ -159,8 +180,8 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
         const visible = infos.filter(c => c.visibleBeforeSignature);
         const newHtmlMap: Record<string, string> = {};
         for (const c of visible) {
-          const htmlRes = await fetch(`/api/solicitudes/${solicitudId}/contract/html?contractId=${c.contractId}`, { cache: 'no-store' });
-          if (htmlRes.ok) newHtmlMap[c.contractId] = await htmlRes.text();
+          const html = await fetchContract<string>(`/api/solicitudes/${solicitudId}/contract/html?contractId=${c.contractId}`, { cache: 'no-store' });
+          if (html) newHtmlMap[c.contractId] = html;
         }
         setHtmlMap(newHtmlMap);
 
@@ -168,11 +189,8 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
         const signed = infos.filter(c => c.status === 'SIGNED' || c.status === 'FINALIZED');
         const newPdfMap: Record<string, string> = {};
         for (const c of signed) {
-          const pdfRes = await fetch(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${c.contractId}`, { cache: 'no-store' });
-          if (pdfRes.ok) {
-            const data = await pdfRes.json();
-            if (data.pdfUrl) newPdfMap[c.contractId] = data.pdfUrl;
-          }
+          const data = await fetchContract<{ pdfUrl?: string }>(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${c.contractId}`, { cache: 'no-store' });
+          if (data?.pdfUrl) newPdfMap[c.contractId] = data.pdfUrl;
         }
         setPdfUrlMap(newPdfMap);
       } catch (err) {
@@ -196,14 +214,11 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
         return;
       }
 
-      const res = await fetch(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${activeContract.contractId}`, { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        const url = data.pdfUrl ?? null;
-        if (url) {
-          setPdfUrlMap(prev => ({ ...prev, [activeContract.contractId]: url }));
-          window.open(url, '_blank');
-        }
+      const data = await fetchContract<{ pdfUrl?: string }>(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${activeContract.contractId}`, { cache: 'no-store' });
+      const url = data?.pdfUrl;
+      if (url) {
+        setPdfUrlMap(prev => ({ ...prev, [activeContract.contractId]: url }));
+        window.open(url, '_blank');
       }
     } finally {
       setDownloadingPdf(false);
@@ -370,13 +385,11 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
                     }
                     setDownloadingPdf(true);
                     try {
-                      const res = await fetch(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${c.contractId}`, { cache: 'no-store' });
-                      if (res.ok) {
-                        const data = await res.json();
-                        if (data.pdfUrl) {
-                          setPdfUrlMap(prev => ({ ...prev, [c.contractId]: data.pdfUrl }));
-                          window.open(data.pdfUrl, '_blank');
-                        }
+                      const data = await fetchContract<{ pdfUrl?: string }>(`/api/solicitudes/${solicitudId}/contract/pdf?contractId=${c.contractId}`, { cache: 'no-store' });
+                      const url = data?.pdfUrl;
+                      if (url) {
+                        setPdfUrlMap(prev => ({ ...prev, [c.contractId]: url }));
+                        window.open(url, '_blank');
                       }
                     } finally {
                       setDownloadingPdf(false);

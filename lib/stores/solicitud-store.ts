@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { toast } from 'sonner';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
 import type { DocumentsVerificationStatus } from '@/lib/types/document';
 import type { DocumentListResult } from '@/lib/types/document';
@@ -120,6 +121,25 @@ function mapDocumentsVerification(data: any): DocumentsVerificationStatus {
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   };
+}
+
+let _lastRefreshToast = 0;
+function refreshToast(msg: string) {
+  const now = Date.now();
+  if (now - _lastRefreshToast > 30_000) {
+    toast.error(msg);
+    _lastRefreshToast = now;
+  }
+}
+
+const _inflight = new Map<string, Promise<unknown>>();
+
+function dedupeFetch<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const existing = _inflight.get(key);
+  if (existing) return existing as Promise<T>;
+  const promise = fn().finally(() => _inflight.delete(key));
+  _inflight.set(key, promise);
+  return promise;
 }
 
 // ── Fetch helpers (llaman a las API routes proxy) ─────────────────────────────
@@ -359,17 +379,20 @@ export const useSolicitudStore = create<SolicitudStore>()(
       if (applicationStatus === 'pending' || applicationStatus === 'success') return get().application;
       if (!applicationId) return null;
 
-      set({ applicationStatus: 'pending' });
-      try {
-        const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}`);
-        const app = raw ? mapApplication(raw) : null;
-        set({ application: app, applicationStatus: 'success' });
-        return app;
-      } catch (err) {
-        console.error('[SolicitudStore] Error fetching application:', err);
-        set({ applicationStatus: 'error' });
-        return null;
-      }
+      return dedupeFetch('application', async () => {
+        set({ applicationStatus: 'pending' });
+        try {
+          const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}`);
+          const app = raw ? mapApplication(raw) : null;
+          set({ application: app, applicationStatus: 'success' });
+          return app;
+        } catch (err) {
+          console.error('[SolicitudStore] Error fetching application:', err);
+          set({ applicationStatus: 'error' });
+          toast.error('No se pudo cargar la solicitud.');
+          return null;
+        }
+      });
     },
 
     // ── Fetch Full Detail ─────────────────────────────────────────────────────
@@ -379,15 +402,18 @@ export const useSolicitudStore = create<SolicitudStore>()(
       if (detailStatus === 'pending' || detailStatus === 'success') return;
       if (!applicationId) return;
 
-      set({ detailStatus: 'pending' });
-      try {
-        const detail = await fetchJson<ApplicationFullDetail>(`/api/solicitudes/${applicationId}/detail`);
-        const parsed = detail ? parseDetail(detail) : null;
-        set({ fullDetail: parsed, detailStatus: 'success' });
-      } catch (err) {
-        console.error('[SolicitudStore] Error fetching full detail:', err);
-        set({ detailStatus: 'error' });
-      }
+      return dedupeFetch('detail', async () => {
+        set({ detailStatus: 'pending' });
+        try {
+          const detail = await fetchJson<ApplicationFullDetail>(`/api/solicitudes/${applicationId}/detail`);
+          const parsed = detail ? parseDetail(detail) : null;
+          set({ fullDetail: parsed, detailStatus: 'success' });
+        } catch (err) {
+          console.error('[SolicitudStore] Error fetching full detail:', err);
+          set({ detailStatus: 'error' });
+          toast.error('No se pudo cargar el detalle de la solicitud.');
+        }
+      });
     },
 
     // ── Fetch Documents ───────────────────────────────────────────────────────
@@ -397,14 +423,17 @@ export const useSolicitudStore = create<SolicitudStore>()(
       if (documentsStatus === 'pending' || documentsStatus === 'success') return;
       if (!applicationId) return;
 
-      set({ documentsStatus: 'pending' });
-      try {
-        const { documents, documentUrls } = await loadDocumentsWithUrls(applicationId);
-        set({ documents, documentUrls, documentsStatus: 'success' });
-      } catch (err) {
-        console.error('[SolicitudStore] Error fetching documents:', err);
-        set({ documentsStatus: 'error' });
-      }
+      return dedupeFetch('documents', async () => {
+        set({ documentsStatus: 'pending' });
+        try {
+          const { documents, documentUrls } = await loadDocumentsWithUrls(applicationId);
+          set({ documents, documentUrls, documentsStatus: 'success' });
+        } catch (err) {
+          console.error('[SolicitudStore] Error fetching documents:', err);
+          set({ documentsStatus: 'error' });
+          toast.error('No se pudieron cargar los documentos.');
+        }
+      });
     },
 
     // ── Fetch Documents Verification ──────────────────────────────────────────
@@ -414,15 +443,18 @@ export const useSolicitudStore = create<SolicitudStore>()(
       if (verificationStatus === 'pending' || verificationStatus === 'success') return;
       if (!applicationId) return;
 
-      set({ verificationStatus: 'pending' });
-      try {
-        const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}/documents/status`);
-        const status = raw ? mapDocumentsVerification(raw) : null;
-        set({ documentsVerification: status, verificationStatus: 'success' });
-      } catch (err) {
-        console.error('[SolicitudStore] Error fetching verification:', err);
-        set({ verificationStatus: 'error' });
-      }
+      return dedupeFetch('verification', async () => {
+        set({ verificationStatus: 'pending' });
+        try {
+          const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}/documents/status`);
+          const status = raw ? mapDocumentsVerification(raw) : null;
+          set({ documentsVerification: status, verificationStatus: 'success' });
+        } catch (err) {
+          console.error('[SolicitudStore] Error fetching verification:', err);
+          set({ verificationStatus: 'error' });
+          toast.error('No se pudo verificar el estado de los documentos.');
+        }
+      });
     },
 
     // ── Fetch Contract ────────────────────────────────────────────────────────
@@ -432,15 +464,18 @@ export const useSolicitudStore = create<SolicitudStore>()(
       if (contractStatus === 'pending' || contractStatus === 'success') return;
       if (!applicationId) return;
 
-      set({ contractStatus: 'pending' });
-      try {
-        const result = await loadContract(applicationId);
-        const primaryContract = result.contracts.find(c => c.visibleBeforeSignature) ?? result.contracts[0] ?? null;
-        set({ ...result, contractInfo: primaryContract, contractStatus: 'success' });
-      } catch (err) {
-        console.error('[SolicitudStore] Error fetching contract:', err);
-        set({ contractStatus: 'error' });
-      }
+      return dedupeFetch('contract', async () => {
+        set({ contractStatus: 'pending' });
+        try {
+          const result = await loadContract(applicationId);
+          const primaryContract = result.contracts.find(c => c.visibleBeforeSignature) ?? result.contracts[0] ?? null;
+          set({ ...result, contractInfo: primaryContract, contractStatus: 'success' });
+        } catch (err) {
+          console.error('[SolicitudStore] Error fetching contract:', err);
+          set({ contractStatus: 'error' });
+          toast.error('No se pudo cargar el contrato.');
+        }
+      });
     },
 
     // ── Fetch Intention ───────────────────────────────────────────────────────
@@ -449,12 +484,15 @@ export const useSolicitudStore = create<SolicitudStore>()(
       const { applicationId } = get();
       if (!applicationId) return;
 
-      try {
-        const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}/intention`);
-        if (raw) set({ applicationIntention: mapIntention(raw) });
-      } catch (err) {
-        console.error('[SolicitudStore] Error fetching intention:', err);
-      }
+      return dedupeFetch('intention', async () => {
+        try {
+          const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}/intention`);
+          if (raw) set({ applicationIntention: mapIntention(raw) });
+        } catch (err) {
+          console.error('[SolicitudStore] Error fetching intention:', err);
+          toast.error('No se pudo cargar la intención de crédito.');
+        }
+      });
     },
 
     // ── Refresh (fuerza recarga) ──────────────────────────────────────────────
@@ -471,6 +509,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing application:', err);
         set({ applicationStatus: 'error' });
+        refreshToast('Error al actualizar la solicitud.');
       }
     },
 
@@ -486,6 +525,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing full detail:', err);
         set({ detailStatus: 'error' });
+        refreshToast('Error al actualizar el detalle.');
       }
     },
 
@@ -500,6 +540,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing documents:', err);
         set({ documentsStatus: 'error' });
+        refreshToast('Error al actualizar documentos.');
       }
     },
 
@@ -515,6 +556,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing verification:', err);
         set({ verificationStatus: 'error' });
+        refreshToast('Error al actualizar verificación.');
       }
     },
 
@@ -530,6 +572,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing contract:', err);
         set({ contractStatus: 'error' });
+        refreshToast('Error al actualizar el contrato.');
       }
     },
 

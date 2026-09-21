@@ -14,6 +14,7 @@
  */
 
 import type { ApiResult, ApiError, ErrorCategory } from '@/lib/types/common';
+import { sanitizeErrorMessage } from './error-sanitizer';
 
 // Re-export para conveniencia
 export type { ApiResult, ApiOk, ApiFail, ApiError } from '@/lib/types/common';
@@ -81,10 +82,6 @@ export async function parseResponse<T = void>(
 // ── Builder de errores ────────────────────────────────────────────────────────
 
 function buildError(status: number, json: any, context: string): ApiError {
-  // Extraer mensaje — el backend puede usar message, detail, o error
-  const backendMessage: string | undefined =
-    json.message ?? json.detail ?? json.error;
-
   // Extraer field errors si existen
   const fields: Record<string, string> | undefined =
     json.fieldErrors && Object.keys(json.fieldErrors).length > 0
@@ -108,7 +105,7 @@ function buildError(status: number, json: any, context: string): ApiError {
     case 400:
       return {
         category: 'validation',
-        message: firstFieldError(fields) ?? backendMessage ?? `Los ${context} tienen un formato inválido.`,
+        message: sanitizeErrorMessage(json, 400),
         status,
         fields,
         meta: Object.keys(meta).length > 0 ? meta : undefined,
@@ -131,21 +128,21 @@ function buildError(status: number, json: any, context: string): ApiError {
     case 404:
       return {
         category: 'not_found',
-        message: backendMessage ?? 'El recurso solicitado no existe.',
+        message: sanitizeErrorMessage(json, 404),
         status,
       };
 
     case 409:
       return {
         category: 'conflict',
-        message: backendMessage ?? 'Esta operación no se puede realizar en este momento.',
+        message: sanitizeErrorMessage(json, 409),
         status,
         meta: Object.keys(meta).length > 0 ? meta : undefined,
       };
 
     case 422: {
       // Validación semántica — consume intento
-      let message = backendMessage ?? `Los ${context} no son válidos.`;
+      let message = sanitizeErrorMessage(json, 422);
       const attemptsLeft = meta.attemptsLeft as number | undefined;
       if (attemptsLeft === 1) {
         message += ' ¡Cuidado! Este es tu último intento.';
@@ -162,10 +159,9 @@ function buildError(status: number, json: any, context: string): ApiError {
     }
 
     case 429: {
-      const hours = (meta.blockedHoursLeft as number) ?? 24;
       return {
         category: 'rate_limit',
-        message: backendMessage ?? `Demasiados intentos. Cuenta bloqueada por ${hours} hora${hours !== 1 ? 's' : ''}.`,
+        message: sanitizeErrorMessage(json, 429),
         status,
         meta: Object.keys(meta).length > 0 ? meta : undefined,
       };
@@ -174,7 +170,7 @@ function buildError(status: number, json: any, context: string): ApiError {
     case 503:
       return {
         category: 'server',
-        message: backendMessage ?? 'Servicio temporalmente no disponible. Inténtalo en unos minutos.',
+        message: sanitizeErrorMessage(json, 503),
         status,
       };
 
@@ -188,7 +184,7 @@ function buildError(status: number, json: any, context: string): ApiError {
       }
       return {
         category: 'unknown',
-        message: backendMessage ?? 'Error inesperado. Inténtalo nuevamente.',
+        message: sanitizeErrorMessage(json, status),
         status,
       };
   }

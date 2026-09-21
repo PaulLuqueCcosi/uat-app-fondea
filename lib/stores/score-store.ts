@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import type { PuntajeConfig } from '@/lib/types';
 import { getScore } from '@/lib/client-api/score';
 import type { StoreStatus } from './credit-score-store';
@@ -34,6 +35,7 @@ export const usePuntajeStore = create<PuntajeStore>()((set, get) => ({
     } catch (err) {
       console.error('[PuntajeStore] Error fetching:', err);
       set({ status: 'error', error: 'Error al cargar puntaje' });
+      toast.error('No se pudo cargar el puntaje.');
     }
   },
 
@@ -45,6 +47,7 @@ export const usePuntajeStore = create<PuntajeStore>()((set, get) => ({
     } catch (err) {
       console.error('[PuntajeStore] Error refetching:', err);
       set({ status: 'error', error: 'Error al cargar puntaje' });
+      toast.error('No se pudo actualizar el puntaje.');
     }
   },
 
