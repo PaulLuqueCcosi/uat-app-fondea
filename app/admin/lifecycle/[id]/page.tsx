@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  ArrowLeft,
   ArrowRight,
   ExternalLink,
   CheckCircle2,
@@ -16,8 +15,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { BackLink } from '@/components/admin/shared';
 import { getUniversalLifecycle } from '@/modules/admin/admin-lifecycle.service';
 import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
+import { DataRow } from '@/components/ui/data-row';
 
 // ── Status configs ───────────────────────────────────────────────────────────
 
@@ -38,23 +39,14 @@ const APP_STATUS_LABELS: Record<string, { label: string; bg: string; text: strin
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function InfoRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className="flex items-baseline justify-between gap-2">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className={`text-sm font-semibold text-right ${highlight ? 'text-gray-900' : ''}`}>{value}</span>
-    </div>
-  );
-}
-
 function EmptyStep({ message, sub }: { message: string; sub?: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-10 text-center">
-      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-        <Ban className="h-5 w-5 text-gray-300" />
+      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+        <Ban className="h-5 w-5 text-muted-foreground/50" />
       </div>
-      <p className="text-sm text-gray-400 font-medium">{message}</p>
-      {sub && <p className="text-xs text-gray-300 mt-1 max-w-[200px]">{sub}</p>}
+      <p className="text-sm text-muted-foreground font-medium">{message}</p>
+      {sub && <p className="text-xs text-muted-foreground/70 mt-1 max-w-[200px]">{sub}</p>}
     </div>
   );
 }
@@ -71,14 +63,14 @@ interface PipelineStepProps {
 
 function PipelineStep({ number, title, subtitle, icon: Icon, status, children, href }: PipelineStepProps) {
   const statusConfig = {
-    completed: { circle: 'bg-emerald-500', shadow: 'shadow-emerald-100', border: 'border-emerald-200', bg: 'bg-white' },
-    active: { circle: 'bg-amber-500', shadow: 'shadow-amber-100', border: 'border-amber-200', bg: 'bg-white' },
-    rejected: { circle: 'bg-red-500', shadow: 'shadow-red-100', border: 'border-red-200', bg: 'bg-white' },
-    empty: { circle: 'bg-gray-200', shadow: 'shadow-gray-100', border: 'border-gray-200', bg: 'bg-gray-50/50' },
+    completed: { circle: 'bg-emerald-500', shadow: 'shadow-emerald-100', border: 'border-emerald-200', bg: 'bg-card' },
+    active: { circle: 'bg-amber-500', shadow: 'shadow-amber-100', border: 'border-amber-200', bg: 'bg-card' },
+    rejected: { circle: 'bg-red-500', shadow: 'shadow-red-100', border: 'border-red-200', bg: 'bg-card' },
+    empty: { circle: 'bg-muted', shadow: 'shadow-muted', border: 'border-border', bg: 'bg-muted/50' },
   }[status];
 
   return (
-    <div className={`flex-1 rounded-2xl border p-6 transition-all duration-300 ${statusConfig.bg} ${status === 'empty' ? 'border-dashed' : statusConfig.border} ${status !== 'empty' ? 'shadow-sm hover:shadow-md' : ''}`}>
+    <div className={`flex-1 rounded-xl border p-6 transition-all duration-300 ${statusConfig.bg} ${status === 'empty' ? 'border-dashed' : statusConfig.border} ${status !== 'empty' ? 'shadow-sm hover:shadow-md' : ''}`}>
       {/* Step header with icon */}
       <div className="flex items-center gap-3 mb-5">
         <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-white ${statusConfig.circle} ${status !== 'empty' ? 'shadow-lg shadow-opacity-20' : ''}`}>
@@ -93,7 +85,7 @@ function PipelineStep({ number, title, subtitle, icon: Icon, status, children, h
           )}
         </div>
         <div className="min-w-0">
-          <p className={`text-base font-bold ${status === 'empty' ? 'text-gray-400' : 'text-gray-900'}`}>
+          <p className={`text-base font-bold ${status === 'empty' ? 'text-muted-foreground' : 'text-foreground'}`}>
             {title}
           </p>
           <p className="text-xs text-muted-foreground">{subtitle}</p>
@@ -101,7 +93,7 @@ function PipelineStep({ number, title, subtitle, icon: Icon, status, children, h
       </div>
 
       {/* Divider */}
-      <div className={`h-px mb-5 ${status === 'empty' ? 'bg-gray-200' : 'bg-gray-100'}`} />
+      <div className={`h-px mb-5 ${status === 'empty' ? 'bg-border' : 'bg-border'}`} />
 
       {/* Content */}
       <div className="min-h-[140px]">
@@ -110,12 +102,12 @@ function PipelineStep({ number, title, subtitle, icon: Icon, status, children, h
 
       {/* Action */}
       {href && (
-        <div className="mt-5 pt-4 border-t border-gray-100">
+        <div className="mt-5 pt-4 border-t border-border">
           <Link href={href}>
             <Button
               variant="outline"
               size="sm"
-              className="w-full h-10 gap-2 text-xs font-medium bg-white hover:bg-gray-50 border-gray-200"
+              className="w-full h-10 gap-2 text-xs font-medium bg-card hover:bg-muted"
             >
               <ExternalLink className="h-3.5 w-3.5" />
               Ver detalle
@@ -153,14 +145,12 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
   const credit = lifecycle.credit;
 
   return (
-    <div className="flex flex-1 flex-col gap-8 p-6 md:p-10 min-h-0">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 min-h-0">
       {/* Header */}
       <div>
-        <Link href="/admin/intentions" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3 transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Intenciones
-        </Link>
+        <BackLink href="/admin/intentions" label="Intenciones" />
         <div className="flex items-baseline gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Flujo de intención</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Flujo de intención</h1>
           <span className="text-sm text-muted-foreground font-mono">{id.slice(0, 8)}…</span>
         </div>
         <p className="text-muted-foreground mt-1 text-sm">
@@ -181,10 +171,10 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
           {origin?.anonymous ? (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <InfoRow label="Monto" value={`S/ ${Number(origin.anonymous.amount).toLocaleString()}`} highlight />
-                <InfoRow label="Plazo" value={`${origin.anonymous.termDays} días`} />
-                <InfoRow label="Cuotas" value={String(origin.anonymous.installmentCount)} />
-                <InfoRow label="IP" value={origin.anonymous.client_ip ?? '—'} />
+                <DataRow horizontal label="Monto" value={`S/ ${Number(origin.anonymous.amount).toLocaleString()}`} bold />
+                <DataRow horizontal label="Plazo" value={`${origin.anonymous.termDays} días`} />
+                <DataRow horizontal label="Cuotas" value={String(origin.anonymous.installmentCount)} />
+                <DataRow horizontal label="IP" value={origin.anonymous.client_ip ?? '—'} />
               </div>
               <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
                 <p className="text-xs text-muted-foreground">
@@ -210,15 +200,15 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
           {origin?.userIntention ? (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <InfoRow label="Monto" value={`S/ ${Number(origin.userIntention.amount).toLocaleString()}`} highlight />
-                <InfoRow label="Plazo" value={`${origin.userIntention.termDays} días`} />
-                <InfoRow label="Cuotas" value={String(origin.userIntention.installmentCount)} />
-                <InfoRow label="Tipo" value={origin.userIntention.is_first_loan ? '1er prést.' : 'Recurrente'} />
+                <DataRow horizontal label="Monto" value={`S/ ${Number(origin.userIntention.amount).toLocaleString()}`} bold />
+                <DataRow horizontal label="Plazo" value={`${origin.userIntention.termDays} días`} />
+                <DataRow horizontal label="Cuotas" value={String(origin.userIntention.installmentCount)} />
+                <DataRow horizontal label="Tipo" value={origin.userIntention.is_first_loan ? '1er prést.' : 'Recurrente'} />
               </div>
               {user && (
-                <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
+                <div className="mt-3 pt-3 border-t border-dashed border-border">
                   <p className="text-xs text-muted-foreground mb-1">Vinculado a</p>
-                  <p className="text-sm font-semibold text-gray-900">{user.name ?? 'Sin nombre'}</p>
+                  <p className="text-sm font-semibold text-foreground">{user.name ?? 'Sin nombre'}</p>
                   {user.document_number && (
                     <p className="text-xs text-muted-foreground font-mono">DNI {user.document_number}</p>
                   )}
@@ -257,10 +247,10 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
                 </span>
               </div>
               {app.submitted_at && (
-                <InfoRow label="Enviada" value={new Date(app.submitted_at).toLocaleDateString('es-PE')} />
+                <DataRow horizontal label="Enviada" value={new Date(app.submitted_at).toLocaleDateString('es-PE')} />
               )}
               {app.credit_score != null && (
-                <InfoRow label="Score" value={String(app.credit_score)} highlight />
+                <DataRow horizontal label="Score" value={String(app.credit_score)} bold />
               )}
               {app.rejection_reason && (
                 <p className="text-xs text-red-600 mt-2 bg-red-50 p-2 rounded-md">{app.rejection_reason}</p>
@@ -304,10 +294,10 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <InfoRow label="Monto" value={`S/ ${Number(credit.principal).toLocaleString()}`} highlight />
-                <InfoRow label="Pagado" value={`S/ ${Number(credit.total_paid).toLocaleString()}`} />
-                <InfoRow label="Cuotas" value={`${credit.installments_completed}/${credit.installment_count}`} />
-                <InfoRow label="Pendiente" value={`S/ ${Number(credit.total_outstanding).toLocaleString()}`} />
+                <DataRow horizontal label="Monto" value={`S/ ${Number(credit.principal).toLocaleString()}`} bold />
+                <DataRow horizontal label="Pagado" value={`S/ ${Number(credit.total_paid).toLocaleString()}`} />
+                <DataRow horizontal label="Cuotas" value={`${credit.installments_completed}/${credit.installment_count}`} />
+                <DataRow horizontal label="Pendiente" value={`S/ ${Number(credit.total_outstanding).toLocaleString()}`} />
               </div>
             </div>
           ) : (
@@ -317,9 +307,9 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
       </div>
 
       {/* Progress summary */}
-      <div className="rounded-xl bg-gray-50 border border-gray-100 p-5">
+      <div className="rounded-xl bg-muted border border-border p-5">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-gray-700">Progreso del flujo</p>
+          <p className="text-sm font-medium text-foreground">Progreso del flujo</p>
           <p className="text-sm text-muted-foreground">
             {[origin?.anonymous, origin?.userIntention, app, credit].filter(Boolean).length} de 4 pasos
           </p>
@@ -329,7 +319,7 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
             <div
               key={i}
               className={`flex-1 h-2.5 rounded-full transition-all duration-500 ${
-                exists ? 'bg-emerald-400' : 'bg-gray-200'
+                exists ? 'bg-emerald-400' : 'bg-muted-foreground/20'
               }`}
             />
           ))}
@@ -351,7 +341,7 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
           <span>Rechazado / Mora</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-gray-200 border border-gray-300" />
+          <div className="w-3 h-3 rounded-full bg-muted border border-border" />
           <span>No existe</span>
         </div>
       </div>

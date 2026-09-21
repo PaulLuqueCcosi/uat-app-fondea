@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Wallet, ArrowDownLeft, ArrowUpRight, AlertTriangle, RotateCcw, Banknote } from 'lucide-react';
 import type { AdminCreditTransactions } from '@/modules/admin/admin-credit-detail.service';
+import { formatCurrency, formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   data: AdminCreditTransactions;
@@ -14,16 +15,6 @@ const TX_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string;
   PENALTY_PAYMENT: { label: 'Pago de mora', color: 'text-orange-700', bg: 'bg-orange-50', icon: Banknote },
   REVERSAL: { label: 'Reversión', color: 'text-red-700', bg: 'bg-red-50', icon: RotateCcw },
 };
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return '—';
-  const d = new Date(value);
-  return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
 
 export function CreditTransactionsSection({ data }: Props) {
   // Summary

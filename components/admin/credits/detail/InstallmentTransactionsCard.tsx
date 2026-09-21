@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Wallet, ChevronDown, ChevronRight, FileText } from 'lucide-react';
 import type { InstallmentTransactionInfo, TransactionType } from '@/modules/admin/admin-credit-detail.service';
+import { formatCurrency } from '@/lib/admin-formatters';
 
 /**
  * Fechas ya formateadas en el server component padre (no acá) — formatear fechas
@@ -28,10 +29,6 @@ const TX_TYPE_LABELS: Record<TransactionType, { label: string; color: string; bg
   PENALTY_PAYMENT: { label: 'Pago de mora', color: 'text-orange-700', bg: 'bg-orange-50' },
   REVERSAL: { label: 'Reversión', color: 'text-red-700', bg: 'bg-red-50' },
 };
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-}
 
 export function InstallmentTransactionsCard({ transactions }: Props) {
   return (

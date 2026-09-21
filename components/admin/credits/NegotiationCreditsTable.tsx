@@ -5,6 +5,7 @@ import { ExternalLink, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { negotiationOfferStatusLabels, type NegotiationOffer } from '@/modules/negotiation-offers';
+import { formatCurrency, formatDateTime } from '@/lib/admin-formatters';
 
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   SENT: 'secondary',
@@ -12,14 +13,6 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
   REJECTED: 'destructive',
   EXPIRED: 'outline',
 };
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 interface Props {
   offers: NegotiationOffer[];

@@ -22,6 +22,7 @@ import {
   activateThresholdsAction,
 } from '@/app/actions/admin-evaluation-rules.actions';
 import type { ScoringThresholdsResponse } from '@/modules/admin/admin-evaluation-rules.service';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 export function ThresholdsPanel() {
   const [thresholds, setThresholds] = useState<ScoringThresholdsResponse[]>([]);
@@ -219,12 +220,5 @@ export function ThresholdsPanel() {
   );
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
+// Alias for compatibility with table usage
+const formatDate = formatDateTime;

@@ -10,7 +10,7 @@ import { ApplicationDocumentsSection } from './detail/ApplicationDocumentsSectio
 import { ApplicationContractSection } from './detail/ApplicationContractSection';
 import { ApplicationEvaluationSection } from './detail/ApplicationEvaluationSection';
 import { ApplicationSnapshotsSection } from './detail/ApplicationSnapshotsSection';
-import { ApplicationTimelineSection } from './detail/ApplicationTimelineSection';
+import { AuditTimeline } from '@/components/admin/shared';
 import type {
   AdminApplicationCore,
   AdminApplicationDetail,
@@ -126,7 +126,18 @@ export function ApplicationDetailClient({
 
         <TabsContent value="timeline" className="mt-4">
           {timeline && timeline.length > 0 ? (
-            <ApplicationTimelineSection entries={timeline} />
+            <AuditTimeline
+              entries={timeline}
+              moduleLabels={{
+                CORE: { label: 'Core', color: 'default' },
+                DOCUMENTS: { label: 'Documentos', color: 'secondary' },
+                EVALUATION: { label: 'Evaluación', color: 'secondary' },
+                CONTRACT: { label: 'Contrato', color: 'secondary' },
+                DETAIL: { label: 'Detalle financiero', color: 'outline' },
+                AUDIT: { label: 'Auditoría', color: 'outline' },
+              }}
+              refIdSuffix={(e) => e.module === 'EVALUATION' ? ' (ver pestaña Evaluación)' : null}
+            />
           ) : (
             <EmptyTabState message="No hay eventos de auditoría registrados para esta solicitud" />
           )}

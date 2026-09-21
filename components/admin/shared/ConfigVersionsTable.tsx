@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { formatDate } from '@/lib/admin-formatters';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -332,14 +333,4 @@ export function ConfigVersionsTable({
       </ConfirmAction>
     </div>
   );
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit', month: 'short', year: 'numeric',
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
 }

@@ -4,32 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, CalendarDays, Handshake, AlertCircle } from 'lucide-react';
+import { CalendarDays, Handshake, AlertCircle } from 'lucide-react';
+import { DetailPageHeader } from '@/components/admin/shared';
 import { getAdminInstallmentDetail, getAdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
 import { InstallmentTransactionsCard } from '@/components/admin/credits/detail/InstallmentTransactionsCard';
+import { KpiCard } from '@/components/admin/shared';
+import { DataRow } from '@/components/ui/data-row';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   params: Promise<{ id: string; installmentNo: string }>;
 }
 
 // Labels y descripciones centralizados en `modules/admin/credit-status-labels`.
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-}
-
-function formatDate(value: string | null) {
-  if (!value) return '—';
-  const d = new Date(value + (value.includes('T') ? '' : 'T00:00:00'));
-  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return '—';
-  const d = new Date(value);
-  return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 export default async function AdminInstallmentDetailPage({ params }: Props) {
   const { id, installmentNo } = await params;
@@ -63,31 +51,22 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href={`/admin/credits/${id}`} className="text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <CalendarDays className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold font-mono">
-                {data.installmentCode ?? `Cuota #${data.installmentNo}`}
-              </h1>
-              <Badge variant={sc.variant}>{sc.label}</Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Crédito{' '}
-              <Link href={`/admin/credits/${id}`} className="font-mono text-primary hover:underline">
-                {creditSummary?.creditCode ?? `#${id.slice(0, 8)}`}
-              </Link>
-              {' · '}Vence {formatDate(data.dueDate)}
-            </p>
-          </div>
-        </div>
+      <DetailPageHeader
+        icon={<CalendarDays className="h-5 w-5 text-primary" />}
+        title={data.installmentCode ?? `Cuota #${data.installmentNo}`}
+        subtitle={
+          <>
+            Crédito{' '}
+            <Link href={`/admin/credits/${id}`} className="font-mono text-primary hover:underline">
+              {creditSummary?.creditCode ?? `#${id.slice(0, 8)}`}
+            </Link>
+            {' · '}Vence {formatDate(data.dueDate)}
+          </>
+        }
+        badge={{ label: sc.label, variant: sc.variant }}
+        backHref={`/admin/credits/${id}`}
+        backLabel="Crédito"
+      >
         {canNegotiate && (
           <Link href={`/admin/credits/${id}/installments/${no}/negotiate`}>
             <Button size="sm" className="gap-1.5">
@@ -96,7 +75,7 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
             </Button>
           </Link>
         )}
-      </div>
+      </DetailPageHeader>
 
       {/* Alert for overdue */}
       {isOverdue && (
@@ -130,10 +109,10 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Monto de la cuota" value={formatCurrency(data.amountDue)} />
-        <KpiCard label="Pagado (cuota)" value={formatCurrency(data.amountPaid)} positive={data.amountPaid > 0} />
-        <KpiCard label="Mora acumulada" value={formatCurrency(data.penaltyAccrued)} negative={data.penaltyAccrued > 0} />
-        <KpiCard label="Total pendiente" value={formatCurrency(data.outstanding)} highlight />
+        <KpiCard label="Monto de la cuota" value={formatCurrency(data.amountDue)} mono />
+        <KpiCard label="Pagado (cuota)" value={formatCurrency(data.amountPaid)} positive={data.amountPaid > 0} mono />
+        <KpiCard label="Mora acumulada" value={formatCurrency(data.penaltyAccrued)} negative={data.penaltyAccrued > 0} mono />
+        <KpiCard label="Total pendiente" value={formatCurrency(data.outstanding)} highlight mono />
       </div>
 
       {/* Progress bar */}
@@ -152,10 +131,10 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
             />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-3 border-t">
-            <MiniField label="Pendiente cuota" value={formatCurrency(data.installmentOutstanding)} />
-            <MiniField label="Pendiente mora" value={formatCurrency(data.penaltyOutstanding)} />
-            <MiniField label="Mora pagada" value={formatCurrency(data.penaltyPaid)} />
-            <MiniField label="Días de atraso" value={data.daysOverdue > 0 ? `${data.daysOverdue} días` : 'Al día'} alert={data.daysOverdue > 0} />
+            <DataRow label="Pendiente cuota" value={formatCurrency(data.installmentOutstanding)} />
+            <DataRow label="Pendiente mora" value={formatCurrency(data.penaltyOutstanding)} />
+            <DataRow label="Mora pagada" value={formatCurrency(data.penaltyPaid)} />
+            <DataRow label="Días de atraso" value={data.daysOverdue > 0 ? `${data.daysOverdue} días` : 'Al día'} alert={data.daysOverdue > 0} />
           </div>
         </CardContent>
       </Card>
@@ -167,50 +146,18 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
-            <MiniField label="Fecha vencimiento" value={formatDate(data.dueDate)} />
-            <MiniField label="Fecha de pago" value={formatDateTime(data.paidAt)} />
-            <MiniField label="Última mora cobrada" value={formatDate(data.lastPenaltyDate)} />
-            <MiniField label="Estado" value={sc.description || sc.label} />
-            <MiniField label="Creada" value={formatDateTime(data.createdAt)} />
-            <MiniField label="Última actualización" value={formatDateTime(data.updatedAt)} />
+            <DataRow label="Fecha vencimiento" value={formatDate(data.dueDate)} />
+            <DataRow label="Fecha de pago" value={formatDateTime(data.paidAt)} />
+            <DataRow label="Última mora cobrada" value={formatDate(data.lastPenaltyDate)} />
+            <DataRow label="Estado" value={sc.description || sc.label} />
+            <DataRow label="Creada" value={formatDateTime(data.createdAt)} />
+            <DataRow label="Última actualización" value={formatDateTime(data.updatedAt)} />
           </div>
         </CardContent>
       </Card>
 
       {/* Transacciones */}
       <InstallmentTransactionsCard transactions={transactionsForDisplay} />
-    </div>
-  );
-}
-
-// ── Sub-components ───────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, highlight, positive, negative }: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-  positive?: boolean;
-  negative?: boolean;
-}) {
-  let classes = 'bg-card';
-  let valueClasses = 'text-foreground';
-  if (highlight) { classes = 'border-primary/40 bg-primary/5'; valueClasses = 'text-primary'; }
-  else if (negative) { valueClasses = 'text-red-600'; }
-  else if (positive) { valueClasses = 'text-emerald-600'; }
-
-  return (
-    <div className={`rounded-lg border p-3 ${classes}`}>
-      <p className="text-[11px] text-muted-foreground leading-none">{label}</p>
-      <p className={`text-lg font-bold mt-1 leading-tight font-mono ${valueClasses}`}>{value}</p>
-    </div>
-  );
-}
-
-function MiniField({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
-  return (
-    <div>
-      <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className={`text-sm font-medium ${alert ? 'text-red-600' : ''}`}>{value}</p>
     </div>
   );
 }

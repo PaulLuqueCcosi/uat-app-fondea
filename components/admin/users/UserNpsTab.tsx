@@ -9,10 +9,7 @@ import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
 import { CheckCircle2, CircleDashed, RotateCcw } from 'lucide-react';
 import type { UserNpsSurveyItem } from '@/modules/admin/admin-nps.service';
 import { requestNpsResubmissionAction } from '@/app/actions/admin-nps.actions';
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-}
+import { formatDate } from '@/lib/admin-formatters';
 
 function scoreVariant(score: number): 'success' | 'warning' | 'error' {
   if (score >= 9) return 'success';

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
 import { resolveUbigeoName } from '@/lib/ubigeo-names';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   data: AdminCreditSummary;
@@ -21,20 +22,6 @@ const DISBURSEMENT_STATUS: Record<string, string> = {
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-}
-
-function formatDate(value: string | null) {
-  if (!value) return '—';
-  return new Date(value).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 function buildFullName(client: AdminCreditSummary['client']) {
   if (!client) return '—';

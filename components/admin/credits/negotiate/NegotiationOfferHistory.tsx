@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { History } from 'lucide-react';
 import type { NegotiationOffer } from '@/modules/negotiation-offers';
+import { formatCurrency, formatDateTime } from '@/lib/admin-formatters';
 
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   SENT: 'secondary',
@@ -17,14 +18,6 @@ const STATUS_LABEL: Record<string, string> = {
   REJECTED: 'Rechazada',
   EXPIRED: 'Expirada',
 };
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 interface Props {
   offers: NegotiationOffer[];

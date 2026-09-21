@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronRight, Code2,
 } from 'lucide-react';
 import type { AuditTimelineEntry, AuditModule, ActorType } from '@/modules/admin/admin-application-detail.service';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   /** Entradas tal como vienen del backend (orden ASC por occurredAt). */
@@ -42,12 +43,6 @@ const ACTOR_LABELS: Record<ActorType, string> = {
   USER: 'Usuario',
   ADMIN: 'Admin',
 };
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('es-PE', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit',
-  });
-}
 
 function humanizeEventType(eventType: string) {
   return eventType

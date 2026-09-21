@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Copy, Play, Loader2 } from 'lucide-react';
+import { Copy, Play, Loader2, Calculator as CalculatorIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { DetailPageHeader } from '@/components/admin/shared';
 import { getVersionByIdAction, activateVersionAction } from '@/app/actions/calculator-admin.actions';
 import type { ConfigType, ConfigVersion } from '@/modules/admin/calculator-admin.service';
 import { AvailabilityEditor } from '@/components/admin/calculator/editors/AvailabilityEditor';
@@ -76,19 +77,13 @@ export default function CalculatorVersionDetailPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/admin/calculator')} className="gap-1.5">
-            <ArrowLeft className="h-3.5 w-3.5" /> Volver
-          </Button>
-          <h1 className="text-lg font-bold">
-            {TYPE_LABELS[type] ?? configType} — v{version.version}
-          </h1>
-          {version.isActive && (
-            <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">Activa</Badge>
-          )}
-        </div>
+      <DetailPageHeader
+        icon={<CalculatorIcon className="h-5 w-5 text-primary" />}
+        title={`${TYPE_LABELS[type] ?? configType} — v${version.version}`}
+        badge={version.isActive ? { label: 'Activa', variant: 'success' } : { label: 'Inactiva', variant: 'secondary' }}
+        backHref="/admin/calculator"
+        backLabel="Calculadora"
+      >
         <div className="flex gap-2">
           {!version.isActive && (
             <Button variant="outline" size="sm" onClick={() => setShowActivateModal(true)} className="gap-1.5 text-green-600">
@@ -99,7 +94,7 @@ export default function CalculatorVersionDetailPage() {
             <Copy className="h-3.5 w-3.5" /> Tomar como base
           </Button>
         </div>
-      </div>
+      </DetailPageHeader>
 
       {/* Metadata inline */}
       <div className="flex items-center gap-4 text-sm">

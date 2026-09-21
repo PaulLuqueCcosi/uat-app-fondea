@@ -39,6 +39,7 @@ import {
   type CertificateStatus,
   type PayoffCertificate,
 } from '@/modules/admin/admin-constancias.types';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -68,17 +69,6 @@ const DELIVERY_FILTER_LABELS: Record<string, string> = {
   SENT: 'Enviadas',
   DELIVERY_FAILED: 'Envío fallido',
 };
-
-function formatDateTime(iso: string | null) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('es-PE', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 function shortId(id: string) {
   return id.slice(-8);

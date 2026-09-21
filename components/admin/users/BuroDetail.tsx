@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShieldCheck, ShieldAlert, AlertTriangle, ListChecks, History } from 'lucide-react';
 import type { BuroReport, BuroHistoryEntry } from '@/modules/admin';
+import { formatCurrency, formatDate } from '@/lib/admin-formatters';
 
 const SBS_LABEL: Record<string, { label: string; variant: 'success' | 'warning' | 'error' }> = {
   NORMAL: { label: 'Normal', variant: 'success' },
@@ -22,13 +23,8 @@ const CREDIT_TYPE_LABEL: Record<string, string> = {
   OTRO: 'Otro',
 };
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function formatMoney(n: number) {
-  return `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
+// Alias for this file — formatCurrency is formatMoney
+const formatMoney = formatCurrency;
 
 function sbsBadge(code: string | null) {
   if (!code) return null;

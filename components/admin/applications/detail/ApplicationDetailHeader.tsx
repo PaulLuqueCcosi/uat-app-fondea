@@ -7,6 +7,7 @@ import type {
   AdminApplicationEvaluation,
 } from '@/modules/admin/admin-application-detail.service';
 import { EVALUATION_STEP_LABELS } from '@/modules/admin/admin-application-detail.service';
+import { KpiCard } from '@/components/admin/shared';
 
 interface Props {
   data: AdminApplicationCore;
@@ -143,15 +144,6 @@ export function ApplicationDetailHeader({ data, contract, evaluation }: Props) {
         <KpiCard label={stepKpi.label} value={stepKpi.value} />
         <KpiCard label="Contrato" value={contractLabel} />
       </div>
-    </div>
-  );
-}
-
-function KpiCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border p-3 bg-card">
-      <p className="text-[11px] text-muted-foreground leading-none">{label}</p>
-      <p className="text-lg font-bold mt-1 leading-tight text-foreground">{value}</p>
     </div>
   );
 }

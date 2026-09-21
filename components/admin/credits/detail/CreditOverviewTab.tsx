@@ -9,26 +9,13 @@ import { getDepartment, getProvince, getDistrict } from 'ubigeo-fns';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import type { PayoffCertificate } from '@/modules/admin/admin-constancias.types';
 import { CreditCertificateCard } from './CreditCertificateCard';
+import { DataRow } from '@/components/ui/data-row';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   data: AdminCreditSummary;
   /** Null si el crédito no tiene constancia (no PAID_OFF, no STANDARD, o aún no se emitió). */
   certificate: PayoffCertificate | null;
-}
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-}
-
-function formatDate(value: string | null) {
-  if (!value) return '—';
-  const d = new Date(value + (value.includes('T') ? '' : 'T00:00:00'));
-  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function buildFullName(client: AdminCreditSummary['client']) {
@@ -76,15 +63,15 @@ export function CreditOverviewTab({ data, certificate }: Props) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-              <DataField
+              <DataRow
                 label={data.creditType === 'NEGOTIATION' ? 'Vigente desde' : 'Desembolso'}
                 value={formatDateTime(data.disbursedAt)}
               />
-              <DataField label="Primera cuota" value={formatDate(data.firstDueDate)} />
-              <DataField label="Vencimiento final" value={formatDate(data.maturityDate)} />
-              <DataField label="En mora desde" value={data.overdueSince ? formatDate(data.overdueSince) : '—'} alert={!!data.overdueSince} />
-              <DataField label="Cerrado" value={data.closedAt ? formatDateTime(data.closedAt) : '—'} />
-              <DataField label="Creado" value={formatDateTime(data.createdAt)} />
+              <DataRow label="Primera cuota" value={formatDate(data.firstDueDate)} />
+              <DataRow label="Vencimiento final" value={formatDate(data.maturityDate)} />
+              <DataRow label="En mora desde" value={data.overdueSince ? formatDate(data.overdueSince) : '—'} alert={!!data.overdueSince} />
+              <DataRow label="Cerrado" value={data.closedAt ? formatDateTime(data.closedAt) : '—'} />
+              <DataRow label="Creado" value={formatDateTime(data.createdAt)} />
             </div>
           </CardContent>
         </Card>
@@ -99,19 +86,19 @@ export function CreditOverviewTab({ data, certificate }: Props) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                <DataField label="Monto" value={formatCurrency(data.disbursement.amount)} bold />
-                <DataField label="Método" value={data.disbursement.method ?? '—'} />
-                <DataField
+                <DataRow label="Monto" value={formatCurrency(data.disbursement.amount)} bold />
+                <DataRow label="Método" value={data.disbursement.method ?? '—'} />
+                <DataRow
                   label="Estado"
                   value={DISBURSEMENT_STATUS[data.disbursement.status]?.label ?? data.disbursement.status}
                   valueClassName={DISBURSEMENT_STATUS[data.disbursement.status]?.color}
                 />
-                <DataField label="Banco destino" value={data.disbursement.destinationBank ?? '—'} />
-                <DataField label="Cuenta" value={data.disbursement.destinationAccount ?? '—'} mono />
-                <DataField label="Titular" value={data.disbursement.destinationHolder ?? '—'} />
-                <DataField label="Referencia" value={data.disbursement.referenceNumber ?? '—'} mono />
-                <DataField label="Fecha envío" value={formatDateTime(data.disbursement.disbursedAt)} />
-                <DataField label="Reintentos" value={`${data.disbursement.retryCount}`} />
+                <DataRow label="Banco destino" value={data.disbursement.destinationBank ?? '—'} />
+                <DataRow label="Cuenta" value={data.disbursement.destinationAccount ?? '—'} mono />
+                <DataRow label="Titular" value={data.disbursement.destinationHolder ?? '—'} />
+                <DataRow label="Referencia" value={data.disbursement.referenceNumber ?? '—'} mono />
+                <DataRow label="Fecha envío" value={formatDateTime(data.disbursement.disbursedAt)} />
+                <DataRow label="Reintentos" value={`${data.disbursement.retryCount}`} />
               </div>
               {data.disbursement.failureReason && (
                 <div className="mt-3 p-3 rounded-md bg-red-50 border border-red-200">
@@ -134,9 +121,9 @@ export function CreditOverviewTab({ data, certificate }: Props) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
-                <DataField label="Región" value={ubigeoNames.region ?? '—'} />
-                <DataField label="Provincia" value={ubigeoNames.province ?? '—'} />
-                <DataField label="Distrito" value={ubigeoNames.district ?? '—'} />
+                <DataRow label="Región" value={ubigeoNames.region ?? '—'} />
+                <DataRow label="Provincia" value={ubigeoNames.province ?? '—'} />
+                <DataRow label="Distrito" value={ubigeoNames.district ?? '—'} />
               </div>
             </CardContent>
           </Card>
@@ -156,14 +143,14 @@ export function CreditOverviewTab({ data, certificate }: Props) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
-                <DataField label="Región" value={currentUbigeoNames.region ?? '—'} />
-                <DataField label="Provincia" value={currentUbigeoNames.province ?? '—'} />
-                <DataField label="Distrito" value={currentUbigeoNames.district ?? '—'} />
+                <DataRow label="Región" value={currentUbigeoNames.region ?? '—'} />
+                <DataRow label="Provincia" value={currentUbigeoNames.province ?? '—'} />
+                <DataRow label="Distrito" value={currentUbigeoNames.district ?? '—'} />
               </div>
               {data.currentLocationLat != null && data.currentLocationLng != null && (
                 <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
-                  <DataField label="Latitud" value={data.currentLocationLat.toFixed(5)} mono />
-                  <DataField label="Longitud" value={data.currentLocationLng.toFixed(5)} mono />
+                  <DataRow label="Latitud" value={data.currentLocationLat.toFixed(5)} mono />
+                  <DataRow label="Longitud" value={data.currentLocationLng.toFixed(5)} mono />
                 </div>
               )}
             </CardContent>
@@ -287,26 +274,6 @@ export function CreditOverviewTab({ data, certificate }: Props) {
           </Card>
         )}
       </div>
-    </div>
-  );
-}
-
-// ── Sub-components ───────────────────────────────────────────────────────────
-
-function DataField({ label, value, bold, mono, alert, valueClassName }: {
-  label: string;
-  value: string;
-  bold?: boolean;
-  mono?: boolean;
-  alert?: boolean;
-  valueClassName?: string;
-}) {
-  return (
-    <div>
-      <p className="text-[11px] text-muted-foreground mb-0.5">{label}</p>
-      <p className={`text-sm ${bold ? 'font-bold' : 'font-medium'} ${mono ? 'font-mono text-xs' : ''} ${alert ? 'text-red-600' : ''} ${valueClassName ?? ''}`}>
-        {value}
-      </p>
     </div>
   );
 }

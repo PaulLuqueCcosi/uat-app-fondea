@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Eye, Copy, Pause, Play, Plus } from 'lucide-react';
 import type { RuleSetVersionResponse } from '@/modules/admin/admin-evaluation-rules.service';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 interface VersionsTableProps {
   versions: RuleSetVersionResponse[];
@@ -120,12 +121,5 @@ export function VersionsTable({
   );
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
+// Alias for compatibility with existing usage
+const formatDate = formatDateTime;

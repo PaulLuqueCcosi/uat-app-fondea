@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Play, Copy, Loader2 } from 'lucide-react';
+import { Play, Copy, Loader2, FileCode2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { DetailPageHeader } from '@/components/admin/shared';
 import {
   getVersionByIdAction,
   activateVersionAction,
@@ -60,19 +61,13 @@ export default function EvaluationRuleDetailPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/admin/evaluation-rules')} className="gap-1.5">
-            <ArrowLeft className="h-3.5 w-3.5" /> Volver
-          </Button>
-          <h1 className="text-lg font-bold">
-            {version.type === 'eliminatory' ? 'Eliminatoria' : 'Scoring'} — v{version.version}
-          </h1>
-          {version.active && (
-            <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">Activa</Badge>
-          )}
-        </div>
+      <DetailPageHeader
+        icon={<FileCode2 className="h-5 w-5 text-primary" />}
+        title={`${version.type === 'eliminatory' ? 'Eliminatoria' : 'Scoring'} — v${version.version}`}
+        badge={version.active ? { label: 'Activa', variant: 'success' } : { label: 'Inactiva', variant: 'secondary' }}
+        backHref="/admin/evaluation-rules"
+        backLabel="Motor de evaluación"
+      >
         <div className="flex gap-2">
           {!version.active && (
             <Button variant="outline" size="sm" onClick={handleActivate} className="gap-1.5 text-green-600">
@@ -83,7 +78,7 @@ export default function EvaluationRuleDetailPage() {
             <Copy className="h-3.5 w-3.5" /> Tomar como base
           </Button>
         </div>
-      </div>
+      </DetailPageHeader>
 
       {/* Reutilizar el componente de detalle que ya existe */}
       <VersionDetail version={version} onClose={() => router.push('/admin/evaluation-rules')} />

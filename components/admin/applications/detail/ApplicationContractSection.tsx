@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import type { AdminApplicationContract, AdminContractDocument } from '@/modules/admin/admin-application-detail.service';
 import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
 import { regenerateContractsAction } from '@/app/actions/admin-application.actions';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   data: AdminApplicationContract;
@@ -21,11 +22,6 @@ const CONTRACT_STATUS_CONFIG: Record<string, { label: string; bg: string; text: 
   FINALIZED: { label: 'Finalizado', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
   EXPIRED: { label: 'Expirado', bg: 'bg-gray-50', text: 'text-gray-500', border: 'border-gray-200' },
 };
-
-function formatDateTime(value: string | null) {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 export function ApplicationContractSection({ data }: Props) {
   const router = useRouter();

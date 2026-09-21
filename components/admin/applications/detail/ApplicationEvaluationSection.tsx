@@ -10,14 +10,10 @@ import type {
 } from '@/modules/admin/admin-application-detail.service';
 import { EVALUATION_STEP_LABELS as STEP_LABELS } from '@/modules/admin/admin-application-detail.service';
 import { BackendErrorMessage } from './BackendErrorMessage';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   data: AdminApplicationEvaluation;
-}
-
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function formatVariableValue(value: any): string {

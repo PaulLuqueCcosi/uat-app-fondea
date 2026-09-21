@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Play, Copy, Loader2 } from 'lucide-react';
+import { Play, Copy, Loader2, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
+import { DetailPageHeader } from '@/components/admin/shared';
 import { fetchConfigById, fetchMetadata, activateExistingConfig } from '@/app/admin/scoring/actions';
 import type { ScorecardConfig, ScorecardMetadata } from '@/modules/admin/scoring';
 import { ConfigEditorTab } from '@/components/admin/scoring/ConfigEditorTab';
@@ -57,19 +58,13 @@ export default function ScorecardDetailPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/admin/scoring')} className="gap-1.5">
-            <ArrowLeft className="h-3.5 w-3.5" /> Volver
-          </Button>
-          <h1 className="text-lg font-bold">
-            Scorecard — v{config.version}
-          </h1>
-          {isActive && (
-            <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">Activa</Badge>
-          )}
-        </div>
+      <DetailPageHeader
+        icon={<BarChart3 className="h-5 w-5 text-primary" />}
+        title={`Scorecard — v${config.version}`}
+        badge={isActive ? { label: 'Activa', variant: 'success' } : { label: 'Inactiva', variant: 'secondary' }}
+        backHref="/admin/scoring"
+        backLabel="Scorecard"
+      >
         <div className="flex gap-2">
           {!isActive && (
             <Button variant="outline" size="sm" onClick={handleActivate} className="gap-1.5 text-green-600">
@@ -80,7 +75,7 @@ export default function ScorecardDetailPage() {
             <Copy className="h-3.5 w-3.5" /> Tomar como base
           </Button>
         </div>
-      </div>
+      </DetailPageHeader>
 
       {/* Reutilizar el ConfigEditorTab en modo readonly (ya soporta status ACTIVE = readonly) */}
       <ConfigEditorTab

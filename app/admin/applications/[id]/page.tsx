@@ -8,14 +8,10 @@ import {
   getAdminApplicationTimeline,
 } from '@/modules/admin/admin-application-detail.service';
 import { ApplicationDetailClient } from '@/components/admin/applications/ApplicationDetailClient';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   params: Promise<{ id: string }>;
-}
-
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 export default async function AdminApplicationDetailPage({ params }: Props) {

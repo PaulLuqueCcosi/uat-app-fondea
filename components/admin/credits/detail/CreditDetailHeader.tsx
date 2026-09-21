@@ -7,6 +7,8 @@ import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/prog
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
 import { CreditAdminActions } from './CreditAdminActions';
+import { KpiCard } from '@/components/admin/shared';
+import { formatCurrency } from '@/lib/admin-formatters';
 
 interface Props {
   data: AdminCreditSummary;
@@ -15,10 +17,6 @@ interface Props {
 }
 
 // Labels y color del indicador centralizados en `modules/admin/credit-status-labels`.
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-}
 
 function buildFullName(client: AdminCreditSummary['client']) {
   if (!client) return null;
@@ -142,33 +140,6 @@ export function CreditDetailHeader({ data, outstanding }: Props) {
           highlight={data.status !== 'PAID_OFF'}
         />
       </div>
-    </div>
-  );
-}
-
-function KpiCard({ label, value, sub, highlight, progress, progressColor }: {
-  label: string;
-  value: string;
-  sub?: string;
-  highlight?: boolean;
-  progress?: number;
-  progressColor?: string;
-}) {
-  return (
-    <div className={`rounded-lg border p-3 ${highlight ? 'border-primary/40 bg-primary/5' : 'bg-card'}`}>
-      <p className="text-[11px] text-muted-foreground leading-none">{label}</p>
-      <p className={`text-lg font-bold mt-1 leading-tight ${highlight ? 'text-primary' : 'text-foreground'}`}>{value}</p>
-      {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
-      {progress != null && (
-        <div className="mt-2">
-          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${progressColor ?? 'bg-primary'}`}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

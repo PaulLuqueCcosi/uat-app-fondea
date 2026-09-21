@@ -24,6 +24,7 @@ import {
   getFundStatusAction, registerFundMovementAction, getFundMovementsAction,
   type FundStatus, type FundMovement, type FundMovementType,
 } from '@/app/actions/portfolio.actions';
+import { formatCurrency, formatDateTime } from '@/lib/admin-formatters';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -36,15 +37,8 @@ const MOVEMENT_LABELS: Record<string, { label: string; icon: typeof Plus; color:
   LOAN_REPAYMENT: { label: 'Pago cuota recibido', icon: ArrowUpCircle, color: 'text-success-500' },
 };
 
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('es-PE', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
-}
+// Alias for consistency with other files — formatDateTime handles the time part
+const formatDate = formatDateTime;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 

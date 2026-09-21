@@ -3,19 +3,10 @@ import { ComplaintDetail } from '@/components/admin/complaints/ComplaintDetail';
 import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { formatDate, formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   params: Promise<{ id: string }>;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('es-PE', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
 }
 
 export default async function AdminComplaintDetailPage({ params }: Props) {
@@ -24,7 +15,7 @@ export default async function AdminComplaintDetailPage({ params }: Props) {
 
   if (!complaint) {
     return (
-      <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+      <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
         <Link href="/admin/complaints" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground w-fit">
           <ArrowLeft className="h-4 w-4" /> Reclamaciones
         </Link>
@@ -38,7 +29,7 @@ export default async function AdminComplaintDetailPage({ params }: Props) {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <Link href="/admin/complaints" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground w-fit">
         <ArrowLeft className="h-4 w-4" /> Reclamaciones
       </Link>

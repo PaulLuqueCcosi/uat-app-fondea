@@ -29,6 +29,7 @@ function findLabel(options: readonly { value: string; label: string }[], value: 
   return options.find(o => o.value === value)?.label ?? String(value);
 }
 
+// Custom formatter for this file — needs null handling, 0 decimals, and PEN currency symbol
 function formatCurrency(amount: any): string {
   if (amount === null || amount === undefined) return '—';
   const num = Number(amount);

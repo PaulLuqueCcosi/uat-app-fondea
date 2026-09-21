@@ -9,6 +9,7 @@ import { DataTable, type DataTableColumnDef } from '@/components/admin/DataTable
 import { Handshake, ExternalLink } from 'lucide-react';
 import type { AdminCreditInstallments, InstallmentItem } from '@/modules/admin/admin-credit-detail.service';
 import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
+import { formatCurrency, formatDate } from '@/lib/admin-formatters';
 
 interface Props {
   data: AdminCreditInstallments;
@@ -21,15 +22,6 @@ interface Props {
 // duplicado en varias vistas, con "Vigente" para CURRENT donde el cliente ve "Por pagar".
 
 const MIN_DAYS_OVERDUE_FOR_NEGOTIATION = 5;
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-}
-
-function formatDate(value: string) {
-  const d = new Date(value + (value.includes('T') ? '' : 'T00:00:00'));
-  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
-}
 
 export function CreditInstallmentsSection({ data, totalOutstanding }: Props) {
   const router = useRouter();

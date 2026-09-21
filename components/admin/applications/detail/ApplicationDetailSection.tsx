@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { CreditCard, AlertTriangle } from 'lucide-react';
 import type { AdminApplicationDetail } from '@/modules/admin/admin-application-detail.service';
+import { formatCurrency as formatCurrencyBase, formatDate } from '@/lib/admin-formatters';
 
 interface Props {
   data: AdminApplicationDetail;
@@ -9,12 +10,7 @@ interface Props {
 
 function formatCurrency(value: number | null) {
   if (value == null) return '—';
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-}
-
-function formatDate(value: string | null) {
-  if (!value) return '—';
-  return new Date(value).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatCurrencyBase(value);
 }
 
 export function ApplicationDetailSection({ data }: Props) {

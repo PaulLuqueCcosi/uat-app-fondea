@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DataTable, type DataTableColumnDef, type DataTablePagination } from '@/components/admin/DataTable';
 import { negotiationOfferStatusLabels } from '@/modules/negotiation-offers';
 import type { NegotiationOffer } from '@/modules/negotiation-offers';
+import { formatDate } from '@/lib/admin-formatters';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -17,10 +18,6 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
   REJECTED: 'destructive',
   EXPIRED: 'outline',
 };
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-}
 
 function formatCurrency(value: number) {
   return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;

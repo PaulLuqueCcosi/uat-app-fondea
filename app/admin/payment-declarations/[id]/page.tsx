@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ArrowLeft,
   Receipt,
   AlertTriangle,
   CheckCircle2,
@@ -22,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { DetailPageHeader } from '@/components/admin/shared';
 import {
   getAdminPaymentDeclarationByIdAction,
   approvePaymentDeclarationAction,
@@ -34,6 +34,8 @@ import {
   type PaymentQuote,
 } from '@/modules/payment-declarations';
 
+import { formatCurrency, formatDateTime } from '@/lib/admin-formatters';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -41,20 +43,6 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
   APPROVED: 'default',
   REJECTED: 'destructive',
 };
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('es-PE', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -739,24 +727,14 @@ export default function AdminPaymentDeclarationDetailPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href="/admin/payment-declarations" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Receipt className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold">Declaración de pago</h1>
-            <p className="text-xs text-muted-foreground font-mono">#{detail.id.slice(-8)}</p>
-          </div>
-        </div>
-        <Badge variant={STATUS_VARIANT[detail.status] ?? 'outline'} className="ml-auto">
-          {paymentDeclarationStatusLabels[detail.status]}
-        </Badge>
-      </div>
+      <DetailPageHeader
+        icon={<Receipt className="h-5 w-5 text-primary" />}
+        title="Declaración de pago"
+        subtitle={<span className="font-mono">#{detail.id.slice(-8)}</span>}
+        badge={{ label: paymentDeclarationStatusLabels[detail.status], variant: STATUS_VARIANT[detail.status] ?? 'outline' }}
+        backHref="/admin/payment-declarations"
+        backLabel="Declaraciones"
+      />
 
       {/* Info general */}
       <Card>

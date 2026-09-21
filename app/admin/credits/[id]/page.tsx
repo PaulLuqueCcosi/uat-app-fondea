@@ -12,7 +12,7 @@ import { CreditDetailHeader } from '@/components/admin/credits/detail/CreditDeta
 import { CreditOverviewTab } from '@/components/admin/credits/detail/CreditOverviewTab';
 import { CreditInstallmentsSection } from '@/components/admin/credits/detail/CreditInstallmentsSection';
 import { CreditTransactionsSection } from '@/components/admin/credits/detail/CreditTransactionsSection';
-import { CreditTimelineSection } from '@/components/admin/credits/detail/CreditTimelineSection';
+import { AuditTimeline } from '@/components/admin/shared';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarDays, Wallet, LayoutDashboard, History } from 'lucide-react';
 
@@ -92,7 +92,42 @@ export default async function AdminCreditDetailPage({ params }: Props) {
 
         <TabsContent value="timeline" className="mt-6">
           {timeline ? (
-            <CreditTimelineSection entries={timeline} />
+            <AuditTimeline
+              entries={timeline}
+              moduleLabels={{
+                CORE: { label: 'Crédito', color: 'default' },
+                PAYMENT: { label: 'Pagos', color: 'secondary' },
+                PENALTY: { label: 'Mora', color: 'secondary' },
+                NEGOTIATION: { label: 'Negociación', color: 'secondary' },
+                AUDIT: { label: 'Auditoría', color: 'outline' },
+              }}
+              eventLabels={{
+                CREDIT_CREATED: 'Crédito creado',
+                DISBURSEMENT_COMPLETED: 'Desembolso completado',
+                CREDIT_STATUS_CHANGED: 'Cambio de estado',
+                CREDIT_CLOSED: 'Crédito liquidado',
+                CREDIT_SUSPENDED: 'Crédito suspendido',
+                CREDIT_REACTIVATED: 'Crédito reactivado',
+                CREDIT_WRITTEN_OFF: 'Crédito castigado',
+                INTEREST_REPORTED_TO_FUND: 'Ganancia reportada al fondo',
+                LOSS_REPORTED_TO_FUND: 'Pérdida reportada al fondo',
+                CREDIT_RESULT_REPORTED_TO_FUND: 'Resultado reportado al fondo',
+                CREDIT_CREATION_FAILED: 'Falló la creación del crédito',
+                PAYMENT_DECLARATION_SUBMITTED: 'Comprobante enviado por el cliente',
+                PAYMENT_DECLARATION_APPROVED: 'Comprobante aprobado',
+                PAYMENT_DECLARATION_REJECTED: 'Comprobante rechazado',
+                PAYMENT_APPLIED: 'Pago aplicado',
+                INSTALLMENT_PAID: 'Cuota liquidada',
+                PAYMENT_FAILED: 'Falló el pago',
+                INSTALLMENT_ACTIVATED: 'Cuota activada',
+                INSTALLMENT_OVERDUE: 'Cuota vencida',
+                PENALTY_ACCRUED: 'Mora acumulada',
+                PENALTY_PROCESSING_FAILED: 'Falló el cálculo de mora',
+                NEGOTIATION_CREDIT_CREATED: 'Crédito de refinanciamiento creado',
+                INSTALLMENT_NEGOTIATED: 'Cuota refinanciada',
+                AUDIT_PERSIST_ERROR: 'Error al registrar auditoría',
+              }}
+            />
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">No se pudo cargar la línea de tiempo</p>
           )}

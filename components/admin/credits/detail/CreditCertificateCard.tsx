@@ -14,6 +14,7 @@ import {
   type CertificateStatus,
   type PayoffCertificate,
 } from '@/modules/admin/admin-constancias.types';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 const STATUS_VARIANT: Record<CertificateStatus, 'default' | 'secondary' | 'destructive'> = {
   PENDING: 'secondary',
@@ -26,17 +27,6 @@ const DELIVERY_VARIANT: Record<CertificateDeliveryStatus, 'default' | 'secondary
   SENT: 'default',
   DELIVERY_FAILED: 'destructive',
 };
-
-function formatDateTime(iso: string | null) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('es-PE', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 interface Props {
   /** El crédito solo puede tener a lo sumo una constancia — ver PayoffCertificate. */

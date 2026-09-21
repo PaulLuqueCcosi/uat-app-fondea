@@ -6,13 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumnDef, type DataTablePagination } from '@/components/admin/DataTable';
 import type { VerificationHistoryEntry, PageResponse } from '@/modules/admin';
 import { FORM_STATUS_CONFIG } from './FormStatusCard';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 interface FormVerificationHistoryProps {
   page: PageResponse<VerificationHistoryEntry>;
 }
 
+// Custom wrapper that handles null and uses the shared formatter
 function formatDate(value: string | null): string {
-  return value ? new Date(value).toLocaleString('es-PE') : '—';
+  return value ? formatDateTime(value) : '—';
 }
 
 /**

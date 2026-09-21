@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileSignature, ExternalLink, FileText, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { FileSignature, ExternalLink, FileText, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { DetailPageHeader } from '@/components/admin/shared';
 import { getAdminNegotiationOfferByIdAction } from '@/app/actions/negotiation-offer.actions';
 import {
   negotiationOfferStatusLabels,
@@ -12,6 +13,7 @@ import {
   formatDeadlineUrgency,
   type NegotiationOffer,
 } from '@/modules/negotiation-offers';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -26,10 +28,6 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
 
 function formatCurrency(value: number) {
   return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /**
@@ -123,24 +121,14 @@ export default async function AdminNegotiationOfferDetailPage({ params }: Props)
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href="/admin/negotiation-offers" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <FileSignature className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold">Oferta de refinanciamiento</h1>
-            <p className="text-xs text-muted-foreground font-mono">#{offer.id.slice(0, 8)}</p>
-          </div>
-        </div>
-        <Badge variant={STATUS_VARIANT[offer.status] ?? 'outline'} className="ml-auto">
-          {negotiationOfferStatusLabels[offer.status]}
-        </Badge>
-      </div>
+      <DetailPageHeader
+        icon={<FileSignature className="h-5 w-5 text-primary" />}
+        title="Oferta de refinanciamiento"
+        subtitle={<span className="font-mono">#{offer.id.slice(0, 8)}</span>}
+        badge={{ label: negotiationOfferStatusLabels[offer.status], variant: STATUS_VARIANT[offer.status] ?? 'outline' }}
+        backHref="/admin/negotiation-offers"
+        backLabel="Ofertas"
+      />
 
       {/* Estado — resume en una sola vista qué está pasando con la oferta y qué sigue */}
       <StatusAlert offer={offer} />

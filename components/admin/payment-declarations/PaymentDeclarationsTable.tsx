@@ -11,6 +11,7 @@ import { Search, X } from 'lucide-react';
 import { DataTable, type DataTableColumnDef, type DataTablePagination } from '@/components/admin/DataTable';
 import { paymentDeclarationStatusLabels } from '@/modules/payment-declarations';
 import type { PaymentDeclaration } from '@/modules/payment-declarations';
+import { formatCurrency, formatDateTime } from '@/lib/admin-formatters';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -19,20 +20,6 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
   APPROVED: 'default',
   REJECTED: 'destructive',
 };
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('es-PE', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 
 // ── Columns ─────────────────────────────────────────────────────────────────
 

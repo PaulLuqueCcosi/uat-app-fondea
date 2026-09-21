@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Play, Copy, Eye, FileEdit, Loader2 } from 'lucide-react';
 import type { ScorecardConfig } from '@/modules/admin/scoring';
 import { activateExistingConfig } from '@/app/admin/scoring/actions';
+import { formatDate } from '@/lib/admin-formatters';
 
 interface Props {
   configs: ScorecardConfig[];
@@ -186,14 +187,4 @@ export function ConfigsListTab({ configs, onEdit, onDuplicate, onCreateNew, onRe
       </div>
     </div>
   );
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit', month: 'short', year: 'numeric',
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
 }

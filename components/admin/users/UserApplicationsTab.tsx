@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumnDef, type DataTablePagination } from '@/components/admin/DataTable';
 import type { AdminApplicationRow, ApplicationStatus } from '@/modules/admin/admin-applications.service';
+import { formatDate } from '@/lib/admin-formatters';
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; variant: 'success' | 'warning' | 'error' | 'secondary' }> = {
   SUBMITTED: { label: 'Enviada', variant: 'secondary' },
@@ -19,11 +20,6 @@ const STATUS_CONFIG: Record<ApplicationStatus, { label: string; variant: 'succes
   EXPIRED: { label: 'Expirada', variant: 'secondary' },
   COMPLETED: { label: 'Completada', variant: 'success' },
 };
-
-function formatDate(iso: string | null) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-}
 
 const columns: DataTableColumnDef<AdminApplicationRow>[] = [
   {

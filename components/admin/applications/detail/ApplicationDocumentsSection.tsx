@@ -8,6 +8,7 @@ import {
   Camera, CheckCircle2, XCircle, Clock, AlertCircle, FileCheck, ChevronDown, ChevronRight, Bot, Loader2, ExternalLink,
 } from 'lucide-react';
 import type { AdminApplicationDocuments, AttemptInfo, DocumentItem } from '@/modules/admin/admin-application-detail.service';
+import { formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
   data: AdminApplicationDocuments;
@@ -33,11 +34,6 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   DNI_BACK: 'DNI Reverso',
   SELFIE: 'Selfie',
 };
-
-function formatDateTime(value: string | null) {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
