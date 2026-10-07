@@ -10,6 +10,7 @@ import { getCurrentStep } from '@/lib/funnel-steps';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FormEditPolicyDialog } from '@/components/ui/form-edit-policy-dialog';
 import {
   Form,
@@ -75,6 +76,10 @@ const bankAccountFormSchema = z.object({
     .min(10, 'El número de cuenta debe tener al menos 10 dígitos')
     .max(20, 'El número de cuenta debe tener máximo 20 dígitos')
     .regex(/^\d+$/, 'Solo se permiten números'),
+  // Debe estar marcado para continuar (el backend lo exige también).
+  is_account_owner: z.boolean().refine((checked) => checked, {
+    message: 'Debes confirmar que eres el titular de la cuenta',
+  }),
 });
 
 type BankAccountFormValues = z.infer<typeof bankAccountFormSchema>;
@@ -128,6 +133,8 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
       // reingreso explícito de ambos cada vez que se entra a editar.
       cci: '',
       account_number: '',
+      // Como cci y account_number, se pide de nuevo cada vez que se entra a editar la cuenta.
+      is_account_owner: false,
     },
   });
 
@@ -184,6 +191,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
         account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
         cci: data.cci,
         account_number: data.account_number,
+        is_account_owner: data.is_account_owner,
       }),
       'Cuenta bancaria guardada',
     );
@@ -196,6 +204,7 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
       account_type: data.account_type as 'AHORROS' | 'CORRIENTE',
       cci: data.cci,
       account_number: data.account_number,
+      is_account_owner: data.is_account_owner,
       verified: true,
     });
     setLocalStatus('VERIFIED');
@@ -252,6 +261,8 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DataRow label="Banco" value={bankLabel} />
           <DataRow label="Tipo de cuenta" value={accountTypeLabel} />
+          {/* Cuentas guardadas antes de este campo no lo tienen: se muestra "—", no "No" */}
+          <DataRow label="Titular de la cuenta" value={savedProfile?.is_account_owner ? 'Confirmado por ti' : '—'} />
           <div className="sm:col-span-2">
             <div className="flex flex-col gap-0.5">
               <span className="text-xs text-muted-foreground">Número de cuenta</span>
@@ -427,6 +438,31 @@ export function FunnelBankAccountShadcn({ dashboardMode = false, initialData, on
                 banca por internet, o solicitándolo en una agencia. Es un código de 20 dígitos.
               </p>
             </div>
+
+            <FormField
+              control={form.control}
+              name="is_account_owner"
+              render={({ field, fieldState }) => (
+                <FormItem className="flex flex-col gap-1">
+                  <label className="flex cursor-pointer select-none items-start gap-3 rounded-lg border border-border p-4">
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={(checked) => field.onChange(checked === true)}
+                      onBlur={field.onBlur}
+                      aria-invalid={!!fieldState.error}
+                      className="mt-0.5"
+                    />
+                    <span className="text-sm text-foreground">
+                      Declaro que soy el titular de esta cuenta bancaria *
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        El desembolso solo se realiza a una cuenta a tu nombre.
+                      </span>
+                    </span>
+                  </label>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         </div>
 

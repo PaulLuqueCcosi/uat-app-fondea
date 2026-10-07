@@ -45,7 +45,14 @@ export default async function AdminUserFormDetailPage({
 
   const lastApproved = form.submissions.find((s) => s.verificationResult === 'APPROVED') ?? null;
   const dataToShow = formKey === 'bankAccount' && bankFullData
-    ? { bank_name: bankFullData.bankName, account_type: bankFullData.accountType, cci: bankFullData.cci, account_number: bankFullData.accountNumber }
+    ? {
+        bank_name: bankFullData.bankName,
+        account_type: bankFullData.accountType,
+        cci: bankFullData.cci,
+        account_number: bankFullData.accountNumber,
+        // El endpoint sensible no trae la declaración de titularidad: está en el submission_data enmascarado.
+        is_account_owner: (lastApproved?.submissionData as Record<string, unknown> | undefined)?.is_account_owner,
+      }
     : lastApproved?.submissionData ?? {};
 
   // Info de verificación activa para pasarla al historial

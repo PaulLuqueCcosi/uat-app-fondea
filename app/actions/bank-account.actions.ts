@@ -109,6 +109,8 @@ function mapProfileFromBackend(raw: any): BankAccountProfile & { verified: boole
     account_type: raw.account_type ?? '',
     cci: raw.cci ?? '',
     account_number: raw.account_number ?? '',
+    // Sin `?? false`: las cuentas anteriores al campo no lo tienen, y "no registrado" no es "no es titular".
+    is_account_owner: raw.is_account_owner,
     verified: true,
   };
 }
@@ -173,6 +175,7 @@ export async function saveBankAccountProfile(
       account_type: data.account_type,
       cci: data.cci,
       account_number: data.account_number,
+      is_account_owner: data.is_account_owner === true,
     };
 
     const res = await backendFetch('/api/v1/bank-account/validate', {

@@ -84,6 +84,8 @@ export interface BankAccountProfile {
   account_type: AccountType;
   cci: string;
   account_number: string;
+  /** El usuario declaró ser el titular de la cuenta. Ausente en cuentas guardadas antes de este campo. */
+  is_account_owner?: boolean;
   verified?: boolean;
 }
 

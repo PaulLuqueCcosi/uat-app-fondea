@@ -84,6 +84,7 @@ const BANK_ACCOUNT_LABELS: Record<string, string> = {
   accountNumber: 'Número de cuenta',
   account_number: 'Número de cuenta',
   cci: 'CCI',
+  is_account_owner: 'Declaró ser titular',
 };
 
 const FORM_LABELS_MAP: Record<string, Record<string, string>> = {

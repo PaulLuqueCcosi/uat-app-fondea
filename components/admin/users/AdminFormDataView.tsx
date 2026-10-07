@@ -414,6 +414,13 @@ function BankAccountDataView({ data }: { data: Record<string, any> }) {
           <DataRow label="Tipo de cuenta" value={findLabel(ACCOUNT_TYPE_OPTIONS, accountType)} />
           <DataRow label="Número de cuenta" value={accountNumber} mono />
           <DataRow label="CCI" value={cci} mono />
+          {/* Ausente en envíos anteriores al campo: "No registrado", no "No" */}
+          <DataRow
+            label="Declaró ser titular"
+            value={data.is_account_owner === undefined || data.is_account_owner === null
+              ? 'No registrado'
+              : data.is_account_owner ? 'Sí' : 'No'}
+          />
         </div>
       </div>
     </div>
