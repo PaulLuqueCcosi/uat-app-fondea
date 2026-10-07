@@ -44,6 +44,7 @@ function getBreadcrumbs(
     installments: 'Cuotas',
     negotiate: 'Negociar',
     'negotiation-offers': 'Ofertas de refinanciamiento',
+    'payment-declarations': 'Depósitos',
   };
 
   // Segmentos que son parte de una ruta dinámica (ej. /admin/calculator/fee_groups/:id)

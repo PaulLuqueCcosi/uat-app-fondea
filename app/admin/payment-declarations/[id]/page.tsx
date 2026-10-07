@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DetailPageHeader } from '@/components/admin/shared';
+import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
 import {
   getAdminPaymentDeclarationByIdAction,
   approvePaymentDeclarationAction,
@@ -43,6 +44,16 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
   APPROVED: 'default',
   REJECTED: 'destructive',
 };
+
+/** El backend guarda `admin:<uuid>` en reviewedBy — se muestra corto, no el UUID completo. */
+function formatReviewer(reviewedBy: string): string {
+  const [prefix, id] = reviewedBy.split(':');
+  return id ? `${prefix} #${id.slice(0, 8)}` : reviewedBy;
+}
+
+/** Mensaje para cuando la acción lanza en vez de devolver {ok:false} (sesión vencida, red). */
+const UNEXPECTED_ERROR_MESSAGE =
+  'No se pudo completar la operación. Recarga la página y verifica el estado de la declaración antes de reintentar.';
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -173,7 +184,7 @@ function ReviewedResult({ detail }: { detail: PaymentDeclarationDetail }) {
             <CheckCircle2 className="h-4 w-4" /> Aprobada
           </CardTitle>
           <CardDescription>
-            {detail.reviewedBy && <>Por {detail.reviewedBy} — </>}
+            {detail.reviewedBy && <>Por {formatReviewer(detail.reviewedBy)} — </>}
             {detail.reviewedAt ? formatDateTime(detail.reviewedAt) : '—'}
           </CardDescription>
         </CardHeader>
@@ -243,7 +254,7 @@ function ReviewedResult({ detail }: { detail: PaymentDeclarationDetail }) {
                   <span className="font-semibold">{formatCurrency(detail.paymentResult.totalApplied)}</span>
                 </div>
                 <div className="flex items-center justify-between px-1 text-sm">
-                  <span className="text-muted-foreground">Saldo restante del crédito</span>
+                  <span className="text-muted-foreground">Sobrante sin aplicar</span>
                   <span className="font-medium">{formatCurrency(detail.paymentResult.remaining)}</span>
                 </div>
               </div>
@@ -262,7 +273,7 @@ function ReviewedResult({ detail }: { detail: PaymentDeclarationDetail }) {
           <XCircle className="h-4 w-4" /> Rechazada
         </CardTitle>
         <CardDescription>
-          {detail.reviewedBy && <>Por {detail.reviewedBy} — </>}
+          {detail.reviewedBy && <>Por {formatReviewer(detail.reviewedBy)} — </>}
           {detail.reviewedAt ? formatDateTime(detail.reviewedAt) : '—'}
         </CardDescription>
       </CardHeader>
@@ -431,19 +442,26 @@ function ApproveRejectActions({
     async function loadQuote() {
       setIsLoadingQuote(true);
       setQuoteError(null);
-      const result = await getPaymentQuoteAction(detail.creditId, targetInstallmentNo);
-      if (cancelled) return;
-      if (result.ok) {
-        setQuote(result.data);
-        // Sugerir lo declarado, topeado por lo que realmente se puede cobrar.
-        setAppliedAmount(
-          String(Math.min(detail.declaredAmount, result.data.maximumAllowed).toFixed(2)),
-        );
-      } else {
+      try {
+        const result = await getPaymentQuoteAction(detail.creditId, targetInstallmentNo);
+        if (cancelled) return;
+        if (result.ok) {
+          setQuote(result.data);
+          // Sugerir lo declarado, topeado por lo que realmente se puede cobrar.
+          setAppliedAmount(
+            String(Math.min(detail.declaredAmount, result.data.maximumAllowed).toFixed(2)),
+          );
+        } else {
+          setQuote(null);
+          setQuoteError(result.error.message);
+        }
+      } catch {
+        if (cancelled) return;
         setQuote(null);
-        setQuoteError(result.error.message);
+        setQuoteError(UNEXPECTED_ERROR_MESSAGE);
+      } finally {
+        if (!cancelled) setIsLoadingQuote(false);
       }
-      setIsLoadingQuote(false);
     }
     loadQuote();
     return () => { cancelled = true; };
@@ -455,8 +473,11 @@ function ApproveRejectActions({
   const exceedsMaximum = maximumAllowed !== null && appliedAmountNum > maximumAllowed;
   const exceedsDeclared = appliedAmountNum > detail.declaredAmount;
 
+  // No se aprueba mientras la cotización carga: esa llamada sincroniza la mora en el
+  // backend, y aprobar en paralelo la pisa y deja el tope máximo sin validar en pantalla.
   const canApprove =
-    Number.isFinite(appliedAmountNum)
+    !isLoadingQuote
+    && Number.isFinite(appliedAmountNum)
     && appliedAmountNum > 0
     && !exceedsMaximum
     && !exceedsDeclared
@@ -471,19 +492,26 @@ function ApproveRejectActions({
     setIsApproving(true);
     setApproveError(null);
 
-    const result = await approvePaymentDeclarationAction(detail.id, {
-      appliedAmount: appliedAmountNum,
-      targetInstallmentNo: targetChanged ? targetInstallmentNo : undefined,
-      targetChangeReason: targetChanged ? targetChangeReason.trim() : undefined,
-      adminNote: adminNote.trim() || undefined,
-    });
+    try {
+      const result = await approvePaymentDeclarationAction(detail.id, {
+        appliedAmount: appliedAmountNum,
+        targetInstallmentNo: targetChanged ? targetInstallmentNo : undefined,
+        targetChangeReason: targetChanged ? targetChangeReason.trim() : undefined,
+        adminNote: adminNote.trim() || undefined,
+      });
 
-    setIsApproving(false);
-    if (!result.ok) {
-      setApproveError(result.error.message);
-      return;
+      if (!result.ok) {
+        setApproveError(result.error.message);
+        return;
+      }
+      onUpdated(result.data);
+    } catch {
+      // La acción lanzó (sesión vencida, red): el pago pudo o no aplicarse — por eso el
+      // mensaje manda a verificar el estado en vez de reintentar a ciegas.
+      setApproveError(UNEXPECTED_ERROR_MESSAGE);
+    } finally {
+      setIsApproving(false);
     }
-    onUpdated(result.data);
   }
 
   async function handleReject() {
@@ -491,17 +519,22 @@ function ApproveRejectActions({
     setIsRejecting(true);
     setRejectError(null);
 
-    const result = await rejectPaymentDeclarationAction(detail.id, {
-      clientMessage: clientMessage.trim(),
-      internalNote: internalNote.trim() || undefined,
-    });
+    try {
+      const result = await rejectPaymentDeclarationAction(detail.id, {
+        clientMessage: clientMessage.trim(),
+        internalNote: internalNote.trim() || undefined,
+      });
 
-    setIsRejecting(false);
-    if (!result.ok) {
-      setRejectError(result.error.message);
-      return;
+      if (!result.ok) {
+        setRejectError(result.error.message);
+        return;
+      }
+      onUpdated(result.data);
+    } catch {
+      setRejectError(UNEXPECTED_ERROR_MESSAGE);
+    } finally {
+      setIsRejecting(false);
     }
-    onUpdated(result.data);
   }
 
   return (
@@ -699,14 +732,19 @@ export default function AdminPaymentDeclarationDetailPage() {
   useEffect(() => {
     async function fetchDetail() {
       setLoading(true);
-      const result = await getAdminPaymentDeclarationByIdAction(id);
-      if (result.ok) {
-        setDetail(result.data);
-        setError(null);
-      } else {
-        setError(result.error.message);
+      try {
+        const result = await getAdminPaymentDeclarationByIdAction(id);
+        if (result.ok) {
+          setDetail(result.data);
+          setError(null);
+        } else {
+          setError(result.error.message);
+        }
+      } catch {
+        setError(UNEXPECTED_ERROR_MESSAGE);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     fetchDetail();
   }, [id]);
@@ -727,6 +765,7 @@ export default function AdminPaymentDeclarationDetailPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <BreadcrumbLabel id={id} label={`Declaración #${detail.id.slice(-8)}`} />
       <DetailPageHeader
         icon={<Receipt className="h-5 w-5 text-primary" />}
         title="Declaración de pago"
