@@ -45,6 +45,7 @@ export function mapCreditFromBackend(raw: any): Credit {
     originInstallmentId: raw.origin_installment_id ?? null,
     originCreditId: raw.origin_credit_id ?? null,
     rootCreditId: raw.root_credit_id ?? null,
+    applicationId: raw.application_id ?? null,
   };
 }
 

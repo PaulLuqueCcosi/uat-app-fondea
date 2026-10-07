@@ -50,14 +50,17 @@ interface ActiveLoanCardProps {
   credit: Credit;
   installments: Installment[];
   nextPayment: NextPayment | null;
+  /** Solicitud que originó ESTE crédito (STANDARD) — su contrato firmado. */
   applicationId?: string | null;
+  /** Oferta firmada que originó ESTE crédito (NEGOTIATION) — su acuerdo de refinanciamiento. */
+  negotiationOfferId?: string | null;
 }
 
 /**
  * Card de "Tu Préstamo Actual" para el dashboard.
  * Usa Card anatomy (Header/Content/Footer) + Collapsible para cuotas y calendario.
  */
-export function ActiveLoanCard({ credit, installments, nextPayment, applicationId }: ActiveLoanCardProps) {
+export function ActiveLoanCard({ credit, installments, nextPayment, applicationId, negotiationOfferId }: ActiveLoanCardProps) {
   const progressPercent = credit.totalDue > 0
     ? Math.round((credit.totalPaid / credit.totalDue) * 100)
     : 0;
@@ -259,7 +262,25 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
             <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-border">
               <span className="text-sm font-medium text-foreground mr-1">Documentos:</span>
 
-              {loadingContract ? (
+              {isNegotiation ? (
+                // El documento de un crédito de refinanciamiento es el acuerdo firmado de su
+                // oferta — la página de la oferta ya muestra "Documentos firmados" con su PDF.
+                negotiationOfferId ? (
+                  <Link
+                    href={`/dashboard/creditos/ofertas/${negotiationOfferId}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/40 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                  >
+                    <ScrollText className="w-4 h-4" />
+                    Acuerdo de refinanciamiento
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/25 text-sm text-primary/60">
+                    <ScrollText className="w-4 h-4" />
+                    Acuerdo de refinanciamiento
+                  </span>
+                )
+              ) : loadingContract ? (
                 <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/40 text-sm text-primary">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Contrato

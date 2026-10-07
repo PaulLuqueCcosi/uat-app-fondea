@@ -85,6 +85,11 @@ export interface Credit {
   originInstallmentId?: string | null;
   originCreditId?: string | null;
   rootCreditId?: string | null;
+  /**
+   * Solicitud que originó el crédito — para su contrato firmado. Null en créditos
+   * NEGOTIATION (su documento es el acuerdo de la oferta) y en créditos sin solicitud.
+   */
+  applicationId?: string | null;
 }
 
 /** Configuración de mora — PenaltyConfigInfo del backend */
