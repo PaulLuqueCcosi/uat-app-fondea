@@ -12,6 +12,8 @@ const FIELD_LABELS: Record<string, string> = {
   'kyc.firstName': 'Nombre',
   'kyc.firstLastName': 'Apellido',
   'kyc.birthDate': 'Fecha de nacimiento',
+  'kyc.reniecAddressAvailable': 'RENIEC devolvió dirección',
+  'address.reniecMatchLevel': 'Coincidencia de dirección con RENIEC',
   'labor.situation': 'Situación laboral',
   'labor.details.yearsOfActivity': 'Años de actividad',
   'labor.details.industry': 'Industria',
@@ -63,6 +65,11 @@ const VALUE_LABELS: Record<string, string> = {
   'TECNICA': 'Técnica',
   'SECUNDARIA': 'Secundaria',
   'PRIMARIA': 'Primaria',
+  'DISTRICT': 'Mismo distrito',
+  'PROVINCE': 'Misma provincia',
+  'DEPARTMENT': 'Mismo departamento',
+  'NONE': 'Otro departamento',
+  'NOT_AVAILABLE': 'No disponible',
 };
 
 interface RuleModuleCardProps {

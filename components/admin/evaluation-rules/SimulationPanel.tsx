@@ -18,6 +18,21 @@ interface SimulationPanelProps {
   versions: RuleSetVersionResponse[];
 }
 
+/**
+ * Escenarios de la dirección que devuelve RENIEC, para probar reglas sobre `kyc.reniecAddressAvailable`
+ * y `address.reniecMatchLevel`. La dirección declarada del solicitante simulado es siempre San Isidro
+ * (Lima), con códigos INEI — igual que el dato real del formulario de dirección.
+ */
+const DECLARED_ADDRESS = { region: '15', province: '1501', district: '150131' };
+
+const RENIEC_SCENARIOS: Record<string, { label: string; location: { distrito: string; ubigeoInei: string } | null }> = {
+  SAME_DISTRICT: { label: 'Devuelve dirección — mismo distrito', location: { distrito: 'SAN ISIDRO', ubigeoInei: '150131' } },
+  SAME_PROVINCE: { label: 'Devuelve dirección — misma provincia, otro distrito', location: { distrito: 'MIRAFLORES', ubigeoInei: '150122' } },
+  SAME_REGION: { label: 'Devuelve dirección — mismo departamento, otra provincia', location: { distrito: 'BARRANCA', ubigeoInei: '150201' } },
+  OTHER_REGION: { label: 'Devuelve dirección — otro departamento', location: { distrito: 'AREQUIPA', ubigeoInei: '040101' } },
+  NO_ADDRESS: { label: 'NO devuelve dirección', location: null },
+};
+
 export function SimulationPanel({ versions }: SimulationPanelProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -42,6 +57,7 @@ export function SimulationPanel({ versions }: SimulationPanelProps) {
   const [installments, setInstallments] = useState('3');
   const [isFirstLoan, setIsFirstLoan] = useState(true);
   const [currentScore, setCurrentScore] = useState('');
+  const [reniecScenario, setReniecScenario] = useState('SAME_DISTRICT');
 
   const [simulating, setSimulating] = useState(false);
   const [result, setResult] = useState<EvaluationResponse | null>(null);
@@ -49,6 +65,7 @@ export function SimulationPanel({ versions }: SimulationPanelProps) {
 
   const buildSnapshots = () => {
     const birthYear = new Date().getFullYear() - Number(age);
+    const reniecLocation = RENIEC_SCENARIOS[reniecScenario]?.location ?? null;
     const profileSnapshot = JSON.stringify({
       kyc: {
         dni,
@@ -76,7 +93,10 @@ export function SimulationPanel({ versions }: SimulationPanelProps) {
         familyReference: { name: 'María Test', phone: '999111222', relationship: 'MADRE' },
         nonFamilyReference: { name: 'Carlos Test', phone: '999333444', relationship: 'COLEGA', yearsKnown: 3 },
       },
-      address: { address_type: 'GOOGLE', region: 'Lima', province: 'Lima', district: 'Miraflores' },
+      address: { address_type: 'MANUAL', ...DECLARED_ADDRESS },
+      reniec: reniecLocation
+        ? { addressAvailable: true, location: { ...reniecLocation, ubigeoReniec: reniecLocation.ubigeoInei } }
+        : { addressAvailable: false },
       bankAccount: { bank_name: 'BCP', account_type: 'AHORROS', cci_masked: '002-***-123', account_number_masked: '***123' },
     });
 
@@ -138,6 +158,14 @@ export function SimulationPanel({ versions }: SimulationPanelProps) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Field label="Edad" value={age} onChange={setAge} type="number" />
               <Field label="DNI" value={dni} onChange={setDni} />
+              <div className="col-span-2">
+                <SelectField
+                  label="Dirección según RENIEC (declarada: San Isidro, Lima)"
+                  value={reniecScenario}
+                  onChange={setReniecScenario}
+                  options={Object.entries(RENIEC_SCENARIOS).map(([value, s]) => ({ value, label: s.label }))}
+                />
+              </div>
             </div>
           </div>
 
@@ -256,7 +284,8 @@ function SelectField({ label, value, onChange, options }: {
       <Label className="text-[10px]">{label}</Label>
       <Select value={value} onValueChange={(v) => { if (v) onChange(v); }}>
         <SelectTrigger className="h-7 text-xs">
-          <SelectValue />
+          {/* Sin children, el trigger mostraba el valor crudo (ej: SAME_DISTRICT) en vez de la etiqueta */}
+          <SelectValue>{options.find(o => o.value === value)?.label ?? value}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {options.map(o => (
