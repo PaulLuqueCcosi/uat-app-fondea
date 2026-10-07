@@ -3,6 +3,8 @@
  * Unified from existing patterns in CreditOverviewTab, ComplaintDetailPage, etc.
  */
 
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
+
 export function formatCurrency(value: number): string {
   return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
 }
@@ -13,8 +15,7 @@ export function formatDate(value: string | null): string {
   return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// Hora de Perú y texto idéntico en servidor y navegador (ver formatDateTimePeru).
 export function formatDateTime(value: string | null): string {
-  if (!value) return '—';
-  const d = new Date(value);
-  return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return formatDateTimePeru(value, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }

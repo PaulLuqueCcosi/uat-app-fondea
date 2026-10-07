@@ -29,6 +29,7 @@ import {
   getFundStatusAction, registerFundMovementAction, getFundMovementsAction,
   type FundStatus, type FundMovement, type FundMovementType,
 } from '@/app/actions/portfolio.actions';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,7 @@ function fmt(value: number) {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleString('es-PE', {
+  return formatDateTimePeru(iso, {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }

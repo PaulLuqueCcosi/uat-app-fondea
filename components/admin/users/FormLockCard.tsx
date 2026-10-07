@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Unlock, RefreshCw, Lock, Loader2 } from 'lucide-react';
 import type { FormLock } from '@/modules/admin';
 import { unlockFormAction, resetAttemptsAction, blockFormAction } from '@/app/actions/admin-forms.actions';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 interface FormLockCardProps {
   lock: FormLock;
@@ -87,7 +88,7 @@ export function FormLockCard({ lock, userId, formType }: FormLockCardProps) {
             {lock.blockedUntil && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Bloqueado hasta</span>
-                <span className="text-sm font-mono">{new Date(lock.blockedUntil).toLocaleString('es-PE')}</span>
+                <span className="text-sm font-mono">{formatDateTimePeru(lock.blockedUntil)}</span>
               </div>
             )}
 

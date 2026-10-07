@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import type { AnonymousIntention } from '@/modules/admin/admin-intentions.service';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 export interface AnonymousIntentionFilters {
   from?: string;
@@ -113,7 +114,7 @@ export function AnonymousIntentionsTab({
       header: 'Fecha',
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground">
-          {new Date(row.original.createdAt).toLocaleString('es-PE')}
+          {formatDateTimePeru(row.original.createdAt)}
         </span>
       ),
     },

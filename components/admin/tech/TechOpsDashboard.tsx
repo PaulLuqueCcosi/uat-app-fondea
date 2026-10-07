@@ -14,6 +14,7 @@ import type {
   ApiStatus, ApiStatusBackend, ApiHealthStatus,
   DisbursementTime, DisbursementTimeBackend,
 } from '@/modules/admin/tech/tech-analytics.types';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 // ── Umbrales de alerta (del brief) ────────────────────────────────────────────
 
@@ -245,7 +246,7 @@ export function TechOpsDashboard() {
                     <p className="text-sm font-semibold">{API_LABELS[a.api] ?? a.api}</p>
                     <p className="text-[11px] opacity-80">{badge.label}</p>
                     <p className="text-[10px] opacity-70 truncate">
-                      {a.lastCheckedAt ? new Date(a.lastCheckedAt).toLocaleString('es-PE') : 'Sin registros'}
+                      {a.lastCheckedAt ? formatDateTimePeru(a.lastCheckedAt) : 'Sin registros'}
                     </p>
                   </div>
                 </div>
@@ -297,7 +298,7 @@ export function TechOpsDashboard() {
                     <YAxis tickFormatter={(v) => `${v}s`} tick={{ fontSize: 11 }} />
                     <Tooltip
                       formatter={(value) => [`${Number(value ?? 0).toFixed(1)}s`, 'Tiempo']}
-                      labelFormatter={(d) => new Date(d).toLocaleString('es-PE')}
+                      labelFormatter={(d) => formatDateTimePeru(d)}
                     />
                     <ReferenceLine y={KYC_ALERT_SECONDS} stroke="#DC2626" strokeDasharray="5 5" label={{ value: '3min', position: 'right', fontSize: 10, fill: '#DC2626' }} />
                     <Bar dataKey="totalProcessingSeconds" radius={[4, 4, 0, 0]}>
@@ -358,7 +359,7 @@ export function TechOpsDashboard() {
                     <YAxis tickFormatter={(v) => `${v}m`} tick={{ fontSize: 11 }} />
                     <Tooltip
                       formatter={(value) => [`${Number(value ?? 0).toFixed(1)}min`, 'Tiempo']}
-                      labelFormatter={(d) => new Date(d).toLocaleString('es-PE')}
+                      labelFormatter={(d) => formatDateTimePeru(d)}
                     />
                     <ReferenceLine y={DISBURSEMENT_ALERT_MINUTES} stroke="#DC2626" strokeDasharray="5 5" label={{ value: '15min', position: 'right', fontSize: 10, fill: '#DC2626' }} />
                     <Bar dataKey="minutesElapsed" radius={[4, 4, 0, 0]}>

@@ -19,6 +19,7 @@ import { BackLink } from '@/components/admin/shared';
 import { getUniversalLifecycle } from '@/modules/admin/admin-lifecycle.service';
 import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
 import { DataRow } from '@/components/ui/data-row';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 // ── Status configs ───────────────────────────────────────────────────────────
 
@@ -178,7 +179,7 @@ export default async function AdminLifecycleDetailPage({ params }: { params: Pro
               </div>
               <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
                 <p className="text-xs text-muted-foreground">
-                  {new Date(origin.anonymous.created_at).toLocaleString('es-PE')}
+                  {formatDateTimePeru(origin.anonymous.created_at)}
                 </p>
               </div>
             </div>

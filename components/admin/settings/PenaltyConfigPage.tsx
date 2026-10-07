@@ -19,6 +19,7 @@ import {
   getPenaltyConfigHistoryAction,
 } from '@/app/actions/admin-penalty.actions';
 import type { PenaltyConfigResponse } from '@/modules/admin/admin-penalty.service';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -637,7 +638,7 @@ export function PenaltyConfigPage() {
               ))}
               <div className="pt-3 mt-1">
                 <p className="text-[10px] text-muted-foreground">
-                  Creada: {new Date(config.createdAt).toLocaleString('es-PE')} · Por: {config.createdBy}
+                  Creada: {formatDateTimePeru(config.createdAt)} · Por: {config.createdBy}
                 </p>
               </div>
             </div>
@@ -682,7 +683,7 @@ function HistoryItem({ item }: { item: PenaltyConfigResponse }) {
         <div>
           <p className="text-sm font-medium">{item.name}</p>
           <p className="text-[10px] text-muted-foreground">
-            {new Date(item.createdAt).toLocaleString('es-PE')} · {item.ranges.length} rangos
+            {formatDateTimePeru(item.createdAt)} · {item.ranges.length} rangos
           </p>
         </div>
         <div className="flex items-center gap-2">

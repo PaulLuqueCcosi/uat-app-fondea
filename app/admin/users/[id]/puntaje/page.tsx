@@ -1,5 +1,6 @@
 import { getAdminUserPuntaje, getAdminUserPuntajeHistorial, getPuntajeRangos } from '@/modules/admin';
 import { PuntajeTab } from '@/components/admin/users/PuntajeTab';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 export default async function AdminUserPuntajePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,7 +15,7 @@ export default async function AdminUserPuntajePage({ params }: { params: Promise
   // evita hydration mismatch por diferencias de ICU Node vs navegador.
   const history = historial.content.map((h) => ({
     ...h,
-    createdAt: new Date(h.createdAt).toLocaleString('es-PE', {
+    createdAt: formatDateTimePeru(h.createdAt, {
       day: '2-digit',
       month: 'short',
       year: 'numeric',

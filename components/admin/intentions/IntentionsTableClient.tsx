@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/collapsible';
 import Link from 'next/link';
 import type { AdminIntentionResponse } from '@/modules/admin/admin-intentions.service';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 type IntentionStatus = AdminIntentionResponse['status'];
 
@@ -502,11 +503,11 @@ export function IntentionsTableClient({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Creada</span>
-                    <span className="text-xs">{new Date(viewing.createdAt).toLocaleString('es-PE')}</span>
+                    <span className="text-xs">{formatDateTimePeru(viewing.createdAt)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Actualizada</span>
-                    <span className="text-xs">{new Date(viewing.updatedAt).toLocaleString('es-PE')}</span>
+                    <span className="text-xs">{formatDateTimePeru(viewing.updatedAt)}</span>
                   </div>
                   {viewing.calculatorIntentionId && (
                     <div className="flex justify-between">

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Eye, FileImage } from 'lucide-react';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 export interface DocumentDetail {
   name: string;
@@ -59,7 +60,7 @@ export function DocumentDetailDialog({ doc }: { doc: DocumentDetail }) {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Fecha de carga</span>
                 <span className="text-sm font-medium">
-                  {new Date(doc.uploadedAt).toLocaleDateString('es-PE', {
+                  {formatDateTimePeru(doc.uploadedAt, {
                     day: '2-digit',
                     month: 'short',
                     year: 'numeric',

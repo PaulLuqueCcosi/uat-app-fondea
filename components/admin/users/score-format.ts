@@ -1,3 +1,4 @@
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 /**
  * Formateo de fechas para las pantallas de score/buró.
  *
@@ -15,7 +16,7 @@ export function formatDate(iso: string): string {
 }
 
 export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('es-PE', {
+  return formatDateTimePeru(iso, {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }

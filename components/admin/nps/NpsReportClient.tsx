@@ -22,6 +22,7 @@ import {
   type NpsDistributionResponse,
   type UserNpsSurveyItem,
 } from '@/modules/admin';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -197,7 +198,7 @@ export function NpsReportClient({
       header: 'Fecha',
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {new Date(row.original.created_at).toLocaleString('es-PE')}
+          {formatDateTimePeru(row.original.created_at)}
         </span>
       ),
     },

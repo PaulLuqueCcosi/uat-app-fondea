@@ -38,6 +38,7 @@ import {
 } from '@/modules/negotiation-offers';
 import { formatBackendDate, formatBackendDateShort, parseBackendDate } from '@/modules/shared/backend-date';
 import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ function formatCurrency(amount: number): string {
 }
 
 function formatDateTime(iso: string): string {
-  return parseBackendDate(iso).toLocaleString('es-PE', {
+  return formatDateTimePeru(iso, {
     day: 'numeric',
     month: 'long',
     hour: 'numeric',

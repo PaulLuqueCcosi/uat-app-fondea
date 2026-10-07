@@ -14,6 +14,7 @@ import {
 import { DataTable, type DataTableColumnDef, type DataTablePagination } from '@/components/admin/DataTable';
 import type { FormSubmission, PageResponse } from '@/modules/admin';
 import { AdminFormDataView } from './AdminFormDataView';
+import { formatDateTimePeru } from '@/modules/shared/backend-date';
 
 interface FormSubmissionsHistoryProps {
   page: PageResponse<FormSubmission>;
@@ -79,7 +80,7 @@ export function FormSubmissionsHistory({ page, formKey = '', activeVerification 
       header: 'Fecha',
       cell: ({ row }) => (
         <span className="text-xs whitespace-nowrap">
-          {new Date(row.original.submittedAt).toLocaleString('es-PE')}
+          {formatDateTimePeru(row.original.submittedAt)}
         </span>
       ),
     },
@@ -170,7 +171,7 @@ export function FormSubmissionsHistory({ page, formKey = '', activeVerification 
             <div className="space-y-4">
               {/* Meta */}
               <div className="text-xs text-muted-foreground">
-                Enviado: {new Date(viewingSubmission.submittedAt).toLocaleString('es-PE')}
+                Enviado: {formatDateTimePeru(viewingSubmission.submittedAt)}
               </div>
 
               {/* Si es la verificación activa → panel de vigencia */}
