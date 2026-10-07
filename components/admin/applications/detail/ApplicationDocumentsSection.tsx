@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Camera, CheckCircle2, XCircle, Clock, AlertCircle, FileCheck, ChevronDown, ChevronRight, Bot, Loader2, ExternalLink,
+  Camera, CheckCircle2, XCircle, Clock, AlertCircle, FileCheck, ChevronDown, ChevronRight, Bot, Loader2, ExternalLink, PauseCircle,
 } from 'lucide-react';
 import type { AdminApplicationDocuments, AttemptInfo, DocumentItem } from '@/modules/admin/admin-application-detail.service';
 import { formatDateTime } from '@/lib/admin-formatters';
@@ -79,6 +79,12 @@ export function ApplicationDocumentsSection({ data }: Props) {
                 const cfg = VERIFICATION_STATUS[verification.overallStatus ?? 'PENDING'];
                 return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
               })()}
+              {verification.temporarilyBlocked && verification.blockedUntil && (
+                <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                  <PauseCircle className="h-3 w-3" />
+                  En pausa hasta {formatDateTime(verification.blockedUntil)}
+                </span>
+              )}
             </div>
 
             {/* Per-document status */}
@@ -89,6 +95,9 @@ export function ApplicationDocumentsSection({ data }: Props) {
                 rejectionReason={verification.dniFrontRejectionReason}
                 attempts={verification.dniFrontAttempts}
                 failedAttempts={verification.dniFrontFailedAttempts}
+                maxAttempts={verification.maxAttempts}
+                blocksPreApproval={verification.temporarilyBlocked && verification.blockedStep === 'DNI_FRONT'}
+                pausedUntil={verification.temporarilyBlocked ? verification.blockedUntil : null}
                 attemptLog={attemptsByType('DNI_FRONT')}
               />
               <VerificationCard
@@ -97,6 +106,9 @@ export function ApplicationDocumentsSection({ data }: Props) {
                 rejectionReason={verification.dniBackRejectionReason}
                 attempts={verification.dniBackAttempts}
                 failedAttempts={verification.dniBackFailedAttempts}
+                maxAttempts={verification.maxAttempts}
+                blocksPreApproval={verification.temporarilyBlocked && verification.blockedStep === 'DNI_BACK'}
+                pausedUntil={verification.temporarilyBlocked ? verification.blockedUntil : null}
                 attemptLog={attemptsByType('DNI_BACK')}
               />
               <VerificationCard
@@ -105,6 +117,9 @@ export function ApplicationDocumentsSection({ data }: Props) {
                 rejectionReason={verification.selfieRejectionReason}
                 attempts={verification.selfieAttempts}
                 failedAttempts={verification.selfieFailedAttempts}
+                maxAttempts={verification.maxAttempts}
+                blocksPreApproval={verification.temporarilyBlocked && verification.blockedStep === 'SELFIE'}
+                pausedUntil={verification.temporarilyBlocked ? verification.blockedUntil : null}
                 attemptLog={attemptsByType('SELFIE')}
               />
             </div>
@@ -173,12 +188,17 @@ export function ApplicationDocumentsSection({ data }: Props) {
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
-function VerificationCard({ title, status, rejectionReason, attempts, failedAttempts, attemptLog }: {
+function VerificationCard({ title, status, rejectionReason, attempts, failedAttempts, maxAttempts, blocksPreApproval, pausedUntil, attemptLog }: {
   title: string;
   status: string | null;
   rejectionReason: string | null;
   attempts: number | null;
   failedAttempts: number | null;
+  maxAttempts: number | null;
+  /** Este paso agotó sus vidas y tiene la pre-aprobación en pausa. */
+  blocksPreApproval: boolean;
+  /** Hasta cuándo está pausada la pre-aprobación (null si no hay pausa vigente). */
+  pausedUntil: string | null;
   attemptLog: AttemptInfo[];
 }) {
   const [showAttempts, setShowAttempts] = useState(false);
@@ -199,7 +219,23 @@ function VerificationCard({ title, status, rejectionReason, attempts, failedAtte
       )}
       {(attempts != null || failedAttempts != null) && (
         <p className="text-xs text-muted-foreground">
-          Intentos: {attempts ?? 0}{failedAttempts ? ` (${failedAttempts} fallidos)` : ''}
+          Intentos: {attempts ?? 0}
+          {maxAttempts != null && (
+            <> · Fallidos: <strong className={blocksPreApproval ? 'text-red-600' : 'text-foreground'}>
+              {failedAttempts ?? 0}/{maxAttempts}
+            </strong></>
+          )}
+          {maxAttempts == null && failedAttempts ? ` (${failedAttempts} fallidos)` : ''}
+        </p>
+      )}
+      {blocksPreApproval && (
+        <Badge variant="destructive" className="text-[10px]">Pausó la pre-aprobación</Badge>
+      )}
+      {/* Mientras dura la pausa, ningún paso sin verificar se puede usar: se indica hasta cuándo. */}
+      {pausedUntil && status !== 'VERIFIED' && (
+        <p className="flex items-center gap-1 text-[11px] text-amber-700">
+          <PauseCircle className="h-3 w-3" />
+          Bloqueado hasta {formatDateTime(pausedUntil)}
         </p>
       )}
 

@@ -193,6 +193,14 @@ export interface VerificationInfo {
   dniFrontFailedAttempts: number | null;
   dniBackFailedAttempts: number | null;
   selfieFailedAttempts: number | null;
+  /** Vidas por paso antes de pausar la pre-aprobación. */
+  maxAttempts: number | null;
+  /** Pausa temporal vigente: la solicitud sigue PRE_APPROVED. */
+  temporarilyBlocked: boolean;
+  blockedUntil: string | null;
+  blockedStep: string | null;
+  /** La pre-aprobación vence antes de que termine la pausa (no se podrá continuar). */
+  expiresBeforeUnblock: boolean;
   createdAt: string;
   updatedAt: string | null;
 }

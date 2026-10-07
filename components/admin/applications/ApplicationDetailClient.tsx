@@ -7,6 +7,7 @@ import { ApplicationDetailHeader } from './detail/ApplicationDetailHeader';
 import { ApplicationOverviewTab } from './detail/ApplicationOverviewTab';
 import { ApplicationDetailSection } from './detail/ApplicationDetailSection';
 import { ApplicationDocumentsSection } from './detail/ApplicationDocumentsSection';
+import { TemporaryBlockBanner } from './detail/TemporaryBlockBanner';
 import { ApplicationContractSection } from './detail/ApplicationContractSection';
 import { ApplicationEvaluationSection } from './detail/ApplicationEvaluationSection';
 import { ApplicationSnapshotsSection } from './detail/ApplicationSnapshotsSection';
@@ -85,7 +86,7 @@ export function ApplicationDetailClient({
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
-          <ApplicationOverviewTab data={core} dates={coreDates} />
+          <ApplicationOverviewTab data={core} dates={coreDates} verification={documents?.verification ?? null} />
         </TabsContent>
 
         <TabsContent value="detail" className="mt-4">
@@ -98,7 +99,10 @@ export function ApplicationDetailClient({
 
         <TabsContent value="documents" className="mt-4">
           {documents ? (
-            <ApplicationDocumentsSection data={documents} />
+            <div className="space-y-4">
+              <TemporaryBlockBanner verification={documents.verification} />
+              <ApplicationDocumentsSection data={documents} />
+            </div>
           ) : (
             <EmptyTabState message="No hay datos de documentos" />
           )}

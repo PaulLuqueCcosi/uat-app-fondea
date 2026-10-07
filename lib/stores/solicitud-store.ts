@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { toast } from 'sonner';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
-import type { DocumentsVerificationStatus } from '@/lib/types/document';
+import type { DocumentsVerificationStatus, DocumentsPause } from '@/lib/types/document';
 import type { DocumentListResult } from '@/lib/types/document';
 import type { StoreStatus } from './credit-score-store';
 import type { SimulationSnapshot } from '@/lib/types/simulation';
@@ -120,6 +120,19 @@ function mapDocumentsVerification(data: any): DocumentsVerificationStatus {
     selfie: mapItem(data.selfie),
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
+    blockedUntil: data.blockedUntil ?? null,
+    canContinueAt: data.canContinueAt ?? null,
+    blockedStep: data.blockedStep ?? null,
+  };
+}
+
+/** Pausa temporal derivada del estado de verificación (null si no hay pausa). */
+function pauseFromVerification(status: DocumentsVerificationStatus | null): DocumentsPause | null {
+  if (!status?.blockedUntil) return null;
+  return {
+    blockedUntil: status.blockedUntil,
+    canContinueAt: status.canContinueAt,
+    expiresFirst: status.canContinueAt === null,
   };
 }
 
@@ -215,6 +228,8 @@ interface SolicitudState {
 
   verificationStatus: StoreStatus;
   documentsVerification: DocumentsVerificationStatus | null;
+  /** Pausa temporal de verificación de documentos (desde status, verify o un 429). */
+  documentsPause: DocumentsPause | null;
 
   contractStatus: StoreStatus;
   contracts: ContractInfo[];
@@ -245,6 +260,7 @@ interface SolicitudActions {
 
   setDocumentUrl: (type: keyof DocumentUrls, url: string | null) => void;
   setDocumentsVerification: (status: DocumentsVerificationStatus) => void;
+  setDocumentsPause: (pause: DocumentsPause | null) => void;
 }
 
 type SolicitudStore = SolicitudState & SolicitudActions;
@@ -266,6 +282,7 @@ const INITIAL_STATE: SolicitudState = {
 
   verificationStatus: 'idle',
   documentsVerification: null,
+  documentsPause: null,
 
   contractStatus: 'idle',
   contracts: [],
@@ -448,7 +465,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
         try {
           const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}/documents/status`);
           const status = raw ? mapDocumentsVerification(raw) : null;
-          set({ documentsVerification: status, verificationStatus: 'success' });
+          set({ documentsVerification: status, documentsPause: pauseFromVerification(status), verificationStatus: 'success' });
         } catch (err) {
           console.error('[SolicitudStore] Error fetching verification:', err);
           set({ verificationStatus: 'error' });
@@ -552,7 +569,7 @@ export const useSolicitudStore = create<SolicitudStore>()(
       try {
         const raw = await fetchJson<any>(`/api/solicitudes/${applicationId}/documents/status`);
         const status = raw ? mapDocumentsVerification(raw) : null;
-        set({ documentsVerification: status, verificationStatus: 'success' });
+        set({ documentsVerification: status, documentsPause: pauseFromVerification(status), verificationStatus: 'success' });
       } catch (err) {
         console.error('[SolicitudStore] Error refreshing verification:', err);
         set({ verificationStatus: 'error' });
@@ -583,7 +600,11 @@ export const useSolicitudStore = create<SolicitudStore>()(
     },
 
     setDocumentsVerification: (status) => {
-      set({ documentsVerification: status, verificationStatus: 'success' });
+      set({ documentsVerification: status, documentsPause: pauseFromVerification(status), verificationStatus: 'success' });
+    },
+
+    setDocumentsPause: (pause) => {
+      set({ documentsPause: pause });
     },
 
   })),

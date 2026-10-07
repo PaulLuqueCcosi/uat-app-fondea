@@ -4,13 +4,16 @@ import {
   Calendar, CheckCircle2, XCircle, AlertCircle, Shield, Hash, User, FileText,
 } from 'lucide-react';
 import Link from 'next/link';
-import type { AdminApplicationCore } from '@/modules/admin/admin-application-detail.service';
+import type { AdminApplicationCore, VerificationInfo } from '@/modules/admin/admin-application-detail.service';
+import { TemporaryBlockBanner } from './TemporaryBlockBanner';
 import { CreditCreationRetryButton } from './CreditCreationRetryButton';
 import { BackendErrorMessage } from './BackendErrorMessage';
 import { failureCodeLabel } from '@/modules/admin/application-failure-codes';
 
 interface Props {
   data: AdminApplicationCore;
+  /** Verificación de documentos: si hay una pausa temporal vigente se explica en el resumen. */
+  verification?: VerificationInfo | null;
   /** Fechas ya formateadas en el server component (page.tsx) — evita hydration
    *  mismatch por diferencias de ICU Node vs navegador con toLocaleString. */
   dates: {
@@ -37,7 +40,7 @@ function buildFullName(client: AdminApplicationCore['client']) {
     .join(' ');
 }
 
-export function ApplicationOverviewTab({ data, dates }: Props) {
+export function ApplicationOverviewTab({ data, dates, verification = null }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Col 1-2: Información principal */}
@@ -62,6 +65,9 @@ export function ApplicationOverviewTab({ data, dates }: Props) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Pausa temporal por intentos agotados en la verificación de documentos */}
+        <TemporaryBlockBanner verification={verification} />
 
         {/* Error / Rechazo */}
         {(data.rejectionReason || data.evaluationError || data.failureCode) && (

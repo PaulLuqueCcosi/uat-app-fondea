@@ -11,6 +11,7 @@ import type {
   DocumentListResult,
   DocumentsVerificationStatus,
   DocumentItemStatus,
+  DocumentsPause,
 } from '@/lib/types/document';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -34,7 +35,12 @@ export type UploadDocumentResult = ActionResult & (
       uploadedAt: string;
       message?: string;
     }
-  | { success: false }
+  | {
+      success: false;
+      /** true cuando el backend respondió 429: verificación en pausa temporal */
+      blocked?: boolean;
+      pause?: DocumentsPause;
+    }
 );
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
@@ -71,6 +77,19 @@ function mapDocumentsVerificationStatus(raw: any): DocumentsVerificationStatus {
     selfie: mapDocumentItemStatus(raw.selfie),
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
+    blockedUntil: raw.blockedUntil ?? null,
+    canContinueAt: raw.canContinueAt ?? null,
+    blockedStep: raw.blockedStep ?? null,
+  };
+}
+
+/** Interpreta el cuerpo 429 (snake_case) de una pausa temporal de verificación. */
+function mapPauseFrom429(json: any): DocumentsPause {
+  const canContinueAt: string | null = json?.can_continue_at ?? null;
+  return {
+    blockedUntil: json?.blocked_until ?? '',
+    canContinueAt,
+    expiresFirst: json?.expires_first === true || canContinueAt === null,
   };
 }
 
@@ -105,6 +124,21 @@ export async function uploadDocumentAction(
         headers: {},
       },
     );
+
+    if (res.status === 429) {
+      let json: any = {};
+      try {
+        json = await res.json();
+      } catch {}
+      return {
+        success: false,
+        httpStatus: 429,
+        errorCategory: 'rate_limit',
+        error: json?.message ?? 'Tu verificación está en pausa temporalmente.',
+        blocked: true,
+        pause: mapPauseFrom429(json),
+      };
+    }
 
     if (!isSuccess(res.status)) {
       return await parseBackendResponse(res) as Extract<ActionResult, { success: false }>;
@@ -246,6 +280,9 @@ export interface VerifyDocumentResult {
   success: boolean;
   documentsStatus?: DocumentsVerificationStatus;
   error?: string;
+  /** true cuando el backend respondió 429: verificación en pausa temporal */
+  blocked?: boolean;
+  pause?: DocumentsPause;
 }
 
 /**
@@ -254,8 +291,7 @@ export interface VerifyDocumentResult {
  *
  * Reglas del backend:
  * - SELFIE solo se puede verificar si DNI_FRONT y DNI_BACK ya están VERIFIED
- * - Máximo 5 intentos por documento
- * - Si se agotan los intentos → solicitud pasa a BLOCKED
+ * - 3 intentos por paso; al agotarse, pausa temporal de 24 h (429 mientras dura)
  */
 export async function verifyDocumentAction(
   applicationId: string,
@@ -274,6 +310,15 @@ export async function verifyDocumentAction(
       try {
         json = await res.json();
       } catch {}
+
+      if (res.status === 429) {
+        return {
+          success: false,
+          blocked: true,
+          pause: mapPauseFrom429(json),
+          error: json?.message ?? 'Tu verificación está en pausa temporalmente.',
+        };
+      }
 
       return { success: false, error: sanitizeErrorMessage(json, res.status) };
     }

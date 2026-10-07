@@ -15,12 +15,12 @@ import {
 } from '@/components/ui/dialog';
 import { uploadDocumentAction, deleteDocumentAction, verifyDocumentAction } from '@/app/actions/document.actions';
 import type { DocumentType, DocumentsVerificationStatus, DocumentItemStatus } from '@/lib/types/document';
-import { toast } from 'sonner';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
 import { getCurrentStep } from '@/lib/funnel-steps';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
+import { DocumentPauseNotice, LastAttemptWarning, useDocumentsPause } from './DocumentPauseNotice';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,6 +52,7 @@ function VerificationStatusBadge({ item }: { item: DocumentItemStatus | undefine
       );
     case 'REJECTED':
       return (
+        <div className="space-y-2">
         <div className="p-3 rounded-lg bg-error-50 border border-error-200 space-y-1.5">
           <div className="flex items-center gap-2">
             <XCircle className="w-4 h-4 text-error-600 shrink-0" />
@@ -65,11 +66,8 @@ function VerificationStatusBadge({ item }: { item: DocumentItemStatus | undefine
               El documento no pudo ser verificado. Asegúrate de que la foto sea clara, sin reflejos y muestre el DNI completo.
             </p>
           )}
-          <p className="text-xs text-error-600 ml-6 font-medium">
-            {item.remainingAttempts > 0
-              ? `Puedes reintentar (${item.remainingAttempts} intento${item.remainingAttempts !== 1 ? 's' : ''} restante${item.remainingAttempts !== 1 ? 's' : ''})`
-              : 'Sin intentos restantes — contacta a soporte'}
-          </p>
+        </div>
+        {item.remainingAttempts === 1 && <LastAttemptWarning />}
         </div>
       );
     case 'FAILED':
@@ -107,7 +105,8 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
   const pathname = usePathname();
   const params = useParams();
   const currentStep = getCurrentStep(pathname);
-  const { setDocumentUrl, setDocumentsVerification } = useSolicitudStore();
+  const { setDocumentUrl, setDocumentsVerification, setDocumentsPause } = useSolicitudStore();
+  const { paused } = useDocumentsPause();
 
   const isInSolicitudFlow = pathname.includes('/solicitudes/');
   const solicitudId = applicationId || (params.id as string | undefined);
@@ -191,7 +190,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
 
   const handleUploadAndVerify = async (side: 'front' | 'back') => {
     const file = side === 'front' ? frontFile : backFile;
-    if (!file || !solicitudId) return;
+    if (!file || !solicitudId || paused) return;
 
     setProcessing(side);
     setError('');
@@ -205,6 +204,11 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
       formData.append('file', file);
       const uploadResult = await uploadDocumentAction(solicitudId, docType, formData);
       if (!uploadResult.success) {
+        if (uploadResult.blocked && uploadResult.pause) {
+          setDocumentsPause(uploadResult.pause);
+          setProcessing(null);
+          return;
+        }
         setError(uploadResult.error || 'No se pudo subir la imagen. Verifica que sea un archivo válido.');
         setProcessing(null);
         return;
@@ -212,6 +216,13 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
 
       // 2. Verify
       const verifyResult = await verifyDocumentAction(solicitudId, docType);
+
+      if (verifyResult.blocked && verifyResult.pause) {
+        setDocumentsPause(verifyResult.pause);
+        if (side === 'front') setFrontUploaded(true);
+        else setBackUploaded(true);
+        return;
+      }
 
       // 3. Update state
       if (side === 'front') setFrontUploaded(true);
@@ -232,10 +243,6 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
             side,
             message: itemStatus.rejectionReason || 'El documento no pasó la verificación automática.',
           });
-          // Toast de último intento
-          if (itemStatus.remainingAttempts === 1) {
-            toast.warning('⚠️ Este es tu último intento. Si falla, tu cuenta se bloqueará por 24 horas.', { duration: 8000 });
-          }
         }
       } else {
         setVerifyError({
@@ -253,7 +260,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
 
   const handleRetryVerify = async (side: 'front' | 'back') => {
     const docType: DocumentType = side === 'front' ? 'DNI_FRONT' : 'DNI_BACK';
-    if (!solicitudId) return;
+    if (!solicitudId || paused) return;
 
     setProcessing(side);
     setVerifyError(null);
@@ -261,6 +268,10 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
 
     try {
       const result = await verifyDocumentAction(solicitudId, docType);
+      if (result.blocked && result.pause) {
+        setDocumentsPause(result.pause);
+        return;
+      }
       if (result.success && result.documentsStatus) {
         setDocumentsVerification(result.documentsStatus);
 
@@ -273,9 +284,6 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
             side,
             message: itemStatus.rejectionReason || 'El documento no pasó la verificación.',
           });
-          if (itemStatus.remainingAttempts === 1) {
-            toast.warning('⚠️ Este es tu último intento. Si falla, tu cuenta se bloqueará por 24 horas.', { duration: 8000 });
-          }
         }
       } else {
         setVerifyError({
@@ -393,6 +401,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                   variant="outline"
                   className="w-full sm:flex-1 h-10"
                   onClick={() => openCameraModal(side)}
+                  disabled={paused}
                 >
                   <Camera className="w-4 h-4 mr-2" />
                   Tomar foto
@@ -409,6 +418,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                   variant="outline"
                   className="w-full sm:flex-1 h-10"
                   onClick={() => fileInputRef.current?.click()}
+                  disabled={paused}
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   Subir desde galería
@@ -483,7 +493,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                 ) : uploaded && itemVerification?.status === 'REJECTED' ? (
                   /* Rejected — show retry/delete */
                   <>
-                    {itemVerification.remainingAttempts > 0 ? (
+                    {itemVerification.remainingAttempts > 0 && !paused ? (
                       <Button
                         type="button"
                         onClick={() => handleDelete(side)}
@@ -495,7 +505,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                       </Button>
                     ) : (
                       <Button type="button" disabled className="w-full sm:flex-1 h-10">
-                        Sin intentos disponibles
+                        Verificación en pausa
                       </Button>
                     )}
                     <Button
@@ -514,7 +524,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     <Button
                       type="button"
                       onClick={() => handleRetryVerify(side)}
-                      disabled={backBlockedByFront}
+                      disabled={backBlockedByFront || paused}
                       className="w-full sm:flex-1 h-10"
                     >
                       {backBlockedByFront ? 'Verifica el frente primero' : 'Reintentar verificación'}
@@ -535,7 +545,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
                     <Button
                       type="button"
                       onClick={() => handleUploadAndVerify(side)}
-                      disabled={backBlockedByFront}
+                      disabled={backBlockedByFront || paused}
                       className="w-full sm:flex-1 h-10"
                     >
                       <ShieldCheck className="w-4 h-4 mr-2" />
@@ -589,6 +599,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
           />
         </CardHeader>
         <CardContent className="pt-0">
+          <DocumentPauseNotice />
           <form className="w-full">
             {/* Tips */}
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-10">

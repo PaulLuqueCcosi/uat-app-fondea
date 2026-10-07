@@ -23,11 +23,11 @@ import {
   Loader2,
 } from 'lucide-react';
 import { uploadDocumentAction, deleteDocumentAction, verifyDocumentAction } from '@/app/actions/document.actions';
-import { toast } from 'sonner';
 import { FormHeader } from '@/components/ui/form-header';
 import { Separator } from '@/components/ui/separator';
 import { CameraModal } from '../../solicitar/CameraModal';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
+import { DocumentPauseNotice, LastAttemptWarning, useDocumentsPause } from './DocumentPauseNotice';
 import { getCurrentStep } from '@/lib/funnel-steps';
 
 // ── Tipos MediaPipe ───────────────────────────────────────────────────────────
@@ -168,7 +168,8 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
   const pathname  = usePathname();
   const params    = useParams();
   const currentStep = getCurrentStep(pathname);
-  const { setDocumentUrl, setDocumentsVerification } = useSolicitudStore();
+  const { setDocumentUrl, setDocumentsVerification, setDocumentsPause } = useSolicitudStore();
+  const { paused } = useDocumentsPause();
 
   const [processing, setProcessing] = useState(false);
   const [error, setError]           = useState('');
@@ -271,8 +272,8 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
       return;
     }
 
-    if (!solicitudId) {
-      setError('No se encontró la solicitud activa.');
+    if (!solicitudId || paused) {
+      if (!solicitudId) setError('No se encontró la solicitud activa.');
       return;
     }
 
@@ -286,13 +287,22 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
       formData.append('file', selfieFile);
       const uploadResult = await uploadDocumentAction(solicitudId, 'SELFIE', formData);
       if (!uploadResult.success) {
-        setError(uploadResult.error || 'Error al subir la selfie. Intenta nuevamente.');
+        if (uploadResult.blocked && uploadResult.pause) {
+          setDocumentsPause(uploadResult.pause);
+        } else {
+          setError(uploadResult.error || 'Error al subir la selfie. Intenta nuevamente.');
+        }
         setProcessing(false);
         return;
       }
 
       // 2. Verify — NO actualizamos estado visual hasta tener respuesta
       const verifyResult = await verifyDocumentAction(solicitudId, 'SELFIE');
+
+      if (verifyResult.blocked && verifyResult.pause) {
+        setDocumentsPause(verifyResult.pause);
+        return;
+      }
 
       if (verifyResult.success && verifyResult.documentsStatus) {
         const selfieStatus = verifyResult.documentsStatus.selfie.status;
@@ -325,16 +335,8 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
           setUploadScore(null);
           setDocumentUrl('selfie', null);
           if (fileInputRef.current) fileInputRef.current.value = '';
-          const remaining = verifyResult.documentsStatus.selfie.remainingAttempts;
           const reason = verifyResult.documentsStatus.selfie.rejectionReason;
-          setError(
-            reason
-              ? `${reason}${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
-              : `No se pudo verificar tu selfie. Por favor, intenta con otra foto.${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
-          );
-          if (remaining === 1) {
-            toast.warning('⚠️ Este es tu último intento. Si falla, tu cuenta se bloqueará por 24 horas.', { duration: 8000 });
-          }
+          setError(reason || 'No se pudo verificar tu selfie. Por favor, intenta con otra foto.');
         }
       } else {
         // Error de red o HTTP error
@@ -387,7 +389,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleRetryVerify = async () => {
-    if (!solicitudId) return;
+    if (!solicitudId || paused) return;
 
     setProcessing(true);
     setVerifyError(null);
@@ -395,6 +397,11 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
 
     try {
       const result = await verifyDocumentAction(solicitudId, 'SELFIE');
+
+      if (result.blocked && result.pause) {
+        setDocumentsPause(result.pause);
+        return;
+      }
 
       if (result.success && result.documentsStatus) {
         const selfieStatus = result.documentsStatus.selfie.status;
@@ -422,16 +429,8 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
           setUploadScore(null);
           setDocumentUrl('selfie', null);
           if (fileInputRef.current) fileInputRef.current.value = '';
-          const remaining = result.documentsStatus.selfie.remainingAttempts;
           const reason = result.documentsStatus.selfie.rejectionReason;
-          setError(
-            reason
-              ? `${reason}${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
-              : `No se pudo verificar tu selfie. Por favor, intenta con otra foto.${remaining != null ? ` (${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})` : ''}`
-          );
-          if (remaining === 1) {
-            toast.warning('⚠️ Este es tu último intento. Si falla, tu cuenta se bloqueará por 24 horas.', { duration: 8000 });
-          }
+          setError(reason || 'No se pudo verificar tu selfie. Por favor, intenta con otra foto.');
         }
       } else {
         console.log('[KYCSelfie] Retry verify failed:', result.error);
@@ -479,6 +478,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
           />
         </CardHeader>
         <CardContent className="pt-0">
+          <DocumentPauseNotice />
           {verification && (verification.dniFront.status !== 'VERIFIED' || verification.dniBack.status !== 'VERIFIED') ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
               <div className="bg-warning-50 rounded-full p-4 mb-4">
@@ -530,13 +530,12 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                     <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                     <div className="text-sm">
                       <p className="font-medium">{error}</p>
-                      {verification?.selfie && verification.selfie.failedAttempts > 0 && verification.selfie.status !== 'VERIFIED' && (
-                        <p className="mt-1 text-xs opacity-80">
-                          Intentos fallidos: {verification.selfie.failedAttempts}/{verification.selfie.maxAttempts} — Restantes: {verification.selfie.remainingAttempts}
-                        </p>
-                      )}
                     </div>
                   </div>
+                )}
+
+                {verification?.selfie.status === 'REJECTED' && verification.selfie.remainingAttempts === 1 && (
+                  <LastAttemptWarning />
                 )}
 
                 {/* Botones de acción — solo si no hay foto capturada */}
@@ -546,7 +545,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                     variant="outline"
                     className="w-full sm:flex-1"
                     onClick={() => setCameraModalOpen(true)}
-                    disabled={analyzing}
+                    disabled={analyzing || paused}
                   >
                     <Camera className="w-4 h-4 mr-2" />
                     Capturar selfie
@@ -687,6 +686,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                           <Button
                             type="button"
                             onClick={handleRetryVerify}
+                            disabled={paused}
                             className="w-full sm:flex-1"
                           >
                             Reintentar
@@ -706,6 +706,7 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                           <Button
                             type="button"
                             onClick={handleUploadAndVerify}
+                            disabled={paused}
                             className="w-full sm:flex-1"
                           >
                             Verificar
