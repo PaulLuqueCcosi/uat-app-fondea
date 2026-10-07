@@ -72,7 +72,9 @@ function buildSuggestedSchedule(outstanding: number, installments: number): { du
     accumulated += amount;
     const date = new Date();
     date.setMonth(date.getMonth() + i);
-    rows.push({ dueDate: date.toISOString().slice(0, 10), amount: amount.toFixed(1) });
+    // Fecha LOCAL (no toISOString, que pasa a UTC y en Perú corre un día después de las 19:00)
+    const dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    rows.push({ dueDate, amount: amount.toFixed(1) });
   }
   return rows;
 }

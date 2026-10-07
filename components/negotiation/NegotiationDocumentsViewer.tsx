@@ -2,9 +2,22 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FileText, Maximize2, X, Download, Loader2 } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { NegotiationOfferDocument } from '@/modules/negotiation-offers';
+
+// El backend deja `{{firma}}` intacto en el HTML pre-firma a propósito: al firmar lo reemplaza
+// por el bloque de firma real (ver HandlebarsContractHtmlRenderer). En la vista previa se muestra
+// un recuadro indicando dónde irá, en vez del placeholder crudo.
+const SIGNATURE_PLACEHOLDER = /\{\{\s*firma\s*\}\}/g;
+const SIGNATURE_PREVIEW_BLOCK =
+  '<div style="margin:24px 0;padding:20px;border:2px dashed #94a3b8;border-radius:8px;' +
+  'text-align:center;color:#64748b;font-family:system-ui,sans-serif;font-size:13px;">' +
+  'Aquí irá tu firma digital</div>';
+
+function withSignaturePreview(html: string): string {
+  return html.replace(SIGNATURE_PLACEHOLDER, SIGNATURE_PREVIEW_BLOCK);
+}
 
 // ── Visor de documento aislado (iframe imperativo para evitar React reconciliation issues) ──
 
@@ -107,7 +120,7 @@ export function NegotiationDocumentsViewer({ offerId, documents, isSigned }: Neg
     for (const doc of visibleDocs) {
       try {
         const res = await fetch(`/api/negotiation-offers/${offerId}/documents/${doc.contractId}/html`, { cache: 'no-store' });
-        if (res.ok) newMap[doc.contractId] = await res.text();
+        if (res.ok) newMap[doc.contractId] = withSignaturePreview(await res.text());
       } catch {
         // silently skip
       }
@@ -126,34 +139,37 @@ export function NegotiationDocumentsViewer({ offerId, documents, isSigned }: Neg
 
   if (isSigned) {
     return (
-      <Card className="overflow-hidden">
-        <div className="p-4 border-b border-border bg-success-50/30">
-          <p className="text-sm font-medium text-success-900 flex items-center gap-2">
-            <FileText className="w-4 h-4" /> Documentos firmados
-          </p>
-        </div>
-        <div className="p-4 space-y-3">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
+            Documentos firmados
+          </CardTitle>
+          <CardDescription>Descarga una copia del acuerdo que firmaste.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
           {documents.map((doc) => (
-            <div key={doc.contractId} className="flex items-center justify-between rounded-lg border border-border p-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div key={doc.contractId} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="w-9 h-9 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
                   <FileText className="w-4 h-4 text-primary" />
                 </div>
                 <span className="text-sm font-medium text-foreground">{doc.name}</span>
               </div>
               {doc.pdfUrl ? (
-                <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer">
+                <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
                   <Button variant="outline" size="sm" className="gap-1.5">
                     <Download className="w-3.5 h-3.5" />
-                    Descargar PDF
+                    <span className="hidden sm:inline">Descargar PDF</span>
+                    <span className="sm:hidden">PDF</span>
                   </Button>
                 </a>
               ) : (
-                <span className="text-xs text-muted-foreground">PDF no disponible</span>
+                <span className="shrink-0 text-xs text-muted-foreground">PDF no disponible</span>
               )}
             </div>
           ))}
-        </div>
+        </CardContent>
       </Card>
     );
   }

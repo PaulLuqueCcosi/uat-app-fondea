@@ -13,7 +13,9 @@ import {
   formatDeadlineUrgency,
   type NegotiationOffer,
 } from '@/modules/negotiation-offers';
-import { formatDateTime } from '@/lib/admin-formatters';
+import { formatDate, formatDateTime } from '@/lib/admin-formatters';
+import { formatBackendDateShort } from '@/modules/shared/backend-date';
+import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -121,6 +123,7 @@ export default async function AdminNegotiationOfferDetailPage({ params }: Props)
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <BreadcrumbLabel id={id} label={`Oferta del ${formatBackendDateShort(offer.createdAt)}`} />
       <DetailPageHeader
         icon={<FileSignature className="h-5 w-5 text-primary" />}
         title="Oferta de refinanciamiento"
@@ -193,7 +196,7 @@ export default async function AdminNegotiationOfferDetailPage({ params }: Props)
                 {offer.schedule.map((item) => (
                   <tr key={item.installmentNo} className="border-b last:border-0">
                     <td className="py-1.5 font-mono text-primary">{item.installmentNo}</td>
-                    <td className="py-1.5">{new Date(item.dueDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                    <td className="py-1.5">{formatDate(item.dueDate)}</td>
                     <td className="py-1.5 text-right font-mono">{formatCurrency(item.amount)}</td>
                   </tr>
                 ))}
