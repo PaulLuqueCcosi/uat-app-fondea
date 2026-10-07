@@ -57,6 +57,18 @@ export interface RejectionBreakdownBackend {
   reasons: RejectionReasonEntry[];
 }
 
+// ── Demanda no atendida por falta de fondo ───────────────────────────────────
+
+export interface FundsRejections {
+  count: number;
+  requestedAmount: number;
+}
+
+export interface FundsRejectionsBackend {
+  count: number;
+  requested_amount: number;
+}
+
 // ── R41 — Leads por hora ──────────────────────────────────────────────────────
 
 export interface LeadsByHourEntry {

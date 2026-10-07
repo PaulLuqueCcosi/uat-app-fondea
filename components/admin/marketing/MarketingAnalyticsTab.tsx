@@ -4,14 +4,16 @@ import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MetricCard, MetricCardSkeleton } from '@/components/admin/metrics/MetricCard';
-import { ScanFace, ListTree, XCircle, Clock } from 'lucide-react';
+import { ScanFace, ListTree, XCircle, Clock, Wallet } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
 } from 'recharts';
+import { formatCurrency } from '@/lib/admin-formatters';
 import type {
   KycFirstAttempt, KycFirstAttemptBackend,
   FormStepEntry, FormStepEntryBackend,
   RejectionBreakdown, RejectionBreakdownBackend,
+  FundsRejections, FundsRejectionsBackend,
   LeadsByHourEntry, LeadsByHourBackend,
 } from '@/modules/admin/admin-marketing.types';
 
@@ -52,6 +54,7 @@ export function MarketingAnalyticsTab() {
   const [kyc, setKyc] = useState<KycFirstAttempt | null>(null);
   const [steps, setSteps] = useState<FormStepEntry[]>([]);
   const [rejections, setRejections] = useState<RejectionBreakdown | null>(null);
+  const [fundsRejections, setFundsRejections] = useState<FundsRejections | null>(null);
   const [leadsByHour, setLeadsByHour] = useState<LeadsByHourEntry[]>([]);
 
   const fetchAll = useCallback(async (selectedDays: string) => {
@@ -59,10 +62,11 @@ export function MarketingAnalyticsTab() {
     const { from, to } = toDateParams(Number(selectedDays));
     const qs = `from=${from}&to=${to}`;
 
-    const [kycRaw, stepsRaw, rejectionsRaw, leadsRaw] = await Promise.all([
+    const [kycRaw, stepsRaw, rejectionsRaw, fundsRaw, leadsRaw] = await Promise.all([
       fetchJson<KycFirstAttemptBackend>(`kyc-first-attempt?${qs}`),
       fetchJson<{ steps: FormStepEntryBackend[] }>(`form-step-abandonment?${qs}`),
       fetchJson<RejectionBreakdownBackend>(`rejection-breakdown?${qs}`),
+      fetchJson<FundsRejectionsBackend>(`funds-rejections?${qs}`),
       fetchJson<LeadsByHourBackend>(`leads-by-hour?${qs}`),
     ]);
 
@@ -83,6 +87,11 @@ export function MarketingAnalyticsTab() {
     setRejections(rejectionsRaw ? {
       totalRejections: rejectionsRaw.total_rejections,
       reasons: rejectionsRaw.reasons,
+    } : null);
+
+    setFundsRejections(fundsRaw ? {
+      count: fundsRaw.count,
+      requestedAmount: fundsRaw.requested_amount,
     } : null);
 
     setLeadsByHour(leadsRaw?.hours ?? []);
@@ -166,6 +175,29 @@ export function MarketingAnalyticsTab() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-6">Sin rechazos en el período</p>
+          )}
+        </MetricCard>
+
+        {/* Demanda no atendida por falta de fondo */}
+        <MetricCard
+          icon={Wallet}
+          title="Demanda no atendida por falta de fondo"
+          description="Solicitudes rechazadas porque no había fondo para el monto — sirve para dimensionar cuánto fondo falta"
+          onRefresh={() => fetchAll(days)}
+          isRefreshing={loading}
+        >
+          {fundsRejections ? (
+            <div className="flex items-center gap-6">
+              <p className={`text-4xl font-bold ${fundsRejections.count > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                {formatCurrency(fundsRejections.requestedAmount)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {fundsRejections.count} {fundsRejections.count === 1 ? 'solicitud' : 'solicitudes'}<br />
+                {fundsRejections.count === 0 ? 'Todo el monto pedido tuvo fondo' : 'no atendidas en el período'}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-6">Sin datos</p>
           )}
         </MetricCard>
       </div>

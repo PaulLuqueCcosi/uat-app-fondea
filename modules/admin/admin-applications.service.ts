@@ -20,6 +20,8 @@ export interface AdminApplicationRow {
   evaluatedAt: string | null;
   creditScore: number | null;
   rejectionReason: string | null;
+  /** Código de fallo/rechazo (ej. INSUFFICIENT_FUNDS = sin fondo disponible). */
+  failureCode: string | null;
   createdAt: string;
 }
 
@@ -33,6 +35,8 @@ export interface AdminApplicationsResult {
 export interface ApplicationFilters {
   search?: string;
   status?: ApplicationStatus;
+  /** Filtra por código de fallo/rechazo, ej. INSUFFICIENT_FUNDS. */
+  failureCode?: string;
   /** Filtra por el ID exacto de un usuario — ej. tab "Solicitudes" del detalle de usuario. */
   userId?: string;
   submittedFrom?: string; // ISO date: YYYY-MM-DD
@@ -58,6 +62,9 @@ export async function getAdminApplications(
   }
   if (filters.status) {
     params.set('status', filters.status);
+  }
+  if (filters.failureCode) {
+    params.set('failureCode', filters.failureCode);
   }
   if (filters.userId) {
     params.set('userId', filters.userId);

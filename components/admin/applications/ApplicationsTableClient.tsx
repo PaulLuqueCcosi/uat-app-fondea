@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { AdminApplicationRow, ApplicationStatus } from '@/modules/admin/admin-applications.service';
+import { failureCodeLabel, REJECTION_REASON_FILTER_OPTIONS } from '@/modules/admin/application-failure-codes';
 
 // ── Status labels ──────────────────────────────────────────────────────────
 
@@ -70,12 +71,29 @@ const columns = [
     header: 'Estado',
     cell: ({ row }: { row: { original: AdminApplicationRow } }) => {
       const cfg = STATUS_CONFIG[row.original.status];
+      // Un rechazo por falta de fondo no es una decisión sobre el usuario: se marca aparte para que el
+      // admin lo distinga de un rechazo por reglas a simple vista.
+      const reason = row.original.status === 'REJECTED' ? failureCodeLabel(row.original.failureCode) : null;
+      const noFunds = row.original.failureCode === 'INSUFFICIENT_FUNDS';
       return (
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}
-        >
-          {cfg.label}
-        </span>
+        <div className="flex flex-col items-start gap-1">
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}
+          >
+            {cfg.label}
+          </span>
+          {reason && (
+            <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                noFunds
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-neutral-50 text-neutral-600 border-neutral-200'
+              }`}
+            >
+              {reason}
+            </span>
+          )}
+        </div>
       );
     },
   },
@@ -197,6 +215,11 @@ export function ApplicationsTableClient({ data, pagination }: ApplicationsTableC
     applyFilters({ status: value || undefined });
   };
 
+  const handleFailureCodeChange = (value: string) => {
+    // Elegir un motivo de rechazo implica ver solo rechazadas: se fija el estado a la vez.
+    applyFilters({ failure_code: value || undefined, ...(value ? { status: 'REJECTED' } : {}) });
+  };
+
   const handlePageChange = useCallback(
     (newPage: number) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -231,6 +254,7 @@ export function ApplicationsTableClient({ data, pagination }: ApplicationsTableC
   };
 
   const currentStatus = searchParams.get('status') ?? '';
+  const currentFailureCode = searchParams.get('failure_code') ?? '';
 
   return (
     <div className="space-y-4">
@@ -282,6 +306,18 @@ export function ApplicationsTableClient({ data, pagination }: ApplicationsTableC
             <NativeSelectOption value="EXPIRED">Expirada</NativeSelectOption>
           </NativeSelect>
 
+          <NativeSelect
+            value={currentFailureCode}
+            onChange={(e) => handleFailureCodeChange(e.target.value)}
+            className="h-9 w-64"
+            disabled={isPending}
+          >
+            <NativeSelectOption value="">Todos los motivos</NativeSelectOption>
+            {REJECTION_REASON_FILTER_OPTIONS.map((opt) => (
+              <NativeSelectOption key={opt.value} value={opt.value}>{opt.label}</NativeSelectOption>
+            ))}
+          </NativeSelect>
+
           <CollapsibleTrigger
             render={<Button variant="outline" size="sm" className="h-9 gap-2" type="button" disabled={isPending} />}
           >
@@ -293,7 +329,7 @@ export function ApplicationsTableClient({ data, pagination }: ApplicationsTableC
             {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </CollapsibleTrigger>
 
-          {(activeFilterCount > 0 || currentStatus || search) && (
+          {(activeFilterCount > 0 || currentStatus || currentFailureCode || search) && (
             <Button
               variant="ghost"
               size="sm"

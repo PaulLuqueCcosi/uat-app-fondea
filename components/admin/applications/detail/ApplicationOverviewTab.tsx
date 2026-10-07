@@ -7,6 +7,7 @@ import Link from 'next/link';
 import type { AdminApplicationCore } from '@/modules/admin/admin-application-detail.service';
 import { CreditCreationRetryButton } from './CreditCreationRetryButton';
 import { BackendErrorMessage } from './BackendErrorMessage';
+import { failureCodeLabel } from '@/modules/admin/application-failure-codes';
 
 interface Props {
   data: AdminApplicationCore;
@@ -80,7 +81,10 @@ export function ApplicationOverviewTab({ data, dates }: Props) {
               {data.failureCode && (
                 <div>
                   <p className="text-[11px] text-muted-foreground">Código de fallo</p>
-                  <p className="text-sm font-mono">{data.failureCode}</p>
+                  <p className="text-sm">
+                    <span className="font-medium">{failureCodeLabel(data.failureCode)}</span>
+                    <span className="ml-2 font-mono text-xs text-muted-foreground">{data.failureCode}</span>
+                  </p>
                 </div>
               )}
               {data.evaluationError && (

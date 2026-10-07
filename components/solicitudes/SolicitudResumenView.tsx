@@ -24,6 +24,7 @@ import type { DocumentListResult } from '@/lib/types/document';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 import { LoanBreakdownCard } from './LoanBreakdownCard';
+import { formatBackendDateLong, parseBackendDate } from '@/modules/shared/backend-date';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -347,8 +348,86 @@ function ApprovedView({
 // ── Vista: Rechazada ──────────────────────────────────────────────────────────
 
 function RejectedView({ application }: { application: ApplicationRecord }) {
+  // Sin fondo NO es una decisión sobre el usuario: se explica distinto, sin tono de "reprobado".
+  if (application.failureCode === 'INSUFFICIENT_FUNDS') {
+    return <NoFundsView />;
+  }
+  return <RulesRejectedView application={application} />;
+}
+
+/** Rechazo por falta de fondo: se chequea antes de evaluar, el perfil del usuario ni se miró. */
+function NoFundsView() {
   const router = useRouter();
-  const canRetry = application.canRetryAt ? new Date(application.canRetryAt) <= new Date() : false;
+
+  return (
+    <div className="w-full max-w-3xl mx-auto space-y-6">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-warning-400 to-warning-600 p-8 md:p-10">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
+
+        <div className="relative flex flex-col md:flex-row items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <Clock className="w-10 h-10 text-white" />
+          </div>
+          <div className="text-center md:text-left flex-1">
+            <p className="text-sm font-medium text-neutral-900/60 uppercase tracking-wider mb-1">
+              Resultado
+            </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
+              Por ahora no tenemos fondos disponibles
+            </h1>
+            <p className="text-neutral-800/80 text-base">
+              En este momento no contamos con fondos para el monto que pediste. No se debe a tu perfil
+              ni a tus datos: ni siquiera llegamos a evaluarlos.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-primary-50 border border-primary-200 rounded-xl p-5">
+        <div className="flex gap-3">
+          <AlertCircle className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground">
+            <p className="font-semibold mb-2">¿Qué puedes hacer?</p>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>• Volver a intentarlo más tarde: no tienes que esperar ningún plazo.</li>
+              <li>• Probar con un monto menor, que podríamos cubrir ahora.</li>
+              <li>• Tus datos ya verificados se mantienen mientras estén vigentes, así que volver a solicitar será más rápido.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <Card className="border-0 shadow-md">
+        <CardContent className="p-5">
+          <p className="text-sm text-muted-foreground">
+            Si tienes dudas, escríbenos a{' '}
+            <a href="mailto:soporte@fondea.pe" className="text-primary font-medium hover:underline">
+              soporte@fondea.pe
+            </a>
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => router.push('/dashboard')} className="w-full sm:flex-1">
+          <Home className="w-4 h-4 mr-2" />
+          Volver al dashboard
+        </Button>
+        <Button onClick={() => router.push('/solicitar')} className="w-full sm:flex-1">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Volver a intentar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Rechazo por las reglas de evaluación. No se inventan motivos que el sistema no tiene. */
+function RulesRejectedView({ application }: { application: ApplicationRecord }) {
+  const router = useRouter();
+  const retryAt = application.canRetryAt ? parseBackendDate(application.canRetryAt) : null;
+  const canRetry = retryAt ? retryAt <= new Date() : false;
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
@@ -369,14 +448,14 @@ function RejectedView({ application }: { application: ApplicationRecord }) {
               Solicitud no aprobada
             </h1>
             <p className="text-white/80 text-base">
-              {application.rejectionReason ?? 'Lamentablemente tu solicitud no fue aprobada en esta ocasión'}
+              Evaluamos tu solicitud y, por ahora, no cumple con los criterios para este préstamo.
             </p>
           </div>
         </div>
       </div>
 
       {/* Fecha de reintento */}
-      {/* {application.canRetryAt && (
+      {retryAt && (
         <Card className="border-0 shadow-md">
           <CardContent className="p-5">
             <div className="flex gap-3">
@@ -384,15 +463,21 @@ function RejectedView({ application }: { application: ApplicationRecord }) {
               <div className="text-sm">
                 <p className="font-semibold text-foreground mb-1">¿Cuándo puedo volver a intentarlo?</p>
                 <p className="text-muted-foreground">
-                  Podrás presentar una nueva solicitud a partir del{' '}
-                  <span className="font-semibold text-foreground">{formatDate(application.canRetryAt)}</span>.
-                  {' '}Te recomendamos mejorar tu perfil crediticio durante este tiempo.
+                  {canRetry ? (
+                    'Ya puedes presentar una nueva solicitud.'
+                  ) : (
+                    <>
+                      Podrás presentar una nueva solicitud a partir del{' '}
+                      <span className="font-semibold text-foreground">{formatBackendDateLong(application.canRetryAt)}</span>.
+                      {' '}Te recomendamos mejorar tu perfil crediticio durante este tiempo.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-      )} */}
+      )}
 
       {/* Recomendaciones */}
       <div className="bg-primary-50 border border-primary-200 rounded-xl p-5">
@@ -434,7 +519,7 @@ function RejectedView({ application }: { application: ApplicationRecord }) {
           disabled={!canRetry}
         >
           <RefreshCw className="w-4 h-4 mr-2" />
-          {canRetry ? 'Nueva solicitud' : 'No disponible aún'}
+          {canRetry ? 'Nueva solicitud' : retryAt ? `Disponible el ${formatBackendDateLong(application.canRetryAt)}` : 'No disponible aún'}
         </Button>
       </div>
     </div>

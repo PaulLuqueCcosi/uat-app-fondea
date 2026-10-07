@@ -39,13 +39,16 @@ export type ApplicationStatus =
   | 'COMPLETED';
 
 /**
- * Códigos de fallo técnico del pipeline.
- * Solo presentes cuando status === 'FAILED'.
+ * Códigos de fallo/rechazo del pipeline de evaluación.
+ * Presentes cuando status es 'FAILED' o 'REJECTED' (INSUFFICIENT_FUNDS).
  */
 export type ApplicationFailureCode =
   | 'BUSINESS_VALIDATION_FAILED'
   | 'SCORE_CALCULATION_FAILED'
-  | 'EVALUATION_ERROR';
+  | 'CALCULATION_ERROR'
+  | 'EVALUATION_ERROR'
+  /** No hay fondo para el monto pedido: rechazo del lado de Fondea, no del perfil del usuario. */
+  | 'INSUFFICIENT_FUNDS';
 
 export interface LoanApplication {
   id: string;

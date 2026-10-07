@@ -8,6 +8,7 @@ interface Props {
     size?: string;
     q?: string;
     status?: string;
+    failure_code?: string;
     submitted_from?: string;
     submitted_to?: string;
     score_min?: string;
@@ -23,6 +24,7 @@ export default async function AdminApplicationsPage({ searchParams }: Props) {
   const { data, pagination } = await getAdminApplications(page, pageSize, {
     search: params.q,
     status: params.status as any,
+    failureCode: params.failure_code,
     submittedFrom: params.submitted_from,
     submittedTo: params.submitted_to,
     scoreMin: params.score_min ? Number(params.score_min) : undefined,
