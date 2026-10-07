@@ -70,6 +70,10 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
   );
 }
 
+/** Edad permitida para validar identidad. Debe coincidir con KycAgeRule del backend. */
+const KYC_MIN_AGE = 21;
+const KYC_MAX_AGE = 110;
+
 const kycValidationSchema = z.object({
   dni: z
     .string()
@@ -125,15 +129,16 @@ const kycValidationSchema = z.object({
       const age = today.getFullYear() - date.getFullYear()
         - (today < new Date(today.getFullYear(), date.getMonth(), date.getDate()) ? 1 : 0);
       
-      if (age < 18) {
+      // Mismos límites y mensajes que KycAgeRule en el backend (inclusivos en ambos extremos).
+      if (age < KYC_MIN_AGE) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Debes ser mayor de edad (mínimo 18 años)',
+          message: `Solo se permite a personas mayores de ${KYC_MIN_AGE} años`,
         });
-      } else if (age > 120) {
+      } else if (age > KYC_MAX_AGE) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'La edad máxima permitida es 120 años',
+          message: `Solo se permite a personas menores de ${KYC_MAX_AGE} años`,
         });
       }
     }),
@@ -629,8 +634,11 @@ export function FunnelKYCValidation({
 
                 const selectedDate = parseDateFromField(field.value);
                 const today = new Date();
-                const minDate = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate());
-                const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+                // El calendario deja elegir cualquier fecha pasada (no solo el rango permitido):
+                // si bloqueara las fechas fuera de rango, el usuario nunca vería el mensaje
+                // que le explica por qué no puede continuar.
+                const minDate = new Date(today.getFullYear() - (KYC_MAX_AGE + 20), 0, 1);
+                const defaultMonth = new Date(today.getFullYear() - KYC_MIN_AGE, today.getMonth(), today.getDate());
 
                 return (
                   <FormItem className="flex flex-col gap-1">
@@ -655,20 +663,23 @@ export function FunnelKYCValidation({
                         <Calendar
                           mode="single"
                           selected={selectedDate}
-                          defaultMonth={selectedDate ?? maxDate}
+                          defaultMonth={selectedDate ?? defaultMonth}
                           captionLayout="dropdown"
                           startMonth={minDate}
-                          endMonth={maxDate}
-                          disabled={{ after: maxDate, before: minDate }}
+                          endMonth={today}
+                          disabled={{ after: today, before: minDate }}
                           onSelect={(date) => {
                             if (date) {
                               field.onChange(formatDateToField(date));
+                              // Valida solo este campo al elegir la fecha, para mostrar el
+                              // mensaje de edad enseguida sin activar el resto del formulario.
+                              void form.trigger('birth_date');
                             }
                           }}
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormDescription>Debes de ser mayor de edad.</FormDescription>
+                    <FormDescription>Solo se permite a personas de {KYC_MIN_AGE} años o más.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 );
