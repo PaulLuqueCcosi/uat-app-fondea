@@ -97,12 +97,9 @@ export default function LoanCalculatorPortal({
         ? updateIntention(initialValues!.intencionId, data.amount, data.termDays, data.installmentCount)
         : fondeaPortalApi.createIntention(data);
 
-      // Toast observa la promesa (no modifica el resultado)
-      toast.promise(promise, {
-        loading: isEditing ? 'Actualizando solicitud...' : 'Creando solicitud...',
-        success: isEditing ? 'Solicitud actualizada' : 'Solicitud creada',
-        error: 'Error al procesar la solicitud',
-      });
+      // Sin toast de carga/éxito: en este punto solo existe una intención, la solicitud
+      // recién se crea al enviarla en /solicitar. Solo se avisa si falla.
+      promise.catch(() => toast.error('Error al procesar la solicitud'));
 
       // Awaitar el resultado real para Zustand
       const result = await promise;
