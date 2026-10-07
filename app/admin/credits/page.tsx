@@ -50,6 +50,8 @@ export default async function AdminCreditsPage({ searchParams }: Props) {
 
   const [{ data, pagination }, negotiationCredits] = await Promise.all([
     getAdminCredits(page, pageSize, {
+      // Sin esto el tab "Créditos" traía también los de refinanciamiento, que ya tienen su propio tab
+      creditType: 'STANDARD',
       search: params.q,
       status: params.status as CreditStatus | undefined,
       termDays: params.term_days ? Number(params.term_days) : undefined,

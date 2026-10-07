@@ -13,6 +13,7 @@ import { CreditOverviewTab } from '@/components/admin/credits/detail/CreditOverv
 import { CreditInstallmentsSection } from '@/components/admin/credits/detail/CreditInstallmentsSection';
 import { CreditTransactionsSection } from '@/components/admin/credits/detail/CreditTransactionsSection';
 import { AuditTimeline } from '@/components/admin/shared';
+import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarDays, Wallet, LayoutDashboard, History } from 'lucide-react';
 
@@ -48,6 +49,7 @@ export default async function AdminCreditDetailPage({ params }: Props) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <BreadcrumbLabel id={id} label={summary.creditCode} />
       <CreditDetailHeader data={summary} outstanding={totalOutstanding} />
 
       <Tabs defaultValue="overview" className="w-full">

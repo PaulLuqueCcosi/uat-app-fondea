@@ -7,6 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { AdminUserMenu } from '@/components/admin/AdminUserMenu';
+import { useBreadcrumbLabelsStore } from '@/modules/shared/breadcrumb-labels';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -18,7 +19,12 @@ import {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
+/** `dynamicLabels` mapea un segmento dinámico (ej. el UUID de un crédito) a su label
+ * legible (ej. el creditCode) — lo registran las páginas de detalle vía `<BreadcrumbLabel>`. */
+function getBreadcrumbs(
+  pathname: string,
+  dynamicLabels: Record<string, string>,
+): { label: string; href?: string }[] {
   const segments = pathname.replace('/admin', '').split('/').filter(Boolean);
 
   if (segments.length === 0) return [{ label: 'Admin' }];
@@ -35,13 +41,16 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
     fee_groups: 'Tarifas',
     pricing_rules: 'Reglas de Pricing',
     education: 'Educación Financiera',
+    installments: 'Cuotas',
+    negotiate: 'Negociar',
+    'negotiation-offers': 'Ofertas de refinanciamiento',
   };
 
   // Segmentos que son parte de una ruta dinámica (ej. /admin/calculator/fee_groups/:id)
   // pero NO tienen página propia sin el id/acción que sigue — antes su breadcrumb
   // apuntaba a esa URL inexistente y caía en "Sección no disponible". Su link ahora
   // apunta al ancestro válido más cercano (el listado con tabs) en vez de a sí mismo.
-  const NON_NAVIGABLE_SEGMENTS = new Set(['availability', 'fee_groups', 'pricing_rules']);
+  const NON_NAVIGABLE_SEGMENTS = new Set(['availability', 'fee_groups', 'pricing_rules', 'installments']);
 
   const crumbs: { label: string; href?: string }[] = [
     { label: 'Admin', href: '/admin' },
@@ -54,7 +63,8 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
     const isLast = i === segments.length - 1;
     const isNavigable = !NON_NAVIGABLE_SEGMENTS.has(seg);
     crumbs.push({
-      label: labelMap[seg] || seg,
+      // El número después de /installments es el nro. de cuota (…/installments/2 → "Cuota 2")
+      label: segments[i - 1] === 'installments' ? `Cuota ${seg}` : dynamicLabels[seg] || labelMap[seg] || seg,
       href: isLast ? undefined : (isNavigable ? path : lastValidPath),
     });
     if (isNavigable) lastValidPath = path;
@@ -74,7 +84,8 @@ interface AdminNavbarProps {
 
 export function AdminNavbar({ user, onSignOut }: AdminNavbarProps) {
   const pathname = usePathname();
-  const breadcrumbs = getBreadcrumbs(pathname);
+  const dynamicLabels = useBreadcrumbLabelsStore((s) => s.labels);
+  const breadcrumbs = getBreadcrumbs(pathname, dynamicLabels);
 
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center border-b border-border bg-neutral-900 px-4">

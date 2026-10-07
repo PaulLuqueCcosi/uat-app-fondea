@@ -11,6 +11,7 @@ import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
 import { InstallmentTransactionsCard } from '@/components/admin/credits/detail/InstallmentTransactionsCard';
 import { KpiCard } from '@/components/admin/shared';
 import { DataRow } from '@/components/ui/data-row';
+import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
 
 interface Props {
@@ -51,6 +52,7 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <BreadcrumbLabel id={id} label={creditSummary?.creditCode} />
       <DetailPageHeader
         icon={<CalendarDays className="h-5 w-5 text-primary" />}
         title={data.installmentCode ?? `Cuota #${data.installmentNo}`}
@@ -78,33 +80,46 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
       </DetailPageHeader>
 
       {/* Alert for overdue */}
+      {/* Alertas de estado: tarjeta blanca estándar, el color va solo en el círculo del ícono */}
       {isOverdue && (
-        <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
-          <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium text-red-800">Cuota vencida — {data.daysOverdue} días de atraso</p>
-            <p className="text-xs text-red-600 mt-0.5">
-              Mora acumulada: {formatCurrency(data.penaltyAccrued)}.
-              {canNegotiate && ' Esta cuota es elegible para negociación.'}
-            </p>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error-100">
+              <AlertCircle className="h-5 w-5 text-error-700" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Cuota vencida — {data.daysOverdue} días de atraso</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Mora acumulada: <span className="font-medium text-error-700">{formatCurrency(data.penaltyAccrued)}</span>.
+                {canNegotiate && ' Esta cuota es elegible para negociación.'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Alert for negotiated */}
       {isNegotiated && data.negotiationCreditId && (
-        <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
-          <Handshake className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium text-foreground">Esta cuota fue refinanciada</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              La deuda se trasladó a un crédito de negociación.{' '}
-              <Link href={`/admin/credits/${data.negotiationCreditId}`} className="text-primary hover:underline font-medium">
-                Ver crédito de negociación →
-              </Link>
-            </p>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="flex flex-1 items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100">
+                <Handshake className="h-5 w-5 text-primary-700" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Esta cuota fue refinanciada</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  La deuda se trasladó a un crédito de negociación y ya no se cobra desde esta cuota.
+                </p>
+              </div>
+            </div>
+            <Link href={`/admin/credits/${data.negotiationCreditId}`} className="shrink-0">
+              <Button size="sm" variant="outline" className="gap-1.5 w-full sm:w-auto">
+                <Handshake className="h-4 w-4" />
+                Ver crédito de negociación
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
       )}
 
       {/* KPI Cards */}

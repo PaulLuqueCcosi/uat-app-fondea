@@ -10,6 +10,7 @@ import { installmentStatusInfo, INSTALLMENT_STATUS_INFO } from '@/modules/admin/
 import { getNegotiationOffersByInstallmentAction } from '@/app/actions/negotiation-offer.actions';
 import { NegotiationOfferForm } from '@/components/admin/credits/negotiate/NegotiationOfferForm';
 import { NegotiationOfferHistory } from '@/components/admin/credits/negotiate/NegotiationOfferHistory';
+import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
 
 interface Props {
   params: Promise<{ id: string; installmentNo: string }>;
@@ -38,6 +39,7 @@ export default async function NegotiateInstallmentPage({ params }: Props) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <BreadcrumbLabel id={id} label={creditSummary?.creditCode} />
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
