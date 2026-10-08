@@ -2,6 +2,7 @@ import { PauseCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDateTime } from '@/lib/admin-formatters';
 import type { VerificationInfo } from '@/modules/admin/admin-application-detail.service';
+import { UnblockDocumentsAction } from './UnblockDocumentsAction';
 
 const STEP_LABELS: Record<string, string> = {
   DNI_FRONT: 'DNI frente',
@@ -14,7 +15,10 @@ const STEP_LABELS: Record<string, string> = {
  * y el cliente podrá continuar cuando termine la pausa, salvo que la pre-aprobación venza antes.
  * Mismo estilo que la tarjeta "Motivo de fallo / rechazo" del resumen.
  */
-export function TemporaryBlockBanner({ verification }: { verification: VerificationInfo | null }) {
+export function TemporaryBlockBanner({ applicationId, verification }: {
+  applicationId: string;
+  verification: VerificationInfo | null;
+}) {
   if (!verification?.temporarilyBlocked || !verification.blockedUntil) {
     return null;
   }
@@ -45,6 +49,9 @@ export function TemporaryBlockBanner({ verification }: { verification: Verificat
             una nueva solicitud.
           </p>
         )}
+        <div className="pt-1">
+          <UnblockDocumentsAction applicationId={applicationId} />
+        </div>
       </CardContent>
     </Card>
   );

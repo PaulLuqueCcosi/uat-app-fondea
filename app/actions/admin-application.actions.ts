@@ -32,6 +32,38 @@ export async function regenerateContractsAction(applicationId: string): Promise<
   }
 }
 
+/**
+ * Levanta la pausa temporal de la verificación de documentos (admin) antes de que pasen las 24h:
+ * el paso que agotó sus intentos recupera sus vidas y el cliente puede continuar ya.
+ * El motivo es obligatorio y queda en la auditoría con el admin que lo ejecutó.
+ *
+ * POST /api/v1/admin/applications/{applicationId}/documents/unblock?reason=...
+ */
+export async function unblockDocumentVerificationAction(
+  applicationId: string,
+  reason: string,
+): Promise<{ ok: boolean; message: string }> {
+  await requireValidSession();
+
+  try {
+    const res = await backendFetch(
+      `/api/v1/admin/applications/${applicationId}/documents/unblock?reason=${encodeURIComponent(reason)}`,
+      { method: 'POST', context: 'ADMIN_UNBLOCK_DOCUMENTS' },
+    );
+
+    if (res.ok) {
+      return { ok: true, message: 'Pausa levantada: el cliente puede continuar con la verificación.' };
+    }
+
+    // ProblemDetail (RFC 9457) de GlobalExceptionHandler: el `detail` ya viene redactado para el admin
+    const body = await res.json().catch(() => null);
+    return { ok: false, message: body?.detail ?? `No se pudo levantar la pausa (${res.status}).` };
+  } catch (err) {
+    console.error('[ADMIN] Error levantando la pausa de documentos:', err);
+    return { ok: false, message: 'Error de conexión' };
+  }
+}
+
 // Nota: la URL del PDF de contrato y la URL de un documento (DNI/selfie) se piden
 // vía API routes normales (app/api/admin/applications/[id]/contract/.../pdf y
 // .../documents/.../url), NO Server Actions — invocar una Server Action desde el

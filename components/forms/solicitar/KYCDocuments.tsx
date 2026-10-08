@@ -38,6 +38,17 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
   );
 }
 
+/**
+ * Aviso de última vida para los pasos que NO pasan por el badge de rechazo (el badge de REJECTED ya lo
+ * incluye). Hace falta porque al eliminar la foto rechazada el paso vuelve a PENDING en el backend: si el
+ * cliente recarga o vuelve más tarde, sigue con una sola vida y tiene que enterarse antes de reintentar.
+ */
+function LastLifeNotice({ item }: { item: DocumentItemStatus | undefined }) {
+  if (!item) return null;
+  if (item.status === 'VERIFIED' || item.status === 'REJECTED') return null;
+  return item.remainingAttempts === 1 ? <LastAttemptWarning /> : null;
+}
+
 /** Badge visual del estado de verificación de un lado del DNI */
 function VerificationStatusBadge({ item }: { item: DocumentItemStatus | undefined }) {
   if (!item) return null;
@@ -429,6 +440,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
               {itemVerification && itemVerification.status === 'REJECTED' && (
                 <VerificationStatusBadge item={itemVerification} />
               )}
+              <LastLifeNotice item={itemVerification} />
             </div>
           ) : (
             /* Photo captured/loaded — show preview + actions */
@@ -460,6 +472,7 @@ export function FunnelKYCDocuments({ applicationId, initialFrontUrl, initialBack
               {!isProcessing && itemVerification && (
                 <VerificationStatusBadge item={itemVerification} />
               )}
+              {!isProcessing && <LastLifeNotice item={itemVerification} />}
 
               {/* Action buttons — h-10 consistente para todos */}
               <div className="flex flex-col sm:flex-row gap-3">

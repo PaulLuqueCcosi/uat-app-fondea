@@ -534,7 +534,9 @@ export function FunnelKYCSelfie({ applicationId, initialSelfieUrl, loading: exte
                   </div>
                 )}
 
-                {verification?.selfie.status === 'REJECTED' && verification.selfie.remainingAttempts === 1 && (
+                {/* Una sola vida: se avisa aunque el paso ya no esté REJECTED (al descartar la foto vuelve a PENDING) */}
+                {verification?.selfie.status !== 'VERIFIED'
+                  && verification?.selfie.remainingAttempts === 1 && (
                   <LastAttemptWarning />
                 )}
 

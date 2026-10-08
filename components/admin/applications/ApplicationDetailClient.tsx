@@ -100,7 +100,7 @@ export function ApplicationDetailClient({
         <TabsContent value="documents" className="mt-4">
           {documents ? (
             <div className="space-y-4">
-              <TemporaryBlockBanner verification={documents.verification} />
+              <TemporaryBlockBanner applicationId={core.id} verification={documents.verification} />
               <ApplicationDocumentsSection data={documents} />
             </div>
           ) : (

@@ -67,7 +67,7 @@ export function ApplicationOverviewTab({ data, dates, verification = null }: Pro
         </Card>
 
         {/* Pausa temporal por intentos agotados en la verificación de documentos */}
-        <TemporaryBlockBanner verification={verification} />
+        <TemporaryBlockBanner applicationId={data.id} verification={verification} />
 
         {/* Error / Rechazo */}
         {(data.rejectionReason || data.evaluationError || data.failureCode) && (
