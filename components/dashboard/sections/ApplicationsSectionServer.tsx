@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { ApplicationRecord } from '@/lib/types';
+import { getApplicationStatusDisplay, isNoFundsRejection } from '@/modules/applications';
 
 // Helper para formatear fecha
 function formatDate(isoDate: string): string {
@@ -87,8 +88,8 @@ export async function ApplicationsSectionServer({ applications }: ApplicationsSe
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <Badge variant={getStatusVariant(app.status)}>
-                  {getStatusLabel(app.status)}
+                <Badge variant={isNoFundsRejection(app) ? getApplicationStatusDisplay(app.status, app.failureCode).variant : getStatusVariant(app.status)}>
+                  {isNoFundsRejection(app) ? getApplicationStatusDisplay(app.status, app.failureCode).label : getStatusLabel(app.status)}
                 </Badge>
                 <ChevronRight className="w-4 h-4 text-fondea-text" />
               </div>

@@ -12,6 +12,8 @@ export type {
 export {
   applicationStatusLabels,
   applicationStatusVariants,
+  getApplicationStatusDisplay,
+  isNoFundsRejection,
 } from './application.types';
 
 // ── Errors ────────────────────────────────────────────────────────────────────

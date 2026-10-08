@@ -30,8 +30,8 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { getApplicationsList, deleteApplication } from '@/app/actions/applications-list.actions';
 import {
-  applicationStatusLabels,
-  applicationStatusVariants,
+  getApplicationStatusDisplay,
+  isNoFundsRejection,
   type ApplicationRecord,
   type ApplicationStatus,
 } from '@/modules/applications';
@@ -49,13 +49,14 @@ function formatDate(iso?: string): string {
 
 // ── Filtros de estado ─────────────────────────────────────────────────────────
 
-type StatusFilter = 'ALL' | 'IN_PROGRESS' | 'APPROVED' | 'REJECTED';
+type StatusFilter = 'ALL' | 'IN_PROGRESS' | 'APPROVED' | 'REJECTED' | 'NO_FUNDS';
 
 const STATUS_FILTER_MAP: Record<StatusFilter, ApplicationStatus[] | null> = {
   ALL: null,
   IN_PROGRESS: ['SUBMITTED', 'PROCESSING', 'PRE_APPROVED', 'PENDING_DOCUMENTS', 'PENDING_SIGNATURE'],
   APPROVED: ['APPROVED', 'COMPLETED'],
   REJECTED: ['REJECTED', 'REJECTED_BY_USER', 'FAILED', 'BLOCKED', 'EXPIRED'],
+  NO_FUNDS: ['REJECTED'],
 };
 
 const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
@@ -63,7 +64,21 @@ const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
   IN_PROGRESS: 'En curso',
   APPROVED: 'Aprobadas',
   REJECTED: 'Rechazadas',
+  NO_FUNDS: 'Sin fondos',
 };
+
+/**
+ * Un rechazo por falta de fondos no es un rechazo del perfil: sale solo en
+ * 'Sin fondos' y se excluye de 'Rechazadas'.
+ */
+function matchesStatusFilter(app: ApplicationRecord, filter: StatusFilter): boolean {
+  const statuses = STATUS_FILTER_MAP[filter];
+  if (!statuses) return true;
+  if (!statuses.includes(app.status)) return false;
+  if (filter === 'NO_FUNDS') return isNoFundsRejection(app);
+  if (filter === 'REJECTED') return !isNoFundsRejection(app);
+  return true;
+}
 
 // ── Columnas (sin botón "Ver" separado — toda la fila es clickeable) ──────────
 
@@ -104,16 +119,19 @@ const columns: ColumnDef<ApplicationRecord>[] = [
     accessorKey: 'status',
     header: 'Estado',
     cell: ({ row }) => {
-      const status = row.original.status;
+      const { label, variant } = getApplicationStatusDisplay(
+        row.original.status,
+        row.original.failureCode,
+      );
       return (
-        <Badge variant={applicationStatusVariants[status]}>
-          {applicationStatusLabels[status]}
+        <Badge variant={variant}>
+          {label}
         </Badge>
       );
     },
-    filterFn: (row, _id, filterValue: ApplicationStatus[] | null) => {
+    filterFn: (row, _id, filterValue: StatusFilter | null) => {
       if (!filterValue) return true;
-      return filterValue.includes(row.original.status);
+      return matchesStatusFilter(row.original, filterValue);
     },
   },
   {
@@ -130,6 +148,7 @@ const columns: ColumnDef<ApplicationRecord>[] = [
 // ── Card móvil para cada solicitud ────────────────────────────────────────────
 
 function ApplicationMobileCard({ app, onDelete }: { app: ApplicationRecord; onDelete: (id: string) => void }) {
+  const { label, variant } = getApplicationStatusDisplay(app.status, app.failureCode);
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       {/* Header: ID + estado + eliminar */}
@@ -138,8 +157,8 @@ function ApplicationMobileCard({ app, onDelete }: { app: ApplicationRecord; onDe
           #{app.id.slice(0, 8)}
         </Link>
         <div className="flex items-center gap-2">
-          <Badge variant={applicationStatusVariants[app.status]}>
-            {applicationStatusLabels[app.status]}
+          <Badge variant={variant}>
+            {label}
           </Badge>
           <button
             onClick={() => onDelete(app.id)}
@@ -169,7 +188,11 @@ function ApplicationMobileCard({ app, onDelete }: { app: ApplicationRecord; onDe
         </div>
         {app.rejectionReason && (
           <div className="mt-2 pt-2 border-t border-border/50">
-            <span className="text-xs text-error-600">{app.rejectionReason}</span>
+            <span
+              className={`text-xs ${isNoFundsRejection(app) ? 'text-warning-700' : 'text-error-600'}`}
+            >
+              {app.rejectionReason}
+            </span>
           </div>
         )}
       </Link>
@@ -237,9 +260,8 @@ export function ApplicationsTable() {
 
   // Aplicar filtro de estado como column filter
   const columnFilters = React.useMemo<ColumnFiltersState>(() => {
-    const statuses = STATUS_FILTER_MAP[statusFilter];
-    if (!statuses) return [];
-    return [{ id: 'status', value: statuses }];
+    if (statusFilter === 'ALL') return [];
+    return [{ id: 'status', value: statusFilter }];
   }, [statusFilter]);
 
   const table = useReactTable({
@@ -264,7 +286,9 @@ export function ApplicationsTable() {
       return (
         row.original.id.toLowerCase().includes(q) ||
         row.original.status.toLowerCase().includes(q) ||
-        (applicationStatusLabels[row.original.status] ?? '').toLowerCase().includes(q)
+        getApplicationStatusDisplay(row.original.status, row.original.failureCode)
+          .label.toLowerCase()
+          .includes(q)
       );
     },
   });

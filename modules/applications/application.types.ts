@@ -23,7 +23,10 @@ export type ApplicationStatus =
 export type ApplicationFailureCode =
   | 'BUSINESS_VALIDATION_FAILED'
   | 'SCORE_CALCULATION_FAILED'
-  | 'EVALUATION_ERROR';
+  | 'CALCULATION_ERROR'
+  | 'EVALUATION_ERROR'
+  /** No hay fondo para el monto pedido: rechazo del lado de Fondea, no del perfil del usuario. */
+  | 'INSUFFICIENT_FUNDS';
 
 // ── Registro de solicitud ─────────────────────────────────────────────────────
 
@@ -71,3 +74,26 @@ export const applicationStatusVariants: Record<ApplicationStatus, StatusVariant>
   EXPIRED: 'error',
   COMPLETED: 'success',
 };
+
+/**
+ * Un rechazo por falta de fondos no es un rechazo del perfil del cliente:
+ * puede volver a intentarlo de inmediato, así que no se muestra como "Rechazada".
+ */
+export function isNoFundsRejection(
+  app: Pick<ApplicationRecord, 'status' | 'failureCode'>,
+): boolean {
+  return app.status === 'REJECTED' && app.failureCode === 'INSUFFICIENT_FUNDS';
+}
+
+export const NO_FUNDS_LABEL = 'Sin fondos por ahora';
+
+/** Etiqueta y variante a mostrar al cliente para el estado de una solicitud. */
+export function getApplicationStatusDisplay(
+  status: ApplicationStatus,
+  failureCode?: ApplicationFailureCode,
+): { label: string; variant: StatusVariant } {
+  if (isNoFundsRejection({ status, failureCode })) {
+    return { label: NO_FUNDS_LABEL, variant: 'warning' };
+  }
+  return { label: applicationStatusLabels[status], variant: applicationStatusVariants[status] };
+}

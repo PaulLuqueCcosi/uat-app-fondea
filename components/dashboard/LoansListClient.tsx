@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
+import { getApplicationStatusDisplay, isNoFundsRejection } from '@/modules/applications';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -60,9 +61,15 @@ function getStatusVariant(status: ApplicationStatus): 'success' | 'completed' | 
   }
 }
 
+/** Etiqueta y variante del badge; el rechazo por falta de fondos se muestra aparte. */
+function getStatusDisplay(app: ApplicationRecord) {
+  if (isNoFundsRejection(app)) return getApplicationStatusDisplay(app.status, app.failureCode);
+  return { label: getStatusLabel(app.status), variant: getStatusVariant(app.status) };
+}
+
 // ── Filtros ───────────────────────────────────────────────────────────────────
 
-type FilterKey = 'ALL' | 'IN_PROGRESS' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+type FilterKey = 'ALL' | 'IN_PROGRESS' | 'APPROVED' | 'REJECTED' | 'NO_FUNDS' | 'EXPIRED';
 
 interface FilterDef {
   key: FilterKey;
@@ -83,8 +90,18 @@ const FILTERS: FilterDef[] = [
     label: 'Rechazadas',
     statuses: ['REJECTED', 'REJECTED_BY_USER', 'FAILED', 'BLOCKED'],
   },
+  // Rechazo por falta de fondos: no es un rechazo del perfil, va en su propio filtro.
+  { key: 'NO_FUNDS', label: 'Sin fondos', statuses: ['REJECTED'] },
   { key: 'EXPIRED', label: 'Expiradas', statuses: ['EXPIRED'] },
 ];
+
+function matchesFilter(def: FilterDef, app: ApplicationRecord): boolean {
+  if (def.statuses === null) return true;
+  if (!def.statuses.includes(app.status)) return false;
+  if (def.key === 'NO_FUNDS') return isNoFundsRejection(app);
+  if (def.key === 'REJECTED') return !isNoFundsRejection(app);
+  return true;
+}
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -97,8 +114,8 @@ export function LoansListClient({ applications }: LoansListClientProps) {
 
   const filtered = useMemo(() => {
     const def = FILTERS.find((f) => f.key === activeFilter);
-    if (!def || def.statuses === null) return applications;
-    return applications.filter((app) => def.statuses!.includes(app.status));
+    if (!def) return applications;
+    return applications.filter((app) => matchesFilter(def, app));
   }, [applications, activeFilter]);
 
   const counts = useMemo(() => {
@@ -107,12 +124,13 @@ export function LoansListClient({ applications }: LoansListClientProps) {
       IN_PROGRESS: 0,
       APPROVED: 0,
       REJECTED: 0,
+      NO_FUNDS: 0,
       EXPIRED: 0,
     };
     for (const app of applications) {
       for (const f of FILTERS) {
         if (f.key === 'ALL') continue;
-        if (f.statuses?.includes(app.status)) {
+        if (matchesFilter(f, app)) {
           result[f.key]++;
         }
       }
@@ -184,7 +202,9 @@ export function LoansListClient({ applications }: LoansListClientProps) {
               )}
             </div>
           ) : (
-            filtered.map((app) => (
+            filtered.map((app) => {
+              const display = getStatusDisplay(app);
+              return (
               <Link
                 key={app.id}
                 href={`/solicitudes/${app.id}`}
@@ -202,13 +222,14 @@ export function LoansListClient({ applications }: LoansListClientProps) {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Badge variant={getStatusVariant(app.status)}>
-                    {getStatusLabel(app.status)}
+                  <Badge variant={display.variant}>
+                    {display.label}
                   </Badge>
                   <ChevronRight className="w-4 h-4 text-fondea-text" />
                 </div>
               </Link>
-            ))
+              );
+            })
           )}
         </div>
       </Card>

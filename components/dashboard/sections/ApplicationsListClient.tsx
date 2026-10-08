@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { deleteApplication } from '@/app/actions/applications-list.actions';
 import type { ApplicationRecord } from '@/lib/types';
+import { getApplicationStatusDisplay, isNoFundsRejection } from '@/modules/applications';
 
 function formatDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -57,8 +58,11 @@ export function ApplicationsListClient({ applications: initial }: { applications
             </p>
           </Link>
           <div className="flex items-center gap-1.5 shrink-0">
-            <Badge variant={getStatusVariant(app.status)} className="text-[9px]">
-              {app.status}
+            <Badge
+              variant={isNoFundsRejection(app) ? getApplicationStatusDisplay(app.status, app.failureCode).variant : getStatusVariant(app.status)}
+              className="text-[9px]"
+            >
+              {isNoFundsRejection(app) ? getApplicationStatusDisplay(app.status, app.failureCode).label : app.status}
             </Badge>
             <button
               onClick={() => handleDelete(app.id)}
