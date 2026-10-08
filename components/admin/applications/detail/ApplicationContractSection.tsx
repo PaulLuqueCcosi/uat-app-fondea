@@ -207,6 +207,20 @@ function DocumentCard({ doc, applicationId }: { doc: AdminContractDocument; appl
                 <Monitor className="h-3 w-3 text-muted-foreground" />
                 <p className="text-muted-foreground truncate max-w-48">{doc.signature.userAgent ?? '—'}</p>
               </div>
+              {doc.signature.documentHash && (
+                <div>
+                  <p className="text-muted-foreground">Código de verificación</p>
+                  <p className="font-mono">
+                    {(doc.signature.documentHash.slice(0, 16).toUpperCase().match(/.{1,4}/g) ?? []).join(' ')}
+                  </p>
+                </div>
+              )}
+              {doc.signature.consentVersion && (
+                <div>
+                  <p className="text-muted-foreground">Versión del consentimiento</p>
+                  <p>{doc.signature.consentVersion}</p>
+                </div>
+              )}
             </div>
             {doc.signature.acceptanceStatement && (
               <p className="text-[10px] italic text-muted-foreground mt-1">{doc.signature.acceptanceStatement}</p>

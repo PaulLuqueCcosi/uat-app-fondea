@@ -91,11 +91,13 @@ export async function getNegotiationOfferById(
 export async function acceptNegotiationOffer(
   id: string,
   request: AcceptNegotiationOfferRequest,
+  extraHeaders: Record<string, string> = {},
 ): Promise<NegotiationOfferResult<NegotiationOffer>> {
   try {
     const res = await backendFetch(`/api/v1/negotiation-offers/${id}/accept`, {
       context: CTX,
       method: 'POST',
+      headers: extraHeaders,
       body: JSON.stringify(request),
     });
 

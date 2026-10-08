@@ -242,6 +242,10 @@ export interface SignatureInfo {
   ipAddress: string | null;
   userAgent: string | null;
   acceptanceStatement: string;
+  /** SHA-256 del documento firmado (si el backend lo registró) */
+  documentHash?: string | null;
+  /** Versión del texto de consentimiento aceptado */
+  consentVersion?: string | null;
   signedBy: string;
   createdAt: string;
 }

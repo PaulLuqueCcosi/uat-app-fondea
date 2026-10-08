@@ -84,8 +84,8 @@ export interface NegotiationOfferDetail {
 // ─── Requests ─────────────────────────────────────────────────────────────────
 
 export interface AcceptNegotiationOfferRequest {
-  signedName: string;
-  signatureImage?: string;
+  /** Aceptación explícita; el backend toma el nombre del perfil validado */
+  accepted: true;
 }
 
 export interface RejectNegotiationOfferRequest {

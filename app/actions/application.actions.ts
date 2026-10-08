@@ -4,6 +4,7 @@ import { requireValidSession } from './auth.actions';
 import { ApplicationRecord, ApplicationStatus, PEPDeclarations, ActionResult } from '@/lib/types';
 import { backendFetch as _backendFetch } from '@/lib/backend-fetch';
 import { parseBackendResponse, networkError } from '@/lib/action-utils';
+import { getClientEvidenceHeaders } from '@/lib/client-evidence';
 import { sanitizeErrorMessage } from '@/lib/error-sanitizer';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -371,24 +372,18 @@ export async function cancelApplicationAction(
 
 export async function signContractAction(
   applicationId: string,
-  signedName: string,
-  signatureImage?: string,
 ): Promise<ActionResult> {
   await requireValidSession();
 
   try {
-    const body: Record<string, unknown> = { signed_name: signedName };
-
-    if (signatureImage) {
-      body.signature_image = signatureImage;
-    }
-
+    // La firma es solo la aceptación: el backend toma el nombre del perfil validado
+    // y registra fecha, IP y user-agent (que reenviamos desde el navegador real).
     const res = await backendFetch(
       `/api/v1/applications/${applicationId}/contract/sign`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', ...(await getClientEvidenceHeaders()) },
+        body: JSON.stringify({ accepted: true }),
       },
     );
 

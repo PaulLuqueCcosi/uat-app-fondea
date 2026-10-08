@@ -6,11 +6,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { FileText, Download, Check, AlertCircle, PenLine, Loader2, Maximize2, X } from 'lucide-react';
+import { FileText, Download, Check, AlertCircle, Loader2, Maximize2, X } from 'lucide-react';
 import { signContractAction } from '@/app/actions/application.actions';
 import { useSolicitudStore, type ContractInfo } from '@/lib/stores/solicitud-store';
-import SignaturePad from '@/components/ui/signature-pad';
 
 interface FunnelContractProps {
   applicationId?: string;
@@ -119,8 +117,6 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [signature, setSignature] = useState<string | null>(null);
 
   // Estado de contratos — desde contexto
   const [contracts, setContracts] = useState<ContractInfo[]>(ctxContracts);
@@ -227,22 +223,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
 
   const handleSubmit = async () => {
     if (!accepted) {
-      setError('Debes aceptar los términos y condiciones');
-      return;
-    }
-
-    if (!fullName.trim()) {
-      setError('Debes ingresar tu nombre completo para firmar');
-      return;
-    }
-
-    if (fullName.trim().length < 1) {
-      setError('Debes ingresar tu nombre para firmar');
-      return;
-    }
-
-    if (!signature) {
-      setError('Debes dibujar tu firma para continuar');
+      setError('Debes aceptar el contrato para firmarlo');
       return;
     }
 
@@ -255,7 +236,7 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
     setError('');
 
     try {
-      const result = await signContractAction(solicitudId, fullName, signature ?? undefined);
+      const result = await signContractAction(solicitudId);
 
       if (!result.success) {
         setError(result.error ?? 'Error al firmar el contrato');
@@ -505,10 +486,11 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
               )}
             </div>
             <div className="text-sm">
-              <p className="text-dark group-hover:text-primary transition-colors">
-                He leído y acepto los <strong>términos y condiciones</strong> del contrato de
-                préstamo, así como la <strong>política de privacidad</strong> y el{' '}
-                <strong>cronograma de pagos</strong>.
+              <p className="text-dark group-hover:text-primary transition-colors font-medium">
+                Acepto el contrato y lo firmo electrónicamente
+              </p>
+              <p className="text-xs text-fondea-text mt-1">
+                Quedará registrada tu firma con fecha, hora e IP de este dispositivo.
               </p>
             </div>
           </label>
@@ -529,53 +511,9 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
           </div>
         </div>
 
-        {/* Firma Digital */}
+        {/* Firma */}
         <Card className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <PenLine className="w-5 h-5 text-primary" />
-            <h3 className="font-semibold text-dark">Firma Digital</h3>
-          </div>
-
           <div className="space-y-4">
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-dark mb-2">
-                Nombre completo
-              </label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="Ej: Juan Carlos Pérez García"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full"
-              />
-              <p className="text-xs text-fondea-text mt-2">
-                Al escribir tu nombre completo, estás firmando digitalmente este contrato
-              </p>
-            </div>
-
-            {fullName.trim() && (
-              <div className="bg-background rounded-lg p-4 border border-border">
-                <p className="text-xs text-fondea-text mb-2">Vista previa de tu firma:</p>
-                <p className="text-2xl font-signature text-primary text-center py-3 italic">
-                  {fullName}
-                </p>
-              </div>
-            )}
-
-            {/* Firma dibujada */}
-            <div>
-              <label className="block text-sm font-medium text-dark mb-2">
-                Tu firma
-              </label>
-              <SignaturePad
-                value={signature}
-                onChange={setSignature}
-                label="Dibujar firma"
-                description="Dibuja tu firma con el dedo o mouse. Mantén presionado el botón para confirmar."
-              />
-            </div>
-
             {error && (
               <div className="p-3 bg-error/10 border border-error rounded-lg">
                 <p className="text-sm text-error">{error}</p>
@@ -595,15 +533,12 @@ export function FunnelContract({ applicationId }: FunnelContractProps) {
               onClick={handleSubmit}
               disabled={
                 !accepted ||
-                !fullName.trim() ||
-                fullName.trim().length < 5 ||
-                !signature ||
                 loading ||
                 (documentsVerification?.overallStatus !== 'VERIFIED')
               }
               className="w-full"
             >
-              {loading ? 'Firmando...' : 'Firmar y finalizar →'}
+              {loading ? 'Firmando...' : 'Firmar contrato'}
             </Button>
           </div>
         </Card>

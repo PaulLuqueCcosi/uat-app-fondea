@@ -8,6 +8,7 @@
  */
 
 import { requireValidSession, requireAdminRole } from './auth.actions';
+import { getClientEvidenceHeaders } from '@/lib/client-evidence';
 import * as negotiationOfferService from '@/modules/negotiation-offers/negotiation-offer.service';
 import type {
   AcceptNegotiationOfferRequest,
@@ -35,7 +36,8 @@ export async function acceptNegotiationOfferAction(
   request: AcceptNegotiationOfferRequest,
 ) {
   await requireValidSession();
-  return negotiationOfferService.acceptNegotiationOffer(id, request);
+  // IP y user-agent reales del navegador, para la evidencia de firma en el backend
+  return negotiationOfferService.acceptNegotiationOffer(id, request, await getClientEvidenceHeaders());
 }
 
 /** Rechazar la oferta */

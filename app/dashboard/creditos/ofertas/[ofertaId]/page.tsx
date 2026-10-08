@@ -21,7 +21,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import SignaturePad from '@/components/ui/signature-pad';
 import { NegotiationDocumentsViewer } from '@/components/negotiation/NegotiationDocumentsViewer';
 import {
   getNegotiationOfferByIdAction,
@@ -219,8 +218,6 @@ export default function NegotiationOfferDetailPage() {
 
   const [step, setStep] = useState<ViewStep>('review');
   const [accepted, setAccepted] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [signature, setSignature] = useState<string | null>(null);
   const [signError, setSignError] = useState('');
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
@@ -250,22 +247,11 @@ export default function NegotiationOfferDetailPage() {
       setSignError('Debes aceptar los términos de la oferta');
       return;
     }
-    if (!fullName.trim() || fullName.trim().length < 5) {
-      setSignError('Ingresa tu nombre completo para firmar');
-      return;
-    }
-    if (!signature) {
-      setSignError('Debes dibujar tu firma para continuar');
-      return;
-    }
 
     setStep('signing');
     setSignError('');
 
-    const result = await acceptNegotiationOfferAction(offerId, {
-      signedName: fullName.trim(),
-      signatureImage: signature,
-    });
+    const result = await acceptNegotiationOfferAction(offerId, { accepted: true });
 
     if (!result.ok) {
       setSignError(result.error.message);
@@ -473,7 +459,7 @@ export default function NegotiationOfferDetailPage() {
                 <PenLine className="w-5 h-5 text-primary" />
                 Firma digital
               </CardTitle>
-              <CardDescription>Revisa el acuerdo, acepta los términos y firma para refinanciar tu cuota.</CardDescription>
+              <CardDescription>Revisa el acuerdo y acepta para firmar y refinanciar tu cuota.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <label className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer group">
@@ -487,26 +473,12 @@ export default function NegotiationOfferDetailPage() {
                   {accepted && <Check className="w-3 h-3 text-white absolute top-1 left-1 pointer-events-none" />}
                 </div>
                 <p className="text-sm text-foreground group-hover:text-primary transition-colors">
-                  He leído y acepto el cronograma propuesto y los documentos de refinanciamiento.
+                  <span className="font-medium">Acepto el contrato y lo firmo electrónicamente</span>
+                  <span className="block text-xs text-muted-foreground mt-1 font-normal">
+                    Quedará registrada tu firma con fecha, hora e IP de este dispositivo.
+                  </span>
                 </p>
               </label>
-
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-foreground mb-2">
-                  Nombre completo
-                </label>
-                <Input
-                  id="fullName"
-                  placeholder="Ej: Juana María Pérez Gómez"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Tu firma</label>
-                <SignaturePad value={signature} onChange={setSignature} />
-              </div>
 
               {signError && (
                 <div className="p-3 bg-error-50 border border-error-200 rounded-lg">
@@ -521,9 +493,9 @@ export default function NegotiationOfferDetailPage() {
                 <Button
                   className="flex-1"
                   onClick={handleSign}
-                  disabled={!accepted || !fullName.trim() || !signature}
+                  disabled={!accepted}
                 >
-                  Firmar y aceptar
+                  Firmar contrato
                 </Button>
               </div>
             </CardContent>
