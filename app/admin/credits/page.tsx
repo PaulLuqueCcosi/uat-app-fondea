@@ -21,6 +21,7 @@ interface Props {
     min_days_mora?: string;
     passport_level?: string;
     city?: string;
+    disbursement_milestone?: string;
     // Tabla de negociación — mismos filtros, prefijados con n_ para no pisar los de arriba
     n_page?: string;
     n_size?: string;
@@ -35,7 +36,14 @@ interface Props {
     n_min_days_mora?: string;
     n_passport_level?: string;
     n_city?: string;
+    n_disbursement_milestone?: string;
   }>;
+}
+
+/** Only 7, 14 or 21 are valid milestones; anything else is ignored. */
+function parseMilestone(value: string | undefined): 7 | 14 | 21 | undefined {
+  const n = Number(value);
+  return n === 7 || n === 14 || n === 21 ? n : undefined;
 }
 
 export default async function AdminCreditsPage({ searchParams }: Props) {
@@ -63,6 +71,7 @@ export default async function AdminCreditsPage({ searchParams }: Props) {
       minDaysMora: params.min_days_mora ? Number(params.min_days_mora) : undefined,
       passportLevel: params.passport_level,
       city: params.city,
+      disbursementMilestone: parseMilestone(params.disbursement_milestone),
     }),
     getAdminCredits(negotiationPage, negotiationPageSize, {
       creditType: 'NEGOTIATION',
@@ -77,6 +86,7 @@ export default async function AdminCreditsPage({ searchParams }: Props) {
       minDaysMora: params.n_min_days_mora ? Number(params.n_min_days_mora) : undefined,
       passportLevel: params.n_passport_level,
       city: params.n_city,
+      disbursementMilestone: parseMilestone(params.n_disbursement_milestone),
     }),
   ]);
 

@@ -28,6 +28,8 @@ export interface AdminCreditRow {
   totalDue: number;
   pendingBalance: number;
   disbursedAt: string | null;
+  /** Calendar days since disbursement (Peru date); null when not disbursed. */
+  daysSinceDisbursement: number | null;
   maturityDate: string;
   daysRemaining: number;
   status: CreditStatus;
@@ -63,6 +65,8 @@ export interface CreditFilters {
   overdueOnly?: boolean;
   minDaysMora?: number;
   passportLevel?: string;  // BRONCE, PLATA, ORO, MASTER
+  /** Credits that today complete exactly 7, 14 or 21 days since disbursement (Peru date). */
+  disbursementMilestone?: 7 | 14 | 21;
 }
 
 // ── Service ─────────────────────────────────────────────────────────────────
@@ -91,6 +95,7 @@ export async function getAdminCredits(
   if (filters.overdueOnly) params.set('overdueOnly', 'true');
   if (filters.minDaysMora) params.set('minDaysMora', String(filters.minDaysMora));
   if (filters.passportLevel) params.set('passportLevel', filters.passportLevel);
+  if (filters.disbursementMilestone) params.set('disbursementMilestone', String(filters.disbursementMilestone));
 
   const res = await backendFetch(`/api/v1/admin/portfolio/credits?${params.toString()}`, {
     context: 'PORTFOLIO_CREDITS',
@@ -121,6 +126,7 @@ export async function getAdminCredits(
     totalDue: row.total_due ?? 0,
     pendingBalance: row.pending_balance ?? 0,
     disbursedAt: row.disbursed_at,
+    daysSinceDisbursement: row.days_since_disbursement ?? null,
     maturityDate: row.maturity_date,
     daysRemaining: row.days_remaining ?? 0,
     status: row.status,

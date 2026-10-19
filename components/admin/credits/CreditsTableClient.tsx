@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import {
   Collapsible,
@@ -105,6 +106,15 @@ const columns = [
         {row.original.disbursedAt
           ? new Date(row.original.disbursedAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })
           : '—'}
+      </span>
+    ),
+  },
+  {
+    accessorKey: 'daysSinceDisbursement',
+    header: 'Días',
+    cell: ({ row }: { row: { original: AdminCreditRow } }) => (
+      <span className="text-[11px] text-muted-foreground" title="Días desde el desembolso">
+        {row.original.daysSinceDisbursement != null ? row.original.daysSinceDisbursement : '—'}
       </span>
     ),
   },
@@ -326,13 +336,14 @@ export function CreditsTableClient({ data, pagination, paramPrefix = '' }: Credi
     // Solo limpia las claves de ESTA instancia — no toca el tab activo ni los
     // filtros de la otra tabla si comparten la misma página.
     ['q', 'status', 'term_days', 'passport_level', 'city', 'min_amount', 'max_amount',
-      'min_days_mora', 'disbursed_from', 'disbursed_to', 'overdue_only']
+      'min_days_mora', 'disbursed_from', 'disbursed_to', 'overdue_only', 'disbursement_milestone']
       .forEach((key) => params.delete(p(key)));
     params.set(p('page'), '1');
     updateUrl(params);
   }, [searchParams, updateUrl, p]);
 
   const currentStatus = searchParams.get(p('status')) ?? '';
+  const currentMilestone = searchParams.get(p('disbursement_milestone')) ?? '';
 
   return (
     <div className="space-y-4">
@@ -365,6 +376,21 @@ export function CreditsTableClient({ data, pagination, paramPrefix = '' }: Credi
           ))}
         </NativeSelect>
 
+        {/* Hito de desembolso: control propio, fuera del panel de filtros. Lista los créditos
+            que HOY cumplen 7, 14 o 21 días desde su desembolso (fecha de Perú). */}
+        <NativeSelect
+          value={currentMilestone}
+          onChange={(e) => applyFilters({ disbursement_milestone: e.target.value || undefined })}
+          className={cn('h-9 w-48', currentMilestone && 'border-primary text-primary')}
+          disabled={isPending}
+          aria-label="Hito de desembolso"
+        >
+          <NativeSelectOption value="">Desembolso: todos</NativeSelectOption>
+          <NativeSelectOption value="7">Desembolsados hace 7 días</NativeSelectOption>
+          <NativeSelectOption value="14">Desembolsados hace 14 días</NativeSelectOption>
+          <NativeSelectOption value="21">Desembolsados hace 21 días</NativeSelectOption>
+        </NativeSelect>
+
         <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
           <CollapsibleTrigger
             render={<Button variant="outline" size="sm" className="h-9 gap-2" type="button" disabled={isPending} />}
@@ -378,7 +404,7 @@ export function CreditsTableClient({ data, pagination, paramPrefix = '' }: Credi
           </CollapsibleTrigger>
         </Collapsible>
 
-        {(activeFilterCount > 0 || currentStatus || search) && (
+        {(activeFilterCount > 0 || currentStatus || currentMilestone || search) && (
           <Button variant="ghost" size="sm" className="h-9 gap-1 text-xs" onClick={clearAllFilters} disabled={isPending}>
             <X className="h-3.5 w-3.5" /> Limpiar
           </Button>
