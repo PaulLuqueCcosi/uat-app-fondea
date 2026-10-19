@@ -42,6 +42,7 @@ import {
   getInstallmentViewStatus,
 } from '@/modules/credits';
 import { formatBackendDate, parseBackendDate } from '@/modules/shared/backend-date';
+import { CreditDocumentsSection } from '@/components/dashboard/sections/CreditDocumentsSection';
 import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -454,6 +455,9 @@ export default function CreditoDetallePage() {
           </CardContent>
         </Card>
       )}
+
+      {/* ─── Documentos descargables de ESTE crédito ─── */}
+      <CreditDocumentsSection creditId={credit.id} />
 
       {/* ─── Información del crédito ─── */}
       <Card>
