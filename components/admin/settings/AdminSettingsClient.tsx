@@ -205,8 +205,6 @@ function FormAttemptsCard() {
         validDurationDays: 90,
         active: true,
         description: null,
-        minAge: null,
-        maxAge: null,
       }
     );
   }

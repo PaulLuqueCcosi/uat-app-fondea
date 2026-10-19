@@ -20,8 +20,6 @@ export interface AdminFormConfigResponse {
   validDurationDays: number;
   active: boolean;
   description: string | null;
-  minAge: number | null;
-  maxAge: number | null;
 }
 
 export interface UpdateFormConfigRequest {
@@ -29,8 +27,6 @@ export interface UpdateFormConfigRequest {
   blockHours: number;
   validDurationDays: number;
   active?: boolean | null;
-  minAge?: number | null;
-  maxAge?: number | null;
 }
 
 // ── API Calls ─────────────────────────────────────────────────────────────────
