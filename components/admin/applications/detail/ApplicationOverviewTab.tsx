@@ -133,7 +133,7 @@ export function ApplicationOverviewTab({ data, dates, verification = null }: Pro
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    El reintento automático corre cada 15 min, pero podés forzarlo ahora.
+                    La creación del crédito falló y no se reintenta sola. Revisa el error y vuelve a intentarlo.
                   </p>
                   <CreditCreationRetryButton applicationId={data.id} />
                 </>
