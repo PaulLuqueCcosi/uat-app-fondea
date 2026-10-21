@@ -45,6 +45,8 @@ export interface FeeDiscountHistory {
   label: string;
   /** 'PERCENTAGE' o 'FIXED_AMOUNT'; ausente en datos anteriores al reparto de descuentos fijos. */
   type?: string;
+  /** Orden en que se aplicó el descuento; ausente en datos anteriores. */
+  order?: number;
   amountBefore: number;
   discountAmount: number;
   amountAfter: number;

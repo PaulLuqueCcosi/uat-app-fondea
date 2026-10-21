@@ -139,6 +139,7 @@ async function fetchCalculation(
         code: h.code,
         label: h.label,
         type: h.type,
+        order: h.order,
         amountBefore: h.amountBefore,
         discountAmount: h.discountAmount,
         amountAfter: h.amountAfter,

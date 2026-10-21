@@ -3,7 +3,7 @@ import { X, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FeeDiscountHistory, ScoreResult } from "../core/types";
 import { DETAIL_MAX_WIDTH } from "../core/constants";
-import { discountStepText, feesAreDistributed, subtotalChain } from "@/modules/shared/fee-discounts";
+import { discountStepText, subtotalChain } from "@/modules/shared/fee-discounts";
 
 function TooltipText({ text, children }: { text: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -91,18 +91,10 @@ export default function LoanDetail({
 
   // Con las comisiones repartidas (todos los descuentos ya aplicados en cada una) el subtotal
   // es la suma de las comisiones y no hace falta listar los descuentos fijos aparte.
-  const distributed = !loading && scoreData
-    ? feesAreDistributed(scoreData.fees, scoreData.totalFeesResult)
-    : false;
-
   const chain = !loading && scoreData
-    ? subtotalChain(
-        scoreData.totalFeesOriginal,
-        scoreData.discounts,
-        scoreData,
-        distributed,
-      )
+    ? subtotalChain(scoreData.fees, scoreData.totalFeesOriginal, scoreData.discounts, scoreData)
     : null;
+  const distributed = chain?.distributed ?? false;
 
   return (
     <div

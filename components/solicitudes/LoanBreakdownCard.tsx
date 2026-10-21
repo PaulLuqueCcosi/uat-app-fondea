@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, AlertTriangle, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ApplicationFullDetail } from '@/lib/stores/solicitud-store';
 import type { SnapshotFee, SnapshotDiscount, SnapshotScheduleItem } from '@/lib/types';
-import { discountStepText, feesAreDistributed, subtotalChain } from '@/modules/shared/fee-discounts';
+import { discountStepText, subtotalChain } from '@/modules/shared/fee-discounts';
 
 interface LoanBreakdownCardProps {
   fullDetail: ApplicationFullDetail | null;
@@ -147,15 +147,10 @@ function DetailBreakdown({ fullDetail, snap }: { fullDetail: ApplicationFullDeta
   const fixedDiscounts = Object.values(snap.discounts?.fixed ?? {}) as any[];
   const percentageDiscounts = Object.values(snap.discounts?.percentage ?? {}) as any[];
 
-  // Solicitudes nuevas: las comisiones traen los descuentos fijos repartidos y suman el total de
+  // Solicitudes nuevas: las comisiones traen los descuentos repartidos y suman el total de
   // comisiones. Las guardadas antes del reparto los traen solo en los totales (presentación anterior).
-  const distributed = feesAreDistributed(fees, snap.summary.totalFeesResult);
-  const chain = subtotalChain(
-    snap.summary.totalFeesOriginal,
-    [...percentageDiscounts, ...fixedDiscounts],
-    snap.summary,
-    distributed,
-  );
+  const chain = subtotalChain(fees, snap.summary.totalFeesOriginal, [...percentageDiscounts, ...fixedDiscounts], snap.summary);
+  const distributed = chain.distributed;
 
   const hasLimitAdjustment = fullDetail.was_limit_adjusted === true;
 
