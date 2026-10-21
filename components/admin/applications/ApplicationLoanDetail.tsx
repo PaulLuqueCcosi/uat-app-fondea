@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { feesAreDistributed } from '@/modules/shared/fee-discounts';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -130,8 +131,14 @@ export function ApplicationLoanDetail({ loan }: ApplicationLoanDetailProps) {
           ))}
           <Divider />
 
-          {/* Descuentos fijos */}
-          {loan.fixedDiscounts.length > 0 && (
+          {/* Con las comisiones repartidas (solicitudes nuevas) el subtotal es la suma de las comisiones;
+              solo las anteriores al reparto listan los descuentos fijos aparte. */}
+          {feesAreDistributed(loan.fees, loan.totalFeesResult) && loan.fixedDiscounts.length > 0 && (
+            <>
+              <Row label="Subtotal" value={fmt(loan.totalFeesResult)} bold />
+            </>
+          )}
+          {!feesAreDistributed(loan.fees, loan.totalFeesResult) && loan.fixedDiscounts.length > 0 && (
             <>
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Descuentos fijos</p>
               {loan.fixedDiscounts.map((d) => (

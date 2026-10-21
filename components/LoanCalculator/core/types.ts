@@ -43,6 +43,8 @@ export interface ScheduleItem {
 export interface FeeDiscountHistory {
   code: string;
   label: string;
+  /** 'PERCENTAGE' o 'FIXED_AMOUNT'; ausente en datos anteriores al reparto de descuentos fijos. */
+  type?: string;
   amountBefore: number;
   discountAmount: number;
   amountAfter: number;

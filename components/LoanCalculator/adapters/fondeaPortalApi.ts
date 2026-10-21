@@ -144,6 +144,7 @@ async function fetchCalculation(
       discountHistory: (f.discountHistory ?? []).map((h: any) => ({
         code: h.code,
         label: h.label,
+        type: h.type,
         amountBefore: h.amountBefore,
         discountAmount: h.discountAmount,
         amountAfter: h.amountAfter,

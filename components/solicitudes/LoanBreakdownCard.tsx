@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp, AlertTriangle, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ApplicationFullDetail } from '@/lib/stores/solicitud-store';
 import type { SnapshotFee, SnapshotDiscount, SnapshotScheduleItem } from '@/lib/types';
+import { discountStepText, feesAreDistributed, subtotalChain } from '@/modules/shared/fee-discounts';
 
 interface LoanBreakdownCardProps {
   fullDetail: ApplicationFullDetail | null;
@@ -146,16 +147,15 @@ function DetailBreakdown({ fullDetail, snap }: { fullDetail: ApplicationFullDeta
   const fixedDiscounts = Object.values(snap.discounts?.fixed ?? {}) as any[];
   const percentageDiscounts = Object.values(snap.discounts?.percentage ?? {}) as any[];
 
-  const subtotalPartials = (() => {
-    if (percentageDiscounts.length <= 1) return [];
-    let acc = snap.summary.totalFeesOriginal;
-    const partials: number[] = [];
-    for (let i = 0; i < percentageDiscounts.length - 1; i++) {
-      acc -= percentageDiscounts[i].totalDiscountAmount;
-      partials.push(acc);
-    }
-    return partials;
-  })();
+  // Solicitudes nuevas: las comisiones traen los descuentos fijos repartidos y suman el total de
+  // comisiones. Las guardadas antes del reparto los traen solo en los totales (presentación anterior).
+  const distributed = feesAreDistributed(fees, snap.summary.totalFeesResult);
+  const chain = subtotalChain(
+    snap.summary.totalFeesOriginal,
+    [...percentageDiscounts, ...fixedDiscounts],
+    snap.summary,
+    distributed,
+  );
 
   const hasLimitAdjustment = fullDetail.was_limit_adjusted === true;
 
@@ -191,26 +191,19 @@ function DetailBreakdown({ fullDetail, snap }: { fullDetail: ApplicationFullDeta
           label="Subtotal"
           value={
             <span className="flex flex-wrap items-center gap-1.5 justify-end">
-              {snap.summary.totalPercentageDiscounts > 0 && (
-                <>
-                  <TooltipText text={`${percentageDiscounts[0]?.label ?? ''} -${percentageDiscounts[0]?.value ?? 0}%`}>
-                    <s className="opacity-80 text-[11px] sm:text-xs text-error-500">{fmt(snap.summary.totalFeesOriginal)}</s>
-                  </TooltipText>
-                  {subtotalPartials.map((p, i) => (
-                    <TooltipText key={i} text={`${percentageDiscounts[i + 1]?.label ?? ''} -${percentageDiscounts[i + 1]?.value ?? 0}%`}>
-                      <s className="opacity-80 text-[11px] sm:text-xs text-error-500">{fmt(p)}</s>
-                    </TooltipText>
-                  ))}
-                </>
-              )}
-              <span className="text-foreground">{fmt(snap.summary.totalFeesWithPercentageDiscounts)}</span>
+              {chain.struck.map((s, i) => (
+                <TooltipText key={i} text={s.tooltip}>
+                  <s className="opacity-80 text-[11px] sm:text-xs text-error-500">{fmt(s.amount)}</s>
+                </TooltipText>
+              ))}
+              <span className="text-foreground">{fmt(chain.final)}</span>
             </span>
           }
         />
       </section>
 
-      {/* Descuentos fijos */}
-      {fixedDiscounts.length > 0 && (
+      {/* Descuentos fijos: solo en solicitudes anteriores al reparto entre comisiones */}
+      {!distributed && fixedDiscounts.length > 0 && (
         <>
           <section className="py-1.5">
             <p className="font-bold mb-2 text-sm text-foreground">Descuentos fijos</p>
@@ -274,6 +267,11 @@ function SimpleSummary({ fullDetail }: { fullDetail: ApplicationFullDetail }) {
 
 // ── Sub-componentes ───────────────────────────────────────────────────────────
 
+/** Tooltip de un paso de descuento de una comisión: porcentaje o monto fijo según su tipo. */
+function historyStepText(h: SnapshotFee['discountHistory'][number] | undefined): string {
+  return h ? discountStepText({ label: h.label, type: h.type, value: h.value, amount: h.discountAmount }) : '';
+}
+
 function FeeRow({ fee }: { fee: SnapshotFee }) {
   return (
     <div className="flex justify-between items-center py-1 gap-2 text-xs sm:text-sm">
@@ -281,11 +279,11 @@ function FeeRow({ fee }: { fee: SnapshotFee }) {
       <span className="flex flex-wrap items-center gap-1.5 justify-end">
         {fee.discountAmount > 0 && fee.originalAmount > fee.finalAmount && (
           <>
-            <TooltipText text={`${fee.discountHistory[0]?.label ?? ''} -${fee.discountHistory[0]?.value ?? 0}%`}>
+            <TooltipText text={historyStepText(fee.discountHistory[0])}>
               <s className="opacity-80 text-[11px] sm:text-xs text-error-500">{fmt(fee.originalAmount)}</s>
             </TooltipText>
             {fee.discountHistory.slice(0, -1).map((h, i) => (
-              <TooltipText key={i} text={`${fee.discountHistory[i + 1]?.label ?? ''} -${fee.discountHistory[i + 1]?.value ?? 0}%`}>
+              <TooltipText key={i} text={historyStepText(fee.discountHistory[i + 1])}>
                 <s className="opacity-80 text-[11px] sm:text-xs text-error-500">{fmt(h.amountAfter)}</s>
               </TooltipText>
             ))}

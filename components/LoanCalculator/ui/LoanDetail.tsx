@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ScoreResult } from "../core/types";
+import type { FeeDiscountHistory, ScoreResult } from "../core/types";
 import { DETAIL_MAX_WIDTH } from "../core/constants";
+import { discountStepText, feesAreDistributed, subtotalChain } from "@/modules/shared/fee-discounts";
 
 function TooltipText({ text, children }: { text: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -58,6 +59,11 @@ interface Props {
   maxWidth?: number;
 }
 
+/** Paso de descuento de una comisión, con el tipo que distingue porcentaje de monto fijo. */
+function toStep(h: FeeDiscountHistory | undefined) {
+  return h ? { label: h.label, type: h.type, value: h.value, amount: h.discountAmount } : undefined;
+}
+
 function Skeleton({ className }: { className?: string }) {
   return (
     <div
@@ -83,20 +89,20 @@ export default function LoanDetail({
     ? scoreData.discounts.filter((d) => d.type === "FIXED_AMOUNT")
     : [];
 
-  const percentageDiscounts = !loading && scoreData
-    ? scoreData.discounts.filter((d) => d.type === "PERCENTAGE")
-    : [];
+  // Con las comisiones repartidas (todos los descuentos ya aplicados en cada una) el subtotal
+  // es la suma de las comisiones y no hace falta listar los descuentos fijos aparte.
+  const distributed = !loading && scoreData
+    ? feesAreDistributed(scoreData.fees, scoreData.totalFeesResult)
+    : false;
 
-  const subtotalPartials = (() => {
-    if (loading || !scoreData || percentageDiscounts.length <= 1) return [];
-    let acc = scoreData.totalFeesOriginal;
-    const partials = [];
-    for (let i = 0; i < percentageDiscounts.length - 1; i++) {
-      acc -= percentageDiscounts[i].totalDiscountAmount;
-      partials.push(acc);
-    }
-    return partials;
-  })();
+  const chain = !loading && scoreData
+    ? subtotalChain(
+        scoreData.totalFeesOriginal,
+        scoreData.discounts,
+        scoreData,
+        distributed,
+      )
+    : null;
 
   return (
     <div
@@ -148,13 +154,13 @@ export default function LoanDetail({
                 <span className="flex flex-wrap items-center gap-1.5 justify-end">
                   {fee.discountAmount > 0 && (
                     <>
-                      <TooltipText text={`${fee.discountHistory[0]?.label ?? ""} -${fee.discountHistory[0]?.value ?? 0}%`}>
+                      <TooltipText text={discountStepText(toStep(fee.discountHistory[0]))}>
                         <s className="opacity-80 text-[11px] sm:text-xs" style={{ color: "#EF4444" }}>
                           S/ {fee.originalAmount.toFixed(2)}
                         </s>
                       </TooltipText>
                       {fee.discountHistory.slice(0, -1).map((h, i) => (
-                        <TooltipText key={i} text={`${fee.discountHistory[i + 1]?.label ?? ""} -${fee.discountHistory[i + 1]?.value ?? 0}%`}>
+                        <TooltipText key={i} text={discountStepText(toStep(fee.discountHistory[i + 1]))}>
                           <s className="opacity-80 text-[11px] sm:text-xs" style={{ color: "#EF4444" }}>
                             S/ {h.amountAfter.toFixed(2)}
                           </s>
@@ -175,31 +181,22 @@ export default function LoanDetail({
                 <Skeleton className="h-4 w-20" />
               ) : (
                 <span className="flex flex-wrap items-center gap-1.5 justify-end">
-                  {scoreData!.totalPercentageDiscounts > 0 && (
-                    <>
-                      <TooltipText text={`${percentageDiscounts[0]?.label ?? ""} -${percentageDiscounts[0]?.value ?? 0}%`}>
-                        <s className="opacity-80 text-[11px] sm:text-xs" style={{ color: "#EF4444" }}>
-                          S/ {scoreData!.totalFeesOriginal.toFixed(2)}
-                        </s>
-                      </TooltipText>
-                      {subtotalPartials.map((p, i) => (
-                        <TooltipText key={i} text={`${percentageDiscounts[i + 1]?.label ?? ""} -${percentageDiscounts[i + 1]?.value ?? 0}%`}>
-                          <s className="opacity-80 text-[11px] sm:text-xs" style={{ color: "#EF4444" }}>
-                            S/ {p.toFixed(2)}
-                          </s>
-                        </TooltipText>
-                      ))}
-                    </>
-                  )}
-                  <span>S/ {scoreData!.totalFeesWithPercentageDiscounts.toFixed(2)}</span>
+                  {chain!.struck.map((s, i) => (
+                    <TooltipText key={i} text={s.tooltip}>
+                      <s className="opacity-80 text-[11px] sm:text-xs" style={{ color: "#EF4444" }}>
+                        S/ {s.amount.toFixed(2)}
+                      </s>
+                    </TooltipText>
+                  ))}
+                  <span>S/ {chain!.final.toFixed(2)}</span>
                 </span>
               )
             }
           />
         </section>
 
-        {/* Descuentos fijos */}
-        {!loading && fixedDiscounts.length > 0 && (
+        {/* Descuentos fijos: solo cuando las comisiones no los traen repartidos (datos anteriores) */}
+        {!loading && !distributed && fixedDiscounts.length > 0 && (
           <>
             <section className="py-1.5">
               <p className="font-bold mb-2 text-sm sm:text-base">Descuentos fijos</p>
