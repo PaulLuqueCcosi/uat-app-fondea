@@ -17,7 +17,7 @@ export default async function AdminPenaltySettingsPage() {
         <div>
           <h1 className="text-xl font-bold text-foreground">Configuración de Mora</h1>
           <p className="text-sm text-muted-foreground">
-            Define los rangos de penalidad por días de atraso
+            Define qué se cobra por cada día de atraso, por tramo y por concepto
           </p>
         </div>
       </div>

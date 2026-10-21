@@ -12,47 +12,43 @@ import { Separator } from '@/components/ui/separator';
 import {
   Plus, Trash2, Save, Loader2, AlertCircle, CheckCircle2, History, Eye,
 } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 import {
   getActivePenaltyConfigAction,
   createPenaltyConfigAction,
   getPenaltyConfigHistoryAction,
+  getConceptsCatalogAction,
+  getComplianceStateAction,
 } from '@/app/actions/admin-penalty.actions';
-import type { PenaltyConfigResponse } from '@/modules/admin/admin-penalty.service';
+import type {
+  ComplianceState,
+  ConceptsCatalog,
+  PenaltyConfigResponse,
+  PenaltyMode,
+} from '@/modules/admin/admin-penalty.types';
+import {
+  REGULATED_BLOCKED_CONCEPTS,
+  conceptLabel,
+  type ChargeConcept,
+} from '@/modules/shared/charge-concepts';
+import { COLOR_PRESETS, ICON_OPTIONS, getLucideIcon } from './penalty/penalty-style-options';
+import { PenaltyStagesTable } from './penalty/PenaltyStagesTable';
+import { PenaltyComplianceBanner } from './penalty/PenaltyComplianceBanner';
+import { PenaltyMatrixEditor } from './penalty/PenaltyMatrixEditor';
+import { PenaltySimulatorPanel, type SimulationSource } from './penalty/PenaltySimulatorPanel';
+import { penaltyErrorMessage } from './penalty/penalty-errors';
+import {
+  defaultMatrixDraft,
+  draftFromConfig,
+  normalizeAllocationOrder,
+  requestFromDraft,
+  validateMatrix,
+  type MatrixDraft,
+  type MatrixError,
+} from './penalty/penalty-matrix';
 import { formatDateTimePeru } from '@/modules/shared/backend-date';
 import { PENALTY_BASE_OPTIONS, penaltyBasePhrase, type PenaltyBase } from '@/modules/shared/penalty-base';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-const COLOR_PRESETS = [
-  { name: 'green', value: '#10b981', label: 'Verde' },
-  { name: 'yellow', value: '#f59e0b', label: 'Amarillo' },
-  { name: 'orange', value: '#f97316', label: 'Naranja' },
-  { name: 'red', value: '#ef4444', label: 'Rojo' },
-  { name: 'blue', value: '#3b82f6', label: 'Azul' },
-  { name: 'purple', value: '#8b5cf6', label: 'Morado' },
-  { name: 'gray', value: '#6b7280', label: 'Gris' },
-  { name: 'teal', value: '#14b8a6', label: 'Turquesa' },
-];
-
-const ICON_OPTIONS = [
-  { value: 'check-circle', label: 'Check' },
-  { value: 'alert-triangle', label: 'Alerta' },
-  { value: 'shield-alert', label: 'Escudo' },
-  { value: 'ban', label: 'Prohibido' },
-  { value: 'clock', label: 'Reloj' },
-  { value: 'calendar-x', label: 'Calendario' },
-  { value: 'trending-up', label: 'Subida' },
-  { value: 'flame', label: 'Fuego' },
-  { value: 'zap', label: 'Rayo' },
-  { value: 'circle-alert', label: 'Círculo' },
-  { value: 'skull', label: 'Peligro' },
-  { value: 'coins', label: 'Monedas' },
-  { value: 'piggy-bank', label: 'Alcancía' },
-  { value: 'thumbs-up', label: 'Pulgar' },
-  { value: 'star', label: 'Estrella' },
-  { value: 'trophy', label: 'Trofeo' },
-];
 
 interface RangeDraft {
   fromDay: number;
@@ -72,16 +68,6 @@ interface ValidationError {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Convierte nombre kebab-case (ej: "alert-triangle") al componente Lucide. */
-function getLucideIcon(name: string): React.ComponentType<{ className?: string }> | null {
-  // Lucide exporta con PascalCase: "alert-triangle" → "AlertTriangle"
-  const pascalCase = name
-    .split('-')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('');
-  return (LucideIcons as any)[pascalCase] ?? null;
-}
 
 function formatRangeLabel(from: number, to: number | null): string {
   if (to === null) return `Día ${from} en adelante`;
@@ -189,21 +175,51 @@ export function PenaltyConfigPage() {
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [catalog, setCatalog] = useState<ConceptsCatalog | null>(null);
+  const [compliance, setCompliance] = useState<ComplianceState | null>(null);
+  const [editMode, setEditMode] = useState<PenaltyMode>('SIMPLE');
+  const [matrixDraft, setMatrixDraft] = useState<MatrixDraft>(() => defaultMatrixDraft(null));
+  const [matrixErrors, setMatrixErrors] = useState<MatrixError[]>([]);
 
   useEffect(() => { loadConfig(); }, []);
 
   async function loadConfig() {
     setLoading(true);
-    const [active, hist] = await Promise.all([
+    const [active, hist, concepts, complianceState] = await Promise.all([
       getActivePenaltyConfigAction(),
       getPenaltyConfigHistoryAction(),
+      getConceptsCatalogAction(),
+      getComplianceStateAction(),
     ]);
     setConfig(active);
     setHistory(hist);
+    setCatalog(concepts);
+    setCompliance(complianceState);
     setLoading(false);
   }
 
+  /** Solo recarga el perfil (después de cambiarlo); no tira lo que el admin esté editando. */
+  async function reloadCompliance() {
+    setCompliance(await getComplianceStateAction());
+  }
+
+  // Sin perfil legible se aplica el regulado: es lo más conservador.
+  const blocked: ReadonlySet<ChargeConcept> = new Set<ChargeConcept>(
+    (compliance?.profile ?? 'REGULATED') === 'REGULATED' ? REGULATED_BLOCKED_CONCEPTS : [],
+  );
+
+  function switchEditMode(next: PenaltyMode) {
+    setEditMode(next);
+    setErrors([]);
+    setMatrixErrors([]);
+    setMessage(null);
+  }
+
   function startEditing() {
+    // Parte del modo de la configuración activa; sin ella, de la matriz si el backend ya la ofrece.
+    setEditMode(config ? config.mode : catalog ? 'POR_CONCEPTOS' : 'SIMPLE');
+    setMatrixDraft(draftFromConfig(config, catalog));
+    setMatrixErrors([]);
     if (config && config.ranges.length > 0) {
       setDraft(config.ranges.map(r => ({
         fromDay: r.fromDay,
@@ -271,6 +287,10 @@ export function PenaltyConfigPage() {
   }
 
   async function handleSave() {
+    if (editMode === 'POR_CONCEPTOS') {
+      handleSaveMatrix();
+      return;
+    }
     const validationErrors = validateRanges(draft);
     setErrors(validationErrors);
     if (validationErrors.length > 0) {
@@ -301,9 +321,46 @@ export function PenaltyConfigPage() {
         await loadConfig();
         router.refresh();
       } else {
-        setMessage({ type: 'error', text: result.error ?? 'Error al guardar' });
+        setMessage({ type: 'error', text: penaltyErrorMessage(result.error, 'Error al guardar') });
       }
     });
+  }
+
+  function handleSaveMatrix() {
+    const validationErrors = validateMatrix(matrixDraft, catalog, blocked);
+    setMatrixErrors(validationErrors);
+    if (validationErrors.length > 0) {
+      setMessage({ type: 'error', text: `Hay ${validationErrors.length} error(es) de validación` });
+      return;
+    }
+
+    const name = configName.trim() || `Config Mora — ${new Date().toLocaleDateString('es-PE')}`;
+
+    startTransition(async () => {
+      const result = await createPenaltyConfigAction(requestFromDraft(name, matrixDraft, blocked));
+
+      if (result.ok) {
+        setMessage({ type: 'success', text: 'Configuración guardada y activada' });
+        setIsEditing(false);
+        await loadConfig();
+        router.refresh();
+      } else {
+        setMessage({ type: 'error', text: penaltyErrorMessage(result.error, 'Error al guardar') });
+      }
+    });
+  }
+
+  /** Configuración a simular: el borrador si es válido; si no, el motivo por el que no se puede. */
+  function editingSimulationSource(): SimulationSource {
+    if (validateMatrix(matrixDraft, catalog, blocked).length > 0) {
+      return { kind: 'unavailable', reason: 'Corrige los errores de la matriz para poder simularla.' };
+    }
+    return { kind: 'draft', config: requestFromDraft(configName.trim() || 'Simulación', matrixDraft, blocked) };
+  }
+
+  function savedSimulationSource(): SimulationSource {
+    if (config && config.mode === 'POR_CONCEPTOS' && config.id) return { kind: 'saved', configId: config.id };
+    return { kind: 'unavailable', reason: 'El simulador está disponible para configuraciones por conceptos.' };
   }
 
   // ── Loading ─────────────────────────────────────────────────────────────────
@@ -321,13 +378,16 @@ export function PenaltyConfigPage() {
   if (isEditing) {
     return (
       <div className="space-y-6">
+        <PenaltyComplianceBanner compliance={compliance} onChanged={reloadCompliance} />
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base">Nueva configuración de mora</CardTitle>
                 <CardDescription>
-                  Define rangos consecutivos. El último rango debe dejar "Hasta" vacío para cubrir todos los días restantes.
+                  {editMode === 'POR_CONCEPTOS'
+                    ? 'Define tramos de días consecutivos y, para cada uno, cómo se cobra cada concepto.'
+                    : 'Define rangos consecutivos. El último rango debe dejar "Hasta" vacío para cubrir todos los días restantes.'}
                 </CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={() => { setIsEditing(false); setErrors([]); setMessage(null); }}>
@@ -348,9 +408,68 @@ export function PenaltyConfigPage() {
               <p className="text-[10px] text-muted-foreground">Identificador para el historial. Opcional.</p>
             </div>
 
+            {/* Modo */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium" id="penalty-mode-label">Sistema de mora</Label>
+              <div role="radiogroup" aria-labelledby="penalty-mode-label" className="inline-flex rounded-lg border p-0.5">
+                <Button
+                  type="button"
+                  role="radio"
+                  aria-checked={editMode === 'POR_CONCEPTOS'}
+                  variant={editMode === 'POR_CONCEPTOS' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => switchEditMode('POR_CONCEPTOS')}
+                >
+                  Por conceptos
+                </Button>
+                <Button
+                  type="button"
+                  role="radio"
+                  aria-checked={editMode === 'SIMPLE'}
+                  variant={editMode === 'SIMPLE' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => switchEditMode('SIMPLE')}
+                >
+                  Simple (anterior)
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                {editMode === 'POR_CONCEPTOS'
+                  ? 'Matriz de tramos por concepto: interés compensatorio, gastos, tarifa e interés moratorio.'
+                  : 'Un solo cargo por tramo, en monto fijo o porcentaje, como hasta ahora.'}
+              </p>
+            </div>
+
             <Separator />
 
+            {editMode === 'POR_CONCEPTOS' && (
+              catalog ? (
+                <PenaltyMatrixEditor
+                  draft={matrixDraft}
+                  onChange={(next) => { setMatrixDraft(next); setMatrixErrors([]); }}
+                  catalog={catalog}
+                  blocked={blocked}
+                  errors={matrixErrors}
+                />
+              ) : (
+                <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                  <div className="space-y-2">
+                    <p className="text-sm text-destructive">
+                      No se pudieron cargar las reglas de los conceptos, así que la matriz no se puede editar ahora.
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => loadConfig().then(() => setIsEditing(true))}>
+                      Reintentar
+                    </Button>
+                  </div>
+                </div>
+              )
+            )}
+
             {/* Rangos */}
+            {editMode === 'SIMPLE' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">Rangos de penalidad</Label>
@@ -537,9 +656,38 @@ export function PenaltyConfigPage() {
                 </div>
               ))}
             </div>
+            )}
+
+            {/* Errores de la matriz */}
+            {editMode === 'POR_CONCEPTOS' && matrixErrors.length > 0 && (
+              <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-destructive">Corrige los errores antes de guardar</p>
+                  <ul className="mt-1 space-y-0.5">
+                    {matrixErrors.slice(0, 8).map((e, i) => (
+                      <li key={i} className="text-xs text-destructive/80">
+                        Tramo {e.stageIndex + 1}: {e.message}
+                      </li>
+                    ))}
+                    {matrixErrors.length > 8 && (
+                      <li className="text-xs text-destructive/80">...y {matrixErrors.length - 8} más</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Mensaje de error al guardar (por ejemplo, un código del backend) */}
+            {message?.type === 'error' && errors.length === 0 && matrixErrors.length === 0 && (
+              <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                <p className="text-sm text-destructive">{message.text}</p>
+              </div>
+            )}
 
             {/* Errores globales */}
-            {errors.length > 0 && (
+            {editMode === 'SIMPLE' && errors.length > 0 && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                 <div>
@@ -580,6 +728,10 @@ export function PenaltyConfigPage() {
             </div>
           </CardContent>
         </Card>
+
+        {editMode === 'POR_CONCEPTOS' && catalog && (
+          <PenaltySimulatorPanel source={editingSimulationSource()} />
+        )}
       </div>
     );
   }
@@ -588,6 +740,8 @@ export function PenaltyConfigPage() {
 
   return (
     <div className="space-y-6">
+      <PenaltyComplianceBanner compliance={compliance} onChanged={reloadCompliance} />
+
       {/* Config activa */}
       <Card>
         <CardHeader>
@@ -607,7 +761,23 @@ export function PenaltyConfigPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {config && config.ranges.length > 0 ? (
+          {config && config.mode === 'POR_CONCEPTOS' ? (
+            <div className="space-y-4">
+              <PenaltyStagesTable stages={config.stages} catalog={catalog} />
+              <p className="text-xs text-muted-foreground">
+                Orden de imputación del pago:{' '}
+                <span className="font-medium text-foreground">
+                  {normalizeAllocationOrder(config.allocationOrder)
+                    .filter((c) => c !== 'MORA_SIMPLE')
+                    .map((c) => conceptLabel(c, catalog?.concepts.find((x) => x.code === c)?.label))
+                    .join(' → ')}
+                </span>
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Creada: {formatDateTimePeru(config.createdAt)} · Por: {config.createdBy}
+              </p>
+            </div>
+          ) : config && config.ranges.length > 0 ? (
             <div className="space-y-0">
               {config.ranges.map((range, i) => (
                 <div key={range.id} className="flex items-center gap-3 py-3 border-b last:border-0">
@@ -659,6 +829,10 @@ export function PenaltyConfigPage() {
         </CardContent>
       </Card>
 
+      {config && config.mode === 'POR_CONCEPTOS' && (
+        <PenaltySimulatorPanel source={savedSimulationSource()} />
+      )}
+
       {/* Historial */}
       {history.length > 1 && (
         <Card>
@@ -667,7 +841,7 @@ export function PenaltyConfigPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             {history.map((h) => (
-              <HistoryItem key={h.id} item={h} />
+              <HistoryItem key={h.id} item={h} catalog={catalog} />
             ))}
           </CardContent>
         </Card>
@@ -678,7 +852,7 @@ export function PenaltyConfigPage() {
 
 // ── History Item with expandable detail ───────────────────────────────────────
 
-function HistoryItem({ item }: { item: PenaltyConfigResponse }) {
+function HistoryItem({ item, catalog }: { item: PenaltyConfigResponse; catalog: ConceptsCatalog | null }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -687,20 +861,34 @@ function HistoryItem({ item }: { item: PenaltyConfigResponse }) {
         <div>
           <p className="text-sm font-medium">{item.name}</p>
           <p className="text-[10px] text-muted-foreground">
-            {formatDateTimePeru(item.createdAt)} · {item.ranges.length} rangos
+            {formatDateTimePeru(item.createdAt)} ·{' '}
+            {item.mode === 'POR_CONCEPTOS' ? `${item.stages.length} tramos por conceptos` : `${item.ranges.length} rangos`}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={item.isActive ? 'success' : 'secondary'} className="text-[10px]">
             {item.isActive ? 'Activa' : 'Inactiva'}
           </Badge>
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setExpanded(!expanded)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => setExpanded(!expanded)}
+            aria-expanded={expanded}
+            aria-label={`${expanded ? 'Ocultar' : 'Ver'} el detalle de ${item.name}`}
+          >
             <Eye className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
 
-      {expanded && (
+      {expanded && item.mode === 'POR_CONCEPTOS' && (
+        <div className="mt-2">
+          <PenaltyStagesTable stages={item.stages} catalog={catalog} compact />
+        </div>
+      )}
+
+      {expanded && item.mode !== 'POR_CONCEPTOS' && (
         <div className="mt-2 pl-2 border-l-2 border-muted space-y-1.5">
           {item.ranges.map((range) => (
             <div key={range.id} className="flex items-center justify-between text-xs py-1">

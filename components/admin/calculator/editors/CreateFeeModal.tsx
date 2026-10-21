@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { FEE_CATEGORY_OPTIONS, conceptHelp, type ChargeConcept } from '@/modules/shared/charge-concepts';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -31,6 +33,8 @@ const CALCULATOR_URL = '/api/admin/fee-catalog';
 export function CreateFeeModal({ open, onOpenChange, onCreated }: Props) {
   const [label, setLabel] = useState('');
   const [description, setDescription] = useState('');
+  // Sin valor por defecto: el admin debe elegir la categoría a conciencia (define cómo se cobra en mora).
+  const [category, setCategory] = useState<ChargeConcept | ''>('');
   const [saving, setSaving] = useState(false);
 
   // Auto-generar código a partir del nombre
@@ -39,13 +43,14 @@ export function CreateFeeModal({ open, onOpenChange, onCreated }: Props) {
   const handleSave = async () => {
     if (!label.trim()) { toast.error('El nombre es requerido'); return; }
     if (!description.trim()) { toast.error('La descripción pública es requerida'); return; }
+    if (!category) { toast.error('Elige la categoría del cargo'); return; }
 
     setSaving(true);
     try {
       const res = await fetch(CALCULATOR_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, label: label.trim(), description: description.trim() }),
+        body: JSON.stringify({ code, label: label.trim(), description: description.trim(), category }),
       });
 
       if (!res.ok) {
@@ -62,6 +67,7 @@ export function CreateFeeModal({ open, onOpenChange, onCreated }: Props) {
       // Reset
       setLabel('');
       setDescription('');
+      setCategory('');
     } catch {
       toast.error('Error de conexión');
     }
@@ -98,11 +104,31 @@ export function CreateFeeModal({ open, onOpenChange, onCreated }: Props) {
             />
             <p className="text-[10px] text-muted-foreground">Texto visible para el usuario final</p>
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="fee-category" className="text-xs">Categoría del cargo *</Label>
+            <NativeSelect
+              id="fee-category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value as ChargeConcept | '')}
+              className="w-full"
+              aria-required="true"
+            >
+              <NativeSelectOption value="">Selecciona una categoría</NativeSelectOption>
+              {FEE_CATEGORY_OPTIONS.map((o) => (
+                <NativeSelectOption key={o.value} value={o.value}>{o.label}</NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <p className="text-[10px] text-muted-foreground">
+              {category
+                ? conceptHelp(category)
+                : 'Define con qué regla de mora se cobra este cargo cuando la cuota se atrasa.'}
+            </p>
+          </div>
         </div>
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
-          <Button size="sm" onClick={handleSave} disabled={saving || !label.trim() || !description.trim()}>
+          <Button size="sm" onClick={handleSave} disabled={saving || !label.trim() || !description.trim() || !category}>
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
             Crear cargo
           </Button>

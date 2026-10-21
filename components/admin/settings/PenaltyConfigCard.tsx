@@ -5,16 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CircleDollarSign, ArrowRight, Loader2 } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
 import { getActivePenaltyConfigAction } from '@/app/actions/admin-penalty.actions';
 import type { PenaltyConfigResponse } from '@/modules/admin/admin-penalty.service';
 import { penaltyBasePhrase } from '@/modules/shared/penalty-base';
-
-function getLucideIcon(name: string): React.ComponentType<{ className?: string }> | null {
-  const pascalCase = name.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
-  return (LucideIcons as any)[pascalCase] ?? null;
-}
+import { conceptLabel } from '@/modules/shared/charge-concepts';
+import { getLucideIcon } from './penalty/penalty-style-options';
 
 function formatValue(range: { type: string; value: number; base: string | null }): string {
   if (range.type === 'FIXED') return `S/ ${range.value}/día`;
@@ -64,6 +60,26 @@ export function PenaltyConfigCard() {
           <div className="flex justify-center py-4">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
+        ) : config && config.mode === 'POR_CONCEPTOS' && config.stages.length > 0 ? (
+          config.stages.map((stage, i) => (
+            <div key={stage.id ?? i} className="flex items-center justify-between py-1.5 gap-2">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {stage.icon && (() => {
+                  const IconComp = getLucideIcon(stage.icon);
+                  return IconComp ? <IconComp className="w-3.5 h-3.5 shrink-0 text-muted-foreground" /> : null;
+                })()}
+                {stage.color && <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />}
+                <span className="text-sm text-foreground truncate">
+                  {stage.label || formatRangeLabel(stage.fromDay, stage.toDay)}
+                </span>
+              </div>
+              <Badge variant="outline" className="text-xs shrink-0">
+                {stage.rules.length > 0
+                  ? stage.rules.map((r) => conceptLabel(r.concept)).join(' + ')
+                  : 'Sin cargos'}
+              </Badge>
+            </div>
+          ))
         ) : config && config.ranges.length > 0 ? (
           config.ranges.map((range) => (
             <div key={range.id} className="flex items-center justify-between py-1.5 gap-2">

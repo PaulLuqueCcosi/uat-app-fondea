@@ -13,12 +13,15 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Plus } from 'lucide-react';
 import { CreateFeeModal } from './CreateFeeModal';
+import { feeCategoryLabel } from '@/modules/shared/charge-concepts';
 
 export interface FeeCatalogItem {
   id: string;
   code: string;
   label: string;
   description: string | null;
+  /** Categoría de cobro (INTERES_COMPENSATORIO, GASTOS, TARIFA). Ausente en catálogos que aún no la devuelven. */
+  category?: string | null;
 }
 
 interface Props {
@@ -31,9 +34,11 @@ interface Props {
   loading?: boolean;
 }
 
-/** Build display text: "Label (description)" or just "Label" */
+/** Build display text: "Label (description) · Categoría" or just "Label" */
 function displayText(item: FeeCatalogItem): string {
-  return item.description ? `${item.label} (${item.description})` : item.label;
+  const base = item.description ? `${item.label} (${item.description})` : item.label;
+  const category = feeCategoryLabel(item.category);
+  return category ? `${base} · ${category}` : base;
 }
 
 /**
