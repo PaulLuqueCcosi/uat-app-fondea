@@ -11,7 +11,8 @@ import { backendFetch } from '@/lib/backend-fetch';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type PenaltyType = 'PERCENTAGE' | 'FIXED';
-export type PenaltyBase = 'INSTALLMENT' | 'PRINCIPAL';
+import type { PenaltyBase } from '@/modules/shared/penalty-base';
+export type { PenaltyBase };
 
 export interface PenaltyRangeResponse {
   id: string;

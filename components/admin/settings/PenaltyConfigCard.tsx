@@ -9,6 +9,7 @@ import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
 import { getActivePenaltyConfigAction } from '@/app/actions/admin-penalty.actions';
 import type { PenaltyConfigResponse } from '@/modules/admin/admin-penalty.service';
+import { penaltyBasePhrase } from '@/modules/shared/penalty-base';
 
 function getLucideIcon(name: string): React.ComponentType<{ className?: string }> | null {
   const pascalCase = name.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
@@ -17,7 +18,7 @@ function getLucideIcon(name: string): React.ComponentType<{ className?: string }
 
 function formatValue(range: { type: string; value: number; base: string | null }): string {
   if (range.type === 'FIXED') return `S/ ${range.value}/día`;
-  const baseLabel = range.base === 'PRINCIPAL' ? 'del préstamo' : 'de la cuota';
+  const baseLabel = penaltyBasePhrase(range.base);
   return `${range.value}% ${baseLabel}/día`;
 }
 

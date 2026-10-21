@@ -35,7 +35,7 @@ interface MoraRange {
   maxDays: number | null;
   penaltyPerDay: number;
   type: 'PERCENTAGE' | 'FIXED';
-  base: 'INSTALLMENT' | 'PRINCIPAL' | null;
+  base: 'INSTALLMENT' | 'PRINCIPAL' | 'FEES' | null;
 }
 
 interface NotificationConfig {

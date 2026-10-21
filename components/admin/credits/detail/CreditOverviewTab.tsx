@@ -11,6 +11,7 @@ import type { PayoffCertificate } from '@/modules/admin/admin-constancias.types'
 import { CreditCertificateCard } from './CreditCertificateCard';
 import { DataRow } from '@/components/ui/data-row';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
+import { penaltyBaseName } from '@/modules/shared/penalty-base';
 
 interface Props {
   data: AdminCreditSummary;
@@ -263,7 +264,7 @@ export function CreditOverviewTab({ data, certificate }: Props) {
                           <td className="py-2 px-3 text-right font-mono">
                             {r.type === 'PERCENTAGE' ? `${r.value}%` : formatCurrency(r.value)}
                           </td>
-                          <td className="py-2 px-3">{r.base === 'INSTALLMENT' ? 'Cuota' : r.base === 'PRINCIPAL' ? 'Capital' : '—'}</td>
+                          <td className="py-2 px-3">{penaltyBaseName(r.base)}</td>
                         </tr>
                       ))}
                     </tbody>

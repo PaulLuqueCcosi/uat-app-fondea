@@ -9,6 +9,7 @@ import { backendFetch } from '@/lib/backend-fetch';
 import type { Result } from '@/modules/shared/result';
 import type { TransparencyConfig, TransparencyScenario, ScenarioSeverity } from './transparency.types';
 import { errors } from './passport.errors';
+import { penaltyBasePhrase } from '@/modules/shared/penalty-base';
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
@@ -105,7 +106,7 @@ function formatRangeDescription(range: any): string {
   if (range.type === 'FIXED') {
     return `Penalidad de S/ ${range.value} por día`;
   }
-  const baseLabel = range.base === 'PRINCIPAL' ? 'del préstamo' : 'de la cuota';
+  const baseLabel = penaltyBasePhrase(range.base);
   return `${range.value}% ${baseLabel} por día`;
 }
 

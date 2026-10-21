@@ -44,6 +44,7 @@ import {
 import { formatBackendDate, parseBackendDate } from '@/modules/shared/backend-date';
 import { CreditDocumentsSection } from '@/components/dashboard/sections/CreditDocumentsSection';
 import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
+import { penaltyBaseDescription } from '@/modules/shared/penalty-base';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -441,7 +442,7 @@ export default function CreditoDetallePage() {
                       </td>
                       <td className="py-2 px-2 text-xs text-muted-foreground">
                         {range.type === 'PERCENTAGE'
-                          ? range.base === 'PRINCIPAL' ? 'Monto total del préstamo' : 'Monto de la cuota'
+                          ? penaltyBaseDescription(range.base)
                           : '—'}
                       </td>
                     </tr>

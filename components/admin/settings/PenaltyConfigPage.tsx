@@ -20,6 +20,7 @@ import {
 } from '@/app/actions/admin-penalty.actions';
 import type { PenaltyConfigResponse } from '@/modules/admin/admin-penalty.service';
 import { formatDateTimePeru } from '@/modules/shared/backend-date';
+import { PENALTY_BASE_OPTIONS, penaltyBasePhrase, type PenaltyBase } from '@/modules/shared/penalty-base';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -58,7 +59,7 @@ interface RangeDraft {
   toDay: number | null;
   type: 'PERCENTAGE' | 'FIXED';
   value: number;
-  base: 'INSTALLMENT' | 'PRINCIPAL' | null;
+  base: PenaltyBase | null;
   color: string;
   icon: string;
   label: string;
@@ -90,7 +91,7 @@ function formatRangeLabel(from: number, to: number | null): string {
 
 function formatValue(range: { type: string; value: number; base: string | null }): string {
   if (range.type === 'FIXED') return `S/ ${range.value} por día`;
-  const baseLabel = range.base === 'PRINCIPAL' ? 'del monto prestado' : 'de la cuota';
+  const baseLabel = penaltyBasePhrase(range.base, 'long');
   return `${range.value}% ${baseLabel} por día`;
 }
 
@@ -450,8 +451,11 @@ export function PenaltyConfigPage() {
                           onChange={(e) => updateRange(i, 'base', e.target.value)}
                           className="h-9"
                         >
-                          <NativeSelectOption value="INSTALLMENT">Monto de la cuota</NativeSelectOption>
-                          <NativeSelectOption value="PRINCIPAL">Monto del préstamo</NativeSelectOption>
+                          {PENALTY_BASE_OPTIONS.map((option) => (
+                            <NativeSelectOption key={option.value} value={option.value}>
+                              {option.label}
+                            </NativeSelectOption>
+                          ))}
                         </NativeSelect>
                       </div>
                     )}

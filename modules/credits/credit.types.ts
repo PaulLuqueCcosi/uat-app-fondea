@@ -106,7 +106,7 @@ export interface PenaltyRangeInfo {
   toDay: number | null;
   type: 'PERCENTAGE' | 'FIXED';
   value: number;
-  base: 'INSTALLMENT' | 'PRINCIPAL' | null;
+  base: 'INSTALLMENT' | 'PRINCIPAL' | 'FEES' | null;
   label: string | null;
   color: string | null;
 }
