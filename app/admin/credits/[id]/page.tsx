@@ -73,7 +73,7 @@ export default async function AdminCreditDetailPage({ params }: Props) {
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <CreditOverviewTab data={summary} certificate={certificate} />
+          <CreditOverviewTab data={summary} certificate={certificate} penaltyBreakdown={detail?.penaltyBreakdown ?? []} />
         </TabsContent>
 
         <TabsContent value="installments" className="mt-6">

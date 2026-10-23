@@ -1,3 +1,5 @@
+import { formatCurrency } from '@/lib/admin-formatters';
+
 /**
  * Conceptos de cobro de la mora y de las comisiones del catálogo de la calculadora.
  * Fuente única de los textos en español: la usan la pantalla de configuración de mora,
@@ -99,6 +101,20 @@ export function methodLabel(method: string): string {
 
 export function valueUnit(kind: ChargeValueKind | string): string {
   return VALUE_UNITS[kind as ChargeValueKind] ?? '';
+}
+
+/** Tipo de valor de un método según su nombre (respaldo cuando el backend no lo manda). */
+export function valueKindForMethod(method: string): ChargeValueKind {
+  if (method === 'TASA_NOMINAL_ANUAL_SOBRE_CAPITAL') return 'TNA';
+  if (method === 'MONTO_FIJO_UNA_VEZ' || method === 'MONTO_FIJO_DIARIO') return 'AMOUNT';
+  return 'PERCENT';
+}
+
+/** Valor de una regla con su unidad: "2.5%", "24% anual" o un monto con el formato de montos admin. */
+export function ruleValueText(method: string, value: number): string {
+  const kind = valueKindForMethod(method);
+  if (kind === 'AMOUNT') return formatCurrency(value);
+  return `${value}${kind === 'TNA' ? '% anual' : '%'}`;
 }
 
 /** Opciones para el selector de categoría de una comisión del catálogo. */

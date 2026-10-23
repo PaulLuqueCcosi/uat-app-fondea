@@ -8,6 +8,7 @@
  */
 
 import { backendFetch } from '@/lib/backend-fetch';
+import type { ChargeConcept } from '@/modules/shared/charge-concepts';
 
 // ── Types: Summary (camelCase — backend usa @JsonNaming) ────────────────────
 
@@ -33,6 +34,34 @@ export interface PenaltyConfig {
   name: string;
   isActive: boolean;
   ranges: PenaltyRange[];
+  /** SIMPLE | POR_CONCEPTOS (null si el backend no lo manda). */
+  mode: string | null;
+  /** Tramos x conceptos (solo POR_CONCEPTOS; vacío en SIMPLE). */
+  stages: PenaltyStage[];
+}
+
+export interface PenaltyRule {
+  concept: ChargeConcept;
+  method: string;
+  value: number;
+}
+
+export interface PenaltyStage {
+  fromDay: number;
+  /** null = tramo abierto. */
+  toDay: number | null;
+  label: string | null;
+  color: string | null;
+  icon: string | null;
+  rules: PenaltyRule[];
+}
+
+/** Mora de un concepto: acumulada, pagada y pendiente (admin, S8). */
+export interface PenaltyBreakdownItem {
+  concept: ChargeConcept;
+  accrued: number;
+  paid: number;
+  outstanding: number;
 }
 
 export interface ClientInfo {
@@ -272,6 +301,27 @@ function mapAdminCreditSummaryFromBackend(raw: any): AdminCreditSummary {
                 color: r.color ?? null,
               }))
             : [],
+          mode: raw.penalty_config.mode ?? null,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          stages: Array.isArray(raw.penalty_config.stages)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ? raw.penalty_config.stages.map((s: any) => ({
+                fromDay: s.from_day ?? s.fromDay ?? 0,
+                toDay: s.to_day ?? s.toDay ?? null,
+                label: s.label ?? null,
+                color: s.color ?? null,
+                icon: s.icon ?? null,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                rules: Array.isArray(s.rules)
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  ? s.rules.map((r: any) => ({
+                      concept: r.concept,
+                      method: r.method ?? '',
+                      value: r.value ?? 0,
+                    }))
+                  : [],
+              }))
+            : [],
         }
       : null,
     approvalSnapshot: raw.approval_snapshot
@@ -321,6 +371,8 @@ export interface AdminCreditDetail {
   installmentsCompleted: number;
   installmentsOverdue: number;
   negotiatedInstallments: NegotiatedInstallmentSummary[];
+  /** Mora del crédito por concepto (cuotas que el crédito cobra directamente). */
+  penaltyBreakdown: PenaltyBreakdownItem[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -352,7 +404,20 @@ function mapAdminCreditDetailFromBackend(raw: any): AdminCreditDetail {
           summary: n.summary ? mapCreditFinancialSummaryFromBackend(n.summary) : null,
         }))
       : [],
+    penaltyBreakdown: mapPenaltyBreakdown(raw.penalty_breakdown),
   };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPenaltyBreakdown(raw: any): PenaltyBreakdownItem[] {
+  if (!Array.isArray(raw)) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return raw.map((item: any) => ({
+    concept: item.concept ?? 'MORA_SIMPLE',
+    accrued: item.accrued ?? 0,
+    paid: item.paid ?? 0,
+    outstanding: item.outstanding ?? 0,
+  }));
 }
 
 /**
@@ -470,6 +535,8 @@ export interface AdminInstallmentDetail {
   updatedAt: string;
   /** Solo presente si status = NEGOTIATED — el crédito que asumió esta deuda */
   negotiationCreditId?: string | null;
+  /** Mora de la cuota por concepto; vacía si no tiene mora. */
+  penaltyBreakdown: PenaltyBreakdownItem[];
   transactions: InstallmentTransactionInfo[];
   auditEvents: InstallmentAuditEventDetail[];
 }
@@ -512,6 +579,7 @@ function mapAdminInstallmentDetailFromBackend(raw: any): AdminInstallmentDetail 
     createdAt: raw.created_at ?? raw.createdAt ?? '',
     updatedAt: raw.updated_at ?? raw.updatedAt ?? '',
     negotiationCreditId: raw.negotiation_credit_id ?? raw.negotiationCreditId ?? null,
+    penaltyBreakdown: mapPenaltyBreakdown(raw.penalty_breakdown),
     transactions: Array.isArray(raw.transactions)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ? raw.transactions.map((tx: any) => ({

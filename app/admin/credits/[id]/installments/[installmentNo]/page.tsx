@@ -9,6 +9,7 @@ import { DetailPageHeader } from '@/components/admin/shared';
 import { getAdminInstallmentDetail, getAdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
 import { InstallmentTransactionsCard } from '@/components/admin/credits/detail/InstallmentTransactionsCard';
+import { PenaltyBreakdownTable } from '@/components/admin/credits/detail/PenaltyBreakdownTable';
 import { KpiCard } from '@/components/admin/shared';
 import { DataRow } from '@/components/ui/data-row';
 import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
@@ -151,6 +152,16 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
             <DataRow label="Mora pagada" value={formatCurrency(data.penaltyPaid)} />
             <DataRow label="Días de atraso" value={data.daysOverdue > 0 ? `${data.daysOverdue} días` : 'Al día'} alert={data.daysOverdue > 0} />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Mora por concepto (admin) */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Mora por concepto</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PenaltyBreakdownTable items={data.penaltyBreakdown} />
         </CardContent>
       </Card>
 

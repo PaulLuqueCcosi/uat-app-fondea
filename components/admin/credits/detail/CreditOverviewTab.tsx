@@ -12,11 +12,16 @@ import { CreditCertificateCard } from './CreditCertificateCard';
 import { DataRow } from '@/components/ui/data-row';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
 import { penaltyBaseName } from '@/modules/shared/penalty-base';
+import type { PenaltyBreakdownItem } from '@/modules/admin/admin-credit-detail.service';
+import { PenaltyBreakdownTable } from './PenaltyBreakdownTable';
+import { PenaltyStageMatrix } from './PenaltyStageMatrix';
 
 interface Props {
   data: AdminCreditSummary;
   /** Null si el crédito no tiene constancia (no PAID_OFF, no STANDARD, o aún no se emitió). */
   certificate: PayoffCertificate | null;
+  /** Mora del crédito por concepto (vista admin). */
+  penaltyBreakdown?: PenaltyBreakdownItem[];
 }
 
 function buildFullName(client: AdminCreditSummary['client']) {
@@ -47,7 +52,7 @@ function resolveUbigeoNames(region: string | null, province: string | null, dist
   return { region, province, district };
 }
 
-export function CreditOverviewTab({ data, certificate }: Props) {
+export function CreditOverviewTab({ data, certificate, penaltyBreakdown = [] }: Props) {
   const ubigeoNames = resolveUbigeoNames(data.ubigeoRegion, data.ubigeoProvince, data.ubigeoDistrict);
   const currentUbigeoNames = resolveUbigeoNames(data.currentUbigeoRegion, data.currentUbigeoProvince, data.currentUbigeoDistrict);
 
@@ -222,6 +227,19 @@ export function CreditOverviewTab({ data, certificate }: Props) {
           </Card>
         )}
 
+        {/* Mora por concepto del crédito (admin) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Mora por concepto</CardTitle>
+            <p className="text-[11px] text-muted-foreground">
+              Suma de las cuotas que este crédito cobra directamente.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <PenaltyBreakdownTable items={penaltyBreakdown} />
+          </CardContent>
+        </Card>
+
         {/* Configuración de mora */}
         {data.penaltyConfig && (
           <Card>
@@ -240,6 +258,9 @@ export function CreditOverviewTab({ data, certificate }: Props) {
                   {data.penaltyConfig.isActive ? 'Sigue siendo la config. por defecto' : 'Ya no es la config. por defecto'}
                 </Badge>
               </div>
+              {data.penaltyConfig.mode === 'POR_CONCEPTOS' && data.penaltyConfig.stages.length > 0 && (
+                <PenaltyStageMatrix stages={data.penaltyConfig.stages} />
+              )}
               {data.penaltyConfig.ranges.length > 0 && (
                 <div className="rounded-md border overflow-hidden overflow-x-auto">
                   <table className="w-full text-xs">
