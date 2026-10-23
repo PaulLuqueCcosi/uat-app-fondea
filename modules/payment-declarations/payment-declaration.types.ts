@@ -9,6 +9,8 @@
  * El mapper transforma a estos tipos camelCase.
  */
 
+import type { ChargeConcept } from '@/modules/shared/charge-concepts';
+
 // ─── Estados ──────────────────────────────────────────────────────────────────
 
 /** Estado de una declaración de pago (backend enum). */
@@ -205,6 +207,14 @@ export interface InstallmentQuote {
  * El backend sincroniza la mora antes de calcular, así que los montos son los vigentes al
  * momento de pedirla. No se persiste nada.
  */
+/** Una fila del desglose de mora por concepto de la cotización (solo admin). */
+export interface PenaltyBreakdownItem {
+  concept: ChargeConcept;
+  accrued: number;
+  paid: number;
+  outstanding: number;
+}
+
 export interface PaymentQuote {
   creditId: string;
   targetInstallmentNo: number;
@@ -216,6 +226,8 @@ export interface PaymentQuote {
   /** Hash SHA-256 de la cotización — permite detectar si cambió antes de aplicar. */
   fingerprint: string;
   installments: InstallmentQuote[];
+  /** Mora de las cuotas incluidas, por concepto (solo admin). Vacía si no hay mora. */
+  penaltyBreakdown: PenaltyBreakdownItem[];
 }
 
 export interface RejectPaymentDeclarationRequest {

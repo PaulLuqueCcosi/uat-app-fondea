@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DetailPageHeader } from '@/components/admin/shared';
 import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
+import { PenaltyBreakdownTable } from '@/components/admin/credits/detail/PenaltyBreakdownTable';
 import {
   getAdminPaymentDeclarationByIdAction,
   approvePaymentDeclarationAction,
@@ -385,6 +386,15 @@ function PaymentQuotePanel({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {quote.penaltyBreakdown.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            Mora por concepto
+          </p>
+          <PenaltyBreakdownTable items={quote.penaltyBreakdown} />
         </div>
       )}
 
