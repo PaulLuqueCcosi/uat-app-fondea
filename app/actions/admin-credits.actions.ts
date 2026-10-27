@@ -162,3 +162,19 @@ export async function registerManualPaymentAction(
   const data = await res.json();
   return { ok: true, message: 'Pago registrado', totalApplied: data.total_applied, remaining: data.remaining };
 }
+
+/**
+ * URL prefirmada del contrato firmado de un crédito (null si no tiene uno firmado).
+ * GET /api/v1/admin/portfolio/credits/{creditId}/contract
+ */
+export async function getCreditContractUrlAction(creditId: string): Promise<{ ok: boolean; url?: string; message?: string }> {
+  const res = await backendFetch(`/api/v1/admin/portfolio/credits/${creditId}/contract`, {
+    context: 'ADMIN_CREDIT_CONTRACT',
+  });
+
+  if (res.status === 404) return { ok: false, message: 'Este crédito no tiene un contrato firmado disponible.' };
+  if (!res.ok) return { ok: false, message: `No se pudo obtener el contrato (error ${res.status})` };
+
+  const data = await res.json();
+  return data.url ? { ok: true, url: data.url } : { ok: false, message: 'No se pudo obtener el contrato.' };
+}

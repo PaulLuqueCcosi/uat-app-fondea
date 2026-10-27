@@ -7,6 +7,7 @@ import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/prog
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
 import { CreditAdminActions } from './CreditAdminActions';
+import { ViewContractButton } from './ViewContractButton';
 import { KpiCard } from '@/components/admin/shared';
 import { formatCurrency } from '@/lib/admin-formatters';
 
@@ -91,6 +92,7 @@ export function CreditDetailHeader({ data, outstanding }: Props) {
               </Button>
             </Link>
           )}
+          {data.applicationId && <ViewContractButton creditId={data.id} />}
           <CreditAdminActions creditId={data.id} status={data.status} />
         </div>
       </div>
