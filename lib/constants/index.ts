@@ -50,9 +50,5 @@ export const ROUTES = {
     BANK_ACCOUNT: '/solicitar/bank-account',
     CONTRACT: '/solicitar/contract',
     CONTRACT_SIGNED: '/solicitar/contract-signed',
-    WAITING: '/solicitar/waiting',
-    APPROVED: '/solicitar/approved',
-    MORE_INFO: '/solicitar/more-info',
-    REJECTED: '/solicitar/rejected',
   },
 } as const;

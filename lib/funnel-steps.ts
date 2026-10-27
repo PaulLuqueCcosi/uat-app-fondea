@@ -76,7 +76,7 @@ export const FUNNEL_STEPS: FunnelStep[] = [
     path: '/solicitar/summary',
     icon: FileText,
     description: 'Revisar y enviar',
-    nextPath: '/solicitar/waiting',
+    nextPath: '/dashboard',
   },
   // {
   //   id: 7,

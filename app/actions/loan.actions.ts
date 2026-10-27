@@ -47,10 +47,6 @@ export async function getLoanSummary(): Promise<{
 // ── Aplicación activa ─────────────────────────────────────────────────────────
 // TODO: reemplazar con getActiveApplicationAction de application.actions.ts
 
-export async function getApplication() {
-  return null;
-}
-
 // ── Documentos KYC ───────────────────────────────────────────────────────────
 // TODO: conectar con POST /api/v1/kyc/documents cuando el backend lo exponga
 
@@ -77,15 +73,6 @@ export async function saveAdditional(
   _data: unknown
 ): Promise<{ success: boolean }> {
   return { success: true };
-}
-
-// ── Evaluación ────────────────────────────────────────────────────────────────
-// TODO: reemplazar con polling a getApplicationStatusAction de application.actions.ts
-
-export async function evaluateApplication(): Promise<{
-  result: 'approved' | 'more_info' | 'rejected';
-}> {
-  return { result: 'approved' };
 }
 
 // ── Contrato ──────────────────────────────────────────────────────────────────
