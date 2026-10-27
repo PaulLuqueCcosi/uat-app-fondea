@@ -21,6 +21,7 @@ import {
   CalendarLegend,
   MonthSelector,
   NextPaymentAlert,
+  CreditProgressBlock,
 } from '@/components/credits';
 import {
   getCreditByIdAction,
@@ -290,42 +291,18 @@ export default function CreditoDetallePage() {
         </Card>
       )}
 
-      {/* ─── Progreso del préstamo ─── */}
+      {/* ─── Progreso del préstamo (bloque compartido con el dashboard) ─── */}
       <Card>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-muted-foreground">Progreso del préstamo</p>
-            <p className="text-sm font-bold text-foreground">{Math.round(progressPercent)}% completado</p>
-          </div>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
-            <div
-              className="h-full rounded-full bg-accent-500 transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-2 pt-1">
-            <div className="rounded-md border border-border bg-background p-2.5">
-              <p className="text-xs text-muted-foreground mb-0.5">Total</p>
-              <p className="text-base font-bold text-foreground">
-                {formatCurrencyShort(credit.totalDue)}
+        <CardContent>
+          <CreditProgressBlock
+            credit={credit}
+            progressPercentage={summary?.progressPercentage}
+            footer={
+              <p className="text-[10px] text-muted-foreground">
+                {credit.installmentsCompleted} de {credit.installmentCount} cuotas pagadas · Finaliza el {formatDate(credit.maturityDate)}
               </p>
-            </div>
-            <div className="rounded-md border border-accent-200 bg-accent-50 p-2.5">
-              <p className="text-xs text-accent-800 mb-0.5">Pagado</p>
-              <p className="text-base font-bold text-accent-700">
-                {formatCurrencyShort(credit.totalPaid)}
-              </p>
-            </div>
-            <div className="rounded-md border border-error-200 bg-error-50 p-2.5">
-              <p className="text-xs text-error-700 mb-0.5">Pendiente</p>
-              <p className="text-base font-bold text-error-700">
-                {formatCurrencyShort(credit.totalOutstanding)}
-              </p>
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            {credit.installmentsCompleted} de {credit.installmentCount} cuotas pagadas · Finaliza el {formatDate(credit.maturityDate)}
-          </p>
+            }
+          />
         </CardContent>
       </Card>
 

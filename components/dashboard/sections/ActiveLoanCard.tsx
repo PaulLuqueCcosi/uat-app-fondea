@@ -11,6 +11,7 @@ import {
   CalendarLegend,
   MonthSelector,
   NextPaymentAlert,
+  CreditProgressBlock,
 } from '@/components/credits';
 import { CreditDocumentsMenu } from './CreditDocumentsMenu';
 import type { Credit, Installment, NextPayment, InstallmentViewStatus } from '@/modules/credits';
@@ -61,9 +62,6 @@ interface ActiveLoanCardProps {
  * Usa Card anatomy (Header/Content/Footer) + Collapsible para cuotas y calendario.
  */
 export function ActiveLoanCard({ credit, installments, nextPayment, applicationId, negotiationOfferId }: ActiveLoanCardProps) {
-  const progressPercent = credit.totalDue > 0
-    ? Math.round((credit.totalPaid / credit.totalDue) * 100)
-    : 0;
   const isNegotiation = credit.creditType === 'NEGOTIATION';
 
   const [expanded, setExpanded] = useState(true);
@@ -134,39 +132,8 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
             />
           )}
 
-          {/* ─── Progreso del préstamo ─── */}
-          <div className="rounded-lg border border-border p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-muted-foreground">Progreso del préstamo</p>
-              <p className="text-sm font-bold text-foreground">{progressPercent}% completado</p>
-            </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
-              <div
-                className="h-full rounded-full bg-accent-500 transition-all duration-500"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              <div className="rounded-md border border-border bg-background p-2.5">
-                <p className="text-xs text-muted-foreground mb-0.5">Total</p>
-                <p className="text-base font-bold text-foreground">
-                  {formatCurrencyShort(credit.totalDue)}
-                </p>
-              </div>
-              <div className="rounded-md border border-accent-200 bg-accent-50 p-2.5">
-                <p className="text-xs text-accent-800 mb-0.5">Pagado</p>
-                <p className="text-base font-bold text-accent-700">
-                  {formatCurrencyShort(credit.totalPaid)}
-                </p>
-              </div>
-              <div className="rounded-md border border-error-200 bg-error-50 p-2.5">
-                <p className="text-xs text-error-700 mb-0.5">Pendiente</p>
-                <p className="text-base font-bold text-error-700">
-                  {formatCurrencyShort(credit.totalOutstanding)}
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* ─── Progreso del préstamo (bloque compartido con el detalle) ─── */}
+          <CreditProgressBlock credit={credit} />
 
           {/* ─── Cuotas + Calendario (colapsable) ─── */}
           <CollapsibleContent>

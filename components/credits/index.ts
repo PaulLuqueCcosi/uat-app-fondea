@@ -2,3 +2,4 @@ export { InstallmentCalendar, CalendarLegend, MonthSelector } from './Installmen
 export { ScoreGauge } from './ScoreGauge';
 export { CreditsTable } from './CreditsTable';
 export { NextPaymentAlert } from './NextPaymentAlert';
+export { CreditProgressBlock } from './CreditProgressBlock';
