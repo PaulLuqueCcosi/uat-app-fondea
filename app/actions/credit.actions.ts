@@ -82,3 +82,14 @@ export async function getTransactionsAction(creditId: string) {
 // POST /api/v1/credits/{id}/installments/{no}/pay. Ese endpoint se eliminó del backend
 // (permitía que un usuario redujera su propia deuda sin comprobante ni revisión) y esta
 // action nunca fue usada por ninguna vista.
+
+/**
+ * Crédito generado a partir de una solicitud (null si todavía no existe).
+ * Se usa en la vista de solicitud aprobada para mostrar el estado real del desembolso.
+ */
+export async function getCreditByApplicationAction(applicationId: string) {
+  await requireValidSession();
+  const result = await creditService.getCredits();
+  if (!result.ok) return result;
+  return { ok: true as const, data: result.data.find((c) => c.applicationId === applicationId) ?? null };
+}

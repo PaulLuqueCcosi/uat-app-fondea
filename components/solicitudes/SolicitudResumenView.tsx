@@ -24,6 +24,7 @@ import type { DocumentListResult } from '@/lib/types/document';
 import type { ApplicationRecord, ApplicationStatus } from '@/lib/types';
 import { useSolicitudStore } from '@/lib/stores/solicitud-store';
 import { LoanBreakdownCard } from './LoanBreakdownCard';
+import { DisbursementStatusCard } from './DisbursementStatusCard';
 import { formatBackendDateLong, parseBackendDate } from '@/modules/shared/backend-date';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -333,6 +334,8 @@ function ApprovedView({
           )}
         </div>
       </div>
+
+      <DisbursementStatusCard applicationId={application.id} />
 
       {/* Detalle del préstamo con breakdown */}
       <LoanBreakdownCard fullDetail={fullDetail} detailStatus={detailStatus} />
