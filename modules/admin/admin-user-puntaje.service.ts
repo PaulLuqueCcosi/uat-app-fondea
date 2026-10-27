@@ -89,3 +89,40 @@ export async function getPuntajeRangos(): Promise<PuntajeRango[]> {
     maxLoanAmount: r.maxLoanAmount,
   }));
 }
+
+export interface AdjustPuntajeResult {
+  ok: boolean;
+  message: string;
+  previousPoints?: number;
+  newPoints?: number;
+  appliedDelta?: number;
+}
+
+/**
+ * Ajuste manual con signo (positivo suma, negativo resta) del puntaje de fidelización.
+ * El backend exige un motivo de 5 a 200 caracteres, acota a ±1000 y no deja bajar de 0:
+ * `appliedDelta` es lo realmente aplicado.
+ * POST /api/v1/admin/score/users/{userId}/ajuste
+ */
+export async function adjustAdminUserPuntaje(userId: string, points: number, reason: string): Promise<AdjustPuntajeResult> {
+  const res = await backendFetch(`/api/v1/admin/score/users/${userId}/ajuste`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ points, reason }),
+    context: 'ADMIN_USER_PUNTAJE',
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    return { ok: false, message: body?.detail ?? body?.message ?? `No se pudo ajustar el puntaje (error ${res.status})` };
+  }
+
+  const data = await res.json();
+  return {
+    ok: true,
+    message: 'Puntaje ajustado',
+    previousPoints: data.previousPoints,
+    newPoints: data.newPoints,
+    appliedDelta: data.appliedDelta,
+  };
+}

@@ -1,6 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { adjustUserPuntajeAction } from '@/app/actions/admin-user-puntaje.actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 
 interface PuntajeTabProps {
+  userId: string;
   /** null cuando el usuario todavía no tiene puntaje inicializado en el backend. */
   score: { points: number; maxLoanAmount: number; categoryName: string } | null;
   history: { id: string; points: number; type: string; reason: string | null; createdAt: string }[];
@@ -51,7 +55,9 @@ const PRESET_REASONS = [
   { value: 'AJUSTE_MANUAL', label: 'Ajuste manual (especificar)', defaultAmount: 0 },
 ];
 
-export function PuntajeTab({ score, history, ranges }: PuntajeTabProps) {
+export function PuntajeTab({ userId, score, history, ranges }: PuntajeTabProps) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustType, setAdjustType] = useState<'add' | 'subtract'>('add');
   const [adjustAmount, setAdjustAmount] = useState('');
@@ -81,9 +87,25 @@ export function PuntajeTab({ score, history, ranges }: PuntajeTabProps) {
     setShowAdjustModal(true);
   };
 
+  const amount = Number(adjustAmount);
+  const reasonText =
+    adjustReason === 'AJUSTE_MANUAL'
+      ? adjustCustomReason.trim()
+      : PRESET_REASONS.find((r) => r.value === adjustReason)?.label ?? '';
+  const adjustInvalid = !Number.isInteger(amount) || amount < 1 || amount > 1000 || reasonText.length < 5;
+
   const handleConfirmAdjust = () => {
-    // TODO: llamar al backend
-    setShowAdjustModal(false);
+    startTransition(async () => {
+      const signed = adjustType === 'add' ? amount : -amount;
+      const result = await adjustUserPuntajeAction(userId, signed, reasonText);
+      if (result.ok) {
+        toast.success(`Puntaje: ${result.previousPoints} → ${result.newPoints}`);
+        setShowAdjustModal(false);
+        router.refresh();
+      } else {
+        toast.error(result.message);
+      }
+    });
   };
 
   return (
@@ -224,6 +246,7 @@ export function PuntajeTab({ score, history, ranges }: PuntajeTabProps) {
                 onChange={(e) => setAdjustAmount(e.target.value)}
                 placeholder="Ej: 50"
                 min={1}
+                max={1000}
               />
             </div>
 
@@ -264,7 +287,7 @@ export function PuntajeTab({ score, history, ranges }: PuntajeTabProps) {
             <Button variant="outline" onClick={() => setShowAdjustModal(false)}>Cancelar</Button>
             <Button
               onClick={handleConfirmAdjust}
-              disabled={!adjustAmount || !adjustReason}
+              disabled={adjustInvalid || pending}
               className={adjustType === 'subtract' ? 'bg-destructive hover:bg-destructive/90' : ''}
             >
               {adjustType === 'add' ? `Sumar +${adjustAmount || 0}` : `Restar -${adjustAmount || 0}`}

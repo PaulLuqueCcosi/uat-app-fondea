@@ -24,5 +24,5 @@ export default async function AdminUserPuntajePage({ params }: { params: Promise
     }),
   }));
 
-  return <PuntajeTab score={score} history={history} ranges={rangos} />;
+  return <PuntajeTab userId={id} score={score} history={history} ranges={rangos} />;
 }
