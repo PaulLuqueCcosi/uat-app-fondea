@@ -730,7 +730,10 @@ export function PenaltyConfigPage() {
         </Card>
 
         {editMode === 'POR_CONCEPTOS' && catalog && (
-          <PenaltySimulatorPanel source={editingSimulationSource()} />
+          <PenaltySimulatorPanel
+            source={editingSimulationSource()}
+            configName={`${configName.trim() || 'Simulación'} (en edición, sin guardar)`}
+          />
         )}
       </div>
     );
@@ -830,7 +833,7 @@ export function PenaltyConfigPage() {
       </Card>
 
       {config && config.mode === 'POR_CONCEPTOS' && (
-        <PenaltySimulatorPanel source={savedSimulationSource()} />
+        <PenaltySimulatorPanel source={savedSimulationSource()} configName={config?.name ? `${config.name} (activa)` : undefined} />
       )}
 
       {/* Historial */}

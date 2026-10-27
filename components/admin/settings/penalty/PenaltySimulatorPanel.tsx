@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Calculator, Loader2 } from 'lucide-react';
+import { Calculator, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,14 @@ import type {
   SimulatePenaltyResponse,
 } from '@/modules/admin/admin-penalty.types';
 import { MATRIX_CONCEPTS, conceptLabel, type ChargeConcept } from '@/modules/shared/charge-concepts';
+import {
+  downloadSimulationCsv,
+  downloadSimulationPdf,
+  type SimulationExportContext,
+} from '@/modules/admin/mora-simulation-export';
+import { describeRealInstallment, type RealInstallment, type RealLoan } from '@/modules/admin/mora-real-loan';
 import { penaltyErrorMessage } from './penalty-errors';
+import { RealLoanLoader } from './RealLoanLoader';
 
 /** De dónde sale la configuración a simular. */
 export type SimulationSource =
@@ -22,6 +29,8 @@ export type SimulationSource =
 
 interface Props {
   source: SimulationSource;
+  /** Nombre de la configuración que se simula; va en el encabezado de lo que se exporta. */
+  configName?: string;
 }
 
 /** Conceptos de la cuota que se pueden ingresar (el moratorio se calcula sobre el capital vencido). */
@@ -43,7 +52,7 @@ function parseNonNegative(raw: string): number | null {
   return Number.isFinite(value) && value >= 0 ? value : null;
 }
 
-export function PenaltySimulatorPanel({ source }: Props) {
+export function PenaltySimulatorPanel({ source, configName }: Props) {
   const [amounts, setAmounts] = useState<Record<string, string>>({ ...SAMPLE_AMOUNTS });
   const [periodDays, setPeriodDays] = useState('10');
   const [overdueCapital, setOverdueCapital] = useState('166.67');
@@ -51,7 +60,34 @@ export function PenaltySimulatorPanel({ source }: Props) {
   const [toDay, setToDay] = useState('5');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<SimulatePenaltyResponse | null>(null);
+  const [result, setResult] = useState<{ data: SimulatePenaltyResponse; context: SimulationExportContext } | null>(null);
+  /** Cuota real elegida; se suelta si la persona cambia a mano alguno de los montos que llenó. */
+  const [realPick, setRealPick] = useState<{ no: number; origin: string } | null>(null);
+  const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+
+  function pickRealInstallment(installment: RealInstallment, loan: RealLoan) {
+    setAmounts({
+      INTERES_COMPENSATORIO: String(installment.amounts.INTERES_COMPENSATORIO),
+      GASTOS: String(installment.amounts.GASTOS),
+      TARIFA: String(installment.amounts.TARIFA),
+    });
+    setPeriodDays(String(installment.periodDays));
+    setOverdueCapital(String(installment.principal));
+    setRealPick({ no: installment.no, origin: describeRealInstallment(loan, installment) });
+  }
+
+  async function exportAs(kind: 'csv' | 'pdf') {
+    if (!result) return;
+    setExporting(kind);
+    try {
+      if (kind === 'csv') downloadSimulationCsv(result.data, result.context);
+      else await downloadSimulationPdf(result.data, result.context);
+    } catch {
+      setError('No se pudo generar el archivo');
+    } finally {
+      setExporting(null);
+    }
+  }
 
   async function run() {
     setError(null);
@@ -105,7 +141,18 @@ export function PenaltySimulatorPanel({ source }: Props) {
     setLoading(false);
 
     if (response.ok) {
-      setResult(response.data);
+      setResult({
+        data: response.data,
+        context: {
+          configName: configName ?? (source.kind === 'draft' ? 'Configuración en edición (sin guardar)' : 'Configuración activa'),
+          amounts: conceptAmounts,
+          periodDays: period,
+          overdueCapital: capital,
+          fromDay: from,
+          toDay: to,
+          origin: realPick?.origin ?? null,
+        },
+      });
     } else {
       setResult(null);
       setError(penaltyErrorMessage(response.error, 'No se pudo simular'));
@@ -132,6 +179,14 @@ export function PenaltySimulatorPanel({ source }: Props) {
           <p className="text-sm text-muted-foreground">{source.reason}</p>
         )}
 
+        <RealLoanLoader onPick={pickRealInstallment} selectedNo={realPick?.no ?? null} />
+
+        {realPick && (
+          <p className="text-xs text-muted-foreground" data-testid="sim-origin">
+            Datos: {realPick.origin}. Si cambias un monto a mano, deja de contarse como dato real.
+          </p>
+        )}
+
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {AMOUNT_CONCEPTS.map((concept) => (
             <div key={concept} className="space-y-1">
@@ -145,7 +200,10 @@ export function PenaltySimulatorPanel({ source }: Props) {
                 min={0}
                 step="0.01"
                 value={amounts[concept] ?? ''}
-                onChange={(e) => setAmounts({ ...amounts, [concept]: e.target.value })}
+                onChange={(e) => {
+                  setAmounts({ ...amounts, [concept]: e.target.value });
+                  setRealPick(null);
+                }}
                 placeholder="0"
                 className="h-9 font-mono"
               />
@@ -159,7 +217,10 @@ export function PenaltySimulatorPanel({ source }: Props) {
               min={1}
               step={1}
               value={periodDays}
-              onChange={(e) => setPeriodDays(e.target.value)}
+              onChange={(e) => {
+                setPeriodDays(e.target.value);
+                setRealPick(null);
+              }}
               className="h-9 font-mono"
             />
           </div>
@@ -172,7 +233,10 @@ export function PenaltySimulatorPanel({ source }: Props) {
               min={0}
               step="0.01"
               value={overdueCapital}
-              onChange={(e) => setOverdueCapital(e.target.value)}
+              onChange={(e) => {
+                setOverdueCapital(e.target.value);
+                setRealPick(null);
+              }}
               className="h-9 font-mono"
             />
           </div>
@@ -218,7 +282,29 @@ export function PenaltySimulatorPanel({ source }: Props) {
 
         {result && (
           <div className="space-y-2">
-            {result.perDay.length === 0 ? (
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => exportAs('csv')}
+                disabled={exporting !== null || result.data.perDay.length === 0}
+              >
+                {exporting === 'csv' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+                Descargar CSV
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => exportAs('pdf')}
+                disabled={exporting !== null || result.data.perDay.length === 0}
+              >
+                {exporting === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                Descargar PDF
+              </Button>
+            </div>
+            {result.data.perDay.length === 0 ? (
               <p className="text-sm text-muted-foreground">El simulador no devolvió días para ese rango.</p>
             ) : (
               <div className="max-h-96 overflow-auto rounded-lg border">
@@ -234,7 +320,7 @@ export function PenaltySimulatorPanel({ source }: Props) {
                     </tr>
                   </thead>
                   <tbody className="text-right font-mono">
-                    {result.perDay.map((d) => (
+                    {result.data.perDay.map((d) => (
                       <tr key={d.day} className="border-t">
                         <th scope="row" className="px-3 py-1.5 text-left font-normal">{d.day}</th>
                         {MATRIX_CONCEPTS.map((c) => (
@@ -248,9 +334,9 @@ export function PenaltySimulatorPanel({ source }: Props) {
                     <tr>
                       <th scope="row" className="px-3 py-2 text-left">Total del rango</th>
                       {MATRIX_CONCEPTS.map((c) => (
-                        <td key={c} className="px-3 py-2">{money.format(result.totals[c] ?? 0)}</td>
+                        <td key={c} className="px-3 py-2">{money.format(result.data.totals[c] ?? 0)}</td>
                       ))}
-                      <td className="px-3 py-2">{money.format(dayTotal(result.totals))}</td>
+                      <td className="px-3 py-2">{money.format(dayTotal(result.data.totals))}</td>
                     </tr>
                   </tfoot>
                 </table>
