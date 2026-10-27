@@ -42,7 +42,7 @@ export function NplGeoMap() {
       const params = new URLSearchParams({ level });
       if (parentCode) params.set('parentCode', parentCode);
 
-      const url = `/api/admin/collections/analytics/npl-by-city-mock?${params.toString()}`;
+      const url = `/api/admin/collections/analytics/npl-by-city?${params.toString()}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`${res.status}`);
       const json: NplByCityResponse = await res.json();
