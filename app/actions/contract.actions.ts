@@ -13,6 +13,8 @@ export type ContractStatus = 'GENERATED' | 'SIGNED' | 'EXPIRED';
 export interface ContractInfo {
   contractId: string;
   applicationId: string;
+  documentTypeCode: string | null;
+  documentTypeName: string | null;
   status: ContractStatus;
   generatedAt: string;
   signedAt: string | null;
@@ -22,77 +24,74 @@ export interface ContractInfo {
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 /**
- * Obtiene el estado del contrato para una solicitud.
+ * Lista los documentos contractuales de una solicitud (puede haber más de uno).
  * GET /api/v1/applications/{applicationId}/contract
  *
- * Retorna null si no existe (404).
+ * Retorna [] si no hay documentos o si la consulta falla.
  */
-export async function getContractInfoAction(applicationId: string): Promise<ContractInfo | null> {
+export async function getContractsAction(applicationId: string): Promise<ContractInfo[]> {
   await requireValidSession();
 
   try {
     const res = await backendFetch(`/api/v1/applications/${applicationId}/contract`);
-
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
+    if (!res.ok) return [];
 
     const data = await res.json();
-    return {
-      contractId: data.contractId,
-      applicationId: data.applicationId,
-      status: data.status as ContractStatus,
-      generatedAt: data.generatedAt,
-      signedAt: data.signedAt,
-      expiredAt: data.expiredAt,
-    };
+    if (!Array.isArray(data)) return [];
+    return data.map((c) => ({
+      contractId: c.contractId,
+      applicationId: c.applicationId,
+      documentTypeCode: c.documentTypeCode ?? null,
+      documentTypeName: c.documentTypeName ?? null,
+      status: c.status as ContractStatus,
+      generatedAt: c.generatedAt,
+      signedAt: c.signedAt ?? null,
+      expiredAt: c.expiredAt ?? null,
+    }));
   } catch (err) {
-    console.error('[CONTRACT] Error al obtener info del contrato:', err);
-    return null;
+    console.error('[CONTRACT] Error al listar los documentos:', err);
+    return [];
   }
 }
 
 /**
- * Obtiene el HTML del contrato para renderizar en pantalla.
- * GET /api/v1/applications/{applicationId}/contract/html
+ * Obtiene el HTML de un documento para renderizar en pantalla.
+ * GET /api/v1/applications/{applicationId}/contract/{contractId}/html
  *
  * Retorna el HTML como string, o null si no existe.
  */
-export async function getContractHtmlAction(applicationId: string): Promise<string | null> {
+export async function getContractHtmlAction(applicationId: string, contractId: string): Promise<string | null> {
   await requireValidSession();
 
   try {
-    const res = await backendFetch(`/api/v1/applications/${applicationId}/contract/html`);
-
-    if (res.status === 404) return null;
+    const res = await backendFetch(`/api/v1/applications/${applicationId}/contract/${contractId}/html`);
     if (!res.ok) return null;
 
     return await res.text();
   } catch (err) {
-    console.error('[CONTRACT] Error al obtener HTML del contrato:', err);
+    console.error('[CONTRACT] Error al obtener HTML del documento:', err);
     return null;
   }
 }
 
 /**
- * Obtiene la URL prefirmada del PDF del contrato.
- * GET /api/v1/applications/{applicationId}/contract/pdf
+ * Obtiene la URL prefirmada del PDF de un documento.
+ * GET /api/v1/applications/{applicationId}/contract/{contractId}/pdf
  *
  * Solo disponible después de firmar.
  * Retorna la URL o null si no está disponible.
  */
-export async function getContractPdfUrlAction(applicationId: string): Promise<string | null> {
+export async function getContractPdfUrlAction(applicationId: string, contractId: string): Promise<string | null> {
   await requireValidSession();
 
   try {
-    const res = await backendFetch(`/api/v1/applications/${applicationId}/contract/pdf`);
-
-    if (res.status === 404) return null;
+    const res = await backendFetch(`/api/v1/applications/${applicationId}/contract/${contractId}/pdf`);
     if (!res.ok) return null;
 
     const data = await res.json();
     return data.pdfUrl ?? null;
   } catch (err) {
-    console.error('[CONTRACT] Error al obtener PDF del contrato:', err);
+    console.error('[CONTRACT] Error al obtener PDF del documento:', err);
     return null;
   }
 }

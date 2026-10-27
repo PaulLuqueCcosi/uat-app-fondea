@@ -1,7 +1,7 @@
 'use server';
 
 import { requireValidSession } from './auth.actions';
-import { getContractInfoAction, getContractPdfUrlAction } from './contract.actions';
+import { getContractsAction, getContractPdfUrlAction } from './contract.actions';
 import { getNegotiationOfferByIdAction, getMyNegotiationOffersAction } from './negotiation-offer.actions';
 import { getCreditByIdAction } from './credit.actions';
 
@@ -41,12 +41,17 @@ export async function getCreditDocumentsAction(source: CreditDocumentsSource): P
     }
 
     if (source.applicationId) {
-      const info = await getContractInfoAction(source.applicationId);
+      const applicationId = source.applicationId;
+      const contracts = await getContractsAction(applicationId);
       // The backend also uses FINALIZED after signing (see contracts_contract status check).
-      const status: string | undefined = info?.status;
-      if (!info || (status !== 'SIGNED' && status !== 'FINALIZED')) return [];
-      const url = await getContractPdfUrlAction(source.applicationId);
-      return url ? [{ id: info.contractId, label: 'Contrato firmado', url }] : [];
+      const signed = contracts.filter((c) => c.status === 'SIGNED' || (c.status as string) === 'FINALIZED');
+      const docs = await Promise.all(
+        signed.map(async (c) => {
+          const url = await getContractPdfUrlAction(applicationId, c.contractId);
+          return url ? { id: c.contractId, label: c.documentTypeName ?? 'Contrato firmado', url } : null;
+        }),
+      );
+      return docs.filter((d): d is CreditDocument => d !== null);
     }
 
     return [];
