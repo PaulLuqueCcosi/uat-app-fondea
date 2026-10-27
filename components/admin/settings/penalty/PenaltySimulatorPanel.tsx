@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Calculator, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,12 @@ import {
   downloadSimulationPdf,
   type SimulationExportContext,
 } from '@/modules/admin/mora-simulation-export';
-import { describeRealInstallment, type RealInstallment, type RealLoan } from '@/modules/admin/mora-real-loan';
+import {
+  describeRealInstallment,
+  moraBaseAmounts,
+  type RealInstallment,
+  type RealLoan,
+} from '@/modules/admin/mora-real-loan';
 import { penaltyErrorMessage } from './penalty-errors';
 import { RealLoanLoader } from './RealLoanLoader';
 
@@ -31,6 +36,8 @@ interface Props {
   source: SimulationSource;
   /** Nombre de la configuración que se simula; va en el encabezado de lo que se exporta. */
   configName?: string;
+  /** La configuración simulada calcula la mora sobre montos con IGV; los datos reales se toman con esa base. */
+  includeIgv?: boolean;
 }
 
 /** Conceptos de la cuota que se pueden ingresar (el moratorio se calcula sobre el capital vencido). */
@@ -52,7 +59,7 @@ function parseNonNegative(raw: string): number | null {
   return Number.isFinite(value) && value >= 0 ? value : null;
 }
 
-export function PenaltySimulatorPanel({ source, configName }: Props) {
+export function PenaltySimulatorPanel({ source, configName, includeIgv = false }: Props) {
   const [amounts, setAmounts] = useState<Record<string, string>>({ ...SAMPLE_AMOUNTS });
   const [periodDays, setPeriodDays] = useState('10');
   const [overdueCapital, setOverdueCapital] = useState('166.67');
@@ -62,19 +69,31 @@ export function PenaltySimulatorPanel({ source, configName }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ data: SimulatePenaltyResponse; context: SimulationExportContext } | null>(null);
   /** Cuota real elegida; se suelta si la persona cambia a mano alguno de los montos que llenó. */
-  const [realPick, setRealPick] = useState<{ no: number; origin: string } | null>(null);
+  const [realPick, setRealPick] = useState<{ installment: RealInstallment; loan: RealLoan } | null>(null);
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+  const realOrigin = realPick ? describeRealInstallment(realPick.loan, realPick.installment, includeIgv) : null;
 
-  function pickRealInstallment(installment: RealInstallment, loan: RealLoan) {
+  function fillFromInstallment(installment: RealInstallment) {
+    const base = moraBaseAmounts(installment, includeIgv);
     setAmounts({
-      INTERES_COMPENSATORIO: String(installment.amounts.INTERES_COMPENSATORIO),
-      GASTOS: String(installment.amounts.GASTOS),
-      TARIFA: String(installment.amounts.TARIFA),
+      INTERES_COMPENSATORIO: String(base.INTERES_COMPENSATORIO),
+      GASTOS: String(base.GASTOS),
+      TARIFA: String(base.TARIFA),
     });
     setPeriodDays(String(installment.periodDays));
     setOverdueCapital(String(installment.principal));
-    setRealPick({ no: installment.no, origin: describeRealInstallment(loan, installment) });
   }
+
+  function pickRealInstallment(installment: RealInstallment, loan: RealLoan) {
+    fillFromInstallment(installment);
+    setRealPick({ installment, loan });
+  }
+
+  // Si se enciende o apaga "incluir IGV" con una cuota real elegida, los montos se vuelven a calcular con la nueva base.
+  useEffect(() => {
+    if (realPick) fillFromInstallment(realPick.installment);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [includeIgv]);
 
   async function exportAs(kind: 'csv' | 'pdf') {
     if (!result) return;
@@ -150,7 +169,7 @@ export function PenaltySimulatorPanel({ source, configName }: Props) {
           overdueCapital: capital,
           fromDay: from,
           toDay: to,
-          origin: realPick?.origin ?? null,
+          origin: realOrigin,
         },
       });
     } else {
@@ -179,11 +198,11 @@ export function PenaltySimulatorPanel({ source, configName }: Props) {
           <p className="text-sm text-muted-foreground">{source.reason}</p>
         )}
 
-        <RealLoanLoader onPick={pickRealInstallment} selectedNo={realPick?.no ?? null} />
+        <RealLoanLoader onPick={pickRealInstallment} selectedNo={realPick?.installment.no ?? null} />
 
-        {realPick && (
+        {realOrigin && (
           <p className="text-xs text-muted-foreground" data-testid="sim-origin">
-            Datos: {realPick.origin}. Si cambias un monto a mano, deja de contarse como dato real.
+            Datos: {realOrigin}. Si cambias un monto a mano, deja de contarse como dato real.
           </p>
         )}
 

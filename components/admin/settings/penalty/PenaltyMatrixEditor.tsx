@@ -280,6 +280,23 @@ export function PenaltyMatrixEditor({ draft, onChange, catalog, blocked, errors 
         </div>
       </div>
 
+      {/* Base de cálculo: con o sin IGV */}
+      <label className="flex max-w-2xl cursor-pointer items-start gap-3 rounded-lg border p-3">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={draft.includeIgv}
+          onChange={(e) => onChange({ ...draft, includeIgv: e.target.checked })}
+        />
+        <span>
+          <span className="block text-sm font-medium">Calcular la mora sobre el monto con IGV</span>
+          <span className="block text-xs text-muted-foreground">
+            Apagado, la mora se calcula sobre el monto neto de cada concepto de la cuota (sin IGV). Encendido, sobre el monto
+            neto más su IGV. Solo afecta a los créditos nuevos que usen esta configuración.
+          </span>
+        </span>
+      </label>
+
       {/* Orden de imputación */}
       <div className="space-y-2">
         <div>

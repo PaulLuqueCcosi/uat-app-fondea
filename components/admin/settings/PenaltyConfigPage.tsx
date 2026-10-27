@@ -733,6 +733,7 @@ export function PenaltyConfigPage() {
           <PenaltySimulatorPanel
             source={editingSimulationSource()}
             configName={`${configName.trim() || 'Simulación'} (en edición, sin guardar)`}
+            includeIgv={matrixDraft.includeIgv}
           />
         )}
       </div>
@@ -774,6 +775,12 @@ export function PenaltyConfigPage() {
                     .filter((c) => c !== 'MORA_SIMPLE')
                     .map((c) => conceptLabel(c, catalog?.concepts.find((x) => x.code === c)?.label))
                     .join(' → ')}
+                </span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Base de cálculo:{' '}
+                <span className="font-medium text-foreground">
+                  {config.includeIgv ? 'monto de la cuota con IGV' : 'monto de la cuota sin IGV'}
                 </span>
               </p>
               <p className="text-[10px] text-muted-foreground">
@@ -833,7 +840,7 @@ export function PenaltyConfigPage() {
       </Card>
 
       {config && config.mode === 'POR_CONCEPTOS' && (
-        <PenaltySimulatorPanel source={savedSimulationSource()} configName={config?.name ? `${config.name} (activa)` : undefined} />
+        <PenaltySimulatorPanel source={savedSimulationSource()} configName={config?.name ? `${config.name} (activa)` : undefined} includeIgv={config?.includeIgv ?? false} />
       )}
 
       {/* Historial */}

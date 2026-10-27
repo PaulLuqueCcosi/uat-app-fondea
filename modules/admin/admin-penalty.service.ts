@@ -142,6 +142,7 @@ export function mapPenaltyConfig(raw: unknown): PenaltyConfigResponse | null {
     ranges: Array.isArray(raw.ranges) ? raw.ranges.filter(isObject).map(mapRange) : [],
     stages: Array.isArray(raw.stages) ? raw.stages.filter(isObject).map(mapStage) : [],
     allocationOrder: order.length > 0 ? order : [...DEFAULT_ALLOCATION_ORDER],
+    includeIgv: raw.includeIgv === true,
   };
 }
 

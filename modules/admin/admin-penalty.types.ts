@@ -72,6 +72,8 @@ export interface PenaltyConfigResponse {
   ranges: PenaltyRangeResponse[];
   stages: PenaltyStage[];
   allocationOrder: ChargeConcept[];
+  /** La mora se calcula sobre el monto de la cuota con IGV; una respuesta sin el campo es `false`. */
+  includeIgv: boolean;
 }
 
 export interface SavePenaltyConfigRequest {
@@ -82,6 +84,8 @@ export interface SavePenaltyConfigRequest {
   ranges?: SavePenaltyRangeRequest[];
   allocationOrder?: ChargeConcept[];
   stages?: PenaltyStage[];
+  /** Calcular la mora sobre el monto con IGV; omitido = no. */
+  includeIgv?: boolean;
 }
 
 // ── Catálogo de conceptos (GET /concepts) ─────────────────────────────────────

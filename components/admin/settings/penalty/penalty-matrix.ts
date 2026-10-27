@@ -41,6 +41,8 @@ export interface StageDraft {
 export interface MatrixDraft {
   stages: StageDraft[];
   allocationOrder: ChargeConcept[];
+  /** Calcular la mora sobre el monto de la cuota con IGV. */
+  includeIgv: boolean;
 }
 
 export interface MatrixError {
@@ -99,7 +101,7 @@ export function defaultMatrixDraft(catalog: ConceptsCatalog | null): MatrixDraft
   if (findMethodSpec(catalog, 'INTERES_COMPENSATORIO', 'SIGUE_CORRIENDO')) {
     stage.cells.INTERES_COMPENSATORIO = { method: 'SIGUE_CORRIENDO', value: '100' };
   }
-  return { stages: [stage], allocationOrder: normalizeAllocationOrder(undefined) };
+  return { stages: [stage], allocationOrder: normalizeAllocationOrder(undefined), includeIgv: false };
 }
 
 function cellsFromRules(rules: PenaltyRule[]): Partial<Record<ChargeConcept, CellDraft>> {
@@ -124,7 +126,11 @@ export function draftFromConfig(config: PenaltyConfigResponse | null, catalog: C
     icon: s.icon ?? 'clock',
     cells: cellsFromRules(s.rules),
   }));
-  return { stages: makeConsecutive(stages), allocationOrder: normalizeAllocationOrder(config.allocationOrder) };
+  return {
+    stages: makeConsecutive(stages),
+    allocationOrder: normalizeAllocationOrder(config.allocationOrder),
+    includeIgv: config.includeIgv,
+  };
 }
 
 // ── Edición de tramos (siempre consecutivos, el último abierto) ───────────────
@@ -262,6 +268,7 @@ export function requestFromDraft(
     mode: 'POR_CONCEPTOS',
     stages: stagesFromDraft(draft, blocked),
     allocationOrder: draft.allocationOrder,
+    includeIgv: draft.includeIgv,
   };
 }
 
