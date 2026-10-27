@@ -378,7 +378,9 @@ export function PenaltyConfigPage() {
   if (isEditing) {
     return (
       <div className="space-y-6">
-        <PenaltyComplianceBanner compliance={compliance} onChanged={reloadCompliance} />
+        {/* Perfil de cumplimiento oculto por ahora (no se usa). La lógica y el componente
+          quedan intactos — para reactivarlo, descomentar esta línea.
+          <PenaltyComplianceBanner compliance={compliance} onChanged={reloadCompliance} /> */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -744,7 +746,9 @@ export function PenaltyConfigPage() {
 
   return (
     <div className="space-y-6">
-      <PenaltyComplianceBanner compliance={compliance} onChanged={reloadCompliance} />
+      {/* Perfil de cumplimiento oculto por ahora (no se usa). La lógica y el componente
+          quedan intactos — para reactivarlo, descomentar esta línea.
+          <PenaltyComplianceBanner compliance={compliance} onChanged={reloadCompliance} /> */}
 
       {/* Config activa */}
       <Card>
