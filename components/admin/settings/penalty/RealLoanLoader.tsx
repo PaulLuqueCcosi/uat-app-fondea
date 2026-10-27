@@ -110,6 +110,7 @@ export function RealLoanLoader({ onPick, selectedNo, includeIgv }: Props) {
                   Gastos S/ {money.format(base.GASTOS)} · Tarifa S/ {money.format(base.TARIFA)}
                   {includeIgv ? ' (con IGV)' : ''}
                 </span>
+                <span className="block font-mono font-semibold">Total de la cuota S/ {money.format(inst.total)}</span>
               </button>
               );
             })}

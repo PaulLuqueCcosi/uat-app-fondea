@@ -27,6 +27,8 @@ export interface RealInstallment {
   dueDate: string;
   /** Capital de la cuota: es el "capital vencido" si la cuota entra en mora. */
   principal: number;
+  /** Total que paga el cliente por la cuota: capital + comisiones + IGV (no depende de la base de la mora). */
+  total: number;
   /** Suma de las comisiones de cada categoría, sin IGV. */
   amounts: Record<MoraCategory, number>;
   /** IGV de las comisiones de cada categoría; la configuración de mora decide si entra en la base. */
@@ -55,6 +57,7 @@ export function mapCalculatorSimulation(raw: unknown, input: RealLoanInput): Rea
       installmentNo?: number;
       dueDate?: string;
       principalAmount?: number;
+      amount?: number;
       feeLines?: Array<{ feeCode?: string; category?: string; amount?: number; igvAmount?: number }>;
     };
     const lines: RealFeeLine[] = (s.feeLines ?? []).map((l) => ({
@@ -70,6 +73,7 @@ export function mapCalculatorSimulation(raw: unknown, input: RealLoanInput): Rea
       no: s.installmentNo ?? index + 1,
       dueDate: s.dueDate ?? '',
       principal: round2(Number(s.principalAmount ?? 0)),
+      total: round2(Number(s.amount ?? 0)),
       amounts: { INTERES_COMPENSATORIO: sum('INTERES_COMPENSATORIO'), GASTOS: sum('GASTOS'), TARIFA: sum('TARIFA') },
       igv: { INTERES_COMPENSATORIO: sumIgv('INTERES_COMPENSATORIO'), GASTOS: sumIgv('GASTOS'), TARIFA: sumIgv('TARIFA') },
       periodDays,
@@ -89,5 +93,5 @@ export function moraBaseAmounts(installment: RealInstallment, includeIgv: boolea
 /** Texto corto que explica de dónde salen los montos (va en la exportación). */
 export function describeRealInstallment(loan: RealLoan, installment: RealInstallment, includeIgv = false): string {
   const { amount, termDays, installmentCount, creditScore } = loan.input;
-  return `préstamo calculado hoy con las tarifas vigentes: S/ ${amount} a ${termDays} días en ${installmentCount} cuotas, puntaje ${creditScore}, cuota ${installment.no} de ${installmentCount}, montos ${includeIgv ? 'con' : 'sin'} IGV`;
+  return `préstamo calculado hoy con las tarifas vigentes: S/ ${amount} a ${termDays} días en ${installmentCount} cuotas, puntaje ${creditScore}, cuota ${installment.no} de ${installmentCount} (total de la cuota S/ ${installment.total.toFixed(2)}), montos ${includeIgv ? 'con' : 'sin'} IGV`;
 }
