@@ -10,6 +10,7 @@ import { getAdminInstallmentDetail, getAdminCreditSummary } from '@/modules/admi
 import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
 import { InstallmentTransactionsCard } from '@/components/admin/credits/detail/InstallmentTransactionsCard';
 import { PenaltyBreakdownTable } from '@/components/admin/credits/detail/PenaltyBreakdownTable';
+import { RegisterPaymentDialog } from '@/components/admin/credits/detail/RegisterPaymentDialog';
 import { KpiCard } from '@/components/admin/shared';
 import { DataRow } from '@/components/ui/data-row';
 import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
@@ -37,6 +38,7 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
   const isOverdue = data.status === 'OVERDUE';
   const isNegotiated = data.status === 'NEGOTIATED';
   const canNegotiate = isOverdue && data.daysOverdue >= 5;
+  const canRegisterPayment = data.status !== 'PAID' && !isNegotiated;
 
   // Calculate payment progress
   const totalOwed = data.amountDue + data.penaltyAccrued;
@@ -70,6 +72,7 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
         backHref={`/admin/credits/${id}`}
         backLabel="Crédito"
       >
+        {canRegisterPayment && <RegisterPaymentDialog creditId={id} installmentNo={no} />}
         {canNegotiate && (
           <Link href={`/admin/credits/${id}/installments/${no}/negotiate`}>
             <Button size="sm" className="gap-1.5">
