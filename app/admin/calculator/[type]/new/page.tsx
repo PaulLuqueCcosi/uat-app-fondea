@@ -15,11 +15,20 @@ import { FeeGroupsEditor, validateFeeGroups } from '@/components/admin/calculato
 import { PricingRulesEditor, validatePricingRules } from '@/components/admin/calculator/editors/PricingRulesEditor';
 import { validateAvailabilityGroups } from '@/components/admin/calculator/editors/AmountsTermsEditor';
 import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
+import { TYPE_EXPLANATION } from '@/components/admin/calculator/calculator-field-info';
+import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
 
 const TYPE_LABELS: Record<string, string> = {
-  availability: 'Disponibilidad',
-  fee_groups: 'Tarifas',
-  pricing_rules: 'Reglas de Pricing',
+  availability: 'Oferta',
+  fee_groups: 'Composición de cargos',
+  pricing_rules: 'Precios',
+};
+
+/** Placeholder de ejemplo para el nombre, según el tipo — coherente con lo que se configura. */
+const NAME_PLACEHOLDER: Record<string, string> = {
+  availability: 'Ej: Nuevos montos de octubre',
+  fee_groups: 'Ej: Ajuste de cargos de octubre',
+  pricing_rules: 'Ej: Nuevos precios de octubre',
 };
 
 const PRODUCT_ID = '550e8400-e29b-41d4-a716-446655440000';
@@ -60,6 +69,10 @@ export default function CalculatorNewVersionPage() {
   const [loading, setLoading] = useState(!!fromId);
   const [showConfirmCreate, setShowConfirmCreate] = useState(false);
   const [errors, setErrors] = useState<{ name?: boolean; description?: boolean }>({});
+
+  // El breadcrumb mostraría "new" crudo en el último segmento; lo reemplazamos por
+  // un label legible ("Nueva versión").
+  useBreadcrumbLabel('new', 'Nueva versión');
 
   // Si viene ?from={id}, precargar los datos de esa versión
   useEffect(() => {
@@ -162,6 +175,13 @@ export default function CalculatorNewVersionPage() {
         </Button>
       </div>
 
+      {/* Banner: qué configura este tipo — orienta antes de empezar a llenar campos */}
+      {TYPE_EXPLANATION[type] && (
+        <p className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+          {TYPE_EXPLANATION[type]}
+        </p>
+      )}
+
       {/* Metadata */}
       <Card>
         <CardContent className="pt-4">
@@ -171,7 +191,7 @@ export default function CalculatorNewVersionPage() {
               <Input
                 value={name}
                 onChange={(e) => { setName(e.target.value); setErrors((prev) => ({ ...prev, name: false })); }}
-                placeholder="Ej: Ajuste tarifas Agosto"
+                placeholder={NAME_PLACEHOLDER[type] ?? 'Ej: Ajuste de octubre'}
                 className={errors.name ? 'border-destructive' : ''}
               />
               {errors.name && <p className="text-xs text-destructive">El nombre es requerido</p>}

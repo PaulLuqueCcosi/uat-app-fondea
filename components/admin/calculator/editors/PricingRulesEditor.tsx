@@ -61,9 +61,9 @@ export function validatePricingRules(rules: PricingRule[]): string[] {
   // Must have exactly one default rule
   const defaultRules = rules.filter((r) => r.isDefault);
   if (defaultRules.length === 0) {
-    errors.push('Debe existir una regla marcada como DEFAULT');
+    errors.push('Debe existir una regla marcada como "Por defecto"');
   } else if (defaultRules.length > 1) {
-    errors.push('Solo puede haber una regla DEFAULT');
+    errors.push('Solo puede haber una regla "Por defecto"');
   }
 
   // Conditions coverage: must cover both isFirstLoan true and false
@@ -88,7 +88,7 @@ export function validatePricingRules(rules: PricingRule[]): string[] {
     ids.add(rule.ruleId);
     if (!rule.name?.trim()) errors.push(`Regla "${label}": debe tener un nombre`);
     if (rule.package.feeGroups.length === 0) {
-      errors.push(`Regla "${label}": debe tener al menos un grupo de tarifas`);
+      errors.push(`Regla "${label}": debe tener al menos un grupo de cargos`);
     }
     for (const fg of rule.package.feeGroups) {
       if (!fg.groupCode) errors.push(`Regla "${label}": grupo sin código`);
@@ -121,7 +121,9 @@ function ChipSelector({ label, options, selected, onChange, readonly }: {
 
   return (
     <div className="space-y-1">
-      <p className="text-[10px] text-muted-foreground">{label} {selected.length === 0 && '(todos — wildcard)'}</p>
+      <p className="text-[10px] text-muted-foreground">
+        {label} {selected.length === 0 && <span className="italic">· vacío = aplica a todos</span>}
+      </p>
       <div className="flex flex-wrap gap-1">
         {options.map((opt) => {
           const isSelected = selected.includes(opt.value);
@@ -378,7 +380,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
     <div className="space-y-4">
       {/* Título + ayuda — visible en modo edición y en detalle de versión */}
       <div className="flex items-center gap-1.5">
-        <p className="text-sm font-semibold">Reglas de Pricing</p>
+        <p className="text-sm font-semibold">Precios</p>
         <InfoPopover {...PRICING_RULES_INTRO_INFO} />
       </div>
 
@@ -387,7 +389,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
           <Info className="h-4 w-4 text-amber-600 shrink-0" />
           <p className="text-xs text-amber-700">
-            Cargando opciones de disponibilidad. Si no hay una versión activa de Disponibilidad, los selectores no mostrarán opciones.
+            Cargando opciones de la Oferta. Si no hay una versión activa de Oferta, los selectores no mostrarán opciones.
           </p>
         </div>
       )}
@@ -396,7 +398,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
       {!readonly && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Las reglas se evalúan por prioridad (mayor primero). La primera que matchee se aplica. La regla DEFAULT atrapa todo lo no cubierto.
+            Las reglas se evalúan por prioridad (mayor primero). La primera que coincide se aplica. La regla por defecto atrapa todo lo no cubierto.
           </p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={addRule}>
@@ -426,9 +428,21 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                   {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
                   <span className="text-sm font-medium">{ruleLabel}</span>
                   {rule.isDefault && (
-                    <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[9px]">DEFAULT</Badge>
+                    <Badge
+                      className="bg-amber-50 text-amber-700 border-amber-200 text-[9px]"
+                      title="Regla por defecto: atrapa todo lo que ninguna otra regla cubre."
+                    >
+                      POR DEFECTO
+                    </Badge>
                   )}
-                  {!rule.isDefault && <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[9px] font-mono">P{rule.priority}</Badge>}
+                  {!rule.isDefault && (
+                    <Badge
+                      className="bg-blue-50 text-blue-700 border-blue-200 text-[9px] font-mono"
+                      title={`Prioridad ${rule.priority}: se evalúa antes que las reglas con número menor.`}
+                    >
+                      Prioridad {rule.priority}
+                    </Badge>
+                  )}
                   {!isOpen && rule.package.feeGroups.length > 0 && (
                     <span className="text-[10px] text-muted-foreground">
                       {rule.package.feeGroups
@@ -450,7 +464,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                       }`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${rule.isDefault ? 'bg-amber-500' : 'bg-muted-foreground/40'}`} />
-                      Default
+                      Por defecto
                     </button>
                   )}
                   {!readonly && (
@@ -464,6 +478,10 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
               {/* Rule content */}
               {isOpen && (
                 <CardContent className="space-y-4 border-t pt-4">
+                  {/* Paso 1: datos básicos de la regla */}
+                  {!readonly && (
+                    <p className="text-xs font-semibold text-neutral-700">1. Datos de la regla</p>
+                  )}
                   {/* Metadata: nombre + priority */}
                   {!readonly && (
                     <div className="grid grid-cols-3 gap-3">
@@ -510,13 +528,18 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
 
                   {/* Selectors */}
                   <div className={`rounded-lg border border-l-4 border-l-slate-300 p-3 space-y-2 ${rule.isDefault ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <p className="text-xs font-medium">
-                      Selectores {rule.isDefault && <span className="text-muted-foreground italic">(no aplica — el default atrapa todo)</span>}
+                    <p className="text-xs font-semibold text-neutral-700">
+                      2. ¿A quién aplica esta regla? {rule.isDefault && <span className="font-normal text-muted-foreground italic">(no aplica — la regla por defecto atrapa todo)</span>}
                     </p>
+                    {!rule.isDefault && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Elige para qué combinaciones corre. Si dejas un campo vacío, aplica a todos sus valores.
+                      </p>
+                    )}
                     {availCtx ? (
                       <div className="grid grid-cols-2 gap-3">
                         <ChipSelector
-                          label="Score Ranges"
+                          label="Rango de score"
                           options={availCtx.scoreRanges.map((r) => ({ value: r.code, label: r.label, color: r.color }))}
                           selected={rule.selectors.scoreRanges}
                           onChange={(v) => updateSelector(actualIdx, 'scoreRanges', v)}
@@ -553,7 +576,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                   <div className="rounded-lg border border-l-4 border-l-blue-300 p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-xs font-medium">Grupos de tarifas</p>
+                        <p className="text-xs font-semibold text-neutral-700">3. Grupos de cargos</p>
                         <InfoPopover {...PRICING_RULE_FEE_GROUPS_INFO} />
                       </div>
                       {!readonly && (
@@ -631,7 +654,7 @@ export function PricingRulesEditor({ data, onChange, readonly }: Props) {
                   <div className="rounded-lg border border-l-4 border-l-green-300 p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-xs font-medium">Descuentos</p>
+                        <p className="text-xs font-semibold text-neutral-700">4. Descuentos</p>
                         <InfoPopover {...PRICING_RULE_DISCOUNTS_INFO} />
                       </div>
                       {!readonly && (

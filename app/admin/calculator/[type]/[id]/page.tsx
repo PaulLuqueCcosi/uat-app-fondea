@@ -13,19 +13,13 @@ import { AvailabilityEditor } from '@/components/admin/calculator/editors/Availa
 import { FeeGroupsEditor } from '@/components/admin/calculator/editors/FeeGroupsEditor';
 import { PricingRulesEditor } from '@/components/admin/calculator/editors/PricingRulesEditor';
 import { ConfirmAction } from '@/components/admin/shared/ConfirmAction';
+import { TYPE_EXPLANATION } from '@/components/admin/calculator/calculator-field-info';
+import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
 
 const TYPE_LABELS: Record<string, string> = {
-  availability: 'Disponibilidad',
-  fee_groups: 'Tarifas',
-  pricing_rules: 'Reglas de Pricing',
-};
-
-/** Explicación en lenguaje natural de qué configura esta versión — visible sin clics,
- * a diferencia de los popovers ⓘ de cada sección (que dan el detalle campo por campo). */
-const TYPE_EXPLANATION: Record<string, string> = {
-  availability: 'Esta versión define qué existe para el cliente: los Score Ranges (Bajo/Medio/Alto) y qué montos, plazos y cuotas se pueden ofrecer.',
-  fee_groups: 'Esta versión define grupos de tarifas: cómo se reparte, entre distintos cargos (comisión, seguro, gestión...), el total que decida cobrar una Regla de Pricing.',
-  pricing_rules: 'Esta versión define qué grupo de tarifas y qué descuentos aplican según el monto, plazo, score y si es primer préstamo o no.',
+  availability: 'Oferta',
+  fee_groups: 'Composición de cargos',
+  pricing_rules: 'Precios',
 };
 
 export default function CalculatorVersionDetailPage() {
@@ -38,6 +32,10 @@ export default function CalculatorVersionDetailPage() {
   const [version, setVersion] = useState<ConfigVersion | null>(null);
   const [loading, setLoading] = useState(true);
   const [showActivateModal, setShowActivateModal] = useState(false);
+
+  // El breadcrumb muestra el UUID crudo del segmento :id por defecto. Registramos
+  // "vN" como su label legible una vez cargada la versión.
+  useBreadcrumbLabel(versionId, version ? `v${version.version}` : null);
 
   useEffect(() => {
     async function load() {
@@ -110,6 +108,15 @@ export default function CalculatorVersionDetailPage() {
           {TYPE_EXPLANATION[type]}
         </p>
       )}
+
+      {/* Qué implica cambiar esto — visible sin clics, para que el admin sepa el alcance
+          real de activar una versión antes de hacerlo. */}
+      <p className="text-[11px] text-muted-foreground border border-dashed border-neutral-300 rounded-md px-3 py-2 leading-relaxed">
+        <span className="font-semibold text-neutral-700">Qué implica cambiar esto:</span> crear una versión
+        no afecta nada hasta activarla, y los créditos ya desembolsados nunca cambian — cada uno conserva la
+        configuración con la que nació. Activar una versión solo cambia las simulaciones y los créditos nuevos
+        desde ese momento.
+      </p>
 
       {/* Visual Editor — READONLY */}
       {version.data && configType === 'AVAILABILITY' && (

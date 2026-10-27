@@ -312,7 +312,7 @@ export function SimulatorTab() {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                <Label className="text-xs font-medium">Disponibilidad</Label>
+                <Label className="text-xs font-medium">Oferta</Label>
                 {getStatusBadge(availabilityVersions, selectedAvailability)}
               </div>
               <select value={selectedAvailability} onChange={(e) => setSelectedAvailability(e.target.value)} className="w-full h-8 text-xs rounded border border-input bg-background px-2">
@@ -325,7 +325,7 @@ export function SimulatorTab() {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
-                <Label className="text-xs font-medium">Tarifas</Label>
+                <Label className="text-xs font-medium">Composición de cargos</Label>
                 {getStatusBadge(feeGroupsVersions, selectedFeeGroups)}
               </div>
               <select value={selectedFeeGroups} onChange={(e) => setSelectedFeeGroups(e.target.value)} className="w-full h-8 text-xs rounded border border-input bg-background px-2">
@@ -338,7 +338,7 @@ export function SimulatorTab() {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                <Label className="text-xs font-medium">Reglas de Pricing</Label>
+                <Label className="text-xs font-medium">Precios</Label>
                 {getStatusBadge(pricingRulesVersions, selectedPricingRules)}
               </div>
               <select value={selectedPricingRules} onChange={(e) => setSelectedPricingRules(e.target.value)} className="w-full h-8 text-xs rounded border border-input bg-background px-2">

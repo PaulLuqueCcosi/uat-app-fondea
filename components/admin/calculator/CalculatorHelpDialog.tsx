@@ -57,15 +57,15 @@ export function CalculatorHelpDialog() {
             </TabsTrigger>
             <TabsTrigger value="disponibilidad" className="gap-1.5">
               <Layers className="h-3.5 w-3.5" />
-              Disponib.
+              Oferta
             </TabsTrigger>
             <TabsTrigger value="tarifas" className="gap-1.5">
               <Receipt className="h-3.5 w-3.5" />
-              Tarifas
+              Cargos
             </TabsTrigger>
             <TabsTrigger value="reglas" className="gap-1.5">
               <Tag className="h-3.5 w-3.5" />
-              Reglas
+              Precios
             </TabsTrigger>
           </TabsList>
 

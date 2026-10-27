@@ -141,7 +141,7 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="text-sm">Grupos de Tarifas</CardTitle>
+            <CardTitle className="text-sm">Grupos de cargos</CardTitle>
             <InfoPopover {...FEE_GROUPS_INFO} />
           </div>
           {!readonly && (
@@ -152,7 +152,7 @@ export function FeeGroupsEditor({ data, onChange, readonly }: Props) {
         </div>
         {!readonly && (
           <p className="text-xs text-muted-foreground">
-            Cada grupo define cómo se distribuye una tasa entre cargos individuales. Los porcentajes deben sumar 100%.
+            Cada grupo define cómo se reparte un total entre cargos individuales. Los porcentajes deben sumar 100%.
           </p>
         )}
       </CardHeader>

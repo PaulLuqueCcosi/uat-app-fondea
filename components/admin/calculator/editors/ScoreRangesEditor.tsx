@@ -104,6 +104,7 @@ export function ScoreRangesEditor({ scoreRanges, onChange, readonly }: Props) {
               <div className="flex items-center gap-4">
                 {/* Color picker */}
                 <div className="flex flex-col items-center gap-1.5">
+                  <Label className="text-[11px] text-muted-foreground">Color</Label>
                   <div className="flex items-center gap-1">
                     {COLOR_PRESETS.map((opt) => (
                       <button

@@ -47,10 +47,10 @@ export function validateAvailabilityGroups(groups: AvailabilityGroup[]): Validat
       if (a <= 0) errors.push({ groupIdx: gi, message: `Monto ${a} debe ser mayor a 0` });
     }
 
-    // 3. Montos no duplicados entre grupos
+    // 3. Montos no duplicados entre tramos
     for (const a of group.amounts) {
       if (allAmounts.has(a)) {
-        errors.push({ groupIdx: gi, message: `El monto S/ ${a} ya existe en otro grupo` });
+        errors.push({ groupIdx: gi, message: `El monto S/ ${a} ya existe en otro tramo` });
       }
       allAmounts.add(a);
     }
@@ -108,7 +108,7 @@ export function validateAvailabilityGroups(groups: AvailabilityGroup[]): Validat
       // 9. Plazos no repetidos entre combinaciones del mismo grupo
       for (const t of combo.terms) {
         if (allTermsInGroup.has(t)) {
-          errors.push({ groupIdx: gi, combIdx: ci, message: `El plazo ${t}d ya existe en otra combinación de este grupo` });
+          errors.push({ groupIdx: gi, combIdx: ci, message: `El plazo ${t}d ya existe en otra combinación de este tramo` });
         }
         allTermsInGroup.add(t);
       }
@@ -195,13 +195,13 @@ export function AmountsTermsEditor({ availability, onChange, readonly }: Props) 
           </div>
           {!readonly && (
             <Button variant="outline" size="sm" onClick={addGroup}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Grupo
+              <Plus className="h-3.5 w-3.5 mr-1" /> Tramo
             </Button>
           )}
         </div>
         {!readonly && (
           <p className="text-xs text-muted-foreground">
-            Cada grupo asocia montos con sus plazos/cuotas. Un monto solo puede pertenecer a un grupo.
+            Cada tramo asocia montos con sus plazos/cuotas. Un monto solo puede pertenecer a un tramo.
           </p>
         )}
       </CardHeader>
@@ -223,7 +223,7 @@ export function AmountsTermsEditor({ availability, onChange, readonly }: Props) 
               >
                 <div className="flex items-center gap-2">
                   {isGroupOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
-                  <span className="text-sm font-medium">Grupo {gi + 1}</span>
+                  <span className="text-sm font-medium">Tramo {gi + 1}</span>
                   {!isGroupOpen && (
                     <span className="text-xs text-muted-foreground">{groupSummary(group)}</span>
                   )}

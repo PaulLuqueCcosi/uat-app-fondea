@@ -14,15 +14,18 @@ import type { ConfigType, ConfigVersion } from '@/modules/admin/calculator-admin
 interface VersionsTabProps {
   configType: ConfigType;
   activeVersion: ConfigVersion | null;
+  /** Se llama tras activar una versión, para que el padre refresque el resumen de
+   * versiones activas (el flujo de 3 pasos de arriba). Opcional. */
+  onActivated?: () => void;
 }
 
 const TYPE_LABELS: Record<ConfigType, string> = {
-  AVAILABILITY: 'Disponibilidad',
-  FEE_GROUPS: 'Tarifas',
-  PRICING_RULES: 'Reglas de Pricing',
+  AVAILABILITY: 'Oferta',
+  FEE_GROUPS: 'Composición de cargos',
+  PRICING_RULES: 'Precios',
 };
 
-export function VersionsTab({ configType, activeVersion }: VersionsTabProps) {
+export function VersionsTab({ configType, activeVersion, onActivated }: VersionsTabProps) {
   const router = useRouter();
   const [versions, setVersions] = useState<ConfigVersion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +54,7 @@ export function VersionsTab({ configType, activeVersion }: VersionsTabProps) {
         toast.success('Versión activada');
       }
       fetchVersions();
+      onActivated?.();
     } else {
       toast.error(result.error ?? 'Error al activar');
     }
@@ -69,7 +73,7 @@ export function VersionsTab({ configType, activeVersion }: VersionsTabProps) {
     if (result.impact === 'SELF') {
       return {
         impact: 'SELF',
-        message: 'Esta versión no es compatible con la Disponibilidad/Tarifas activas y no podrá activarse.',
+        message: 'Esta versión no es compatible con la Oferta o la Composición de cargos activas y no podrá activarse.',
         errors: result.errors ?? [],
       };
     }
@@ -77,7 +81,7 @@ export function VersionsTab({ configType, activeVersion }: VersionsTabProps) {
     // impact === 'PRICING_RULES'
     return {
       impact: 'OTHER',
-      message: 'Esto desactivará la versión activa de Reglas de Pricing porque dejaría de ser compatible.',
+      message: 'Esto desactivará la versión activa de Precios porque dejaría de ser compatible.',
       errors: result.errors ?? [],
     };
   };

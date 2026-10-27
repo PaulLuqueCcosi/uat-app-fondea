@@ -11,9 +11,9 @@ export default function AdminCalculatorPage() {
             <Calculator className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">Motor de Pricing</h1>
+            <h1 className="text-xl font-bold text-foreground">Calculadora</h1>
             <p className="text-sm text-muted-foreground">
-              Configura montos, plazos, tarifas y descuentos del producto
+              Configura qué se ofrece, cómo se cobra y a qué precio según el perfil del cliente
             </p>
           </div>
         </div>

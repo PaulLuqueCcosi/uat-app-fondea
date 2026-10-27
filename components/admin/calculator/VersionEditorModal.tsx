@@ -22,9 +22,9 @@ interface VersionEditorModalProps {
 }
 
 const TYPE_LABELS: Record<ConfigType, string> = {
-  AVAILABILITY: 'Disponibilidad',
-  FEE_GROUPS: 'Tarifas',
-  PRICING_RULES: 'Reglas de Pricing',
+  AVAILABILITY: 'Oferta',
+  FEE_GROUPS: 'Composición de cargos',
+  PRICING_RULES: 'Precios',
 };
 
 export function VersionEditorModal({ configType, version, mode, onClose, onSaved }: VersionEditorModalProps) {
