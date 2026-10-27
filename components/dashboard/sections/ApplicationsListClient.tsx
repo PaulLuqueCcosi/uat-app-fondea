@@ -17,7 +17,6 @@ function getStatusVariant(status: string): 'completed' | 'pending' | 'error' | '
   const s = status.toUpperCase();
   if (s === 'APPROVED') return 'completed';
   if (s === 'REJECTED' || s === 'REJECTED_BY_USER' || s === 'FAILED' || s === 'BLOCKED') return 'error';
-  if (s === 'MORE_INFO') return 'warning';
   return 'pending';
 }
 

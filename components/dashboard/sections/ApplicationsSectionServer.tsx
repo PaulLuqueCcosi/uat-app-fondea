@@ -21,7 +21,6 @@ function getStatusLabel(status: string): string {
     SUBMITTED: 'Enviada',
     EVALUATING: 'En evaluación',
     APPROVED: 'Aprobada',
-    MORE_INFO: 'Requiere información',
     REJECTED: 'Rechazada',
     COMPLETED: 'Completada',
   };
@@ -33,7 +32,6 @@ function getStatusVariant(status: string): 'completed' | 'pending' | 'error' | '
   const statusUpper = status.toUpperCase();
   if (statusUpper === 'APPROVED' || statusUpper === 'COMPLETED') return 'completed';
   if (statusUpper === 'REJECTED') return 'error';
-  if (statusUpper === 'MORE_INFO') return 'warning';
   return 'pending';
 }
 
