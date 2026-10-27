@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { loadRealLoanAction } from '@/app/actions/admin-penalty.actions';
-import type { RealInstallment, RealLoan } from '@/modules/admin/mora-real-loan';
+import { moraBaseAmounts, type RealInstallment, type RealLoan } from '@/modules/admin/mora-real-loan';
 import { conceptLabel } from '@/modules/shared/charge-concepts';
 
 interface Props {
@@ -14,6 +14,8 @@ interface Props {
   onPick: (installment: RealInstallment, loan: RealLoan) => void;
   /** Cuota elegida en este momento, para marcarla. */
   selectedNo: number | null;
+  /** La configuración simulada calcula la mora sobre montos con IGV: las tarjetas muestran esa misma base. */
+  includeIgv: boolean;
 }
 
 const money = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -22,7 +24,7 @@ const money = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximum
  * Arma un préstamo con la calculadora y sus tarifas vigentes y deja elegir una de sus cuotas como base de la
  * simulación. Así la mora se prueba con montos reales (interés, gastos y tarifa por cuota) y no con números inventados.
  */
-export function RealLoanLoader({ onPick, selectedNo }: Props) {
+export function RealLoanLoader({ onPick, selectedNo, includeIgv }: Props) {
   const [amount, setAmount] = useState('500');
   const [termDays, setTermDays] = useState('30');
   const [count, setCount] = useState('3');
@@ -58,7 +60,8 @@ export function RealLoanLoader({ onPick, selectedNo }: Props) {
       </summary>
       <p className="mt-2 text-xs text-muted-foreground">
         Calcula un préstamo con las tarifas que están activas hoy y elige una cuota: sus montos por categoría, su período y su
-        capital llenan el simulador.
+        capital llenan el simulador. Los montos van {includeIgv ? 'con' : 'sin'} IGV, igual que la base de mora de esta
+        configuración.
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -88,7 +91,9 @@ export function RealLoanLoader({ onPick, selectedNo }: Props) {
         <div className="mt-3 space-y-2">
           <p className="text-xs text-muted-foreground">Elige la cuota que entra en mora:</p>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Cuotas del préstamo calculado">
-            {loan.installments.map((inst) => (
+            {loan.installments.map((inst) => {
+              const base = moraBaseAmounts(inst, includeIgv);
+              return (
               <button
                 key={inst.no}
                 type="button"
@@ -101,11 +106,13 @@ export function RealLoanLoader({ onPick, selectedNo }: Props) {
               >
                 <span className="block font-semibold">Cuota {inst.no} · {inst.dueDate}</span>
                 <span className="block font-mono text-muted-foreground">
-                  Capital S/ {money.format(inst.principal)} · {conceptLabel('INTERES_COMPENSATORIO')} S/ {money.format(inst.amounts.INTERES_COMPENSATORIO)} ·
-                  Gastos S/ {money.format(inst.amounts.GASTOS)} · Tarifa S/ {money.format(inst.amounts.TARIFA)}
+                  Capital S/ {money.format(inst.principal)} · {conceptLabel('INTERES_COMPENSATORIO')} S/ {money.format(base.INTERES_COMPENSATORIO)} ·
+                  Gastos S/ {money.format(base.GASTOS)} · Tarifa S/ {money.format(base.TARIFA)}
+                  {includeIgv ? ' (con IGV)' : ''}
                 </span>
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

@@ -198,7 +198,11 @@ export function PenaltySimulatorPanel({ source, configName, includeIgv = false }
           <p className="text-sm text-muted-foreground">{source.reason}</p>
         )}
 
-        <RealLoanLoader onPick={pickRealInstallment} selectedNo={realPick?.installment.no ?? null} />
+        <RealLoanLoader
+          onPick={pickRealInstallment}
+          selectedNo={realPick?.installment.no ?? null}
+          includeIgv={includeIgv}
+        />
 
         {realOrigin && (
           <p className="text-xs text-muted-foreground" data-testid="sim-origin">
