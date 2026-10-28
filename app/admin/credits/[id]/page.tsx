@@ -47,10 +47,24 @@ export default async function AdminCreditDetailPage({ params }: Props) {
   // lógica y podía volver a desincronizarse si el backend la ajusta de nuevo.
   const totalOutstanding = detail ? detail.totalOutstanding : summary.totalDue;
 
+  // Paid part of the contractual amount (mora excluded) and the credit's worst delay, for the header and the stage view.
+  const installmentList = installments?.installments ?? [];
+  const paidContractual = installmentList.reduce((sum, i) => sum + Math.min(i.amount_paid, i.amount_due), 0);
+  const penaltyOutstanding = (detail?.penaltyBreakdown ?? []).reduce((sum, p) => sum + p.outstanding, 0);
+  const maxDaysOverdue = installmentList.reduce(
+    (max, i) => (i.status === 'OVERDUE' ? Math.max(max, i.days_overdue) : max),
+    0,
+  );
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <BreadcrumbLabel id={id} label={summary.creditCode} />
-      <CreditDetailHeader data={summary} outstanding={totalOutstanding} />
+      <CreditDetailHeader
+        data={summary}
+        outstanding={totalOutstanding}
+        paidContractual={paidContractual}
+        penaltyOutstanding={penaltyOutstanding}
+      />
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList variant="line" className="w-full">
@@ -73,12 +87,12 @@ export default async function AdminCreditDetailPage({ params }: Props) {
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <CreditOverviewTab data={summary} certificate={certificate} penaltyBreakdown={detail?.penaltyBreakdown ?? []} />
+          <CreditOverviewTab data={summary} certificate={certificate} penaltyBreakdown={detail?.penaltyBreakdown ?? []} maxDaysOverdue={maxDaysOverdue} />
         </TabsContent>
 
         <TabsContent value="installments" className="mt-6">
           {installments ? (
-            <CreditInstallmentsSection data={installments} totalOutstanding={totalOutstanding} />
+            <CreditInstallmentsSection data={installments} totalOutstanding={totalOutstanding} stages={summary.penaltyConfig?.stages ?? []} />
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">No se pudieron cargar las cuotas</p>
           )}

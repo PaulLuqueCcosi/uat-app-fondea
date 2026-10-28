@@ -15,6 +15,10 @@ interface Props {
   data: AdminCreditSummary;
   /** Saldo pendiente real — suma del `outstanding` por cuota (ver page.tsx). */
   outstanding: number;
+  /** Contractual amount already paid (installment amounts only, mora excluded). */
+  paidContractual: number;
+  /** Mora still owed; part of `outstanding`. */
+  penaltyOutstanding: number;
 }
 
 // Labels y color del indicador centralizados en `modules/admin/credit-status-labels`.
@@ -26,12 +30,14 @@ function buildFullName(client: AdminCreditSummary['client']) {
     .join(' ');
 }
 
-export function CreditDetailHeader({ data, outstanding }: Props) {
+export function CreditDetailHeader({ data, outstanding, paidContractual, penaltyOutstanding }: Props) {
   const statusConfig = creditStatusInfo(data.status);
   const interestEarned = data.totalDue - data.principal;
+  // `outstanding` includes mora, so progress is computed from what was paid of the contractual amount.
   const progressPercent = data.totalDue > 0
-    ? Math.min(100, Math.round(((data.totalDue - outstanding) / data.totalDue) * 100))
+    ? Math.max(0, Math.min(100, Math.round((paidContractual / data.totalDue) * 100)))
     : 0;
+  const installmentsOutstanding = Math.max(0, outstanding - penaltyOutstanding);
   const clientName = buildFullName(data.client);
 
   return (
@@ -140,6 +146,11 @@ export function CreditDetailHeader({ data, outstanding }: Props) {
           label={data.status === 'PAID_OFF' ? 'Cerrado' : 'Pendiente'}
           value={data.status === 'PAID_OFF' ? '✓ Liquidado' : formatCurrency(outstanding)}
           highlight={data.status !== 'PAID_OFF'}
+          sub={
+            data.status !== 'PAID_OFF' && penaltyOutstanding > 0
+              ? `Cuotas ${formatCurrency(installmentsOutstanding)} · Mora ${formatCurrency(penaltyOutstanding)}`
+              : undefined
+          }
         />
       </div>
     </div>

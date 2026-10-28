@@ -16,6 +16,14 @@ import { KpiCard } from '@/components/admin/shared';
 import { DataRow } from '@/components/ui/data-row';
 import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
+import {
+  daysText,
+  daysUntilNextStage,
+  stageDaysText,
+  stageForDay,
+  stageRuleLines,
+  stageShortLabel,
+} from '@/modules/shared/penalty-rule-text';
 
 interface Props {
   params: Promise<{ id: string; installmentNo: string }>;
@@ -40,6 +48,11 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
   const isNegotiated = data.status === 'NEGOTIATED';
   const canNegotiate = isOverdue && data.daysOverdue >= 5;
   const canRegisterPayment = data.status !== 'PAID' && !isNegotiated;
+
+  // Stage of the credit's frozen penalty config that today's delay falls in, and when it changes.
+  const stages = creditSummary?.penaltyConfig?.stages ?? [];
+  const currentStage = isOverdue ? stageForDay(stages, data.daysOverdue) : null;
+  const daysToNextStage = isOverdue ? daysUntilNextStage(stages, data.daysOverdue) : null;
 
   // Calculate payment progress
   const totalOwed = data.amountDue + data.penaltyAccrued;
@@ -84,21 +97,47 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
         )}
       </DetailPageHeader>
 
-      {/* Alert for overdue */}
-      {/* Alertas de estado: tarjeta blanca estándar, el color va solo en el círculo del ícono */}
+      {/* Mora por días: where the installment is today and what each day costs (only when overdue) */}
       {isOverdue && (
         <Card>
-          <CardContent className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error-100">
-              <AlertCircle className="h-5 w-5 text-error-700" />
+          <CardContent className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error-100">
+                <AlertCircle className="h-5 w-5 text-error-700" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Mora por días</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Cuota vencida con {daysText(data.daysOverdue)} de atraso.
+                  {canNegotiate && ' Esta cuota es elegible para negociación.'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Cuota vencida — {data.daysOverdue} días de atraso</p>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Mora acumulada: <span className="font-medium text-error-700">{formatCurrency(data.penaltyAccrued)}</span>.
-                {canNegotiate && ' Esta cuota es elegible para negociación.'}
-              </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 border-t pt-3">
+              <DataRow
+                label="Tramo actual"
+                value={
+                  currentStage
+                    ? `${stageShortLabel(currentStage)}${currentStage.label ? ` (${stageDaysText(currentStage.fromDay, currentStage.toDay)})` : ''}`
+                    : 'Sin tramo configurado'
+                }
+              />
+              <DataRow label="Mora acumulada" value={formatCurrency(data.penaltyAccrued)} valueClassName="text-error-700" />
+              <DataRow
+                label="Cambio de tramo"
+                value={daysToNextStage !== null ? `Cambia de tramo en ${daysText(daysToNextStage)}` : 'Es el último tramo'}
+              />
             </div>
+            {currentStage && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Qué se cobra en este tramo</p>
+                <ul className="space-y-0.5">
+                  {stageRuleLines(currentStage.rules).map((line) => (
+                    <li key={line} className="text-xs text-foreground">{line}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

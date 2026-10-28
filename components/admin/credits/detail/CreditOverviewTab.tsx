@@ -21,6 +21,8 @@ interface Props {
   certificate: PayoffCertificate | null;
   /** Mora del crédito por concepto (vista admin). */
   penaltyBreakdown?: PenaltyBreakdownItem[];
+  /** Days of delay of the credit's most overdue installment (0 when up to date). */
+  maxDaysOverdue?: number;
 }
 
 function buildFullName(client: AdminCreditSummary['client']) {
@@ -51,7 +53,7 @@ function resolveUbigeoNames(region: string | null, province: string | null, dist
   return { region, province, district };
 }
 
-export function CreditOverviewTab({ data, certificate, penaltyBreakdown = [] }: Props) {
+export function CreditOverviewTab({ data, certificate, penaltyBreakdown = [], maxDaysOverdue = 0 }: Props) {
   const ubigeoNames = resolveUbigeoNames(data.ubigeoRegion, data.ubigeoProvince, data.ubigeoDistrict);
   const currentUbigeoNames = resolveUbigeoNames(data.currentUbigeoRegion, data.currentUbigeoProvince, data.currentUbigeoDistrict);
 
@@ -225,7 +227,10 @@ export function CreditOverviewTab({ data, certificate, penaltyBreakdown = [] }: 
             </CardContent>
           </Card>
         )}
+      </div>
 
+      {/* Mora: full width so each concept / stage keeps one readable line */}
+      <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* Mora por concepto del crédito (admin) */}
         <Card>
           <CardHeader className="pb-3">
@@ -258,7 +263,7 @@ export function CreditOverviewTab({ data, certificate, penaltyBreakdown = [] }: 
                 </Badge>
               </div>
               {data.penaltyConfig.stages.length > 0 && (
-                <PenaltyStageMatrix stages={data.penaltyConfig.stages} />
+                <PenaltyStageMatrix stages={data.penaltyConfig.stages} currentDays={maxDaysOverdue} />
               )}
             </CardContent>
           </Card>

@@ -27,6 +27,12 @@ export interface AdminCreditRow {
   principal: number;
   totalDue: number;
   pendingBalance: number;
+  /** Installments currently overdue. */
+  overdueInstallments: number;
+  /** Days of delay of the most overdue installment (0 when up to date). */
+  maxDaysOverdue: number;
+  /** Penalty (mora) still owed over all installments; NOT included in `pendingBalance`. */
+  penaltyOutstanding: number;
   disbursedAt: string | null;
   /** Calendar days since disbursement (Peru date); null when not disbursed. */
   daysSinceDisbursement: number | null;
@@ -125,6 +131,9 @@ export async function getAdminCredits(
     principal: row.principal ?? 0,
     totalDue: row.total_due ?? 0,
     pendingBalance: row.pending_balance ?? 0,
+    overdueInstallments: row.overdue_installments ?? 0,
+    maxDaysOverdue: row.max_days_overdue ?? 0,
+    penaltyOutstanding: row.penalty_outstanding ?? 0,
     disbursedAt: row.disbursed_at,
     daysSinceDisbursement: row.days_since_disbursement ?? null,
     maturityDate: row.maturity_date,

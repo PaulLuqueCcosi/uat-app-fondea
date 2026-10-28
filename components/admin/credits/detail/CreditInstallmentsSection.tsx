@@ -7,15 +7,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumnDef } from '@/components/admin/DataTable';
 import { Handshake, ExternalLink } from 'lucide-react';
-import type { AdminCreditInstallments, InstallmentItem } from '@/modules/admin/admin-credit-detail.service';
+import type { AdminCreditInstallments, InstallmentItem, PenaltyStage } from '@/modules/admin/admin-credit-detail.service';
 import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
 import { formatCurrency, formatDate } from '@/lib/admin-formatters';
+import { stageDaysText, stageForDay, stageShortLabel } from '@/modules/shared/penalty-rule-text';
 
 interface Props {
   data: AdminCreditInstallments;
   /** total_outstanding de /detail (CreditQueryReader) — ver nota en page.tsx sobre por
    *  qué esto NO se recalcula sumando `outstanding` por cuota acá. */
   totalOutstanding: number;
+  /** Penalty stages of the credit's frozen config; used to name the stage of each overdue installment. */
+  stages?: PenaltyStage[];
 }
 
 // Labels centralizados en `modules/admin/credit-status-labels` — antes este Record estaba
@@ -23,7 +26,7 @@ interface Props {
 
 const MIN_DAYS_OVERDUE_FOR_NEGOTIATION = 5;
 
-export function CreditInstallmentsSection({ data, totalOutstanding }: Props) {
+export function CreditInstallmentsSection({ data, totalOutstanding, stages = [] }: Props) {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -104,6 +107,19 @@ export function CreditInstallmentsSection({ data, totalOutstanding }: Props) {
           ? <span className="text-red-600 font-medium text-xs">{row.original.days_overdue}d</span>
           : <span className="text-xs text-muted-foreground">—</span>
       ),
+    },
+    {
+      id: 'penalty_stage',
+      header: 'Tramo de mora',
+      cell: ({ row }) => {
+        const stage = stageForDay(stages, row.original.days_overdue);
+        if (!stage) return <span className="text-xs text-muted-foreground">—</span>;
+        return (
+          <span className="text-xs whitespace-nowrap" title={stageDaysText(stage.fromDay, stage.toDay)}>
+            {stageShortLabel(stage)}
+          </span>
+        );
+      },
     },
     {
       id: 'actions',

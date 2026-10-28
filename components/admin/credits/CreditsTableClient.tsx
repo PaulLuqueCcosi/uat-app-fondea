@@ -111,7 +111,7 @@ const columns = [
   },
   {
     accessorKey: 'daysSinceDisbursement',
-    header: 'Días',
+    header: 'Antigüedad',
     cell: ({ row }: { row: { original: AdminCreditRow } }) => (
       <span className="text-[11px] text-muted-foreground" title="Días desde el desembolso">
         {row.original.daysSinceDisbursement != null ? row.original.daysSinceDisbursement : '—'}
@@ -158,10 +158,33 @@ const columns = [
     accessorKey: 'pendingBalance',
     header: 'Pendiente',
     cell: ({ row }: { row: { original: AdminCreditRow } }) => (
-      <span className="text-xs font-mono">
-        S/ {(row.original.pendingBalance ?? 0).toFixed(0)}
-      </span>
+      <div className="flex flex-col leading-tight">
+        <span className="text-xs font-mono">
+          S/ {(row.original.pendingBalance ?? 0).toFixed(0)}
+        </span>
+        {row.original.penaltyOutstanding > 0 && (
+          <span className="text-[10px] font-mono text-error-700" title="Mora pendiente, aparte del saldo de las cuotas">
+            + S/ {row.original.penaltyOutstanding.toFixed(0)} de mora
+          </span>
+        )}
+      </div>
     ),
+  },
+  {
+    accessorKey: 'maxDaysOverdue',
+    header: 'Atraso',
+    cell: ({ row }: { row: { original: AdminCreditRow } }) => {
+      const { maxDaysOverdue: days, overdueInstallments: count } = row.original;
+      if (!days || days <= 0) return <span className="text-xs text-muted-foreground">Al día</span>;
+      return (
+        <span
+          className="text-xs font-medium text-error-700 whitespace-nowrap"
+          title="Días de atraso de la cuota más vencida y cuántas cuotas están vencidas"
+        >
+          {days} {days === 1 ? 'día' : 'días'} · {count} {count === 1 ? 'cuota' : 'cuotas'}
+        </span>
+      );
+    },
   },
   {
     accessorKey: 'status',

@@ -13,7 +13,7 @@ export function PenaltyBreakdownTable({ items }: Props) {
   }
   return (
     <div className="rounded-md border overflow-hidden overflow-x-auto">
-      <table className="w-full text-xs">
+      <table className="w-full text-xs whitespace-nowrap">
         <thead className="bg-muted/50">
           <tr>
             <th className="text-left py-2 px-3 font-medium text-muted-foreground">Concepto</th>

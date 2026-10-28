@@ -1,59 +1,63 @@
-import {
-  MATRIX_CONCEPTS,
-  conceptLabel,
-  methodLabel,
-  ruleValueText,
-} from '@/modules/shared/charge-concepts';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import type { PenaltyStage } from '@/modules/admin/admin-credit-detail.service';
+import {
+  daysText,
+  daysUntilNextStage,
+  stageDaysText,
+  stageForDay,
+  stageRuleLines,
+} from '@/modules/shared/penalty-rule-text';
 
 interface Props {
   stages: PenaltyStage[];
+  /** Max days overdue of the credit; the stage that contains it is highlighted as the current one. */
+  currentDays?: number;
 }
 
-/** Matriz de la configuración de mora del crédito: un tramo por fila, un concepto por columna. */
-export function PenaltyStageMatrix({ stages }: Props) {
+/**
+ * Penalty config of the credit as a vertical list: one row per stage with its day range and its rules
+ * in plain language. Replaces the old stage x concept matrix, which got squeezed in the sidebar.
+ */
+export function PenaltyStageMatrix({ stages, currentDays = 0 }: Props) {
+  const current = stageForDay(stages, currentDays);
+  const untilNext = currentDays > 0 ? daysUntilNextStage(stages, currentDays) : null;
+
   return (
-    <div className="rounded-md border overflow-hidden overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead className="bg-muted/50">
-          <tr>
-            <th className="text-left py-2 px-3 font-medium text-muted-foreground">Tramo</th>
-            {MATRIX_CONCEPTS.map((concept) => (
-              <th key={concept} className="text-left py-2 px-3 font-medium text-muted-foreground">
-                {conceptLabel(concept)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {stages.map((stage, i) => (
-            <tr key={i} className="border-t align-top">
-              <td className="py-2 px-3 whitespace-nowrap">
-                <span className="inline-flex items-center gap-1.5">
-                  {stage.color && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />}
-                  Día {stage.fromDay}{stage.toDay ? `–${stage.toDay}` : '+'}
-                  {stage.label ? ` · ${stage.label}` : ''}
-                </span>
-              </td>
-              {MATRIX_CONCEPTS.map((concept) => {
-                const rule = stage.rules.find((r) => r.concept === concept);
-                return (
-                  <td key={concept} className="py-2 px-3">
-                    {rule ? (
-                      <>
-                        <div>{methodLabel(rule.method)}</div>
-                        <div className="font-mono">{ruleValueText(rule.method, rule.value)}</div>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-2">
+      {stages.map((stage, i) => {
+        const isCurrent = stage === current;
+        const lines = stageRuleLines(stage.rules);
+        return (
+          <div
+            key={i}
+            className={cn('rounded-md border p-3', isCurrent && 'border-error-300 bg-error-50/50')}
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              {stage.color && (
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+              )}
+              <span className="text-xs font-semibold">{stageDaysText(stage.fromDay, stage.toDay)}</span>
+              {stage.label && <span className="text-xs text-muted-foreground">· {stage.label}</span>}
+              {isCurrent && <Badge variant="destructive" className="text-[10px]">Tramo actual</Badge>}
+            </div>
+            {lines.length > 0 ? (
+              <ul className="mt-1.5 space-y-0.5">
+                {lines.map((line) => (
+                  <li key={line} className="text-xs text-muted-foreground">{line}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1.5 text-xs text-muted-foreground">No se cobra nada en este tramo</p>
+            )}
+            {isCurrent && untilNext !== null && (
+              <p className="mt-1.5 text-[11px] font-medium text-error-700">
+                El siguiente tramo empieza en {daysText(untilNext)}
+              </p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
