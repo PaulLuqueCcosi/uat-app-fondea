@@ -588,6 +588,17 @@ export interface AdminInstallmentDetail {
   charges: InstallmentChargeItem[];
   /** Pagos aplicados a la cuota, del más antiguo al más reciente, con el detalle por balde. */
   payments: PaymentTraceGroup[];
+  /** Mora día por día hasta el último día cobrado; vacío si todavía no se cobró nada. */
+  penaltyDays: PenaltyDay[];
+}
+
+/** Lo que cobró de mora un día de atraso: monto por concepto y total del día. */
+export interface PenaltyDay {
+  day: number;
+  date: string;
+  stageLabel: string | null;
+  charges: Partial<Record<ChargeConcept, number>>;
+  total: number;
 }
 
 export async function getAdminInstallmentDetail(
@@ -604,6 +615,19 @@ export async function getAdminInstallmentDetail(
   }
   const raw = await res.json();
   return mapAdminInstallmentDetailFromBackend(raw);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPenaltyDays(raw: any): PenaltyDay[] {
+  if (!Array.isArray(raw)) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return raw.map((d: any) => ({
+    day: d.day ?? 0,
+    date: d.date ?? '',
+    stageLabel: d.stage_label ?? d.stageLabel ?? null,
+    charges: d.charges ?? {},
+    total: d.total ?? 0,
+  }));
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -631,6 +655,7 @@ function mapAdminInstallmentDetailFromBackend(raw: any): AdminInstallmentDetail 
     penaltyBreakdown: mapPenaltyBreakdown(raw.penalty_breakdown),
     charges: mapInstallmentCharges(raw.charges),
     payments: mapPaymentTraces(raw.payments),
+    penaltyDays: mapPenaltyDays(raw.penalty_days ?? raw.penaltyDays),
     transactions: Array.isArray(raw.transactions)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ? raw.transactions.map((tx: any) => ({

@@ -10,6 +10,7 @@ import { getAdminInstallmentDetail, getAdminCreditSummary } from '@/modules/admi
 import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
 import { InstallmentTransactionsCard } from '@/components/admin/credits/detail/InstallmentTransactionsCard';
 import { InstallmentChargesTable } from '@/components/admin/credits/detail/InstallmentChargesTable';
+import { InstallmentMoraTimeline } from '@/components/admin/credits/detail/InstallmentMoraTimeline';
 import { InstallmentPaymentsCard } from '@/components/admin/credits/detail/InstallmentPaymentsCard';
 import { RegisterPaymentDialog } from '@/components/admin/credits/detail/RegisterPaymentDialog';
 import { KpiCard } from '@/components/admin/shared';
@@ -21,7 +22,6 @@ import {
   daysUntilNextStage,
   stageDaysText,
   stageForDay,
-  stageRuleLines,
   stageShortLabel,
 } from '@/modules/shared/penalty-rule-text';
 
@@ -128,16 +128,6 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
                 value={daysToNextStage !== null ? `Cambia de tramo en ${daysText(daysToNextStage)}` : 'Es el último tramo'}
               />
             </div>
-            {currentStage && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Qué se cobra en este tramo</p>
-                <ul className="space-y-0.5">
-                  {stageRuleLines(currentStage.rules).map((line) => (
-                    <li key={line} className="text-xs text-foreground">{line}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
@@ -197,6 +187,18 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Mora día por día: qué se cobró cada día de atraso, por concepto, y cuánto va acumulado */}
+      {(isOverdue || data.penaltyDays.length > 0) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Mora día por día</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InstallmentMoraTimeline days={data.penaltyDays} penaltyAccrued={data.penaltyAccrued} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Detalle de la cuota: capital, interés por tipo y mora, con lo pagado y lo que falta (admin) */}
       <Card>
