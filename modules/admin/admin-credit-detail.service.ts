@@ -64,6 +64,40 @@ export interface PenaltyBreakdownItem {
   outstanding: number;
 }
 
+/** Tipo de balde al que entra un pago: mora por concepto, un fee de la cuota, interés sin desglose o capital. */
+export type PaymentBucketType = 'PENALTY' | 'FEE' | 'INTEREST' | 'PRINCIPAL';
+
+/** Estado de un balde de la cuota. En un fee, `total` incluye el IGV (`igv` es solo un dato). */
+export interface InstallmentChargeItem {
+  type: PaymentBucketType;
+  concept: ChargeConcept | null;
+  feeCode: string | null;
+  total: number;
+  igv: number | null;
+  paid: number;
+  outstanding: number;
+}
+
+/** Lo que un pago aplicó a un balde: saldo antes, monto aplicado y saldo después. */
+export interface PaymentTraceLine {
+  position: number;
+  type: PaymentBucketType;
+  concept: ChargeConcept | null;
+  feeCode: string | null;
+  outstandingBefore: number;
+  applied: number;
+  outstandingAfter: number;
+}
+
+/** Un pago visto desde una cuota. `createdBy` viene como `admin:<id>` o `user:<id>`. */
+export interface PaymentTraceGroup {
+  paymentId: string;
+  transactionDate: string;
+  createdBy: string | null;
+  totalApplied: number;
+  lines: PaymentTraceLine[];
+}
+
 export interface ClientInfo {
   id: string;
   firstName: string | null;
@@ -420,6 +454,45 @@ function mapPenaltyBreakdown(raw: any): PenaltyBreakdownItem[] {
   }));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapInstallmentCharges(raw: any): InstallmentChargeItem[] {
+  if (!Array.isArray(raw)) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return raw.map((item: any) => ({
+    type: item.type ?? 'FEE',
+    concept: item.concept ?? null,
+    feeCode: item.fee_code ?? item.feeCode ?? null,
+    total: item.total ?? 0,
+    igv: item.igv ?? null,
+    paid: item.paid ?? 0,
+    outstanding: item.outstanding ?? 0,
+  }));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPaymentTraces(raw: any): PaymentTraceGroup[] {
+  if (!Array.isArray(raw)) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return raw.map((group: any) => ({
+    paymentId: group.payment_id ?? group.paymentId ?? '',
+    transactionDate: group.transaction_date ?? group.transactionDate ?? '',
+    createdBy: group.created_by ?? group.createdBy ?? null,
+    totalApplied: group.total_applied ?? group.totalApplied ?? 0,
+    lines: Array.isArray(group.lines)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? group.lines.map((line: any) => ({
+          position: line.position ?? 0,
+          type: line.type ?? 'FEE',
+          concept: line.concept ?? null,
+          feeCode: line.fee_code ?? line.feeCode ?? null,
+          outstandingBefore: line.outstanding_before ?? line.outstandingBefore ?? 0,
+          applied: line.applied ?? 0,
+          outstandingAfter: line.outstanding_after ?? line.outstandingAfter ?? 0,
+        }))
+      : [],
+  }));
+}
+
 /**
  * Totales del crédito (totalPaid/totalPenalty/totalOutstanding + cuotas
  * negociadas). Complementa a getAdminCreditSummary (que trae datos crudos —
@@ -539,6 +612,10 @@ export interface AdminInstallmentDetail {
   penaltyBreakdown: PenaltyBreakdownItem[];
   transactions: InstallmentTransactionInfo[];
   auditEvents: InstallmentAuditEventDetail[];
+  /** Estado de cada balde de la cuota en el orden en que un pago lo cubre; vacío si el backend no lo informa. */
+  charges: InstallmentChargeItem[];
+  /** Pagos aplicados a la cuota, del más antiguo al más reciente, con el detalle por balde. */
+  payments: PaymentTraceGroup[];
 }
 
 export async function getAdminInstallmentDetail(
@@ -580,6 +657,8 @@ function mapAdminInstallmentDetailFromBackend(raw: any): AdminInstallmentDetail 
     updatedAt: raw.updated_at ?? raw.updatedAt ?? '',
     negotiationCreditId: raw.negotiation_credit_id ?? raw.negotiationCreditId ?? null,
     penaltyBreakdown: mapPenaltyBreakdown(raw.penalty_breakdown),
+    charges: mapInstallmentCharges(raw.charges),
+    payments: mapPaymentTraces(raw.payments),
     transactions: Array.isArray(raw.transactions)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ? raw.transactions.map((tx: any) => ({
