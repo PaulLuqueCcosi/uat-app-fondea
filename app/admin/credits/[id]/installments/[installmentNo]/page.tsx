@@ -10,7 +10,6 @@ import { InstallmentTransactionsCard } from '@/components/admin/credits/detail/I
 import { InstallmentChargesTable } from '@/components/admin/credits/detail/InstallmentChargesTable';
 import { InstallmentMoraTimeline } from '@/components/admin/credits/detail/InstallmentMoraTimeline';
 import { InstallmentPaymentsCard } from '@/components/admin/credits/detail/InstallmentPaymentsCard';
-import { RegisterPaymentDialog } from '@/components/admin/credits/detail/RegisterPaymentDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InstallmentSummaryCard } from '@/components/admin/credits/detail/InstallmentSummaryCard';
 import { DataRow } from '@/components/ui/data-row';
@@ -45,7 +44,6 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
   const isOverdue = data.status === 'OVERDUE';
   const isNegotiated = data.status === 'NEGOTIATED';
   const canNegotiate = isOverdue && data.daysOverdue >= 5;
-  const canRegisterPayment = data.status !== 'PAID' && !isNegotiated;
 
   // Stage of the credit's frozen penalty config that today's delay falls in, and when it changes.
   const stages = creditSummary?.penaltyConfig?.stages ?? [];
@@ -79,7 +77,6 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
         backHref={`/admin/credits/${id}`}
         backLabel="Crédito"
       >
-        {canRegisterPayment && <RegisterPaymentDialog creditId={id} installmentNo={no} />}
         {canNegotiate && (
           <Link href={`/admin/credits/${id}/installments/${no}/negotiate`}>
             <Button size="sm" className="gap-1.5">

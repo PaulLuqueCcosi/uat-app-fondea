@@ -113,56 +113,6 @@ export async function writeOffCreditAction(creditId: string, writtenOffDate?: st
   return writeOffCredit(creditId, writtenOffDate);
 }
 
-export type ManualPaymentMethod = 'BANK_TRANSFER' | 'YAPE' | 'PLIN' | 'CASH' | 'OTHER';
-
-export interface RegisterManualPaymentInput {
-  amount: number;
-  paymentMethod: ManualPaymentMethod;
-  referenceNumber?: string;
-  /** Fecha contable AAAA-MM-DD; vacío = hoy. */
-  transactionDate?: string;
-}
-
-export interface RegisterManualPaymentResult {
-  ok: boolean;
-  message: string;
-  totalApplied?: number;
-  remaining?: number;
-}
-
-/**
- * Registra un pago hecho fuera de la plataforma (ventanilla, transferencia directa) apuntando
- * a una cuota. El backend aplica mora → interés → capital en orden sobre las cuotas cobrables
- * hasta la cuota objetivo y nunca cobra cuotas posteriores.
- * POST /api/v1/admin/credits/{id}/installments/{n}/payments
- */
-export async function registerManualPaymentAction(
-  creditId: string,
-  installmentNo: number,
-  input: RegisterManualPaymentInput,
-): Promise<RegisterManualPaymentResult> {
-  const res = await backendFetch(`/api/v1/admin/credits/${creditId}/installments/${installmentNo}/payments`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      amount: input.amount,
-      paymentMethod: input.paymentMethod,
-      referenceNumber: input.referenceNumber?.trim() || null,
-      transactionDate: input.transactionDate || null,
-      source: 'manual',
-    }),
-    context: 'ADMIN_CREDIT_MANUAL_PAYMENT',
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    return { ok: false, message: body?.detail ?? body?.message ?? `No se pudo registrar el pago (error ${res.status})` };
-  }
-
-  const data = await res.json();
-  return { ok: true, message: 'Pago registrado', totalApplied: data.total_applied, remaining: data.remaining };
-}
-
 /**
  * URL prefirmada del contrato firmado de un crédito (null si no tiene uno firmado).
  * GET /api/v1/admin/portfolio/credits/{creditId}/contract
