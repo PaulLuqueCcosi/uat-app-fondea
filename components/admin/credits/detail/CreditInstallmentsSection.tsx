@@ -16,7 +16,6 @@ interface Props {
   data: AdminCreditInstallments;
   /** total_outstanding de /detail (CreditQueryReader) — ver nota en page.tsx sobre por
    *  qué esto NO se recalcula sumando `outstanding` por cuota acá. */
-  totalOutstanding: number;
   /** Penalty stages of the credit's frozen config; used to name the stage of each overdue installment. */
   stages?: PenaltyStage[];
 }
@@ -26,13 +25,11 @@ interface Props {
 
 const MIN_DAYS_OVERDUE_FOR_NEGOTIATION = 5;
 
-export function CreditInstallmentsSection({ data, totalOutstanding, stages = [] }: Props) {
+export function CreditInstallmentsSection({ data, stages = [] }: Props) {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const paidCount = data.installments.filter((i) => i.status === 'PAID').length;
-  const overdueCount = data.installments.filter((i) => i.status === 'OVERDUE').length;
 
   const totalPages = Math.max(1, Math.ceil(data.installments.length / pageSize));
   const pageData = useMemo(
@@ -154,21 +151,6 @@ export function CreditInstallmentsSection({ data, totalOutstanding, stages = [] 
 
   return (
     <div className="space-y-4">
-      {/* Summary strip */}
-      <div className="flex items-center gap-4 text-xs">
-        <span className="text-muted-foreground">
-          <span className="font-medium text-emerald-600">{paidCount}</span> pagada{paidCount !== 1 ? 's' : ''}
-        </span>
-        {overdueCount > 0 && (
-          <span className="text-muted-foreground">
-            <span className="font-medium text-red-600">{overdueCount}</span> vencida{overdueCount !== 1 ? 's' : ''}
-          </span>
-        )}
-        <span className="text-muted-foreground ml-auto">
-          Total pendiente: <span className="font-bold text-foreground">{formatCurrency(totalOutstanding)}</span>
-        </span>
-      </div>
-
       <DataTable
         columns={columns}
         data={pageData}

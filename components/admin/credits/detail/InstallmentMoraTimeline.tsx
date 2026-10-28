@@ -25,12 +25,10 @@ export function InstallmentMoraTimeline({ days, penaltyAccrued }: Props) {
   const total = days.reduce((sum, day) => sum + day.total, 0);
   const matches = Math.abs(total - penaltyAccrued) < 0.015;
 
-  let running = 0;
-  let previousStage: string | null | undefined;
   const rows = days.flatMap((day, index) => {
-    running += day.total;
+    const running = days.slice(0, index + 1).reduce((acc, d) => acc + d.total, 0);
     const out = [];
-    if (index === 0 || day.stageLabel !== previousStage) {
+    if (index === 0 || day.stageLabel !== days[index - 1].stageLabel) {
       out.push(
         <tr key={`stage-${day.day}`} className="border-t bg-muted/40">
           <th colSpan={columns} scope="colgroup" className="px-3 py-1.5 text-left text-[11px] font-medium text-muted-foreground">
@@ -39,7 +37,6 @@ export function InstallmentMoraTimeline({ days, penaltyAccrued }: Props) {
         </tr>,
       );
     }
-    previousStage = day.stageLabel;
     out.push(
       <tr key={day.day} className="border-t">
         <td className="py-1.5 px-3 text-center font-mono">{day.day}</td>

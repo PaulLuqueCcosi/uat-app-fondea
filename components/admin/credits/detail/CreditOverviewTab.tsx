@@ -1,9 +1,8 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-  Calendar, MapPin, AlertTriangle, Shield, Banknote, User,
+  Calendar, MapPin, Shield, Banknote, User,
 } from 'lucide-react';
 import { getDepartment, getProvince, getDistrict } from 'ubigeo-fns';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
@@ -11,18 +10,11 @@ import type { PayoffCertificate } from '@/modules/admin/admin-constancias.types'
 import { CreditCertificateCard } from './CreditCertificateCard';
 import { DataRow } from '@/components/ui/data-row';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
-import type { PenaltyBreakdownItem } from '@/modules/admin/admin-credit-detail.service';
-import { PenaltyBreakdownTable } from './PenaltyBreakdownTable';
-import { PenaltyStageMatrix } from './PenaltyStageMatrix';
 
 interface Props {
   data: AdminCreditSummary;
   /** Null si el crédito no tiene constancia (no PAID_OFF, no STANDARD, o aún no se emitió). */
   certificate: PayoffCertificate | null;
-  /** Mora del crédito por concepto (vista admin). */
-  penaltyBreakdown?: PenaltyBreakdownItem[];
-  /** Days of delay of the credit's most overdue installment (0 when up to date). */
-  maxDaysOverdue?: number;
 }
 
 function buildFullName(client: AdminCreditSummary['client']) {
@@ -53,7 +45,7 @@ function resolveUbigeoNames(region: string | null, province: string | null, dist
   return { region, province, district };
 }
 
-export function CreditOverviewTab({ data, certificate, penaltyBreakdown = [], maxDaysOverdue = 0 }: Props) {
+export function CreditOverviewTab({ data, certificate }: Props) {
   const ubigeoNames = resolveUbigeoNames(data.ubigeoRegion, data.ubigeoProvince, data.ubigeoDistrict);
   const currentUbigeoNames = resolveUbigeoNames(data.currentUbigeoRegion, data.currentUbigeoProvince, data.currentUbigeoDistrict);
 
@@ -224,47 +216,6 @@ export function CreditOverviewTab({ data, certificate, penaltyBreakdown = [], ma
               <Link href={`/admin/applications/${data.applicationId}`} className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium">
                 Ver solicitud →
               </Link>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Mora: full width so each concept / stage keeps one readable line */}
-      <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        {/* Mora por concepto del crédito (admin) */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Mora por concepto</CardTitle>
-            <p className="text-[11px] text-muted-foreground">
-              Suma de las cuotas que este crédito cobra directamente.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <PenaltyBreakdownTable items={penaltyBreakdown} />
-          </CardContent>
-        </Card>
-
-        {/* Configuración de mora */}
-        {data.penaltyConfig && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" /> Configuración de mora del crédito
-              </CardTitle>
-              <p className="text-[11px] text-muted-foreground">
-                Con la que se creó el crédito — queda fija aunque luego se actualice la configuración por defecto.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <span className="text-sm font-medium">{data.penaltyConfig.name}</span>
-                <Badge variant={data.penaltyConfig.isActive ? 'default' : 'outline'} className="text-[10px]">
-                  {data.penaltyConfig.isActive ? 'Sigue siendo la config. por defecto' : 'Ya no es la config. por defecto'}
-                </Badge>
-              </div>
-              {data.penaltyConfig.stages.length > 0 && (
-                <PenaltyStageMatrix stages={data.penaltyConfig.stages} currentDays={maxDaysOverdue} />
-              )}
             </CardContent>
           </Card>
         )}

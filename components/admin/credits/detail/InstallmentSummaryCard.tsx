@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/admin-formatters';
 import { conceptLabel } from '@/modules/shared/charge-concepts';
 import { groupCharges, type ChargeTotals } from '@/modules/shared/installment-charges';
 import type { InstallmentChargeItem } from '@/modules/admin/admin-credit-detail.service';
+import { Fold, Line, MONEY, SummaryBlock } from './summary-parts';
 
 /** Dónde está hoy la mora de una cuota vencida: días de atraso, tramo y cuándo cambia. */
 export interface MoraContext {
@@ -19,45 +19,6 @@ interface Props {
   /** Totales de la cuota para cuando el backend no informa el detalle por concepto. */
   fallback: { amountDue: number; amountPaid: number; penaltyAccrued: number; penaltyPaid: number };
   mora: MoraContext | null;
-}
-
-const MONEY = 'font-mono tabular-nums';
-
-function Line({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={MONEY}>{formatCurrency(value)}</span>
-    </div>
-  );
-}
-
-/** Líneas del detalle de un bloque, plegadas por defecto: lo necesario arriba y el desglose a pedido. */
-function Fold({ summary, testId, children }: { summary: string; testId?: string; children: ReactNode }) {
-  return (
-    <details className="group mt-1" data-testid={testId}>
-      <summary className="cursor-pointer select-none text-xs text-primary hover:underline">{summary}</summary>
-      <div className="mt-2 space-y-1 border-l-2 pl-3">{children}</div>
-    </details>
-  );
-}
-
-function Block({ title, amount, tone = 'default', testId, children }: {
-  title: string;
-  amount: number;
-  tone?: 'default' | 'danger';
-  testId?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex-1 rounded-lg border bg-card p-4">
-      <p className="text-xs text-muted-foreground">{title}</p>
-      <p data-testid={testId} className={`${MONEY} text-2xl font-semibold ${tone === 'danger' ? 'text-error-700' : ''}`}>
-        {formatCurrency(amount)}
-      </p>
-      <div className="mt-3 space-y-1.5">{children}</div>
-    </div>
-  );
 }
 
 function Operator({ symbol }: { symbol: string }) {
@@ -110,7 +71,7 @@ export function InstallmentSummaryCard({ charges, fallback, mora }: Props) {
     <Card data-testid="installment-summary">
       <CardContent>
         <div className="flex flex-col gap-3 md:flex-row">
-          <Block title="Monto de la cuota" amount={cuota.total} testId="summary-cuota-total">
+          <SummaryBlock title="Monto de la cuota" amount={cuota.total} testId="summary-cuota-total">
             {g.principal && <Line label="Capital" value={g.principal.item.total} />}
             <Line label="Interés de la cuota" value={g.interestTotals.total} />
             {g.interestBlock === null && g.interestCategories.length > 0 && (
@@ -121,12 +82,12 @@ export function InstallmentSummaryCard({ charges, fallback, mora }: Props) {
               </Fold>
             )}
             {paidLine(cuota)}
-          </Block>
+          </SummaryBlock>
 
           {showMora && (
             <>
               <Operator symbol="+" />
-              <Block title="Mora por el atraso" amount={penalty.total} tone="danger" testId="summary-mora-total">
+              <SummaryBlock title="Mora por el atraso" amount={penalty.total} tone="danger" testId="summary-mora-total">
                 {mora && (
                   <>
                     <p className="text-sm">
@@ -150,7 +111,7 @@ export function InstallmentSummaryCard({ charges, fallback, mora }: Props) {
                   </Fold>
                 )}
                 {paidLine(penalty)}
-              </Block>
+              </SummaryBlock>
             </>
           )}
 

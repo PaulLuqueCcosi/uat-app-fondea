@@ -3,22 +3,13 @@ import { ArrowLeft, CreditCard, RefreshCw, User, ExternalLink } from 'lucide-rea
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/progress';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
 import { CreditAdminActions } from './CreditAdminActions';
 import { ViewContractButton } from './ViewContractButton';
-import { KpiCard } from '@/components/admin/shared';
-import { formatCurrency } from '@/lib/admin-formatters';
 
 interface Props {
   data: AdminCreditSummary;
-  /** Saldo pendiente real — suma del `outstanding` por cuota (ver page.tsx). */
-  outstanding: number;
-  /** Contractual amount already paid (installment amounts only, mora excluded). */
-  paidContractual: number;
-  /** Mora still owed; part of `outstanding`. */
-  penaltyOutstanding: number;
 }
 
 // Labels y color del indicador centralizados en `modules/admin/credit-status-labels`.
@@ -30,14 +21,8 @@ function buildFullName(client: AdminCreditSummary['client']) {
     .join(' ');
 }
 
-export function CreditDetailHeader({ data, outstanding, paidContractual, penaltyOutstanding }: Props) {
+export function CreditDetailHeader({ data }: Props) {
   const statusConfig = creditStatusInfo(data.status);
-  const interestEarned = data.totalDue - data.principal;
-  // `outstanding` includes mora, so progress is computed from what was paid of the contractual amount.
-  const progressPercent = data.totalDue > 0
-    ? Math.max(0, Math.min(100, Math.round((paidContractual / data.totalDue) * 100)))
-    : 0;
-  const installmentsOutstanding = Math.max(0, outstanding - penaltyOutstanding);
   const clientName = buildFullName(data.client);
 
   return (
@@ -126,33 +111,6 @@ export function CreditDetailHeader({ data, outstanding, paidContractual, penalty
           </CardContent>
         </Card>
       )}
-
-      {/* KPIs principales */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiCard
-          label={data.creditType === 'NEGOTIATION' ? 'Deuda negociada' : 'Capital desembolsado'}
-          value={formatCurrency(data.principal)}
-        />
-        <KpiCard label="Total a pagar" value={formatCurrency(data.totalDue)} sub={`+${formatCurrency(interestEarned)} interés`} />
-        <KpiCard label="Cuotas" value={`${data.installmentCount}`} sub={`Plazo ${data.termDays}d`} />
-        <KpiCard
-          label="Progreso"
-          value={`${progressPercent}%`}
-          sub={`${data.status === 'PAID_OFF' ? 'Completado' : 'pagado'}`}
-          progress={progressPercent}
-          progressColor={statusConfig.dotClass}
-        />
-        <KpiCard
-          label={data.status === 'PAID_OFF' ? 'Cerrado' : 'Pendiente'}
-          value={data.status === 'PAID_OFF' ? '✓ Liquidado' : formatCurrency(outstanding)}
-          highlight={data.status !== 'PAID_OFF'}
-          sub={
-            data.status !== 'PAID_OFF' && penaltyOutstanding > 0
-              ? `Cuotas ${formatCurrency(installmentsOutstanding)} · Mora ${formatCurrency(penaltyOutstanding)}`
-              : undefined
-          }
-        />
-      </div>
     </div>
   );
 }
