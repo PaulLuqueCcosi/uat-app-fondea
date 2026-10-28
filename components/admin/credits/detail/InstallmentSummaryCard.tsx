@@ -23,22 +23,19 @@ interface Props {
 
 const MONEY = 'font-mono tabular-nums';
 
-function Line({ label, value, hint }: { label: string; value: number; hint?: string }) {
+function Line({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-baseline justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">
-        {label}
-        {hint && <span className="ml-1 text-[11px]">{hint}</span>}
-      </span>
+      <span className="text-muted-foreground">{label}</span>
       <span className={MONEY}>{formatCurrency(value)}</span>
     </div>
   );
 }
 
 /** Líneas del detalle de un bloque, plegadas por defecto: lo necesario arriba y el desglose a pedido. */
-function Fold({ summary, children }: { summary: string; children: ReactNode }) {
+function Fold({ summary, testId, children }: { summary: string; testId?: string; children: ReactNode }) {
   return (
-    <details className="group mt-1">
+    <details className="group mt-1" data-testid={testId}>
       <summary className="cursor-pointer select-none text-xs text-primary hover:underline">{summary}</summary>
       <div className="mt-2 space-y-1 border-l-2 pl-3">{children}</div>
     </details>
@@ -117,18 +114,10 @@ export function InstallmentSummaryCard({ charges, fallback, mora }: Props) {
             {g.principal && <Line label="Capital" value={g.principal.item.total} />}
             <Line label="Interés de la cuota" value={g.interestTotals.total} />
             {g.interestBlock === null && g.interestCategories.length > 0 && (
-              <Fold summary="Ver el interés por tipo">
-                {g.interestCategories.map((category) => {
-                  const igv = category.rows.reduce((acc, row) => acc + (row.item.igv ?? 0), 0);
-                  return (
-                    <Line
-                      key={category.concept}
-                      label={conceptLabel(category.concept)}
-                      value={category.total}
-                      hint={igv > 0 ? `incluye IGV ${formatCurrency(igv)}` : undefined}
-                    />
-                  );
-                })}
+              <Fold summary="Ver el interés por tipo" testId="summary-interest-detail">
+                {g.interestCategories.map((category) => (
+                  <Line key={category.concept} label={conceptLabel(category.concept)} value={category.total} />
+                ))}
               </Fold>
             )}
             {paidLine(cuota)}

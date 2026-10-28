@@ -54,7 +54,7 @@ function SectionHeader({ title, hint }: { title: string; hint: string }) {
   );
 }
 
-/** Fila de un balde. `indent` sangra el nombre cuando es parte de un grupo; `igv` aparece como dato bajo el total. */
+/** Fila de un balde. `indent` sangra el nombre cuando es parte de un grupo. */
 function Row({ row, label, hint, indent = 0 }: { row: ChargeRow; label: string; hint?: string; indent?: number }) {
   const { item } = row;
   return (
@@ -66,9 +66,6 @@ function Row({ row, label, hint, indent = 0 }: { row: ChargeRow; label: string; 
       </td>
       <td className={MONEY}>
         {formatCurrency(item.total)}
-        {item.igv != null && (
-          <span className="block text-[10px] font-sans text-muted-foreground">incluye IGV {formatCurrency(item.igv)}</span>
-        )}
       </td>
       <td className={MONEY}>{formatCurrency(item.paid)}</td>
       <td className={MONEY}>{formatCurrency(item.outstanding)}</td>
@@ -98,7 +95,7 @@ function SubtotalRow({ label, totals, indent = 0, strong = false }: { label: str
 /**
  * Todo lo que debe la cuota, en tres bloques: el capital, el interés de la cuota (por tipo: interés compensatorio,
  * gastos y tarifa) y la mora por el atraso. La columna "Orden" dice en qué secuencia los cubre un pago (1 = primero:
- * la mora, luego el interés de la cuota y al final el capital). El IGV de cada fee se muestra solo como dato.
+ * la mora, luego el interés de la cuota y al final el capital).
  */
 export function InstallmentChargesTable({ items }: Props) {
   if (items.length === 0) {
@@ -183,7 +180,7 @@ export function InstallmentChargesTable({ items }: Props) {
       </div>
       <p className="text-[11px] text-muted-foreground">
         Un pago cubre los conceptos en el orden de la primera columna: primero la mora, luego el interés de la cuota y al
-        final el capital. El IGV de cada fee ya está incluido en su total.
+        final el capital.
       </p>
     </div>
   );
