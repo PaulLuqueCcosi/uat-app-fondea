@@ -19,24 +19,11 @@ export type { CreditStatus, InstallmentStatus } from './credit-status-labels';
 export type DisbursementMethod = 'BANK_TRANSFER' | 'YAPE' | 'PLIN';
 export type DisbursementStatus = 'PENDING' | 'COMPLETED' | 'FAILED';
 
-export interface PenaltyRange {
-  fromDay: number;
-  toDay: number | null;
-  type: string;
-  value: number;
-  base: string | null;
-  label: string | null;
-  color: string | null;
-}
-
 export interface PenaltyConfig {
   id: string;
   name: string;
   isActive: boolean;
-  ranges: PenaltyRange[];
-  /** SIMPLE | POR_CONCEPTOS (null si el backend no lo manda). */
-  mode: string | null;
-  /** Tramos x conceptos (solo POR_CONCEPTOS; vacío en SIMPLE). */
+  /** Tramos x conceptos. */
   stages: PenaltyStage[];
 }
 
@@ -321,21 +308,6 @@ function mapAdminCreditSummaryFromBackend(raw: any): AdminCreditSummary {
           id: raw.penalty_config.id ?? '',
           name: raw.penalty_config.name ?? '',
           isActive: raw.penalty_config.is_active ?? false,
-          // Defensivo: el ejemplo de la doc omite el shape exacto de ranges para
-          // este endpoint — soporta snake_case y camelCase por si acaso.
-          ranges: Array.isArray(raw.penalty_config.ranges)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ? raw.penalty_config.ranges.map((r: any) => ({
-                fromDay: r.fromDay ?? r.from_day ?? 0,
-                toDay: r.toDay ?? r.to_day ?? null,
-                type: r.type ?? '',
-                value: r.value ?? 0,
-                base: r.base ?? null,
-                label: r.label ?? null,
-                color: r.color ?? null,
-              }))
-            : [],
-          mode: raw.penalty_config.mode ?? null,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           stages: Array.isArray(raw.penalty_config.stages)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -447,7 +419,7 @@ function mapPenaltyBreakdown(raw: any): PenaltyBreakdownItem[] {
   if (!Array.isArray(raw)) return [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return raw.map((item: any) => ({
-    concept: item.concept ?? 'MORA_SIMPLE',
+    concept: item.concept ?? 'INTERES_MORATORIO',
     accrued: item.accrued ?? 0,
     paid: item.paid ?? 0,
     outstanding: item.outstanding ?? 0,

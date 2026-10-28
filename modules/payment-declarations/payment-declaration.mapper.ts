@@ -175,7 +175,7 @@ export function mapPaymentQuoteFromBackend(raw: any): PaymentQuote {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapPenaltyBreakdownItemFromBackend(raw: any): PenaltyBreakdownItem {
   return {
-    concept: raw.concept ?? 'MORA_SIMPLE',
+    concept: raw.concept ?? 'INTERES_MORATORIO',
     accrued: raw.accrued ?? 0,
     paid: raw.paid ?? 0,
     outstanding: raw.outstanding ?? 0,

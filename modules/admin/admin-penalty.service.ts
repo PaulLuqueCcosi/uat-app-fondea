@@ -3,7 +3,7 @@
  * Endpoints (base /api/v1/admin/penalty-config):
  * - GET  /                → Config activa
  * - GET  /history         → Historial
- * - POST /                → Crear nueva config (modo SIMPLE o POR_CONCEPTOS)
+ * - POST /                → Crear nueva config por conceptos
  * - GET  /concepts        → Conceptos, métodos permitidos y límites
  * - POST /simulate        → Simulador de mora por día
  */
@@ -19,9 +19,7 @@ import type {
   ConceptAmounts,
   ConceptsCatalog,
   PenaltyConfigResponse,
-  PenaltyMode,
   PenaltyMutationError,
-  PenaltyRangeResponse,
   PenaltyResult,
   PenaltyRule,
   PenaltyStage,
@@ -29,16 +27,10 @@ import type {
   SimulatePenaltyRequest,
   SimulatePenaltyResponse,
 } from './admin-penalty.types';
-import type { PenaltyBase } from '@/modules/shared/penalty-base';
 
 // Los tipos siguen saliendo de este módulo para no romper los imports existentes.
-export type { PenaltyBase };
 export type {
-  PenaltyType,
-  PenaltyMode,
-  PenaltyRangeResponse,
   PenaltyConfigResponse,
-  SavePenaltyRangeRequest,
   SavePenaltyConfigRequest,
   PenaltyRule,
   PenaltyStage,
@@ -79,21 +71,6 @@ function toNullableString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-function mapRange(raw: Json): PenaltyRangeResponse {
-  return {
-    id: String(raw.id ?? ''),
-    fromDay: toNumber(raw.fromDay),
-    toDay: toNullableNumber(raw.toDay),
-    type: raw.type === 'FIXED' ? 'FIXED' : 'PERCENTAGE',
-    value: toNumber(raw.value),
-    base: (raw.base as PenaltyBase | null | undefined) ?? null,
-    sortOrder: toNumber(raw.sortOrder),
-    color: toNullableString(raw.color),
-    icon: toNullableString(raw.icon),
-    label: toNullableString(raw.label),
-  };
-}
-
 function mapRule(raw: Json): PenaltyRule {
   return {
     concept: raw.concept as ChargeConcept,
@@ -114,11 +91,6 @@ function mapStage(raw: Json): PenaltyStage {
   };
 }
 
-/** Un `mode` ausente o desconocido es una configuración anterior: SIMPLE. */
-function mapMode(value: unknown): PenaltyMode {
-  return value === 'POR_CONCEPTOS' ? 'POR_CONCEPTOS' : 'SIMPLE';
-}
-
 export function mapPenaltyConfig(raw: unknown): PenaltyConfigResponse | null {
   if (!isObject(raw)) return null;
   const order = Array.isArray(raw.allocationOrder)
@@ -130,8 +102,6 @@ export function mapPenaltyConfig(raw: unknown): PenaltyConfigResponse | null {
     isActive: raw.isActive === true,
     createdBy: String(raw.createdBy ?? ''),
     createdAt: String(raw.createdAt ?? ''),
-    mode: mapMode(raw.mode),
-    ranges: Array.isArray(raw.ranges) ? raw.ranges.filter(isObject).map(mapRange) : [],
     stages: Array.isArray(raw.stages) ? raw.stages.filter(isObject).map(mapStage) : [],
     allocationOrder: order.length > 0 ? order : [...DEFAULT_ALLOCATION_ORDER],
     includeIgv: raw.includeIgv === true,

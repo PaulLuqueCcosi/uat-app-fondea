@@ -14,8 +14,7 @@ export type ChargeConcept =
   | 'INTERES_COMPENSATORIO'
   | 'GASTOS'
   | 'TARIFA'
-  | 'INTERES_MORATORIO'
-  | 'MORA_SIMPLE';
+  | 'INTERES_MORATORIO';
 
 /** Métodos de cálculo de una regla (`ChargeMethod`). */
 export type ChargeMethod =
@@ -49,7 +48,6 @@ export const DEFAULT_ALLOCATION_ORDER: readonly ChargeConcept[] = [
   'TARIFA',
   'INTERES_MORATORIO',
   'INTERES_COMPENSATORIO',
-  'MORA_SIMPLE',
 ];
 
 const CONCEPT_LABELS: Record<ChargeConcept, string> = {
@@ -57,7 +55,6 @@ const CONCEPT_LABELS: Record<ChargeConcept, string> = {
   GASTOS: 'Gastos',
   TARIFA: 'Tarifa',
   INTERES_MORATORIO: 'Interés moratorio',
-  MORA_SIMPLE: 'Mora (sistema anterior)',
 };
 
 const CONCEPT_HELP: Record<ChargeConcept, string> = {
@@ -65,7 +62,6 @@ const CONCEPT_HELP: Record<ChargeConcept, string> = {
   GASTOS: 'Cargos por servicios de terceros o recuperación de costos (por ejemplo, cargo administrativo o tecnológico).',
   TARIFA: 'Cargo fijo en soles por un servicio o evento concreto del tarifario.',
   INTERES_MORATORIO: 'Indemniza el atraso. Se calcula como tasa nominal anual sobre el capital vencido de la cuota.',
-  MORA_SIMPLE: 'Cargo único del sistema anterior (rangos con monto fijo o porcentaje).',
 };
 
 const METHOD_LABELS: Record<ChargeMethod, string> = {

@@ -10,7 +10,7 @@ interface Props {
   stages: PenaltyStage[];
 }
 
-/** Matriz de la configuración POR_CONCEPTOS del crédito: un tramo por fila, un concepto por columna. */
+/** Matriz de la configuración de mora del crédito: un tramo por fila, un concepto por columna. */
 export function PenaltyStageMatrix({ stages }: Props) {
   return (
     <div className="rounded-md border overflow-hidden overflow-x-auto">

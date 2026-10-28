@@ -3,48 +3,17 @@
  *
  * Contrato del backend: `/api/v1/admin/penalty-config` (spec S3/S4 de "mora por conceptos").
  * Supuestos escritos aquí para que no se pierdan:
- *  - Una respuesta sin `mode` es una configuración anterior: se trata como SIMPLE.
  *  - Una respuesta sin `stages` es una lista vacía; sin `allocationOrder`, el orden por defecto.
  *  - Los errores del backend traen `code` (estable) y `message`; si no hay `code` se usa `message`.
  */
 
-import type { PenaltyBase } from '@/modules/shared/penalty-base';
 import type {
   ChargeConcept,
   ChargeMethod,
   ChargeValueKind,
 } from '@/modules/shared/charge-concepts';
 
-// ── Configuración (modo SIMPLE, igual que antes) ──────────────────────────────
-
-export type PenaltyType = 'PERCENTAGE' | 'FIXED';
-export type PenaltyMode = 'SIMPLE' | 'POR_CONCEPTOS';
-
-export interface PenaltyRangeResponse {
-  id: string;
-  fromDay: number;
-  toDay: number | null;
-  type: PenaltyType;
-  value: number;
-  base: PenaltyBase | null;
-  sortOrder: number;
-  color: string | null;
-  icon: string | null;
-  label: string | null;
-}
-
-export interface SavePenaltyRangeRequest {
-  fromDay: number;
-  toDay: number | null;
-  type: PenaltyType;
-  value: number;
-  base: PenaltyBase | null;
-  color?: string | null;
-  icon?: string | null;
-  label?: string | null;
-}
-
-// ── Configuración (modo POR_CONCEPTOS) ────────────────────────────────────────
+// ── Configuración (mora por conceptos) ────────────────────────────────────────
 
 export interface PenaltyRule {
   concept: ChargeConcept;
@@ -68,8 +37,6 @@ export interface PenaltyConfigResponse {
   isActive: boolean;
   createdBy: string;
   createdAt: string;
-  mode: PenaltyMode;
-  ranges: PenaltyRangeResponse[];
   stages: PenaltyStage[];
   allocationOrder: ChargeConcept[];
   /** La mora se calcula sobre el monto de la cuota con IGV; una respuesta sin el campo es `false`. */
@@ -78,10 +45,6 @@ export interface PenaltyConfigResponse {
 
 export interface SavePenaltyConfigRequest {
   name: string;
-  /** Solo se envía en modo POR_CONCEPTOS; sin `mode` el backend asume SIMPLE. */
-  mode?: PenaltyMode;
-  /** Obligatorio solo en modo SIMPLE. */
-  ranges?: SavePenaltyRangeRequest[];
   allocationOrder?: ChargeConcept[];
   stages?: PenaltyStage[];
   /** Calcular la mora sobre el monto con IGV; omitido = no. */

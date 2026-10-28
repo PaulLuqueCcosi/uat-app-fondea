@@ -29,15 +29,6 @@ import type { AdminFormConfigResponse } from '@/modules/admin/admin-form-config.
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface MoraRange {
-  label: string;
-  minDays: number;
-  maxDays: number | null;
-  penaltyPerDay: number;
-  type: 'PERCENTAGE' | 'FIXED';
-  base: 'INSTALLMENT' | 'PRINCIPAL' | 'FEES' | null;
-}
-
 interface NotificationConfig {
   paymentReminderDaysBefore: number;
   overdueReminderIntervalDays: number;
@@ -45,18 +36,12 @@ interface NotificationConfig {
 }
 
 interface SystemConfig {
-  mora: MoraRange[];
   notifications: NotificationConfig;
 }
 
 // ── Default config ────────────────────────────────────────────────────────────
 
 const defaultConfig: SystemConfig = {
-  mora: [
-    { label: '1 a 3 días', minDays: 1, maxDays: 3, penaltyPerDay: 5, type: 'FIXED', base: null },
-    { label: '4 a 14 días', minDays: 4, maxDays: 14, penaltyPerDay: 7, type: 'FIXED', base: null },
-    { label: '15+ días', minDays: 15, maxDays: null, penaltyPerDay: 10, type: 'FIXED', base: null },
-  ],
   notifications: {
     paymentReminderDaysBefore: 1,
     overdueReminderIntervalDays: 3,
@@ -107,74 +92,6 @@ export function AdminSettingsClient() {
       {/* ═══ NOTIFICACIONES ═══ */}
       <NotificationsCard config={config} onSave={(notifications) => setConfig((p) => ({ ...p, notifications }))} />
     </div>
-  );
-}
-
-// ── Mora Card ─────────────────────────────────────────────────────────────────
-
-function MoraCard({ config, onSave }: { config: SystemConfig; onSave: (v: MoraRange[]) => void }) {
-  const [draft, setDraft] = useState<MoraRange[]>([]);
-
-  function openDraft() {
-    setDraft(config.mora.map((r) => ({ ...r })));
-  }
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <CircleDollarSign className="h-4 w-4 text-warning-600" /> Penalidades por Mora
-          </CardTitle>
-          <Dialog>
-            <DialogTrigger render={<Button variant="ghost" size="sm" className="h-7 text-xs" onClick={openDraft} />}>
-              <Pencil className="h-3 w-3 mr-1" /> Editar
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Editar Penalidades por Mora</DialogTitle>
-                <DialogDescription>Configura el cargo diario según el rango de días de atraso</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                {draft.map((range, i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <span className="text-sm text-foreground w-28 shrink-0">{range.label}</span>
-                    <div className="flex items-center gap-1.5 flex-1">
-                      <span className="text-sm text-muted-foreground">S/</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={range.penaltyPerDay}
-                        onChange={(e) => {
-                          const updated = [...draft];
-                          updated[i] = { ...updated[i], penaltyPerDay: Number(e.target.value) };
-                          setDraft(updated);
-                        }}
-                        className="h-9 w-20 font-mono"
-                      />
-                      <span className="text-sm text-muted-foreground">/día</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <DialogFooter>
-                <DialogClose render={<Button variant="outline" />}>Cancelar</DialogClose>
-                <DialogClose render={<Button onClick={() => onSave(draft)} />}>Guardar cambios</DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <CardDescription className="text-xs">Cargo diario según días de atraso</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {config.mora.map((range) => (
-          <div key={range.label} className="flex items-center justify-between py-1.5">
-            <span className="text-sm text-foreground">{range.label}</span>
-            <Badge variant="outline" className="font-mono">S/ {range.penaltyPerDay}/día</Badge>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
   );
 }
 

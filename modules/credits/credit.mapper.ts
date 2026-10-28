@@ -15,7 +15,8 @@ import type {
   CreditType,
   InstallmentStatus,
   PenaltyConfigInfo,
-  PenaltyRangeInfo,
+  PenaltyRuleInfo,
+  PenaltyStageInfo,
 } from './credit.types';
 
 // ─── Crédito ──────────────────────────────────────────────────────────────────
@@ -51,7 +52,7 @@ export function mapCreditFromBackend(raw: any): Credit {
 
 /**
  * Config de mora aplicada al crédito. El backend la manda en `penalty_config`, pero los
- * campos internos de cada rango vienen en camelCase (el record anidado no declara
+ * campos internos de cada tramo vienen en camelCase (el record anidado no declara
  * @JsonProperty por campo, a diferencia del resto del DTO) — de ahí el doble fallback.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,20 +61,28 @@ function mapPenaltyConfigFromBackend(raw: any): PenaltyConfigInfo {
     id: raw.id ?? '',
     name: raw.name ?? '',
     isActive: raw.is_active ?? raw.isActive ?? false,
-    ranges: Array.isArray(raw.ranges) ? raw.ranges.map(mapPenaltyRangeFromBackend) : [],
+    stages: Array.isArray(raw.stages) ? raw.stages.map(mapPenaltyStageFromBackend) : [],
   };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapPenaltyRangeFromBackend(raw: any): PenaltyRangeInfo {
+function mapPenaltyStageFromBackend(raw: any): PenaltyStageInfo {
   return {
     fromDay: raw.fromDay ?? raw.from_day ?? 0,
     toDay: raw.toDay ?? raw.to_day ?? null,
-    type: raw.type === 'FIXED' ? 'FIXED' : 'PERCENTAGE',
-    value: raw.value ?? 0,
-    base: raw.base ?? null,
     label: raw.label ?? null,
     color: raw.color ?? null,
+    icon: raw.icon ?? null,
+    rules: Array.isArray(raw.rules) ? raw.rules.map(mapPenaltyRuleFromBackend) : [],
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPenaltyRuleFromBackend(raw: any): PenaltyRuleInfo {
+  return {
+    concept: raw.concept,
+    method: raw.method,
+    value: raw.value ?? 0,
   };
 }
 

@@ -5,6 +5,8 @@
  * El mapper transforma a estos tipos camelCase.
  */
 
+import type { ChargeConcept, ChargeMethod } from '@/modules/shared/charge-concepts';
+
 // ─── Estados ──────────────────────────────────────────────────────────────────
 
 /**
@@ -97,18 +99,25 @@ export interface PenaltyConfigInfo {
   id: string;
   name: string;
   isActive: boolean;
-  ranges: PenaltyRangeInfo[];
+  stages: PenaltyStageInfo[];
 }
 
-/** Rango de mora — PenaltyRangeInfo del backend */
-export interface PenaltyRangeInfo {
+/** Tramo de mora — PenaltyStageInfo del backend */
+export interface PenaltyStageInfo {
   fromDay: number;
+  /** null = tramo abierto */
   toDay: number | null;
-  type: 'PERCENTAGE' | 'FIXED';
-  value: number;
-  base: 'INSTALLMENT' | 'PRINCIPAL' | 'FEES' | null;
   label: string | null;
   color: string | null;
+  icon: string | null;
+  rules: PenaltyRuleInfo[];
+}
+
+/** Regla de un concepto dentro de un tramo — PenaltyRuleInfo del backend */
+export interface PenaltyRuleInfo {
+  concept: ChargeConcept;
+  method: ChargeMethod;
+  value: number;
 }
 
 // ─── Cuota ────────────────────────────────────────────────────────────────────

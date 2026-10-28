@@ -7,10 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Separator } from '@/components/ui/separator';
 import {
-  Plus, Trash2, Save, Loader2, AlertCircle, CheckCircle2, History, Eye,
+  Plus, Save, Loader2, AlertCircle, CheckCircle2, History, Eye,
 } from 'lucide-react';
 import {
   getActivePenaltyConfigAction,
@@ -21,13 +20,8 @@ import {
 import type {
   ConceptsCatalog,
   PenaltyConfigResponse,
-  PenaltyMode,
 } from '@/modules/admin/admin-penalty.types';
-import {
-  conceptLabel,
-  type ChargeConcept,
-} from '@/modules/shared/charge-concepts';
-import { COLOR_PRESETS, ICON_OPTIONS, getLucideIcon } from './penalty/penalty-style-options';
+import { conceptLabel } from '@/modules/shared/charge-concepts';
 import { PenaltyStagesTable } from './penalty/PenaltyStagesTable';
 import { PenaltyMatrixEditor } from './penalty/PenaltyMatrixEditor';
 import { PenaltySimulatorPanel, type SimulationSource } from './penalty/PenaltySimulatorPanel';
@@ -42,121 +36,6 @@ import {
   type MatrixError,
 } from './penalty/penalty-matrix';
 import { formatDateTimePeru } from '@/modules/shared/backend-date';
-import { PENALTY_BASE_OPTIONS, penaltyBasePhrase, type PenaltyBase } from '@/modules/shared/penalty-base';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface RangeDraft {
-  fromDay: number;
-  toDay: number | null;
-  type: 'PERCENTAGE' | 'FIXED';
-  value: number;
-  base: PenaltyBase | null;
-  color: string;
-  icon: string;
-  label: string;
-}
-
-interface ValidationError {
-  index: number;
-  field: string;
-  message: string;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatRangeLabel(from: number, to: number | null): string {
-  if (to === null) return `Día ${from} en adelante`;
-  if (from === to) return `Día ${from}`;
-  return `Día ${from} al ${to}`;
-}
-
-function formatValue(range: { type: string; value: number; base: string | null }): string {
-  if (range.type === 'FIXED') return `S/ ${range.value} por día`;
-  const baseLabel = penaltyBasePhrase(range.base, 'long');
-  return `${range.value}% ${baseLabel} por día`;
-}
-
-// ── Validation ────────────────────────────────────────────────────────────────
-
-function validateRanges(ranges: RangeDraft[]): ValidationError[] {
-  const errors: ValidationError[] = [];
-
-  for (let i = 0; i < ranges.length; i++) {
-    const range = ranges[i];
-
-    // fromDay debe ser >= 1
-    if (range.fromDay < 1) {
-      errors.push({ index: i, field: 'fromDay', message: 'Debe ser al menos 1' });
-    }
-
-    // toDay debe ser >= fromDay (si no es null)
-    if (range.toDay !== null && range.toDay < range.fromDay) {
-      errors.push({ index: i, field: 'toDay', message: 'Debe ser mayor o igual al día inicial' });
-    }
-
-    // value debe ser > 0
-    if (range.value <= 0) {
-      errors.push({ index: i, field: 'value', message: 'Debe ser mayor a 0' });
-    }
-
-    // Si es PERCENTAGE, necesita base
-    if (range.type === 'PERCENTAGE' && !range.base) {
-      errors.push({ index: i, field: 'base', message: 'Selecciona la base del porcentaje' });
-    }
-
-    // Verificar solapamiento con otros rangos
-    for (let j = 0; j < ranges.length; j++) {
-      if (i === j) continue;
-      const other = ranges[j];
-      if (rangesOverlap(range, other)) {
-        errors.push({ index: i, field: 'fromDay', message: `Se solapa con el rango ${j + 1}` });
-        break; // Solo reportar una vez por rango
-      }
-    }
-  }
-
-  // Verificar que el primer rango empiece en 1
-  if (ranges.length > 0) {
-    const sorted = [...ranges].sort((a, b) => a.fromDay - b.fromDay);
-    if (sorted[0].fromDay !== 1) {
-      errors.push({ index: ranges.indexOf(sorted[0]), field: 'fromDay', message: 'El primer rango debe empezar en día 1' });
-    }
-
-    // Verificar gaps (huecos entre rangos)
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const current = sorted[i];
-      const next = sorted[i + 1];
-      if (current.toDay !== null && next.fromDay > current.toDay + 1) {
-        const gapStart = current.toDay + 1;
-        const gapEnd = next.fromDay - 1;
-        errors.push({
-          index: ranges.indexOf(next),
-          field: 'fromDay',
-          message: `Hay un hueco sin cubrir: días ${gapStart}–${gapEnd}`,
-        });
-      }
-    }
-
-    // El último rango debería tener toDay = null (cubrir hasta el infinito)
-    const lastSorted = sorted[sorted.length - 1];
-    if (lastSorted.toDay !== null) {
-      errors.push({
-        index: ranges.indexOf(lastSorted),
-        field: 'toDay',
-        message: 'El último rango debe dejar "Hasta" vacío para cubrir todos los días restantes',
-      });
-    }
-  }
-
-  return errors;
-}
-
-function rangesOverlap(a: RangeDraft, b: RangeDraft): boolean {
-  const aEnd = a.toDay ?? Infinity;
-  const bEnd = b.toDay ?? Infinity;
-  return a.fromDay <= bEnd && b.fromDay <= aEnd;
-}
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
@@ -166,13 +45,10 @@ export function PenaltyConfigPage() {
   const [config, setConfig] = useState<PenaltyConfigResponse | null>(null);
   const [history, setHistory] = useState<PenaltyConfigResponse[]>([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState<RangeDraft[]>([]);
   const [configName, setConfigName] = useState('');
-  const [errors, setErrors] = useState<ValidationError[]>([]);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [catalog, setCatalog] = useState<ConceptsCatalog | null>(null);
-  const [editMode, setEditMode] = useState<PenaltyMode>('SIMPLE');
   const [matrixDraft, setMatrixDraft] = useState<MatrixDraft>(() => defaultMatrixDraft(null));
   const [matrixErrors, setMatrixErrors] = useState<MatrixError[]>([]);
 
@@ -191,125 +67,15 @@ export function PenaltyConfigPage() {
     setLoading(false);
   }
 
-  function switchEditMode(next: PenaltyMode) {
-    setEditMode(next);
-    setErrors([]);
-    setMatrixErrors([]);
-    setMessage(null);
-  }
-
   function startEditing() {
-    // Parte del modo de la configuración activa; sin ella, de la matriz si el backend ya la ofrece.
-    setEditMode(config ? config.mode : catalog ? 'POR_CONCEPTOS' : 'SIMPLE');
     setMatrixDraft(draftFromConfig(config, catalog));
     setMatrixErrors([]);
-    if (config && config.ranges.length > 0) {
-      setDraft(config.ranges.map(r => ({
-        fromDay: r.fromDay,
-        toDay: r.toDay,
-        type: r.type,
-        value: r.value,
-        base: r.base,
-        color: r.color ?? '#f59e0b',
-        icon: r.icon ?? 'clock',
-        label: r.label ?? '',
-      })));
-    } else {
-      setDraft([
-        { fromDay: 1, toDay: 3, type: 'FIXED', value: 5, base: null, color: '#f59e0b', icon: 'clock', label: 'Mora leve' },
-        { fromDay: 4, toDay: 10, type: 'FIXED', value: 7, base: null, color: '#f97316', icon: 'alert-triangle', label: 'Mora moderada' },
-        { fromDay: 11, toDay: null, type: 'PERCENTAGE', value: 0.5, base: 'INSTALLMENT', color: '#ef4444', icon: 'flame', label: 'Mora grave' },
-      ]);
-    }
     setConfigName('');
-    setErrors([]);
     setMessage(null);
     setIsEditing(true);
   }
 
-  function addRange() {
-    const lastRange = draft[draft.length - 1];
-    // Auto-calcular el siguiente fromDay
-    let newFrom = 1;
-    if (lastRange) {
-      if (lastRange.toDay !== null) {
-        newFrom = lastRange.toDay + 1;
-      } else {
-        // Si el último es abierto, convertirlo a cerrado primero
-        const updated = [...draft];
-        updated[updated.length - 1] = { ...lastRange, toDay: lastRange.fromDay + 9 };
-        newFrom = lastRange.fromDay + 10;
-        setDraft([...updated, { fromDay: newFrom, toDay: null, type: 'FIXED', value: 5, base: null, color: '#ef4444', icon: 'alert-triangle', label: '' }]);
-        return;
-      }
-    }
-    setDraft([...draft, { fromDay: newFrom, toDay: null, type: 'FIXED', value: 5, base: null, color: '#ef4444', icon: 'alert-triangle', label: '' }]);
-  }
-
-  function removeRange(index: number) {
-    setDraft(draft.filter((_, i) => i !== index));
-    setErrors([]);
-  }
-
-  function updateRange(index: number, field: keyof RangeDraft, value: any) {
-    const updated = [...draft];
-    updated[index] = { ...updated[index], [field]: value };
-    if (field === 'type' && value === 'FIXED') {
-      updated[index].base = null;
-    }
-    if (field === 'type' && value === 'PERCENTAGE' && !updated[index].base) {
-      updated[index].base = 'INSTALLMENT';
-    }
-    setDraft(updated);
-    // Limpiar errores del campo editado
-    setErrors(errors.filter(e => !(e.index === index && e.field === field)));
-  }
-
-  function getFieldError(index: number, field: string): string | undefined {
-    return errors.find(e => e.index === index && e.field === field)?.message;
-  }
-
-  async function handleSave() {
-    if (editMode === 'POR_CONCEPTOS') {
-      handleSaveMatrix();
-      return;
-    }
-    const validationErrors = validateRanges(draft);
-    setErrors(validationErrors);
-    if (validationErrors.length > 0) {
-      setMessage({ type: 'error', text: `Hay ${validationErrors.length} error(es) de validación` });
-      return;
-    }
-
-    const name = configName.trim() || `Config Mora — ${new Date().toLocaleDateString('es-PE')}`;
-
-    startTransition(async () => {
-      const result = await createPenaltyConfigAction({
-        name,
-        ranges: draft.map(r => ({
-          fromDay: r.fromDay,
-          toDay: r.toDay,
-          type: r.type,
-          value: r.value,
-          base: r.type === 'PERCENTAGE' ? r.base : null,
-          color: r.color || null,
-          icon: r.icon || null,
-          label: r.label || null,
-        })),
-      });
-
-      if (result.ok) {
-        setMessage({ type: 'success', text: 'Configuración guardada y activada' });
-        setIsEditing(false);
-        await loadConfig();
-        router.refresh();
-      } else {
-        setMessage({ type: 'error', text: penaltyErrorMessage(result.error, 'Error al guardar') });
-      }
-    });
-  }
-
-  function handleSaveMatrix() {
+  function handleSave() {
     const validationErrors = validateMatrix(matrixDraft, catalog);
     setMatrixErrors(validationErrors);
     if (validationErrors.length > 0) {
@@ -342,8 +108,8 @@ export function PenaltyConfigPage() {
   }
 
   function savedSimulationSource(): SimulationSource {
-    if (config && config.mode === 'POR_CONCEPTOS' && config.id) return { kind: 'saved', configId: config.id };
-    return { kind: 'unavailable', reason: 'El simulador está disponible para configuraciones por conceptos.' };
+    if (config && config.id) return { kind: 'saved', configId: config.id };
+    return { kind: 'unavailable', reason: 'Guarda una configuración para poder simularla.' };
   }
 
   // ── Loading ─────────────────────────────────────────────────────────────────
@@ -367,12 +133,10 @@ export function PenaltyConfigPage() {
               <div>
                 <CardTitle className="text-base">Nueva configuración de mora</CardTitle>
                 <CardDescription>
-                  {editMode === 'POR_CONCEPTOS'
-                    ? 'Define tramos de días consecutivos y, para cada uno, cómo se cobra cada concepto.'
-                    : 'Define rangos consecutivos. El último rango debe dejar "Hasta" vacío para cubrir todos los días restantes.'}
+                  Define tramos de días consecutivos y, para cada uno, cómo se cobra cada concepto.
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={() => { setIsEditing(false); setErrors([]); setMessage(null); }}>
+              <Button variant="outline" size="sm" onClick={() => { setIsEditing(false); setMatrixErrors([]); setMessage(null); }}>
                 Cancelar
               </Button>
             </div>
@@ -390,257 +154,31 @@ export function PenaltyConfigPage() {
               <p className="text-[10px] text-muted-foreground">Identificador para el historial. Opcional.</p>
             </div>
 
-            {/* Modo */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium" id="penalty-mode-label">Sistema de mora</Label>
-              <div role="radiogroup" aria-labelledby="penalty-mode-label" className="inline-flex rounded-lg border p-0.5">
-                <Button
-                  type="button"
-                  role="radio"
-                  aria-checked={editMode === 'POR_CONCEPTOS'}
-                  variant={editMode === 'POR_CONCEPTOS' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => switchEditMode('POR_CONCEPTOS')}
-                >
-                  Por conceptos
-                </Button>
-                <Button
-                  type="button"
-                  role="radio"
-                  aria-checked={editMode === 'SIMPLE'}
-                  variant={editMode === 'SIMPLE' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => switchEditMode('SIMPLE')}
-                >
-                  Simple (anterior)
-                </Button>
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                {editMode === 'POR_CONCEPTOS'
-                  ? 'Matriz de tramos por concepto: interés compensatorio, gastos, tarifa e interés moratorio.'
-                  : 'Un solo cargo por tramo, en monto fijo o porcentaje, como hasta ahora.'}
-              </p>
-            </div>
-
             <Separator />
 
-            {editMode === 'POR_CONCEPTOS' && (
-              catalog ? (
-                <PenaltyMatrixEditor
-                  draft={matrixDraft}
-                  onChange={(next) => { setMatrixDraft(next); setMatrixErrors([]); }}
-                  catalog={catalog}
-                  errors={matrixErrors}
-                />
-              ) : (
-                <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                  <div className="space-y-2">
-                    <p className="text-sm text-destructive">
-                      No se pudieron cargar las reglas de los conceptos, así que la matriz no se puede editar ahora.
-                    </p>
-                    <Button variant="outline" size="sm" onClick={() => loadConfig().then(() => setIsEditing(true))}>
-                      Reintentar
-                    </Button>
-                  </div>
+            {catalog ? (
+              <PenaltyMatrixEditor
+                draft={matrixDraft}
+                onChange={(next) => { setMatrixDraft(next); setMatrixErrors([]); }}
+                catalog={catalog}
+                errors={matrixErrors}
+              />
+            ) : (
+              <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="text-sm text-destructive">
+                    No se pudieron cargar las reglas de los conceptos, así que la matriz no se puede editar ahora.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => loadConfig().then(() => setIsEditing(true))}>
+                    Reintentar
+                  </Button>
                 </div>
-              )
-            )}
-
-            {/* Rangos */}
-            {editMode === 'SIMPLE' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Rangos de penalidad</Label>
-                <Button variant="outline" size="sm" className="text-xs gap-1.5 h-8" onClick={addRange}>
-                  <Plus className="h-3.5 w-3.5" /> Agregar rango
-                </Button>
               </div>
-
-              {draft.map((range, i) => (
-                <div
-                  key={i}
-                  className={`p-4 rounded-lg border ${
-                    errors.some(e => e.index === i) ? 'border-destructive/50 bg-destructive/5' : 'bg-muted/20'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-primary">Rango {i + 1}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                      onClick={() => removeRange(i)}
-                      disabled={draft.length <= 1}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {/* Desde */}
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Desde día</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={range.fromDay}
-                        onChange={(e) => updateRange(i, 'fromDay', Math.max(1, Number(e.target.value)))}
-                        className={`h-9 font-mono ${getFieldError(i, 'fromDay') ? 'border-destructive' : ''}`}
-                      />
-                      {getFieldError(i, 'fromDay') && (
-                        <p className="text-[10px] text-destructive">{getFieldError(i, 'fromDay')}</p>
-                      )}
-                    </div>
-
-                    {/* Hasta */}
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Hasta día</Label>
-                      <Input
-                        type="number"
-                        min={range.fromDay}
-                        value={range.toDay ?? ''}
-                        onChange={(e) => updateRange(i, 'toDay', e.target.value ? Math.max(range.fromDay, Number(e.target.value)) : null)}
-                        placeholder="∞"
-                        className={`h-9 font-mono ${getFieldError(i, 'toDay') ? 'border-destructive' : ''}`}
-                      />
-                      {getFieldError(i, 'toDay') && (
-                        <p className="text-[10px] text-destructive leading-tight">{getFieldError(i, 'toDay')}</p>
-                      )}
-                    </div>
-
-                    {/* Tipo */}
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Tipo de cargo</Label>
-                      <NativeSelect
-                        value={range.type}
-                        onChange={(e) => updateRange(i, 'type', e.target.value)}
-                        className="h-9"
-                      >
-                        <NativeSelectOption value="FIXED">Monto fijo (S/)</NativeSelectOption>
-                        <NativeSelectOption value="PERCENTAGE">Porcentaje (%)</NativeSelectOption>
-                      </NativeSelect>
-                    </div>
-
-                    {/* Valor */}
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">
-                        {range.type === 'FIXED' ? 'S/ por día' : '% por día'}
-                      </Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={range.type === 'PERCENTAGE' ? 0.01 : 0.5}
-                        value={range.value}
-                        onChange={(e) => updateRange(i, 'value', Number(e.target.value))}
-                        className={`h-9 font-mono ${getFieldError(i, 'value') ? 'border-destructive' : ''}`}
-                      />
-                      {getFieldError(i, 'value') && (
-                        <p className="text-[10px] text-destructive">{getFieldError(i, 'value')}</p>
-                      )}
-                    </div>
-
-                    {/* Base (solo si PERCENTAGE) */}
-                    {range.type === 'PERCENTAGE' && (
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Calcular sobre</Label>
-                        <NativeSelect
-                          value={range.base ?? 'INSTALLMENT'}
-                          onChange={(e) => updateRange(i, 'base', e.target.value)}
-                          className="h-9"
-                        >
-                          {PENALTY_BASE_OPTIONS.map((option) => (
-                            <NativeSelectOption key={option.value} value={option.value}>
-                              {option.label}
-                            </NativeSelectOption>
-                          ))}
-                        </NativeSelect>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Preview del rango */}
-                  <div className="mt-3 pt-3 border-t border-dashed">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {/* Label */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Etiqueta (para el usuario)</Label>
-                        <Input
-                          value={range.label}
-                          onChange={(e) => updateRange(i, 'label', e.target.value)}
-                          placeholder="Ej: Mora leve"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-
-                      {/* Color */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Color</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="color"
-                            value={range.color.startsWith('#') ? range.color : COLOR_PRESETS.find(c => c.name === range.color)?.value ?? '#f59e0b'}
-                            onChange={(e) => updateRange(i, 'color', e.target.value)}
-                            className="h-8 w-10 p-0.5 cursor-pointer border rounded"
-                          />
-                          <div className="flex gap-1">
-                            {COLOR_PRESETS.map((preset) => (
-                              <button
-                                key={preset.name}
-                                type="button"
-                                title={preset.label}
-                                onClick={() => updateRange(i, 'color', preset.value)}
-                                className={`w-6 h-6 rounded-full border-2 transition-all ${
-                                  range.color === preset.value ? 'border-foreground scale-110' : 'border-transparent hover:border-muted-foreground/50'
-                                }`}
-                                style={{ backgroundColor: preset.value }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Icono */}
-                      <div className="space-y-1 col-span-2 sm:col-span-3">
-                        <Label className="text-[10px] text-muted-foreground">Icono</Label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {ICON_OPTIONS.map((opt) => {
-                            const IconComp = getLucideIcon(opt.value);
-                            return (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                title={opt.label}
-                                onClick={() => updateRange(i, 'icon', opt.value)}
-                                className={`w-8 h-8 rounded-md border flex items-center justify-center transition-all ${
-                                  range.icon === opt.value
-                                    ? 'border-primary bg-primary/10 text-primary scale-110'
-                                    : 'border-muted hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground'
-                                }`}
-                              >
-                                {IconComp && <IconComp className="w-4 h-4" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground mt-2">
-                      <span className="font-medium text-foreground">{formatRangeLabel(range.fromDay, range.toDay)}</span>
-                      {' → '}
-                      <span className="font-medium">{formatValue(range)}</span>
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
             )}
 
             {/* Errores de la matriz */}
-            {editMode === 'POR_CONCEPTOS' && matrixErrors.length > 0 && (
+            {matrixErrors.length > 0 && (
               <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                 <div>
@@ -660,30 +198,10 @@ export function PenaltyConfigPage() {
             )}
 
             {/* Mensaje de error al guardar (por ejemplo, un código del backend) */}
-            {message?.type === 'error' && errors.length === 0 && matrixErrors.length === 0 && (
+            {message?.type === 'error' && matrixErrors.length === 0 && (
               <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
                 <p className="text-sm text-destructive">{message.text}</p>
-              </div>
-            )}
-
-            {/* Errores globales */}
-            {editMode === 'SIMPLE' && errors.length > 0 && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-destructive">Corrige los errores antes de guardar</p>
-                  <ul className="mt-1 space-y-0.5">
-                    {errors.slice(0, 5).map((e, i) => (
-                      <li key={i} className="text-xs text-destructive/80">
-                        Rango {e.index + 1} ({e.field}): {e.message}
-                      </li>
-                    ))}
-                    {errors.length > 5 && (
-                      <li className="text-xs text-destructive/80">...y {errors.length - 5} más</li>
-                    )}
-                  </ul>
-                </div>
               </div>
             )}
 
@@ -710,7 +228,7 @@ export function PenaltyConfigPage() {
           </CardContent>
         </Card>
 
-        {editMode === 'POR_CONCEPTOS' && catalog && (
+        {catalog && (
           <PenaltySimulatorPanel
             source={editingSimulationSource()}
             configName={`${configName.trim() || 'Simulación'} (en edición, sin guardar)`}
@@ -744,14 +262,13 @@ export function PenaltyConfigPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {config && config.mode === 'POR_CONCEPTOS' ? (
+          {config ? (
             <div className="space-y-4">
               <PenaltyStagesTable stages={config.stages} catalog={catalog} />
               <p className="text-xs text-muted-foreground">
                 Orden de imputación del pago:{' '}
                 <span className="font-medium text-foreground">
                   {normalizeAllocationOrder(config.allocationOrder)
-                    .filter((c) => c !== 'MORA_SIMPLE')
                     .map((c) => conceptLabel(c, catalog?.concepts.find((x) => x.code === c)?.label))
                     .join(' → ')}
                 </span>
@@ -766,45 +283,6 @@ export function PenaltyConfigPage() {
                 Creada: {formatDateTimePeru(config.createdAt)} · Por: {config.createdBy}
               </p>
             </div>
-          ) : config && config.ranges.length > 0 ? (
-            <div className="space-y-0">
-              {config.ranges.map((range, i) => (
-                <div key={range.id} className="flex items-center gap-3 py-3 border-b last:border-0">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-muted-foreground">{i + 1}</span>
-                  </div>
-                  <div className="flex-1 space-y-0.5">
-                    <p className="text-sm font-medium text-foreground">
-                      {formatRangeLabel(range.fromDay, range.toDay)} — {formatValue(range)}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {range.label && <span>Label: <span className="font-medium text-foreground">{range.label}</span></span>}
-                      {range.color && (
-                        <span className="flex items-center gap-1">
-                          Color: <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: range.color }} />
-                        </span>
-                      )}
-                      {range.icon && (() => {
-                        const IconComp = getLucideIcon(range.icon);
-                        return IconComp ? (
-                          <span className="flex items-center gap-1">
-                            Icono: <IconComp className="w-3.5 h-3.5" />
-                          </span>
-                        ) : null;
-                      })()}
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="font-mono text-xs shrink-0">
-                    {range.type === 'FIXED' ? `S/ ${range.value}` : `${range.value}%`}
-                  </Badge>
-                </div>
-              ))}
-              <div className="pt-3 mt-1">
-                <p className="text-[10px] text-muted-foreground">
-                  Creada: {formatDateTimePeru(config.createdAt)} · Por: {config.createdBy}
-                </p>
-              </div>
-            </div>
           ) : (
             <div className="py-8 text-center">
               <p className="text-sm text-muted-foreground mb-3">
@@ -818,7 +296,7 @@ export function PenaltyConfigPage() {
         </CardContent>
       </Card>
 
-      {config && config.mode === 'POR_CONCEPTOS' && (
+      {config && (
         <PenaltySimulatorPanel source={savedSimulationSource()} configName={config?.name ? `${config.name} (activa)` : undefined} includeIgv={config?.includeIgv ?? false} />
       )}
 
@@ -851,7 +329,7 @@ function HistoryItem({ item, catalog }: { item: PenaltyConfigResponse; catalog: 
           <p className="text-sm font-medium">{item.name}</p>
           <p className="text-[10px] text-muted-foreground">
             {formatDateTimePeru(item.createdAt)} ·{' '}
-            {item.mode === 'POR_CONCEPTOS' ? `${item.stages.length} tramos por conceptos` : `${item.ranges.length} rangos`}
+            {item.stages.length} tramos por conceptos
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -871,24 +349,11 @@ function HistoryItem({ item, catalog }: { item: PenaltyConfigResponse; catalog: 
         </div>
       </div>
 
-      {expanded && item.mode === 'POR_CONCEPTOS' && (
+      {expanded && (
         <div className="mt-2">
           <PenaltyStagesTable stages={item.stages} catalog={catalog} compact />
-        </div>
-      )}
-
-      {expanded && item.mode !== 'POR_CONCEPTOS' && (
-        <div className="mt-2 pl-2 border-l-2 border-muted space-y-1.5">
-          {item.ranges.map((range) => (
-            <div key={range.id} className="flex items-center justify-between text-xs py-1">
-              <span className="text-muted-foreground">{formatRangeLabel(range.fromDay, range.toDay)}</span>
-              <span className="font-mono font-medium">{formatValue(range)}</span>
-            </div>
-          ))}
         </div>
       )}
     </div>
   );
 }
-
-

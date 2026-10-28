@@ -9,13 +9,13 @@ import { backendFetch } from '@/lib/backend-fetch';
 import type { Result } from '@/modules/shared/result';
 import type { TransparencyConfig, TransparencyScenario, ScenarioSeverity } from './transparency.types';
 import { errors } from './passport.errors';
-import { penaltyBasePhrase } from '@/modules/shared/penalty-base';
+import { stageRuleLines } from '@/modules/shared/penalty-rule-text';
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
 /**
  * Obtiene la configuración de transparencia desde el backend.
- * Llama al endpoint público /api/v1/penalty-config y transforma los rangos.
+ * Llama al endpoint público /api/v1/penalty-config y transforma los tramos.
  */
 export async function getTransparencyConfig(
   _productId?: string,
@@ -55,24 +55,21 @@ function mapPenaltyConfigToTransparency(penaltyConfig: any): TransparencyConfig 
   // Primer escenario: Pago puntual (siempre)
   scenarios.push(createOnTimeScenario());
 
-  // Rangos de mora del backend
-  if (penaltyConfig.ranges && Array.isArray(penaltyConfig.ranges)) {
-    for (const range of penaltyConfig.ranges) {
+  // Tramos de mora del backend
+  if (penaltyConfig.stages && Array.isArray(penaltyConfig.stages)) {
+    for (const stage of penaltyConfig.stages) {
+      const ruleLines = stageRuleLines(Array.isArray(stage.rules) ? stage.rules : []);
       scenarios.push({
-        id: range.id ?? `range-${range.fromDay}-${range.toDay ?? 'plus'}`,
-        fromDay: range.fromDay,
-        toDay: range.toDay,
-        title: range.label || formatRangeTitle(range.fromDay, range.toDay),
-        description: formatRangeDescription(range),
-        severity: mapColorToSeverity(range.color),
-        penaltyPerDay: range.type === 'FIXED' ? range.value : null,
-        // Campos extra para el frontend
-        icon: range.icon ?? null,
-        color: range.color ?? null,
-        type: range.type,
-        value: range.value,
-        base: range.base,
-      } as any);
+        id: stage.id ?? `stage-${stage.fromDay}-${stage.toDay ?? 'plus'}`,
+        fromDay: stage.fromDay,
+        toDay: stage.toDay ?? null,
+        title: stage.label || formatStageTitle(stage.fromDay, stage.toDay ?? null),
+        description: ruleLines.join(' · '),
+        severity: mapColorToSeverity(stage.color),
+        ruleLines,
+        icon: stage.icon ?? null,
+        color: stage.color ?? null,
+      });
     }
   }
 
@@ -92,22 +89,13 @@ function createOnTimeScenario(): TransparencyScenario {
     title: 'Pago puntual',
     description: '+15 puntos en tu pasaporte',
     severity: 'positive',
-    penaltyPerDay: null,
   };
 }
 
-function formatRangeTitle(from: number, to: number | null): string {
+function formatStageTitle(from: number, to: number | null): string {
   if (to === null) return `${from}+ días`;
   if (from === to) return `Día ${from}`;
   return `${from} a ${to} días`;
-}
-
-function formatRangeDescription(range: any): string {
-  if (range.type === 'FIXED') {
-    return `Penalidad de S/ ${range.value} por día`;
-  }
-  const baseLabel = penaltyBasePhrase(range.base);
-  return `${range.value}% ${baseLabel} por día`;
 }
 
 function mapColorToSeverity(color: string | null): ScenarioSeverity {

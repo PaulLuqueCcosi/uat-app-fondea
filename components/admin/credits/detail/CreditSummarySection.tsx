@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { AdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
+import { PenaltyStageMatrix } from './PenaltyStageMatrix';
 import { creditStatusInfo } from '@/modules/admin/credit-status-labels';
 import { resolveUbigeoName } from '@/lib/ubigeo-names';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
@@ -179,37 +180,7 @@ export function CreditSummarySection({ data }: Props) {
               </CardHeader>
               <CardContent>
                 <p className="text-sm font-medium mb-2">{data.penaltyConfig.name}</p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-1.5 font-medium text-muted-foreground">Rango</th>
-                        <th className="text-left py-1.5 font-medium text-muted-foreground">Tipo</th>
-                        <th className="text-right py-1.5 font-medium text-muted-foreground">Valor</th>
-                        <th className="text-left py-1.5 font-medium text-muted-foreground">Base</th>
-                        <th className="text-left py-1.5 font-medium text-muted-foreground">Etiqueta</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.penaltyConfig.ranges.map((r, i) => (
-                        <tr key={i} className="border-b last:border-0">
-                          <td className="py-1.5">
-                            <span className="inline-flex items-center gap-1">
-                              {r.color && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: r.color }} />}
-                              Día {r.fromDay}{r.toDay ? `–${r.toDay}` : '+'}
-                            </span>
-                          </td>
-                          <td className="py-1.5">{r.type}</td>
-                          <td className="py-1.5 text-right font-mono">
-                            {r.type === 'PERCENTAGE' ? `${r.value}%` : formatCurrency(r.value)}
-                          </td>
-                          <td className="py-1.5">{r.base ?? '—'}</td>
-                          <td className="py-1.5">{r.label ?? '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <PenaltyStageMatrix stages={data.penaltyConfig.stages} />
               </CardContent>
             </Card>
           )}

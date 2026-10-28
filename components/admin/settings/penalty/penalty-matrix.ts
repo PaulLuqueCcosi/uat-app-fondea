@@ -20,6 +20,7 @@ import type {
   PenaltyStage,
   SavePenaltyConfigRequest,
 } from '@/modules/admin/admin-penalty.types';
+import { findMethodSpec, ruleSummary } from '@/modules/shared/penalty-rule-text';
 
 export interface CellDraft {
   /** `''` = el concepto no se cobra en este tramo (no se envía regla). */
@@ -61,16 +62,8 @@ function nextKey(): string {
 
 // ── Catálogo ──────────────────────────────────────────────────────────────────
 
-export function findMethodSpec(
-  catalog: ConceptsCatalog | null,
-  concept: ChargeConcept,
-  method: ChargeMethod | '',
-): ConceptMethodSpec | undefined {
-  if (!catalog || !method) return undefined;
-  return catalog.concepts
-    .find((c) => c.code === concept)
-    ?.allowedMethods.find((m) => m.method === method);
-}
+// `findMethodSpec` y `ruleSummary` viven en `modules/shared/penalty-rule-text` (los usa también la vista del cliente).
+export { findMethodSpec, ruleSummary };
 
 /** Máximo efectivo de un método: para la TNA también cuenta el tope global del backend. */
 export function effectiveMax(spec: ConceptMethodSpec, catalog: ConceptsCatalog | null): number {
@@ -112,9 +105,9 @@ function cellsFromRules(rules: PenaltyRule[]): Partial<Record<ChargeConcept, Cel
   return cells;
 }
 
-/** Toma una configuración POR_CONCEPTOS guardada como punto de partida de una versión nueva. */
+/** Toma una configuración guardada como punto de partida de una versión nueva. */
 export function draftFromConfig(config: PenaltyConfigResponse | null, catalog: ConceptsCatalog | null): MatrixDraft {
-  if (!config || config.mode !== 'POR_CONCEPTOS' || config.stages.length === 0) {
+  if (!config || config.stages.length === 0) {
     return defaultMatrixDraft(catalog);
   }
   const stages: StageDraft[] = config.stages.map((s) => ({
@@ -260,27 +253,8 @@ export function requestFromDraft(
 ): SavePenaltyConfigRequest {
   return {
     name,
-    mode: 'POR_CONCEPTOS',
     stages: stagesFromDraft(draft),
     allocationOrder: draft.allocationOrder,
     includeIgv: draft.includeIgv,
   };
-}
-
-// ── Textos de una regla guardada ──────────────────────────────────────────────
-
-/** "Sigue corriendo · 100 %" o "No se cobra", para la vista de solo lectura. */
-export function ruleSummary(rule: PenaltyRule | undefined, catalog: ConceptsCatalog | null): string {
-  if (!rule) return 'No se cobra';
-  const kind = findMethodSpec(catalog, rule.concept, rule.method)?.valueKind ?? inferKind(rule.method);
-  const unit = valueUnit(kind);
-  const value = unit === 'S/' ? `S/ ${rule.value}` : `${rule.value} ${unit}`;
-  return `${methodLabel(rule.method)}: ${value}`;
-}
-
-/** Respaldo para mostrar valores cuando el catálogo no está disponible (solo lectura). */
-function inferKind(method: ChargeMethod): 'PERCENT' | 'TNA' | 'AMOUNT' {
-  if (method === 'TASA_NOMINAL_ANUAL_SOBRE_CAPITAL') return 'TNA';
-  if (method === 'MONTO_FIJO_UNA_VEZ' || method === 'MONTO_FIJO_DIARIO') return 'AMOUNT';
-  return 'PERCENT';
 }

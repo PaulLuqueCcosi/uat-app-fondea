@@ -45,7 +45,7 @@ import {
 import { formatBackendDate, parseBackendDate } from '@/modules/shared/backend-date';
 import { CreditDocumentsSection } from '@/components/dashboard/sections/CreditDocumentsSection';
 import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
-import { penaltyBaseDescription } from '@/modules/shared/penalty-base';
+import { stageDaysText, stageRuleLines } from '@/modules/shared/penalty-rule-text';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -389,43 +389,27 @@ export default function CreditoDetallePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 px-2 text-xs text-muted-foreground font-medium">Días de atraso</th>
-                    <th className="text-left py-2 px-2 text-xs text-muted-foreground font-medium">Tipo</th>
-                    <th className="text-right py-2 px-2 text-xs text-muted-foreground font-medium">Valor</th>
-                    <th className="text-left py-2 px-2 text-xs text-muted-foreground font-medium">Sobre</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {credit.penaltyConfig.ranges.map((range, idx) => (
-                    <tr key={idx} className="border-b border-border/50">
-                      <td className="py-2 px-2 text-xs">
-                        {range.toDay
-                          ? `Del ${range.fromDay} al ${range.toDay}`
-                          : `Desde el ${range.fromDay} en adelante`}
-                      </td>
-                      <td className="py-2 px-2">
-                        <Badge variant="outline" className="text-[10px]">
-                          {range.type === 'PERCENTAGE' ? 'Porcentaje' : 'Monto fijo'}
-                        </Badge>
-                      </td>
-                      <td className="py-2 px-2 text-right text-xs font-medium">
-                        {range.type === 'PERCENTAGE'
-                          ? `${range.value}%`
-                          : `S/ ${range.value.toFixed(2)}`}
-                      </td>
-                      <td className="py-2 px-2 text-xs text-muted-foreground">
-                        {range.type === 'PERCENTAGE'
-                          ? penaltyBaseDescription(range.base)
-                          : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {credit.penaltyConfig.stages.map((stage, idx) => (
+                <div key={idx} className="rounded-lg border p-3 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      {stage.color && (
+                        <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                      )}
+                      {stage.label || stageDaysText(stage.fromDay, stage.toDay)}
+                    </span>
+                    {stage.label && (
+                      <span className="text-xs text-muted-foreground">{stageDaysText(stage.fromDay, stage.toDay)}</span>
+                    )}
+                  </div>
+                  <ul className="space-y-0.5">
+                    {stageRuleLines(stage.rules).map((line) => (
+                      <li key={line} className="text-xs text-muted-foreground">{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
             <p className="text-[10px] text-muted-foreground mt-3">
               La mora se aplica desde el primer día de atraso (sin período de gracia).

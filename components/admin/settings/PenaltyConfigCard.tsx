@@ -8,15 +8,8 @@ import { CircleDollarSign, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { getActivePenaltyConfigAction } from '@/app/actions/admin-penalty.actions';
 import type { PenaltyConfigResponse } from '@/modules/admin/admin-penalty.service';
-import { penaltyBasePhrase } from '@/modules/shared/penalty-base';
 import { conceptLabel } from '@/modules/shared/charge-concepts';
 import { getLucideIcon } from './penalty/penalty-style-options';
-
-function formatValue(range: { type: string; value: number; base: string | null }): string {
-  if (range.type === 'FIXED') return `S/ ${range.value}/día`;
-  const baseLabel = penaltyBasePhrase(range.base);
-  return `${range.value}% ${baseLabel}/día`;
-}
 
 function formatRangeLabel(from: number, to: number | null): string {
   if (to === null) return `${from}+ días`;
@@ -60,7 +53,7 @@ export function PenaltyConfigCard() {
           <div className="flex justify-center py-4">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
-        ) : config && config.mode === 'POR_CONCEPTOS' && config.stages.length > 0 ? (
+        ) : config && config.stages.length > 0 ? (
           config.stages.map((stage, i) => (
             <div key={stage.id ?? i} className="flex items-center justify-between py-1.5 gap-2">
               <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -78,22 +71,6 @@ export function PenaltyConfigCard() {
                   ? stage.rules.map((r) => conceptLabel(r.concept)).join(' + ')
                   : 'Sin cargos'}
               </Badge>
-            </div>
-          ))
-        ) : config && config.ranges.length > 0 ? (
-          config.ranges.map((range) => (
-            <div key={range.id} className="flex items-center justify-between py-1.5 gap-2">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                {range.icon && (() => {
-                  const IconComp = getLucideIcon(range.icon);
-                  return IconComp ? <IconComp className="w-3.5 h-3.5 shrink-0 text-muted-foreground" /> : null;
-                })()}
-                {range.color && <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: range.color }} />}
-                <span className="text-sm text-foreground truncate">
-                  {range.label || formatRangeLabel(range.fromDay, range.toDay)}
-                </span>
-              </div>
-              <Badge variant="outline" className="font-mono text-xs shrink-0">{formatValue(range)}</Badge>
             </div>
           ))
         ) : (

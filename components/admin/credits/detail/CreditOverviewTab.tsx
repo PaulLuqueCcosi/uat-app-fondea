@@ -11,7 +11,6 @@ import type { PayoffCertificate } from '@/modules/admin/admin-constancias.types'
 import { CreditCertificateCard } from './CreditCertificateCard';
 import { DataRow } from '@/components/ui/data-row';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
-import { penaltyBaseName } from '@/modules/shared/penalty-base';
 import type { PenaltyBreakdownItem } from '@/modules/admin/admin-credit-detail.service';
 import { PenaltyBreakdownTable } from './PenaltyBreakdownTable';
 import { PenaltyStageMatrix } from './PenaltyStageMatrix';
@@ -258,39 +257,8 @@ export function CreditOverviewTab({ data, certificate, penaltyBreakdown = [] }: 
                   {data.penaltyConfig.isActive ? 'Sigue siendo la config. por defecto' : 'Ya no es la config. por defecto'}
                 </Badge>
               </div>
-              {data.penaltyConfig.mode === 'POR_CONCEPTOS' && data.penaltyConfig.stages.length > 0 && (
+              {data.penaltyConfig.stages.length > 0 && (
                 <PenaltyStageMatrix stages={data.penaltyConfig.stages} />
-              )}
-              {data.penaltyConfig.ranges.length > 0 && (
-                <div className="rounded-md border overflow-hidden overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Rango</th>
-                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Tipo</th>
-                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">Valor</th>
-                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Base</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.penaltyConfig.ranges.map((r, i) => (
-                        <tr key={i} className="border-t">
-                          <td className="py-2 px-3">
-                            <span className="inline-flex items-center gap-1.5">
-                              {r.color && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: r.color }} />}
-                              Día {r.fromDay}{r.toDay ? `–${r.toDay}` : '+'}
-                            </span>
-                          </td>
-                          <td className="py-2 px-3">{r.type === 'PERCENTAGE' ? 'Porcentaje' : 'Fijo'}</td>
-                          <td className="py-2 px-3 text-right font-mono">
-                            {r.type === 'PERCENTAGE' ? `${r.value}%` : formatCurrency(r.value)}
-                          </td>
-                          <td className="py-2 px-3">{penaltyBaseName(r.base)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
               )}
             </CardContent>
           </Card>

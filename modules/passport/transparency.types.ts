@@ -25,8 +25,11 @@ export interface TransparencyScenario {
   description: string;
   /** Severidad para que el frontend decida la UI */
   severity: ScenarioSeverity;
-  /** Monto de penalidad por día en este rango (null si no aplica, ej: puntual) */
-  penaltyPerDay: number | null;
+  /** Reglas del tramo en español, una línea por concepto (vacío en el pago puntual) */
+  ruleLines?: string[];
+  /** Icono (nombre lucide) y color definidos para el tramo en la configuración */
+  icon?: string | null;
+  color?: string | null;
 }
 
 // ── Configuración completa de transparencia ───────────────────────────────────

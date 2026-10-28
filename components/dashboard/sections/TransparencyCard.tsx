@@ -60,13 +60,6 @@ const severityStyles: Record<ScenarioSeverity, {
   },
 };
 
-// ── Helper: formatear penalidad ───────────────────────────────────────────────
-
-function formatPenalty(amount: number, currency: string): string {
-  const symbols: Record<string, string> = { PEN: 'S/', USD: '$', EUR: '€' };
-  return `${symbols[currency] ?? currency} ${amount}`;
-}
-
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export function TransparencyCard() {
@@ -124,8 +117,8 @@ export function TransparencyCard() {
             const style = severityStyles[scenario.severity] ?? severityStyles.low;
 
             // Si el backend envió un icono específico, usarlo
-            const backendIcon = (scenario as any).icon;
-            const backendColor = (scenario as any).color;
+            const backendIcon = scenario.icon;
+            const backendColor = scenario.color;
             let Icon = style.icon;
             if (backendIcon) {
               const iconPascal = backendIcon.split('-').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join('');
@@ -135,13 +128,6 @@ export function TransparencyCard() {
 
             // Si el backend envió color, usar como override del icono
             const iconColorStyle = backendColor ? { color: backendColor } : {};
-
-            const penaltyLabel = scenario.penaltyPerDay
-              ? `${formatPenalty(scenario.penaltyPerDay, config.currency)}/día`
-              : null;
-
-            // Para rangos con type=PERCENTAGE, mostrar la descripción
-            const displayLabel = penaltyLabel ?? (scenario as any).description ?? scenario.description;
 
             return (
               <div
@@ -161,9 +147,17 @@ export function TransparencyCard() {
                         : `Día ${scenario.fromDay} al ${scenario.toDay}`}
                   </p>
                 )}
-                <p className="text-xs font-medium text-foreground">
-                  {displayLabel}
-                </p>
+                {scenario.ruleLines && scenario.ruleLines.length > 0 ? (
+                  <ul className="space-y-0.5">
+                    {scenario.ruleLines.map((line) => (
+                      <li key={line} className="text-xs font-medium text-foreground">{line}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs font-medium text-foreground">
+                    {scenario.description}
+                  </p>
+                )}
               </div>
             );
           })}
