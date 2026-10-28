@@ -1,10 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { CalendarDays, Handshake, AlertCircle } from 'lucide-react';
+import { CalendarDays, Handshake } from 'lucide-react';
 import { DetailPageHeader } from '@/components/admin/shared';
 import { getAdminInstallmentDetail, getAdminCreditSummary } from '@/modules/admin/admin-credit-detail.service';
 import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
@@ -13,12 +11,12 @@ import { InstallmentChargesTable } from '@/components/admin/credits/detail/Insta
 import { InstallmentMoraTimeline } from '@/components/admin/credits/detail/InstallmentMoraTimeline';
 import { InstallmentPaymentsCard } from '@/components/admin/credits/detail/InstallmentPaymentsCard';
 import { RegisterPaymentDialog } from '@/components/admin/credits/detail/RegisterPaymentDialog';
-import { KpiCard } from '@/components/admin/shared';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { InstallmentSummaryCard } from '@/components/admin/credits/detail/InstallmentSummaryCard';
 import { DataRow } from '@/components/ui/data-row';
 import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/admin-formatters';
+import { formatDate, formatDateTime } from '@/lib/admin-formatters';
 import {
-  daysText,
   daysUntilNextStage,
   stageDaysText,
   stageForDay,
@@ -53,11 +51,6 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
   const stages = creditSummary?.penaltyConfig?.stages ?? [];
   const currentStage = isOverdue ? stageForDay(stages, data.daysOverdue) : null;
   const daysToNextStage = isOverdue ? daysUntilNextStage(stages, data.daysOverdue) : null;
-
-  // Calculate payment progress
-  const totalOwed = data.amountDue + data.penaltyAccrued;
-  const totalPaidAmount = data.amountPaid + data.penaltyPaid;
-  const paymentProgress = totalOwed > 0 ? Math.min(100, Math.round((totalPaidAmount / totalOwed) * 100)) : 0;
 
   // Fechas ya formateadas acá (server component) para pasarle strings al client
   // component — evita hydration mismatch por diferencias de ICU Node vs navegador.
@@ -97,41 +90,6 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
         )}
       </DetailPageHeader>
 
-      {/* Mora por días: where the installment is today and what each day costs (only when overdue) */}
-      {isOverdue && (
-        <Card>
-          <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error-100">
-                <AlertCircle className="h-5 w-5 text-error-700" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Mora por días</p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Cuota vencida con {daysText(data.daysOverdue)} de atraso.
-                  {canNegotiate && ' Esta cuota es elegible para negociación.'}
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 border-t pt-3">
-              <DataRow
-                label="Tramo actual"
-                value={
-                  currentStage
-                    ? `${stageShortLabel(currentStage)}${currentStage.label ? ` (${stageDaysText(currentStage.fromDay, currentStage.toDay)})` : ''}`
-                    : 'Sin tramo configurado'
-                }
-              />
-              <DataRow label="Mora acumulada" value={formatCurrency(data.penaltyAccrued)} valueClassName="text-error-700" />
-              <DataRow
-                label="Cambio de tramo"
-                value={daysToNextStage !== null ? `Cambia de tramo en ${daysText(daysToNextStage)}` : 'Es el último tramo'}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {isNegotiated && data.negotiationCreditId && (
         <Card>
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -156,88 +114,86 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
         </Card>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Monto de la cuota" value={formatCurrency(data.amountDue)} mono />
-        <KpiCard label="Pagado (cuota)" value={formatCurrency(data.amountPaid)} positive={data.amountPaid > 0} mono />
-        <KpiCard label="Mora acumulada" value={formatCurrency(data.penaltyAccrued)} negative={data.penaltyAccrued > 0} mono />
-        <KpiCard label="Total pendiente" value={formatCurrency(data.outstanding)} highlight mono />
-      </div>
+      {/* Resumen: cuota (capital + interés) + mora = total, con el desglose plegado */}
+      <InstallmentSummaryCard
+        charges={data.charges}
+        fallback={{
+          amountDue: data.amountDue,
+          amountPaid: data.amountPaid,
+          penaltyAccrued: data.penaltyAccrued,
+          penaltyPaid: data.penaltyPaid,
+        }}
+        mora={
+          isOverdue
+            ? {
+                daysOverdue: data.daysOverdue,
+                stageText: currentStage
+                  ? `${stageShortLabel(currentStage)}${currentStage.label ? ` (${stageDaysText(currentStage.fromDay, currentStage.toDay)})` : ''}`
+                  : null,
+                daysToNextStage,
+              }
+            : null
+        }
+      />
 
-      {/* Progress bar */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-muted-foreground">Progreso de pago</span>
-            <span className="text-xs font-medium">{paymentProgress}%</span>
-          </div>
-          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${
-                paymentProgress >= 100 ? 'bg-emerald-500' : isOverdue ? 'bg-red-400' : 'bg-primary'
-              }`}
-              style={{ width: `${paymentProgress}%` }}
-            />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-3 border-t">
-            <DataRow label="Pendiente cuota" value={formatCurrency(data.installmentOutstanding)} />
-            <DataRow label="Pendiente mora" value={formatCurrency(data.penaltyOutstanding)} />
-            <DataRow label="Mora pagada" value={formatCurrency(data.penaltyPaid)} />
-            <DataRow label="Días de atraso" value={data.daysOverdue > 0 ? `${data.daysOverdue} días` : 'Al día'} alert={data.daysOverdue > 0} />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Detalle a pedido: una pestaña a la vez. Si hay mora día por día, esa abre primero. */}
+      <Tabs defaultValue={data.penaltyDays.length > 0 ? 'mora' : 'detail'} className="w-full">
+        <TabsList variant="line" className="w-full">
+          <TabsTrigger value="detail">Detalle de la cuota</TabsTrigger>
+          {(isOverdue || data.penaltyDays.length > 0) && (
+            <TabsTrigger value="mora">Mora día por día ({data.penaltyDays.length})</TabsTrigger>
+          )}
+          <TabsTrigger value="payments">Pagos ({data.payments.length})</TabsTrigger>
+          <TabsTrigger value="transactions">Movimientos ({data.transactions.length})</TabsTrigger>
+          <TabsTrigger value="info">Información</TabsTrigger>
+        </TabsList>
 
-      {/* Mora día por día: qué se cobró cada día de atraso, por concepto, y cuánto va acumulado */}
-      {(isOverdue || data.penaltyDays.length > 0) && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Mora día por día</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <InstallmentMoraTimeline days={data.penaltyDays} penaltyAccrued={data.penaltyAccrued} />
-          </CardContent>
-        </Card>
-      )}
+        <TabsContent value="detail" className="mt-4">
+          <Card>
+            <CardContent>
+              <InstallmentChargesTable items={data.charges} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Detalle de la cuota: capital, interés por tipo y mora, con lo pagado y lo que falta (admin) */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Detalle de la cuota</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <InstallmentChargesTable items={data.charges} />
-        </CardContent>
-      </Card>
+        <TabsContent value="mora" className="mt-4">
+          <Card>
+            <CardContent>
+              <InstallmentMoraTimeline days={data.penaltyDays} penaltyAccrued={data.penaltyAccrued} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">A dónde entró cada pago</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <InstallmentPaymentsCard payments={data.payments} />
-        </CardContent>
-      </Card>
+        <TabsContent value="payments" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">A dónde entró cada pago</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InstallmentPaymentsCard payments={data.payments} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Info detallada */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Información detallada</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
-            <DataRow label="Fecha vencimiento" value={formatDate(data.dueDate)} />
-            <DataRow label="Fecha de pago" value={formatDateTime(data.paidAt)} />
-            <DataRow label="Última mora cobrada" value={formatDate(data.lastPenaltyDate)} />
-            <DataRow label="Estado" value={sc.description || sc.label} />
-            <DataRow label="Creada" value={formatDateTime(data.createdAt)} />
-            <DataRow label="Última actualización" value={formatDateTime(data.updatedAt)} />
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="transactions" className="mt-4">
+          <InstallmentTransactionsCard transactions={transactionsForDisplay} />
+        </TabsContent>
 
-      {/* Transacciones */}
-      <InstallmentTransactionsCard transactions={transactionsForDisplay} />
+        <TabsContent value="info" className="mt-4">
+          <Card>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
+                <DataRow label="Fecha vencimiento" value={formatDate(data.dueDate)} />
+                <DataRow label="Fecha de pago" value={formatDateTime(data.paidAt)} />
+                <DataRow label="Última mora cobrada" value={formatDate(data.lastPenaltyDate)} />
+                <DataRow label="Estado" value={sc.description || sc.label} />
+                <DataRow label="Creada" value={formatDateTime(data.createdAt)} />
+                <DataRow label="Última actualización" value={formatDateTime(data.updatedAt)} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
