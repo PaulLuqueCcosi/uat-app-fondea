@@ -170,13 +170,11 @@ export function setStageToDay(stages: StageDraft[], index: number, toDay: number
 // ── Validación del lado del cliente ───────────────────────────────────────────
 
 /**
- * Valida el borrador. `blocked` son los conceptos deshabilitados por el perfil de cumplimiento:
- * sus celdas no se validan ni se envían.
+ * Valida el borrador contra las reglas de conceptos y métodos que trae el backend.
  */
 export function validateMatrix(
   draft: MatrixDraft,
   catalog: ConceptsCatalog | null,
-  blocked: ReadonlySet<ChargeConcept>,
 ): MatrixError[] {
   const errors: MatrixError[] = [];
   if (!catalog) {
@@ -200,7 +198,6 @@ export function validateMatrix(
 
     let rules = 0;
     for (const concept of MATRIX_CONCEPTS) {
-      if (blocked.has(concept)) continue;
       const cell = stage.cells[concept];
       if (!cell || cell.method === '') continue;
       rules += 1;
@@ -238,11 +235,10 @@ export function validateMatrix(
 
 // ── Conversión a la petición del backend ──────────────────────────────────────
 
-export function stagesFromDraft(draft: MatrixDraft, blocked: ReadonlySet<ChargeConcept>): PenaltyStage[] {
+export function stagesFromDraft(draft: MatrixDraft): PenaltyStage[] {
   return draft.stages.map((stage) => {
     const rules: PenaltyRule[] = [];
     for (const concept of MATRIX_CONCEPTS) {
-      if (blocked.has(concept)) continue;
       const cell = stage.cells[concept];
       if (!cell || cell.method === '') continue;
       rules.push({ concept, method: cell.method, value: Number(cell.value) });
@@ -261,12 +257,11 @@ export function stagesFromDraft(draft: MatrixDraft, blocked: ReadonlySet<ChargeC
 export function requestFromDraft(
   name: string,
   draft: MatrixDraft,
-  blocked: ReadonlySet<ChargeConcept>,
 ): SavePenaltyConfigRequest {
   return {
     name,
     mode: 'POR_CONCEPTOS',
-    stages: stagesFromDraft(draft, blocked),
+    stages: stagesFromDraft(draft),
     allocationOrder: draft.allocationOrder,
     includeIgv: draft.includeIgv,
   };

@@ -17,22 +17,18 @@ import {
   createPenaltyConfigAction,
   getPenaltyConfigHistoryAction,
   getConceptsCatalogAction,
-  getComplianceStateAction,
 } from '@/app/actions/admin-penalty.actions';
 import type {
-  ComplianceState,
   ConceptsCatalog,
   PenaltyConfigResponse,
   PenaltyMode,
 } from '@/modules/admin/admin-penalty.types';
 import {
-  REGULATED_BLOCKED_CONCEPTS,
   conceptLabel,
   type ChargeConcept,
 } from '@/modules/shared/charge-concepts';
 import { COLOR_PRESETS, ICON_OPTIONS, getLucideIcon } from './penalty/penalty-style-options';
 import { PenaltyStagesTable } from './penalty/PenaltyStagesTable';
-import { PenaltyComplianceBanner } from './penalty/PenaltyComplianceBanner';
 import { PenaltyMatrixEditor } from './penalty/PenaltyMatrixEditor';
 import { PenaltySimulatorPanel, type SimulationSource } from './penalty/PenaltySimulatorPanel';
 import { penaltyErrorMessage } from './penalty/penalty-errors';
@@ -176,7 +172,6 @@ export function PenaltyConfigPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [catalog, setCatalog] = useState<ConceptsCatalog | null>(null);
-  const [compliance, setCompliance] = useState<ComplianceState | null>(null);
   const [editMode, setEditMode] = useState<PenaltyMode>('SIMPLE');
   const [matrixDraft, setMatrixDraft] = useState<MatrixDraft>(() => defaultMatrixDraft(null));
   const [matrixErrors, setMatrixErrors] = useState<MatrixError[]>([]);
@@ -185,28 +180,16 @@ export function PenaltyConfigPage() {
 
   async function loadConfig() {
     setLoading(true);
-    const [active, hist, concepts, complianceState] = await Promise.all([
+    const [active, hist, concepts] = await Promise.all([
       getActivePenaltyConfigAction(),
       getPenaltyConfigHistoryAction(),
       getConceptsCatalogAction(),
-      getComplianceStateAction(),
     ]);
     setConfig(active);
     setHistory(hist);
     setCatalog(concepts);
-    setCompliance(complianceState);
     setLoading(false);
   }
-
-  /** Solo recarga el perfil (después de cambiarlo); no tira lo que el admin esté editando. */
-  async function reloadCompliance() {
-    setCompliance(await getComplianceStateAction());
-  }
-
-  // Sin perfil legible se aplica el regulado: es lo más conservador.
-  const blocked: ReadonlySet<ChargeConcept> = new Set<ChargeConcept>(
-    (compliance?.profile ?? 'REGULATED') === 'REGULATED' ? REGULATED_BLOCKED_CONCEPTS : [],
-  );
 
   function switchEditMode(next: PenaltyMode) {
     setEditMode(next);
@@ -327,7 +310,7 @@ export function PenaltyConfigPage() {
   }
 
   function handleSaveMatrix() {
-    const validationErrors = validateMatrix(matrixDraft, catalog, blocked);
+    const validationErrors = validateMatrix(matrixDraft, catalog);
     setMatrixErrors(validationErrors);
     if (validationErrors.length > 0) {
       setMessage({ type: 'error', text: `Hay ${validationErrors.length} error(es) de validación` });
@@ -337,7 +320,7 @@ export function PenaltyConfigPage() {
     const name = configName.trim() || `Config Mora — ${new Date().toLocaleDateString('es-PE')}`;
 
     startTransition(async () => {
-      const result = await createPenaltyConfigAction(requestFromDraft(name, matrixDraft, blocked));
+      const result = await createPenaltyConfigAction(requestFromDraft(name, matrixDraft));
 
       if (result.ok) {
         setMessage({ type: 'success', text: 'Configuración guardada y activada' });
@@ -352,10 +335,10 @@ export function PenaltyConfigPage() {
 
   /** Configuración a simular: el borrador si es válido; si no, el motivo por el que no se puede. */
   function editingSimulationSource(): SimulationSource {
-    if (validateMatrix(matrixDraft, catalog, blocked).length > 0) {
+    if (validateMatrix(matrixDraft, catalog).length > 0) {
       return { kind: 'unavailable', reason: 'Corrige los errores de la matriz para poder simularla.' };
     }
-    return { kind: 'draft', config: requestFromDraft(configName.trim() || 'Simulación', matrixDraft, blocked) };
+    return { kind: 'draft', config: requestFromDraft(configName.trim() || 'Simulación', matrixDraft) };
   }
 
   function savedSimulationSource(): SimulationSource {
@@ -378,9 +361,6 @@ export function PenaltyConfigPage() {
   if (isEditing) {
     return (
       <div className="space-y-6">
-        {/* Perfil de cumplimiento oculto por ahora (no se usa). La lógica y el componente
-          quedan intactos — para reactivarlo, descomentar esta línea.
-          <PenaltyComplianceBanner compliance={compliance} onChanged={reloadCompliance} /> */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -452,7 +432,6 @@ export function PenaltyConfigPage() {
                   draft={matrixDraft}
                   onChange={(next) => { setMatrixDraft(next); setMatrixErrors([]); }}
                   catalog={catalog}
-                  blocked={blocked}
                   errors={matrixErrors}
                 />
               ) : (
@@ -746,10 +725,6 @@ export function PenaltyConfigPage() {
 
   return (
     <div className="space-y-6">
-      {/* Perfil de cumplimiento oculto por ahora (no se usa). La lógica y el componente
-          quedan intactos — para reactivarlo, descomentar esta línea.
-          <PenaltyComplianceBanner compliance={compliance} onChanged={reloadCompliance} /> */}
-
       {/* Config activa */}
       <Card>
         <CardHeader>

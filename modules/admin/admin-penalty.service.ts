@@ -5,8 +5,6 @@
  * - GET  /history         → Historial
  * - POST /                → Crear nueva config (modo SIMPLE o POR_CONCEPTOS)
  * - GET  /concepts        → Conceptos, métodos permitidos y límites
- * - GET  /compliance      → Perfil de cumplimiento + historial
- * - PUT  /compliance      → Cambiar perfil (exige motivo)
  * - POST /simulate        → Simulador de mora por día
  */
 
@@ -18,9 +16,6 @@ import type {
 } from '@/modules/shared/charge-concepts';
 import { DEFAULT_ALLOCATION_ORDER } from '@/modules/shared/charge-concepts';
 import type {
-  ComplianceHistoryEntry,
-  ComplianceProfile,
-  ComplianceState,
   ConceptAmounts,
   ConceptsCatalog,
   PenaltyConfigResponse,
@@ -50,9 +45,6 @@ export type {
   ConceptsCatalog,
   ConceptSpec,
   ConceptMethodSpec,
-  ComplianceProfile,
-  ComplianceState,
-  ComplianceHistoryEntry,
   SimulatePenaltyRequest,
   SimulatePenaltyResponse,
   PenaltyResult,
@@ -163,23 +155,6 @@ export function mapConceptsCatalog(raw: unknown): ConceptsCatalog | null {
   return { concepts, maxTnaPercent: toNullableNumber(raw.maxTnaPercent) };
 }
 
-function mapProfile(value: unknown): ComplianceProfile {
-  return value === 'UNREGULATED' ? 'UNREGULATED' : 'REGULATED';
-}
-
-export function mapCompliance(raw: unknown): ComplianceState | null {
-  if (!isObject(raw)) return null;
-  const history: ComplianceHistoryEntry[] = Array.isArray(raw.history)
-    ? raw.history.filter(isObject).map((h) => ({
-        profile: mapProfile(h.profile),
-        reason: String(h.reason ?? ''),
-        changedBy: String(h.changedBy ?? ''),
-        changedAt: String(h.changedAt ?? ''),
-      }))
-    : [];
-  return { profile: mapProfile(raw.profile), history };
-}
-
 function mapAmounts(raw: unknown): ConceptAmounts {
   const out: ConceptAmounts = {};
   if (!isObject(raw)) return out;
@@ -271,32 +246,6 @@ export async function getConceptsCatalog(): Promise<ConceptsCatalog | null> {
     return null;
   }
   return mapConceptsCatalog(await res.json().catch(() => null));
-}
-
-export async function getComplianceState(): Promise<ComplianceState | null> {
-  const res = await backendFetch(`${BASE}/compliance`, { context: 'ADMIN_PENALTY_COMPLIANCE' });
-  if (!res.ok) {
-    console.error(`[ADMIN_PENALTY_COMPLIANCE] Error ${res.status}`);
-    return null;
-  }
-  return mapCompliance(await res.json().catch(() => null));
-}
-
-export async function updateComplianceProfile(
-  profile: ComplianceProfile,
-  reason: string,
-): Promise<PenaltyResult<ComplianceState | null>> {
-  const res = await backendFetch(`${BASE}/compliance`, {
-    context: 'ADMIN_PENALTY_COMPLIANCE_UPDATE',
-    method: 'PUT',
-    body: JSON.stringify({ profile, reason }),
-  });
-
-  if (!res.ok) {
-    return { ok: false, error: await readError(res, 'Error al cambiar el perfil') };
-  }
-  // El backend puede responder sin cuerpo; el front vuelve a pedir el estado.
-  return { ok: true, data: mapCompliance(await res.json().catch(() => null)) };
 }
 
 export async function simulatePenalty(

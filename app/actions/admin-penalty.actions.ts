@@ -8,11 +8,7 @@ import {
   getPenaltyConfigHistory,
   createPenaltyConfig,
   getConceptsCatalog,
-  getComplianceState,
-  updateComplianceProfile,
   simulatePenalty,
-  type ComplianceProfile,
-  type ComplianceState,
   type ConceptsCatalog,
   type PenaltyConfigResponse,
   type PenaltyResult,
@@ -41,19 +37,6 @@ export async function createPenaltyConfigAction(
 export async function getConceptsCatalogAction(): Promise<ConceptsCatalog | null> {
   await requireAdminRole();
   return getConceptsCatalog();
-}
-
-export async function getComplianceStateAction(): Promise<ComplianceState | null> {
-  await requireAdminRole();
-  return getComplianceState();
-}
-
-export async function updateComplianceProfileAction(
-  profile: ComplianceProfile,
-  reason: string,
-): Promise<PenaltyResult<ComplianceState | null>> {
-  await requireAdminRole();
-  return updateComplianceProfile(profile, reason);
 }
 
 export async function simulatePenaltyAction(

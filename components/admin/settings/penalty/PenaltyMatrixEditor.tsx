@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowDown, ArrowUp, Plus, Trash2, Lock } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,12 +33,10 @@ interface Props {
   draft: MatrixDraft;
   onChange: (draft: MatrixDraft) => void;
   catalog: ConceptsCatalog;
-  /** Conceptos deshabilitados por el perfil de cumplimiento (regulado: gastos y tarifa). */
-  blocked: ReadonlySet<ChargeConcept>;
   errors: MatrixError[];
 }
 
-export function PenaltyMatrixEditor({ draft, onChange, catalog, blocked, errors }: Props) {
+export function PenaltyMatrixEditor({ draft, onChange, catalog, errors }: Props) {
   const conceptLabelOf = (code: ChargeConcept) =>
     conceptLabel(code, catalog.concepts.find((c) => c.code === code)?.label);
 
@@ -107,9 +105,6 @@ export function PenaltyMatrixEditor({ draft, onChange, catalog, blocked, errors 
                   <th key={concept} scope="col" className="px-3 py-2 font-medium" title={conceptHelp(concept)}>
                     <span className="flex items-center gap-1">
                       {conceptLabelOf(concept)}
-                      {blocked.has(concept) && (
-                        <Lock className="h-3 w-3 text-muted-foreground" aria-label="Bloqueado por el perfil regulado" />
-                      )}
                     </span>
                   </th>
                 ))}
@@ -217,14 +212,11 @@ export function PenaltyMatrixEditor({ draft, onChange, catalog, blocked, errors 
                     {MATRIX_CONCEPTS.map((concept) => {
                       const spec = catalog.concepts.find((c) => c.code === concept);
                       const cell = stage.cells[concept] ?? { method: '' as const, value: '' };
-                      const isBlocked = blocked.has(concept);
                       const methodSpec = findMethodSpec(catalog, concept, cell.method);
                       const cellError = stageErrors.find((e) => e.concept === concept);
                       return (
                         <td key={concept} className="px-3 py-3">
-                          {isBlocked ? (
-                            <p className="text-[11px] text-muted-foreground">No aplica con el perfil regulado.</p>
-                          ) : !spec || spec.allowedMethods.length === 0 ? (
+                          {!spec || spec.allowedMethods.length === 0 ? (
                             <p className="text-[11px] text-muted-foreground">Sin métodos disponibles.</p>
                           ) : (
                             <div className="space-y-1.5">

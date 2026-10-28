@@ -52,9 +52,6 @@ export const DEFAULT_ALLOCATION_ORDER: readonly ChargeConcept[] = [
   'MORA_SIMPLE',
 ];
 
-/** Con perfil REGULATED el backend rechaza estas categorías con valor mayor a 0 en mora. */
-export const REGULATED_BLOCKED_CONCEPTS: readonly ChargeConcept[] = ['GASTOS', 'TARIFA'];
-
 const CONCEPT_LABELS: Record<ChargeConcept, string> = {
   INTERES_COMPENSATORIO: 'Interés compensatorio',
   GASTOS: 'Gastos',

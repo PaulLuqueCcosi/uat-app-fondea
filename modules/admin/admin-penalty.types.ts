@@ -108,22 +108,6 @@ export interface ConceptsCatalog {
   maxTnaPercent: number | null;
 }
 
-// ── Perfil de cumplimiento (GET/PUT /compliance) ──────────────────────────────
-
-export type ComplianceProfile = 'REGULATED' | 'UNREGULATED';
-
-export interface ComplianceHistoryEntry {
-  profile: ComplianceProfile;
-  reason: string;
-  changedBy: string;
-  changedAt: string;
-}
-
-export interface ComplianceState {
-  profile: ComplianceProfile;
-  history: ComplianceHistoryEntry[];
-}
-
 // ── Simulador (POST /simulate) ────────────────────────────────────────────────
 
 export interface SimulatePenaltyRequest {
@@ -153,7 +137,7 @@ export interface SimulatePenaltyResponse {
 // ── Resultado de las mutaciones ───────────────────────────────────────────────
 
 export interface PenaltyMutationError {
-  /** Código estable del backend (por ejemplo COMPLIANCE_FEES_ON_DELAY), si lo hay. */
+  /** Código estable del backend (por ejemplo MORA_TNA_OUT_OF_RANGE), si lo hay. */
   code?: string;
   message: string;
   status?: number;

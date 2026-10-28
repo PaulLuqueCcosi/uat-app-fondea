@@ -1,10 +1,7 @@
 import type { PenaltyMutationError } from '@/modules/admin/admin-penalty.types';
 
 /** Mensajes en español para los `code` estables del backend. */
-const ERROR_MESSAGES: Record<string, string> = {
-  COMPLIANCE_FEES_ON_DELAY:
-    'Con el perfil REGULADO no se pueden cobrar gastos ni tarifa por el atraso. Pon esas celdas en "No se cobra" o cambia el perfil de cumplimiento.',
-};
+const ERROR_MESSAGES: Record<string, string> = {};
 
 /** Texto para mostrar al admin: el del `code` si lo conocemos, si no el mensaje del backend. */
 export function penaltyErrorMessage(error: PenaltyMutationError, fallback: string): string {
