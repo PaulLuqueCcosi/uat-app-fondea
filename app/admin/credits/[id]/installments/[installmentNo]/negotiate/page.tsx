@@ -11,6 +11,7 @@ import { getNegotiationOffersByInstallmentAction } from '@/app/actions/negotiati
 import { NegotiationOfferForm } from '@/components/admin/credits/negotiate/NegotiationOfferForm';
 import { NegotiationOfferHistory } from '@/components/admin/credits/negotiate/NegotiationOfferHistory';
 import { BreadcrumbLabel } from '@/components/shared/BreadcrumbLabel';
+import { formatCurrency } from '@/lib/admin-formatters';
 
 interface Props {
   params: Promise<{ id: string; installmentNo: string }>;
@@ -93,7 +94,24 @@ export default async function NegotiateInstallmentPage({ params }: Props) {
 
       {/* Contenido: formulario a la izquierda (ocupa el ancho disponible), resumen + historial a la derecha */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
+          {isEligible && !pendingOffer && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Qué pasa con esta oferta</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
+                  <li>El cliente recibe el nuevo cronograma y tiene el plazo que definas para firmarlo.</li>
+                  <li>
+                    Si firma, se crea un crédito de negociación con esas cuotas y esta cuota pasa a <strong>Negociada</strong>:
+                    deja de acumular mora. No sale dinero nuevo.
+                  </li>
+                  <li>Si no firma a tiempo, la oferta vence y la cuota sigue vencida, acumulando mora.</li>
+                </ol>
+              </CardContent>
+            </Card>
+          )}
           {isEligible && !pendingOffer ? (
             <NegotiationOfferForm
               installmentId={installment.id}
@@ -110,25 +128,40 @@ export default async function NegotiateInstallmentPage({ params }: Props) {
         </div>
 
         <div className="lg:col-span-1 flex flex-col gap-6">
-          {/* Datos de la cuota */}
+          {/* Lo que debe hoy la cuota: cuota pendiente + mora pendiente = total */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Datos de la cuota</CardTitle>
+              <CardTitle className="text-sm">Lo que debe hoy la cuota</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] text-muted-foreground">Monto cuota</p>
-                <p className="font-semibold">S/ {installment.amount_due.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</p>
+                <p className="text-muted-foreground">Cuota pendiente</p>
+                <p className="font-mono font-medium">{formatCurrency(installment.amount_due - installment.amount_paid)}</p>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-[11px] text-muted-foreground">Mora acumulada</p>
-                <p className="font-semibold text-red-600">S/ {installment.penalty_accrued.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</p>
+                <p className="text-muted-foreground">
+                  Mora pendiente
+                  {installment.days_overdue > 0 && (
+                    <span className="block text-[11px]">
+                      {installment.days_overdue} {installment.days_overdue === 1 ? 'día' : 'días'} de atraso
+                    </span>
+                  )}
+                </p>
+                <p className="font-mono font-medium text-red-600">
+                  {formatCurrency(installment.penalty_accrued - installment.penalty_paid)}
+                </p>
               </div>
               <Separator />
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] text-muted-foreground">Total pendiente</p>
-                <p className="font-semibold">S/ {installment.outstanding.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</p>
+              <div className="flex items-center justify-between font-semibold">
+                <p>Total pendiente</p>
+                <p className="font-mono">{formatCurrency(installment.outstanding)}</p>
               </div>
+              <Link
+                href={`/admin/credits/${id}/installments/${no}`}
+                className="block text-xs text-primary hover:underline"
+              >
+                Ver el detalle de la cuota
+              </Link>
             </CardContent>
           </Card>
 

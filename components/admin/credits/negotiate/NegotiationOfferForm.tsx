@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, Trash2, Handshake, AlertTriangle, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Handshake, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { createNegotiationOfferAction } from '@/app/actions/negotiation-offer.actions';
+import { formatCurrency } from '@/lib/admin-formatters';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -57,24 +58,26 @@ type NegotiationFormValues = z.infer<typeof negotiationFormSchema>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatCurrency(value: number) {
-  return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
-}
+/** Pasa un monto a centavos enteros para sumar y repartir sin errores de redondeo. */
+const toCents = (value: number) => Math.round(value * 100);
 
-/** Sugiere un cronograma inicial simple: N cuotas mensuales iguales que suman el pendiente */
+/**
+ * Sugiere un cronograma inicial: N cuotas mensuales iguales que suman exactamente el pendiente.
+ * Se reparte en centavos; lo que sobra por redondeo va a la última cuota.
+ */
 function buildSuggestedSchedule(outstanding: number, installments: number): { dueDate: string; amount: string }[] {
-  const base = Math.floor((outstanding / installments) * 10) / 10;
+  const totalCents = toCents(outstanding);
+  const baseCents = Math.floor(totalCents / installments);
   const rows: { dueDate: string; amount: string }[] = [];
   let accumulated = 0;
   for (let i = 1; i <= installments; i++) {
-    const isLast = i === installments;
-    const amount = isLast ? Math.round((outstanding - accumulated) * 10) / 10 : base;
-    accumulated += amount;
+    const cents = i === installments ? totalCents - accumulated : baseCents;
+    accumulated += cents;
     const date = new Date();
     date.setMonth(date.getMonth() + i);
     // Fecha LOCAL (no toISOString, que pasa a UTC y en Perú corre un día después de las 19:00)
     const dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    rows.push({ dueDate, amount: amount.toFixed(1) });
+    rows.push({ dueDate, amount: (cents / 100).toFixed(2) });
   }
   return rows;
 }
@@ -101,7 +104,9 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const [parts, setParts] = useState('3');
+
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'schedule',
   });
@@ -109,7 +114,23 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
   const isSubmitting = form.formState.isSubmitting;
 
   const scheduleTotal = form.watch('schedule').reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
-  const totalDiffersFromOutstanding = Math.abs(scheduleTotal - outstanding) > 0.5;
+  // Diferencia en centavos: el cronograma tiene que cuadrar con lo que debe la cuota, al centavo.
+  const diffCents = toCents(scheduleTotal) - toCents(outstanding);
+  const totalDiffersFromOutstanding = diffCents !== 0;
+
+  function splitEvenly() {
+    const n = Math.min(24, Math.max(1, Math.floor(Number(parts)) || 1));
+    setParts(String(n));
+    replace(buildSuggestedSchedule(outstanding, n));
+  }
+
+  /** Suma o resta la diferencia a la última cuota para que el cronograma cuadre con lo que debe la cuota. */
+  function adjustLast() {
+    const rows = form.getValues('schedule');
+    const last = rows.length - 1;
+    const fixed = toCents(Number(rows[last].amount) || 0) - diffCents;
+    if (fixed > 0) form.setValue(`schedule.${last}.amount`, (fixed / 100).toFixed(2), { shouldValidate: true });
+  }
 
   async function onSubmit(data: NegotiationFormValues) {
     setSubmitError(null);
@@ -139,7 +160,9 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Plazo para firmar</CardTitle>
-            <CardDescription>Días que tiene el cliente para aceptar esta oferta antes de que expire.</CardDescription>
+            <CardDescription>
+              Días que tiene el cliente para firmar. Pasado ese plazo la oferta vence y la cuota sigue vencida.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <FormField
@@ -151,7 +174,7 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
                   <FormControl>
                     <Input type="number" min={1} placeholder="7" {...field} />
                   </FormControl>
-                  <FormDescription>El cliente verá esta oferta en su dashboard hasta esa fecha.</FormDescription>
+                  <FormDescription>El cliente ve la oferta en su panel hasta que venza.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -162,22 +185,37 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
         {/* Cronograma */}
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-sm">Cronograma propuesto</CardTitle>
-                <CardDescription>
-                  100% manual — define cada cuota. Pendiente actual de la cuota original: {formatCurrency(outstanding)}
-                </CardDescription>
+            <div>
+              <CardTitle className="text-sm">Nuevo cronograma de pagos</CardTitle>
+              <CardDescription>
+                Estas serán las cuotas del crédito de negociación. Hoy la cuota debe {formatCurrency(outstanding)}.
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-end gap-2 pt-2">
+              <div className="space-y-1">
+                <label htmlFor="negotiation-parts" className="text-xs text-muted-foreground">Repartir en</label>
+                <Input
+                  id="negotiation-parts"
+                  type="number"
+                  min={1}
+                  max={24}
+                  className="h-8 w-20"
+                  value={parts}
+                  onChange={(e) => setParts(e.target.value)}
+                />
               </div>
+              <Button type="button" variant="outline" size="sm" onClick={splitEvenly}>
+                cuotas iguales
+              </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 className="gap-1.5"
                 onClick={() => append({ dueDate: '', amount: '' })}
               >
                 <Plus className="h-3.5 w-3.5" />
-                Agregar cuota
+                Agregar una cuota
               </Button>
             </div>
           </CardHeader>
@@ -217,7 +255,7 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
                       <FormControl>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">S/</span>
-                          <Input type="number" step="0.1" min={0} className="pl-8" {...f} />
+                          <Input type="number" step="0.01" min={0} className="pl-8" {...f} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -251,15 +289,28 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
               </span>
             </div>
 
-            {totalDiffersFromOutstanding && (
+            {totalDiffersFromOutstanding ? (
               <Alert>
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="text-amber-700">El total no coincide con el pendiente actual</AlertTitle>
-                <AlertDescription>
-                  El cronograma suma {formatCurrency(scheduleTotal)}, pero la cuota original tiene {formatCurrency(outstanding)}{' '}
-                  pendiente. El backend no valida esto — es una decisión de negociación con el cliente, pero confírmalo antes de enviar.
+                <AlertTitle className="text-amber-700">
+                  El cronograma suma {formatCurrency(Math.abs(diffCents) / 100)} {diffCents < 0 ? 'menos' : 'más'} de lo que debe la cuota
+                </AlertTitle>
+                <AlertDescription className="space-y-2">
+                  <p>
+                    {diffCents < 0
+                      ? 'El cliente pagaría menos de lo que debe hoy.'
+                      : 'El cliente pagaría más de lo que debe hoy.'}{' '}
+                    El sistema no valida este monto: es una decisión de la negociación, confírmala antes de enviar.
+                  </p>
+                  <Button type="button" variant="outline" size="sm" onClick={adjustLast}>
+                    Ajustar la última cuota para que cuadre
+                  </Button>
                 </AlertDescription>
               </Alert>
+            ) : (
+              <p className="flex items-center gap-1.5 text-xs text-emerald-700">
+                <CheckCircle2 className="h-3.5 w-3.5" /> El cronograma cuadra con lo que debe la cuota.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -275,7 +326,7 @@ export function NegotiationOfferForm({ installmentId, creditId, outstanding }: N
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={isSubmitting} className="gap-2">
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Handshake className="h-4 w-4" />}
-            {isSubmitting ? 'Creando oferta...' : 'Crear oferta de negociación'}
+            {isSubmitting ? 'Enviando oferta...' : 'Enviar oferta al cliente'}
           </Button>
           <Button type="button" variant="outline" onClick={() => router.push(`/admin/credits/${creditId}`)}>
             Cancelar
