@@ -16,6 +16,7 @@ import {
 import { CreditDocumentsMenu } from './CreditDocumentsMenu';
 import type { Credit, Installment, NextPayment, InstallmentViewStatus } from '@/modules/credits';
 import { getInstallmentViewStatus } from '@/modules/credits';
+import { describeInstallmentOwed } from '@/modules/credits/installment-owed';
 import { formatBackendDate, parseBackendDate } from '@/modules/shared/backend-date';
 
 // ─── Estilos por estado visible ───────────────────────────────────────────────
@@ -133,7 +134,7 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
           )}
 
           {/* ─── Progreso del préstamo (bloque compartido con el detalle) ─── */}
-          <CreditProgressBlock credit={credit} />
+          <CreditProgressBlock credit={credit} compact />
 
           {/* ─── Cuotas + Calendario (colapsable) ─── */}
           <CollapsibleContent>
@@ -149,6 +150,7 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
                       // Estado visible: con comprobante en revisión no se pinta de rojo.
                       const view = getInstallmentViewStatus(inst);
                       const style = MINI_ROW_STYLES[view.status];
+                      const owed = describeInstallmentOwed(inst);
                       return (
                         <button
                           key={inst.id}
@@ -170,9 +172,10 @@ export function ActiveLoanCard({ credit, installments, nextPayment, applicationI
                                 : formatDate(inst.dueDate)}
                             </p>
                           </div>
-                          <p className="text-xs font-bold text-foreground shrink-0">
-                            {formatCurrencyShort(inst.amountDue)}
-                          </p>
+                          <div className="shrink-0 text-right">
+                            <p className="text-xs font-bold tabular-nums text-foreground">{formatCurrencyShort(owed.amount)}</p>
+                            {owed.note && <p className="text-[10px] leading-tight text-muted-foreground">{owed.note}</p>}
+                          </div>
                         </button>
                       );
                     })}

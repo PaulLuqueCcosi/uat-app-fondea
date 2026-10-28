@@ -45,7 +45,8 @@ import {
 import { formatBackendDate, parseBackendDate } from '@/modules/shared/backend-date';
 import { CreditDocumentsSection } from '@/components/dashboard/sections/CreditDocumentsSection';
 import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
-import { stageDaysText, stageRuleLines } from '@/modules/shared/penalty-rule-text';
+import { stageDaysText, stageForDay, stageRuleLines } from '@/modules/shared/penalty-rule-text';
+import { describeInstallmentOwed } from '@/modules/credits/installment-owed';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -166,11 +167,35 @@ export default function CreditoDetallePage() {
 
   const progressPercent = summary?.progressPercentage ?? 0;
 
+  // De qué es lo que falta pagar: capital, interés y mora de las cuotas abiertas. Sin desglose, no se dibuja.
+  const openInstallments = installments.filter((i) => i.status !== 'PAID' && i.status !== 'NEGOTIATED');
+  const pendingBreakdown =
+    openInstallments.length > 0 && openInstallments.every((i) => i.principalAmount != null && i.interestAmount != null)
+      ? [
+          {
+            part: 'capital' as const,
+            amount: openInstallments.reduce((sum, i) => sum + Math.max(0, (i.principalAmount ?? 0) - (i.principalPaid ?? 0)), 0),
+          },
+          {
+            part: 'interest' as const,
+            amount: openInstallments.reduce((sum, i) => sum + Math.max(0, (i.interestAmount ?? 0) - (i.interestPaid ?? 0)), 0),
+          },
+          {
+            part: 'mora' as const,
+            amount: openInstallments.reduce((sum, i) => sum + Math.max(0, i.penaltyAccrued - i.penaltyPaid), 0),
+          },
+        ]
+      : undefined;
+
   // El estado OVERDUE del backend es contable: se mantiene aunque el cliente ya haya
   // subido su comprobante y la mora esté congelada. Si TODAS las cuotas vencidas están
   // en revisión, pedirle "paga la más antigua para detener la mora" es incorrecto — ya
   // pagó, y la demora es de nuestra validación. Ver `installment-view-status.ts`.
   const overdueInstallments = installments.filter((i) => i.status === 'OVERDUE');
+  // Tramo de mora en que está hoy el crédito: el de su cuota más atrasada.
+  const worstDelay = overdueInstallments.reduce((max, i) => Math.max(max, i.daysOverdue), 0);
+  const currentMoraStage =
+    credit?.penaltyConfig && worstDelay > 0 ? stageForDay(credit.penaltyConfig.stages, worstDelay) : null;
   const allOverdueUnderReview =
     overdueInstallments.length > 0 && overdueInstallments.every((i) => i.hasPendingDeclaration);
 
@@ -297,6 +322,7 @@ export default function CreditoDetallePage() {
           <CreditProgressBlock
             credit={credit}
             progressPercentage={summary?.progressPercentage}
+            pendingBreakdown={pendingBreakdown}
             footer={
               <p className="text-[10px] text-muted-foreground">
                 {credit.installmentsCompleted} de {credit.installmentCount} cuotas pagadas · Finaliza el {formatDate(credit.maturityDate)}
@@ -376,48 +402,6 @@ export default function CreditoDetallePage() {
         </Card>
       )}
 
-      {/* ─── Configuración de mora aplicada ─── */}
-      {credit.penaltyConfig && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-warning-500" />
-              Sistema de mora aplicado
-            </CardTitle>
-            <CardDescription>
-              Este crédito usa la configuración &quot;{credit.penaltyConfig.name}&quot;. La mora se calcula según los días de atraso.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {credit.penaltyConfig.stages.map((stage, idx) => (
-                <div key={idx} className="rounded-lg border p-3 space-y-1.5">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="flex items-center gap-2 text-sm font-medium">
-                      {stage.color && (
-                        <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
-                      )}
-                      {stage.label || stageDaysText(stage.fromDay, stage.toDay)}
-                    </span>
-                    {stage.label && (
-                      <span className="text-xs text-muted-foreground">{stageDaysText(stage.fromDay, stage.toDay)}</span>
-                    )}
-                  </div>
-                  <ul className="space-y-0.5">
-                    {stageRuleLines(stage.rules).map((line) => (
-                      <li key={line} className="text-xs text-muted-foreground">{line}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-3">
-              La mora se aplica desde el primer día de atraso (sin período de gracia).
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {/* ─── Documentos descargables de ESTE crédito ─── */}
       <CreditDocumentsSection creditId={credit.id} />
 
@@ -470,6 +454,59 @@ export default function CreditoDetallePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ─── Cómo se calcula la mora ───
+          Al final y plegada: el cliente la consulta cuando la necesita, no es lo primero que debe leer.
+          A la vista queda solo el tramo en que está hoy. */}
+      {credit.penaltyConfig && (
+        <Card>
+          <CardContent>
+            <details className="group">
+              <summary className="flex cursor-pointer select-none flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-2 text-base font-semibold text-foreground">
+                  <ShieldAlert className="w-4 h-4 text-warning-500" />
+                  ¿Cómo se calcula mi mora?
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {currentMoraStage
+                    ? `Hoy estás en: ${currentMoraStage.label || stageDaysText(currentMoraStage.fromDay, currentMoraStage.toDay)}`
+                    : 'Ver los tramos'}
+                </span>
+              </summary>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Este crédito usa la configuración &quot;{credit.penaltyConfig.name}&quot;. La mora se calcula según los días de atraso.
+              </p>
+              <div className="mt-3">
+                <div className="space-y-3">
+              {credit.penaltyConfig.stages.map((stage, idx) => (
+                <div key={idx} className="rounded-lg border p-3 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      {stage.color && (
+                        <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                      )}
+                      {stage.label || stageDaysText(stage.fromDay, stage.toDay)}
+                    </span>
+                    {stage.label && (
+                      <span className="text-xs text-muted-foreground">{stageDaysText(stage.fromDay, stage.toDay)}</span>
+                    )}
+                  </div>
+                  <ul className="space-y-0.5">
+                    {stageRuleLines(stage.rules).map((line) => (
+                      <li key={line} className="text-xs text-muted-foreground">{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-3">
+              La mora se aplica desde el primer día de atraso (sin período de gracia).
+            </p>
+            </details>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -522,6 +559,7 @@ function InstallmentListMini({
             ? `/dashboard/creditos/${inst.negotiationCreditId}`
             : `/dashboard/creditos/${creditId}/cuotas/${inst.installmentNo}`;
           const detailTitle = view.status === 'NEGOTIATED' ? 'Ver crédito de refinanciamiento' : 'Ver detalle de la cuota';
+          const owed = describeInstallmentOwed(inst);
 
           return (
             <div key={inst.id} className="flex items-stretch gap-1.5">
@@ -545,9 +583,10 @@ function InstallmentListMini({
                       : formatDate(inst.dueDate)}
                   </p>
                 </div>
-                <p className="text-sm font-bold text-foreground shrink-0">
-                  {formatCurrencyShort(inst.amountDue)}
-                </p>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-bold tabular-nums text-foreground">{formatCurrencyShort(owed.amount)}</p>
+                  {owed.note && <p className="text-[11px] leading-tight text-muted-foreground">{owed.note}</p>}
+                </div>
               </button>
               <Link
                 href={detailHref}

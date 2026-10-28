@@ -9,7 +9,6 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  DollarSign,
   CreditCard,
   Shield,
   XCircle,
@@ -52,6 +51,7 @@ import type { PaymentDeclaration, MyPaymentDeclarationDetail } from '@/modules/p
 import { getActiveDepositAccountAction } from '@/app/actions/deposit-account.actions';
 import type { DepositAccountConfig, DepositAccountError } from '@/modules/deposit-account';
 import { DepositAccountCard } from '@/components/credits/DepositAccountCard';
+import { InstallmentBalance } from '@/components/credits/InstallmentBalance';
 import { useBreadcrumbLabel } from '@/modules/shared/breadcrumb-labels';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -485,62 +485,18 @@ export default function CuotaDetallePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ── Columna izquierda: qué debo y dónde depositar ── */}
         <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-primary" />
-                Desglose
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-sm text-muted-foreground">Monto de cuota</span>
-                <span className="text-sm font-medium text-foreground">{formatCurrency(cuota.amountDue)}</span>
-              </div>
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-sm text-muted-foreground">Ya pagado</span>
-                <span className="text-sm font-medium text-accent-700">{formatCurrency(cuota.amountPaid)}</span>
-              </div>
-              {cuota.penaltyAccrued > 0 && (
-                <div className="flex items-center justify-between py-1.5">
-                  <span className="text-sm text-error-600 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    Mora ({cuota.daysOverdue} días)
-                  </span>
-                  <span className="text-sm font-medium text-error-600">{formatCurrency(cuota.penaltyAccrued)}</span>
-                </div>
-              )}
-              {cuota.penaltyPaid > 0 && (
-                <div className="flex items-center justify-between py-1.5">
-                  <span className="text-sm text-muted-foreground">Mora pagada</span>
-                  <span className="text-sm font-medium text-accent-700">{formatCurrency(cuota.penaltyPaid)}</span>
-                </div>
-              )}
-              <Separator />
-              <div className="flex items-center justify-between py-2">
-                <span className="text-base font-semibold text-foreground">Pendiente</span>
-                <span className="text-xl font-bold text-foreground">{formatCurrency(cuota.outstanding)}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Advertencia si vencida */}
-          {isOverdue && paymentStep === 'declare' && (
-            <Card className="border-error-200">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2 text-error-900">
-                  <XCircle className="w-4 h-4 text-error-600" />
-                  Consecuencias del atraso
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-start gap-2 text-xs text-error-700">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                  <span>Mora de {formatCurrency(cuota.penaltyAccrued)} acumulada por {cuota.daysOverdue} días de atraso</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <InstallmentBalance
+            amountDue={cuota.amountDue}
+            amountPaid={cuota.amountPaid}
+            penaltyAccrued={cuota.penaltyAccrued}
+            penaltyPaid={cuota.penaltyPaid}
+            outstanding={cuota.outstanding}
+            daysOverdue={cuota.daysOverdue}
+            principalAmount={cuota.principalAmount}
+            interestAmount={cuota.interestAmount}
+            principalPaid={cuota.principalPaid}
+            interestPaid={cuota.interestPaid}
+          />
 
           {/* Datos para depositar — solo si hay algo que pagar ahora. Va en la misma
               columna que el Desglose porque es info que el cliente lee antes de actuar,
