@@ -5,31 +5,22 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  Calendar,
   CheckCircle,
-  Clock,
   AlertCircle,
   CreditCard,
-  Shield,
   XCircle,
   Loader2,
-  Upload,
   ImageIcon,
   Plus,
-  Trash2,
   Send,
   Hourglass,
   RefreshCw,
   ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import {
   getInstallmentByNoAction,
   getCreditByIdAction,
@@ -42,7 +33,6 @@ import {
 import type {
   Installment,
   Credit,
-  InstallmentViewStatus,
   InstallmentViewStatusInfo,
 } from '@/modules/credits';
 import { getInstallmentViewStatus } from '@/modules/credits';
@@ -113,99 +103,6 @@ const DECLARATION_STATUS_BADGE: Record<PaymentDeclaration['status'], { label: st
   PENDING: { label: 'En revisión', variant: 'pending' },
 };
 
-// ─── Banner de estado ─────────────────────────────────────────────────────────
-
-/** Colores por estado visible — el copy sale de `view.description`. */
-const BANNER_STYLES: Record<
-  InstallmentViewStatus,
-  { card: string; title: string; body: string; icon: React.ReactNode }
-> = {
-  PAID: {
-    card: 'border-success-200 bg-success-50/50',
-    title: 'text-success-900',
-    body: 'text-success-700',
-    icon: <CheckCircle className="w-4 h-4 text-success-700" />,
-  },
-  UNDER_REVIEW: {
-    card: 'border-primary-200 bg-primary-50/50',
-    title: 'text-primary-900',
-    body: 'text-primary-700',
-    icon: <Hourglass className="w-4 h-4 text-primary-600" />,
-  },
-  OVERDUE: {
-    card: 'border-error-200 bg-error-50/50',
-    title: 'text-error-900',
-    body: 'text-error-700',
-    icon: <AlertCircle className="w-4 h-4 text-error-600" />,
-  },
-  PARTIALLY_PAID: {
-    card: 'border-warning-200 bg-warning-50/50',
-    title: 'text-warning-900',
-    body: 'text-warning-700',
-    icon: <Clock className="w-4 h-4 text-warning-700" />,
-  },
-  CURRENT: {
-    card: 'border-warning-200 bg-warning-50/50',
-    title: 'text-warning-900',
-    body: 'text-warning-700',
-    icon: <Clock className="w-4 h-4 text-warning-700" />,
-  },
-  PENDING: {
-    card: '',
-    title: '',
-    body: 'text-muted-foreground',
-    icon: <Calendar className="w-4 h-4 text-muted-foreground" />,
-  },
-  NEGOTIATED: {
-    card: 'border-primary-200 bg-primary-50/40',
-    title: 'text-primary-900',
-    body: 'text-primary-700',
-    icon: <RefreshCw className="w-4 h-4 text-primary-600" />,
-  },
-};
-
-function StatusBanner({
-  view,
-  cuota,
-}: {
-  view: InstallmentViewStatusInfo;
-  cuota: Installment;
-}) {
-  const style = BANNER_STYLES[view.status];
-
-  // Dato secundario relevante según el estado: cuándo se pagó, cuándo vence, cuánto falta.
-  const meta = (() => {
-    switch (view.status) {
-      case 'PAID':
-        return cuota.paidAt ? `Pagada el ${formatDate(cuota.paidAt)}` : null;
-      case 'PARTIALLY_PAID':
-        return `Ya pagaste ${formatCurrency(cuota.amountPaid)} · faltan ${formatCurrency(cuota.outstanding)}`;
-      case 'OVERDUE':
-        return `Venció el ${formatDate(cuota.dueDate)}`;
-      case 'UNDER_REVIEW':
-      case 'CURRENT':
-      case 'PENDING':
-        return `Vence el ${formatDate(cuota.dueDate)}`;
-      default:
-        return null;
-    }
-  })();
-
-  return (
-    <Card className={style.card}>
-      <CardHeader>
-        <CardTitle className={`text-sm flex items-center gap-2 ${style.title}`}>
-          {style.icon}
-          {view.label}
-        </CardTitle>
-        <CardDescription className={style.body}>
-          {view.description}
-          {meta && <span className="block mt-0.5 opacity-80">{meta}</span>}
-        </CardDescription>
-      </CardHeader>
-    </Card>
-  );
-}
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -258,13 +155,6 @@ export default function CuotaDetallePage() {
   const pendingDeclaration = installmentDeclarations.find((d) => d.status === 'PENDING') ?? null;
   const mostRecentDeclaration = installmentDeclarations[0] ?? null;
 
-  // Historial de comprobantes: la tarjeta siempre muestra poco por defecto (la última
-  // declaración si la cuota sigue activa, o solo las aprobadas si ya cerró). El botón "Ver
-  // todo el historial" abre un modal aparte con TODAS las declaraciones, cada una colapsada
-  // (se expande individualmente para ver sus fotos) — en vez de desparramar todo inline en
-  // la misma tarjeta, que se volvía ilegible con varios comprobantes por declaración.
-  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-
   // Cuenta a la que el cliente tiene que transferir. Se guarda también el error para
   // poder explicarle por qué no la ve (ej. el admin no configuró ninguna) en vez de
   // mostrarle el formulario sin decirle a dónde depositar.
@@ -285,7 +175,6 @@ export default function CuotaDetallePage() {
   // vez de una tarjeta de éxito aparte que se veía distinta a lo que quedaba tras el reload.
   const fetchDetail = useCallback(async () => {
     setLoading(true);
-    setHistoryDialogOpen(false);
     const [cuotaRes, creditRes, declarationsRes, depositAccountRes] = await Promise.all([
       getInstallmentByNoAction(creditoId, cuotaNo),
       getCreditByIdAction(creditoId),
@@ -294,6 +183,16 @@ export default function CuotaDetallePage() {
     ]);
     if (cuotaRes.ok) {
       setCuota(cuotaRes.data);
+      // El monto del primer comprobante arranca con lo que falta pagar, para que el cliente
+      // no lo tipee (sigue editable). Solo si todavía está vacío: no pisa lo que ya escribió.
+      const pending = cuotaRes.data.outstanding;
+      if (pending > 0) {
+        setVoucherRows((rows) =>
+          rows.length === 1 && rows[0].amount === ''
+            ? [{ ...rows[0], amount: pending.toFixed(2) }]
+            : rows,
+        );
+      }
     } else {
       setError(cuotaRes.error.message);
     }
@@ -433,15 +332,17 @@ export default function CuotaDetallePage() {
     );
   }
 
+
   // Estado VISIBLE — resuelve status + hasPendingDeclaration en un solo lugar.
   // `hasPendingDeclaration` viene del backend (es el mismo dato que congela la mora), así
   // que no depende de que el listado de declaraciones haya cargado bien.
   const view = getInstallmentViewStatus(cuota);
-  const isOverdue = view.status === 'OVERDUE';
   const isUnderReview = view.status === 'UNDER_REVIEW';
   const totalInstallments = credit?.installmentCount ?? 0;
   // Solo se ofrece el formulario si la cuota admite pago ahora Y tiene saldo.
   const needsPayment = view.canDeclarePayment && cuota.outstanding > 0;
+  // La superficie "Pagar" existe mientras haya algo que hacer o que contar sobre el pago.
+  const showPaySurface = paymentStep !== 'declare' || isUnderReview || needsPayment;
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -467,484 +368,467 @@ export default function CuotaDetallePage() {
         <Badge variant={view.variant}>{view.label}</Badge>
       </div>
 
-      {/* ─── Banner de estado ───
-          Uno solo, derivado del estado visible. Antes había cinco bloques condicionales
-          casi idénticos (uno por status) que había que mantener en paralelo — y ninguno
-          contemplaba "comprobante en revisión", así que a un cliente que ya había pagado
-          se le mostraba "Cuota vencida, paga lo antes posible". */}
-      {paymentStep === 'declare' && (
-        <StatusBanner view={view} cuota={cuota} />
-      )}
+      {/* ─── Dos superficies blancas sobre el fondo de la página ───
+          Izquierda = resumen (cuánto y por qué). Derecha = la acción (depositar y subir el
+          comprobante) y, debajo, el historial plegado. Sin cajas de colores ni tarjetas
+          anidadas: dentro de cada superficie solo hay divisores finos. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* ── Izquierda: Resumen ── */}
+        <Surface aria-label="Resumen de la cuota">
+          <SummaryContent view={view} cuota={cuota} pendingDeclaration={pendingDeclaration} />
+        </Surface>
 
-      {/* ─── Layout 2 columnas ───
-          Izquierda = info para leer (cuánto debo, dónde deposito). Derecha = la acción
-          (el formulario). Antes DepositAccountCard estaba en la columna derecha, pegado
-          al formulario — dejaba la izquierda (solo Desglose) mucho más corta que la
-          derecha, con un hueco grande debajo. Moviéndola a la izquierda ambas columnas
-          quedan con una altura parecida. */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ── Columna izquierda: qué debo y dónde depositar ── */}
-        <div className="flex flex-col gap-6">
-          <InstallmentBalance
-            amountDue={cuota.amountDue}
-            amountPaid={cuota.amountPaid}
-            penaltyAccrued={cuota.penaltyAccrued}
-            penaltyPaid={cuota.penaltyPaid}
-            outstanding={cuota.outstanding}
-            daysOverdue={cuota.daysOverdue}
-            principalAmount={cuota.principalAmount}
-            interestAmount={cuota.interestAmount}
-            principalPaid={cuota.principalPaid}
-            interestPaid={cuota.interestPaid}
-          />
-
-          {/* Datos para depositar — solo si hay algo que pagar ahora. Va en la misma
-              columna que el Desglose porque es info que el cliente lee antes de actuar,
-              no parte del formulario en sí. */}
-          {needsPayment && paymentStep === 'declare' && (
-            <DepositAccountCard config={depositAccount} error={depositAccountError} />
-          )}
-        </div>
-
-        {/* ── Columna derecha: declarar el pago ── */}
-        <div className="flex flex-col gap-6">
-          {/* STEP: declare — comprobante en revisión (en lugar del formulario).
-              Se muestra según `isUnderReview` (que viene de hasPendingDeclaration del
-              backend, el mismo dato que congela la mora) y NO de la lista de
-              declaraciones: si esa llamada falla, igual se le informa al cliente que
-              tiene algo en revisión en vez de ofrecerle subir otro comprobante. */}
-          {isUnderReview && paymentStep === 'declare' && (
-            <>
-              {/* Fondo blanco liso, igual que el resto de tarjetas de la página — antes tenía
-                  bg-primary-50/50 (celeste), que el usuario pidió explícitamente sacar. El
-                  color queda solo en el ícono/título, como acento, no como fondo. */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2 text-primary-900">
-                    <Hourglass className="w-4 h-4 text-primary-600" />
-                    Comprobante en revisión
-                  </CardTitle>
-                  <CardDescription>
-                    Estamos validando tu pago. La mora quedó detenida desde que lo enviaste —
-                    si todo está en orden, no vas a pagar nada extra por el tiempo de revisión.
-                  </CardDescription>
-                </CardHeader>
-                {pendingDeclaration && (
-                  <CardContent className="space-y-2">
-                    {/* Monto y cantidad de comprobantes SOLO si hay más de uno — con un solo
-                        comprobante son el mismo dato que ya se ve en el historial de abajo,
-                        mostrarlos acá también era pura repetición. Con varios comprobantes
-                        sí aportan: son la SUMA y el conteo, no un dato de un voucher puntual. */}
-                    {pendingDeclaration.vouchers.length > 1 && (
-                      <>
-                        <div className="flex items-center justify-between py-1.5">
-                          <span className="text-sm text-muted-foreground">Monto declarado (total)</span>
-                          <span className="text-sm font-medium text-foreground">
-                            {formatCurrency(pendingDeclaration.declaredAmount)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between py-1.5">
-                          <span className="text-sm text-muted-foreground">Comprobantes</span>
-                          <span className="text-sm font-medium text-foreground">
-                            {pendingDeclaration.vouchers.length}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                    <div className="flex items-center justify-between py-1.5">
-                      <span className="text-sm text-muted-foreground">Enviado el</span>
-                      <span className="text-sm font-medium text-foreground">
-                        {formatDate(pendingDeclaration.createdAt)}
-                      </span>
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            </>
-          )}
-
-          {/* STEP: declare — formulario (con banner de rechazo previo si aplica).
-              `needsPayment` ya excluye las cuotas en revisión, pagadas, refinanciadas y
-              futuras — ver getInstallmentViewStatus.canDeclarePayment. */}
-          {needsPayment && paymentStep === 'declare' && (
-            <>
-              {mostRecentDeclaration?.status === 'REJECTED' && (
-                <Card className="border-error-200 bg-error-50/50">
-                  <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2 text-error-900">
-                      <XCircle className="w-4 h-4 text-error-600" />
-                      Tu comprobante anterior fue rechazado
-                    </CardTitle>
-                    <CardDescription className="text-error-700">
-                      {mostRecentDeclaration.clientMessage ??
-                        'No cumplió con los requisitos. Puedes enviar un nuevo comprobante.'}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
+        {/* ── Derecha: Pagar + historial ── */}
+        <div className="flex flex-col gap-4">
+          {showPaySurface && (
+            <Surface aria-label="Pagar la cuota">
+              {/* STEP: submitting */}
+              {paymentStep === 'submitting' && (
+                <div className="flex flex-col items-center gap-3 py-10">
+                  <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+                  <p className="text-sm font-medium text-foreground">Enviando comprobantes...</p>
+                  <p className="text-xs text-muted-foreground">No cierres esta página</p>
+                </div>
               )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-primary" />
-                    Declarar pago con comprobante
-                  </CardTitle>
-                  <CardDescription>
-                    ¿Ya transferiste? Sube la foto de tu comprobante. Un administrador validará
-                    el pago manualmente.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {voucherRows.map((row, idx) => (
-                    <div key={row.key} className="rounded-lg border border-border p-3 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold shrink-0">
-                            {idx + 1}
-                          </span>
-                          <p className="text-xs font-semibold text-foreground">Comprobante {idx + 1}</p>
-                        </div>
-                        {voucherRows.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeVoucherRow(row.key)}
-                            className="text-muted-foreground hover:text-error-600 transition-colors"
-                            aria-label="Quitar comprobante"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+              {/* STEP: error */}
+              {paymentStep === 'error' && (
+                <div className="space-y-4">
+                  <div>
+                    <p className="flex items-center gap-2 text-sm font-semibold text-error-700">
+                      <XCircle className="w-4 h-4 shrink-0" />
+                      No se pudo enviar la declaración
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {submitError ?? 'Ocurrió un error inesperado'}
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setPaymentStep('declare');
+                        setSubmitError(null);
+                      }}
+                    >
+                      Intentar de nuevo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => router.push(`/dashboard/creditos/${creditoId}`)}
+                    >
+                      Volver al crédito
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-                      {/* File input */}
-                      <div className="space-y-1">
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png"
-                          id={`voucher-file-${row.key}`}
-                          className="hidden"
-                          onChange={(e) => handleVoucherFileChange(row.key, e.target.files?.[0] ?? null)}
-                        />
-                        <label
-                          htmlFor={`voucher-file-${row.key}`}
-                          className="flex items-center gap-2 cursor-pointer rounded-lg border border-dashed border-border px-3 py-2 text-sm hover:border-primary/40 transition-colors"
-                        >
-                          <ImageIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-                          <span className="truncate text-muted-foreground">
-                            {row.file ? row.file.name : 'Seleccionar foto del comprobante (JPEG/PNG, máx. 10MB)'}
-                          </span>
-                        </label>
-                        {row.fileError && (
-                          <p className="text-xs text-error-600 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3 shrink-0" />
-                            {row.fileError}
+              {/* STEP: declare — comprobante en revisión (en lugar del formulario).
+                  Se muestra según `isUnderReview` (que viene de hasPendingDeclaration del
+                  backend, el mismo dato que congela la mora) y NO de la lista de
+                  declaraciones: si esa llamada falla, igual se le informa al cliente que
+                  tiene algo en revisión en vez de ofrecerle subir otro comprobante. */}
+              {isUnderReview && paymentStep === 'declare' && (
+                <div className="space-y-3">
+                  <p className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <Hourglass className="w-4 h-4 text-primary-600 shrink-0" />
+                    Comprobante en revisión
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {cuota.penaltyAccrued > 0
+                      ? 'Estamos validando tu pago. La mora quedó detenida desde que lo enviaste — si todo está en orden, no vas a pagar nada extra por el tiempo de revisión.'
+                      : 'Estamos validando tu pago. Te avisaremos apenas lo aprobemos.'}
+                  </p>
+                  {pendingDeclaration && (
+                    <dl className="divide-y border-y">
+                      {/* Monto y cantidad SOLO si hay más de un comprobante: con uno solo son el
+                          mismo dato que ya se ve en el resumen; con varios aportan la SUMA. */}
+                      {pendingDeclaration.vouchers.length > 1 && (
+                        <>
+                          <div className="flex items-center justify-between py-2.5">
+                            <dt className="text-sm text-muted-foreground">Monto declarado (total)</dt>
+                            <dd className="text-sm font-medium text-foreground">
+                              {formatCurrency(pendingDeclaration.declaredAmount)}
+                            </dd>
+                          </div>
+                          <div className="flex items-center justify-between py-2.5">
+                            <dt className="text-sm text-muted-foreground">Comprobantes</dt>
+                            <dd className="text-sm font-medium text-foreground">
+                              {pendingDeclaration.vouchers.length}
+                            </dd>
+                          </div>
+                        </>
+                      )}
+                      <div className="flex items-center justify-between py-2.5">
+                        <dt className="text-sm text-muted-foreground">Enviado el</dt>
+                        <dd className="text-sm font-medium text-foreground">
+                          {formatDate(pendingDeclaration.createdAt)}
+                        </dd>
+                      </div>
+                    </dl>
+                  )}
+                </div>
+              )}
+
+              {/* STEP: declare — pasos "Deposita" y "Sube tu comprobante".
+                  `needsPayment` ya excluye las cuotas en revisión, pagadas, refinanciadas y
+                  futuras — ver getInstallmentViewStatus.canDeclarePayment. */}
+              {needsPayment && paymentStep === 'declare' && (
+                <div className="space-y-6">
+                  {/* Paso 1 — datos para depositar, sin tarjeta propia. */}
+                  <section className="space-y-3">
+                    <StepHeading number={1} title="Deposita" />
+                    <DepositAccountCard config={depositAccount} error={depositAccountError} bare />
+                  </section>
+
+                  {/* Paso 2 — el comprobante. */}
+                  <section className="space-y-4 border-t border-border pt-6">
+                    <StepHeading number={2} title="Sube tu comprobante" />
+
+                    {mostRecentDeclaration?.status === 'REJECTED' && (
+                      <p className="flex items-start gap-2 text-sm text-error-700">
+                        <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>
+                          Tu comprobante anterior fue rechazado:{' '}
+                          {(
+                            mostRecentDeclaration.clientMessage ??
+                            'no cumplió con los requisitos'
+                          ).replace(/[.\s]+$/, '')}
+                          . Sube uno nuevo.
+                        </span>
+                      </p>
+                    )}
+
+                    <div className="space-y-5">
+                      {voucherRows.map((row, idx) => (
+                        <div key={row.key} className="space-y-3">
+                          {voucherRows.length > 1 && (
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-semibold text-foreground">Comprobante {idx + 1}</p>
+                              <button
+                                type="button"
+                                onClick={() => removeVoucherRow(row.key)}
+                                className="text-xs text-muted-foreground underline underline-offset-2 hover:text-error-700 transition-colors"
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                          )}
+
+                          {/* File input */}
+                          <div className="space-y-1">
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png"
+                              id={`voucher-file-${row.key}`}
+                              className="hidden"
+                              onChange={(e) => handleVoucherFileChange(row.key, e.target.files?.[0] ?? null)}
+                            />
+                            <label
+                              htmlFor={`voucher-file-${row.key}`}
+                              className="flex items-center gap-2 cursor-pointer rounded-lg border border-dashed border-neutral-300 px-3 py-3 text-sm hover:border-primary-600 transition-colors"
+                            >
+                              <ImageIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+                              <span className="truncate text-muted-foreground">
+                                {row.file ? row.file.name : 'Seleccionar foto del comprobante (JPEG/PNG, máx. 10MB)'}
+                              </span>
+                            </label>
+                            {row.fileError && (
+                              <p className="text-xs text-error-700 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3 shrink-0" />
+                                {row.fileError}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-muted-foreground">N° de operación</label>
+                              <Input
+                                placeholder="Ej: OP-2026081500123"
+                                value={row.operationNumber}
+                                onChange={(e) => updateVoucherRow(row.key, { operationNumber: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-muted-foreground">Monto</label>
+                              <Input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={row.amount}
+                                onChange={(e) => updateVoucherRow(row.key, { amount: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={addVoucherRow}
+                      disabled={voucherRows.length >= MAX_VOUCHERS}
+                      className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Agregar otro comprobante
+                    </button>
+
+                    {/* Pie: resumen de una línea, botón y una sola nota. */}
+                    <div className="space-y-3 border-t border-border pt-5">
+                      <div className="space-y-0.5">
+                        <p className="text-sm text-foreground">
+                          Vas a declarar <span className="font-semibold tabular-nums">{formatCurrency(declaredTotal)}</span> de
+                          los <span className="font-semibold tabular-nums">{formatCurrency(cuota.outstanding)}</span> que faltan
+                        </p>
+                        {declaredTotal > 0 && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            {isExactDeclaredMatch ? (
+                              <>
+                                <CheckCircle className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                                Cubre el total pendiente de esta cuota
+                              </>
+                            ) : declaredVsOutstandingDiff < 0 ? (
+                              <>Quedaría un saldo de {formatCurrency(Math.abs(declaredVsOutstandingDiff))} sin declarar</>
+                            ) : (
+                              <>Supera el pendiente de esta cuota en {formatCurrency(declaredVsOutstandingDiff)}</>
+                            )}
                           </p>
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground">N° de operación</label>
-                          <Input
-                            placeholder="Ej: OP-2026081500123"
-                            value={row.operationNumber}
-                            onChange={(e) => updateVoucherRow(row.key, { operationNumber: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground">Monto</label>
-                          <Input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={row.amount}
-                            onChange={(e) => updateVoucherRow(row.key, { amount: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full gap-2"
-                    onClick={addVoucherRow}
-                    disabled={voucherRows.length >= MAX_VOUCHERS}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Agregar otro comprobante
-                  </Button>
-
-                  <Separator />
-
-                  <div
-                    className={`rounded-lg border p-3 space-y-1.5 transition-colors ${
-                      declaredTotal > 0 && isExactDeclaredMatch
-                        ? 'border-success-200 bg-success-50/50'
-                        : 'border-border bg-muted/30'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Total declarado</span>
-                      <span className="font-semibold text-foreground">{formatCurrency(declaredTotal)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Pendiente de esta cuota</span>
-                      <span className="font-medium text-foreground">{formatCurrency(cuota.outstanding)}</span>
-                    </div>
-                    {declaredTotal > 0 && (
-                      <p
-                        className={`text-xs flex items-center gap-1 pt-0.5 ${
-                          isExactDeclaredMatch ? 'text-success-700' : 'text-muted-foreground'
-                        }`}
+                      <Button
+                        onClick={handleSubmitDeclaration}
+                        disabled={!canSubmitDeclaration}
+                        className="w-full gap-2 h-11 font-semibold bg-primary-600 text-white hover:bg-primary-700 disabled:bg-neutral-200 disabled:text-neutral-500 disabled:opacity-100"
                       >
-                        {isExactDeclaredMatch ? (
-                          <>
-                            <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-                            Cubre el total pendiente de esta cuota
-                          </>
-                        ) : declaredVsOutstandingDiff < 0 ? (
-                          <>Quedaría un saldo de {formatCurrency(Math.abs(declaredVsOutstandingDiff))} sin declarar</>
-                        ) : (
-                          <>Supera el pendiente de esta cuota en {formatCurrency(declaredVsOutstandingDiff)}</>
-                        )}
+                        <Send className="w-4 h-4" />
+                        Enviar declaración
+                      </Button>
+
+                      <p className="text-xs text-center text-muted-foreground">
+                        Revisamos tu comprobante manualmente. La mora se detiene desde que lo envías.
                       </p>
-                    )}
-                  </div>
-
-                  <Button
-                    onClick={handleSubmitDeclaration}
-                    disabled={!canSubmitDeclaration}
-                    className={`w-full gap-2 h-11 font-semibold ${
-                      isOverdue
-                        ? 'bg-error-600 text-white hover:bg-error-700 disabled:bg-error-300'
-                        : 'bg-accent-500 text-accent-900 hover:bg-accent-400 disabled:bg-accent-200'
-                    }`}
-                  >
-                    <Send className="w-4 h-4" />
-                    Enviar declaración
-                  </Button>
-
-                  <p className="text-[10px] text-center text-muted-foreground">
-                    Tu comprobante quedará pendiente de revisión — el pago se aplicará recién cuando sea aprobado.
-                  </p>
-                </CardContent>
-              </Card>
-            </>
-          )}
-
-          {/* STEP: submitting */}
-          {paymentStep === 'submitting' && (
-            <Card>
-              <CardContent className="py-12">
-                <div className="flex flex-col items-center gap-4">
-                  <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                  <p className="text-sm font-medium text-foreground">Enviando comprobantes...</p>
-                  <p className="text-xs text-muted-foreground">No cierres esta página</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-
-          {/* STEP: error */}
-          {paymentStep === 'error' && (
-            <Card className="border-error-200">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2 text-error-900">
-                  <XCircle className="w-4 h-4 text-error-600" />
-                  No se pudo enviar la declaración
-                </CardTitle>
-                <CardDescription className="text-error-700">
-                  {submitError ?? 'Ocurrió un error inesperado'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      setPaymentStep('declare');
-                      setSubmitError(null);
-                    }}
-                  >
-                    Intentar de nuevo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => router.push(`/dashboard/creditos/${creditoId}`)}
-                  >
-                    Volver al crédito
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Cuota refinanciada — la deuda se cobra en otro crédito, con link para ir. */}
-          {view.status === 'NEGOTIATED' && paymentStep === 'declare' && (
-            <Card className="border-primary-200 bg-primary-50/40">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2 text-primary-900">
-                  <RefreshCw className="w-4 h-4 text-primary-600" />
-                  Cuota refinanciada
-                </CardTitle>
-                <CardDescription className="text-primary-700">
-                  Esta cuota se reorganizó en un crédito de refinanciamiento. Los pagos van
-                  a ese crédito, no a esta cuota.
-                </CardDescription>
-              </CardHeader>
-              {cuota.negotiationCreditId && (
-                <CardContent>
-                  <Link href={`/dashboard/creditos/${cuota.negotiationCreditId}`}>
-                    <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-                      Ir al crédito de refinanciamiento
-                    </Button>
-                  </Link>
-                </CardContent>
-              )}
-            </Card>
-          )}
-
-
-          {/* Cómo pagar — el cliente transfiere por su cuenta, no hay pasarela. */}
-          {needsPayment && paymentStep === 'declare' && (
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground text-center">
-              <Shield className="w-4 h-4 text-success-600 shrink-0" />
-              Tu comprobante se revisa manualmente. La mora se detiene desde que lo envías.
-            </div>
-          )}
-
-          {/* Historial de comprobantes — sección propia, independiente del status de la
-              cuota y de `paymentStep`: siempre que haya al menos una declaración, se ve.
-              La tarjeta inline muestra POCO (para no enterrar al cliente en intentos
-              viejos): solo lo aprobado si la cuota ya cerró, o solo la última declaración
-              si sigue activa. "Ver todo el historial" abre un modal aparte con TODAS,
-              cada una colapsada — se expande una por una para ver sus fotos, en vez de
-              desparramar todo inline (ilegible con varios comprobantes por declaración). */}
-          {(() => {
-            const isClosedInstallment = view.status === 'PAID';
-            const defaultDeclarations = isClosedInstallment
-              ? installmentDeclarations.filter((d) => d.status === 'APPROVED')
-              : mostRecentDeclaration ? [mostRecentDeclaration] : [];
-            const hasMoreToShow = installmentDeclarations.length > defaultDeclarations.length;
-            if (installmentDeclarations.length === 0) return null;
-            return (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-primary" />
-                    Historial de comprobantes
-                  </CardTitle>
-                  <CardDescription>
-                    {isClosedInstallment
-                      ? 'Comprobantes aprobados para esta cuota.'
-                      : 'Tu declaración más reciente para esta cuota.'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {loadingDeclarationDetails && Object.keys(declarationDetails).length === 0 && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Cargando comprobantes...
                     </div>
-                  )}
-                  {defaultDeclarations.map((decl) => (
-                    <div key={decl.id} className="space-y-3">
-                      <div className="flex items-center justify-between">
+                  </section>
+                </div>
+              )}
+            </Surface>
+          )}
+
+          {/* Historial de comprobantes — plegado, independiente del status de la cuota y de
+              `paymentStep`: siempre que haya al menos una declaración, se puede abrir. */}
+          {installmentDeclarations.length > 0 && (
+            <details className="group rounded-2xl border border-border bg-white px-5 py-3 shadow-sm">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-foreground [&::-webkit-details-marker]:hidden">
+                Historial de comprobantes ({installmentDeclarations.length})
+                <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
+              </summary>
+              <ul className="mt-3 divide-y border-t">
+                {loadingDeclarationDetails && Object.keys(declarationDetails).length === 0 && (
+                  <li className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Cargando comprobantes...
+                  </li>
+                )}
+                {installmentDeclarations.map((decl) => (
+                  <li key={decl.id} className="space-y-2 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
                         <span className="text-xs text-muted-foreground">{formatDate(decl.createdAt)}</span>
                         <Badge variant={DECLARATION_STATUS_BADGE[decl.status].variant}>
                           {DECLARATION_STATUS_BADGE[decl.status].label}
                         </Badge>
                       </div>
-                      {decl.status === 'REJECTED' && decl.clientMessage && (
-                        <p className="text-xs text-error-700 bg-error-50/50 border border-error-200 rounded-md px-2.5 py-1.5">
-                          {decl.clientMessage}
-                        </p>
-                      )}
-                      <VoucherPhotos detail={declarationDetails[decl.id]} />
+                      <span className="text-sm font-semibold tabular-nums text-foreground">
+                        {formatCurrency(decl.declaredAmount)}
+                      </span>
                     </div>
-                  ))}
-
-                  {hasMoreToShow && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs"
-                      onClick={() => setHistoryDialogOpen(true)}
-                    >
-                      Ver todo el historial ({installmentDeclarations.length})
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })()}
+                    {decl.status === 'REJECTED' && decl.clientMessage && (
+                      <p className="text-xs text-error-700">{decl.clientMessage}</p>
+                    )}
+                    <VoucherList detail={declarationDetails[decl.id]} />
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
       </div>
-
-      {/* Modal con TODAS las declaraciones de esta cuota, cada una colapsada por defecto —
-          se expande individualmente para ver sus fotos. Separado de la tarjeta inline para
-          no desparramar potencialmente muchas fotos de golpe en medio de la página. */}
-      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
-        {/* Ancho: se deja la base mobile-safe del componente (`max-w-[calc(100%-2rem)]`, con
-            margen a los costados en pantallas chicas) y solo se ensancha desde `sm:` en
-            adelante — un `max-w-lg` a secas pisaría ese cap en mobile y el modal tocaría
-            los bordes de la pantalla sin margen. */}
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-4 pb-3 border-b shrink-0">
-            <DialogTitle className="text-base">Historial completo de comprobantes</DialogTitle>
-            <DialogDescription>
-              Cuota {cuota.installmentNo} — todas tus declaraciones, más reciente primero.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
-            {installmentDeclarations.map((decl, i) => (
-              <Collapsible key={decl.id} defaultOpen={i === 0} className="rounded-lg border border-border overflow-hidden">
-                <CollapsibleTrigger className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-neutral-50 transition-colors group">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs text-muted-foreground shrink-0">{formatDate(decl.createdAt)}</span>
-                    <Badge variant={DECLARATION_STATUS_BADGE[decl.status].variant}>
-                      {DECLARATION_STATUS_BADGE[decl.status].label}
-                    </Badge>
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 transition-transform group-data-[panel-open]:rotate-180" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-3 pb-3 space-y-3 border-t border-border">
-                  <div className="pt-3 space-y-1">
-                    <p className="text-xs text-muted-foreground">
-                      Monto declarado: <span className="font-medium text-foreground">{formatCurrency(decl.declaredAmount)}</span>
-                    </p>
-                    {decl.status === 'REJECTED' && decl.clientMessage && (
-                      <p className="text-xs text-error-700 bg-error-50/50 border border-error-200 rounded-md px-2.5 py-1.5">
-                        {decl.clientMessage}
-                      </p>
-                    )}
-                  </div>
-                  <VoucherPhotos detail={declarationDetails[decl.id]} />
-                </CollapsibleContent>
-              </Collapsible>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
 
-// ─── Fotos de los comprobantes de una declaración ──────────────────────────────
-// Extraído porque se usa tanto en la tarjeta inline (resumen) como en el modal del
-// historial completo — antes estaba duplicado entre ambos lugares.
+// ─── Piezas de la página ───────────────────────────────────────────────────────
 
-function VoucherPhotos({ detail }: { detail: MyPaymentDeclarationDetail | undefined }) {
+/** Superficie blanca sobre el fondo celeste de la página: el contraste que separa cada bloque. */
+function Surface({ children, ...rest }: React.ComponentProps<'section'>) {
+  return (
+    <section {...rest} className="rounded-2xl border border-border bg-white p-5 md:p-6 shadow-sm">
+      {children}
+    </section>
+  );
+}
+
+function StepHeading({ number, title }: { number: number; title: string }) {
+  return (
+    <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+      <span
+        aria-hidden
+        className="flex h-6 w-6 items-center justify-center rounded-full border border-primary-600 text-xs font-semibold text-primary-600"
+      >
+        {number}
+      </span>
+      {title}
+    </h2>
+  );
+}
+
+/**
+ * Contenido del Resumen: el mensaje de estado es el título (sin caja de color) y, debajo, el
+ * monto con su composición. El copy de las cuotas sin saldo sale de `getInstallmentViewStatus`.
+ */
+function SummaryContent({
+  view,
+  cuota,
+  pendingDeclaration,
+}: {
+  view: InstallmentViewStatusInfo;
+  cuota: Installment;
+  pendingDeclaration: PaymentDeclaration | null;
+}) {
+  const balanceProps = {
+    amountDue: cuota.amountDue,
+    amountPaid: cuota.amountPaid,
+    penaltyAccrued: cuota.penaltyAccrued,
+    penaltyPaid: cuota.penaltyPaid,
+    outstanding: cuota.outstanding,
+    daysOverdue: cuota.daysOverdue,
+    principalAmount: cuota.principalAmount,
+    interestAmount: cuota.interestAmount,
+    principalPaid: cuota.principalPaid,
+    interestPaid: cuota.interestPaid,
+  };
+
+  switch (view.status) {
+    case 'PAID': {
+      const totalPaid = cuota.amountPaid + cuota.penaltyPaid;
+      return (
+        <div className="space-y-5">
+          <div>
+            <p className="flex items-center gap-2 text-2xl font-semibold text-foreground">
+              <CheckCircle className="w-6 h-6 text-emerald-600 shrink-0" />
+              Cuota pagada
+            </p>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Pagaste {formatCurrency(totalPaid)}
+              {cuota.paidAt ? ` el ${formatDate(cuota.paidAt)}` : ''}
+            </p>
+          </div>
+          <InstallmentBalance {...balanceProps} variant="paid" />
+        </div>
+      );
+    }
+
+    case 'UNDER_REVIEW':
+      return (
+        <div>
+          <p className="flex items-center gap-2 text-2xl font-semibold text-foreground">
+            <Hourglass className="w-6 h-6 text-primary-600 shrink-0" />
+            Tu pago está en revisión
+          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            {pendingDeclaration
+              ? `Declaraste ${formatCurrency(pendingDeclaration.declaredAmount)} el ${formatDate(pendingDeclaration.createdAt)}. `
+              : ''}
+            {cuota.penaltyAccrued > 0 ? 'La mora está detenida mientras lo revisamos.' : 'Lo estamos revisando.'}
+          </p>
+        </div>
+      );
+
+    case 'NEGOTIATED':
+      return (
+        <div className="space-y-4">
+          <div>
+            <p className="flex items-center gap-2 text-2xl font-semibold text-foreground">
+              <RefreshCw className="w-6 h-6 text-primary-600 shrink-0" />
+              Cuota refinanciada
+            </p>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Esta cuota se reorganizó en un crédito de refinanciamiento. Los pagos van a ese
+              crédito, no a esta cuota.
+            </p>
+          </div>
+          {cuota.negotiationCreditId && (
+            <Link
+              href={`/dashboard/creditos/${cuota.negotiationCreditId}`}
+              className="inline-flex text-sm font-medium text-primary-600 underline underline-offset-2 hover:text-primary-700"
+            >
+              Ir al crédito de refinanciamiento
+            </Link>
+          )}
+        </div>
+      );
+
+    case 'OVERDUE':
+      return (
+        <InstallmentBalance
+          {...balanceProps}
+          note={
+            <>
+              <span className="text-error-700">
+                Venció el {formatDate(cuota.dueDate)}
+                {cuota.daysOverdue > 0 &&
+                  ` · ${cuota.daysOverdue} ${cuota.daysOverdue === 1 ? 'día' : 'días'} de atraso`}
+              </span>
+              . Paga ahora para detener la mora.
+            </>
+          }
+        />
+      );
+
+    case 'PARTIALLY_PAID':
+      return (
+        <InstallmentBalance
+          {...balanceProps}
+          note={`Ya pagaste ${formatCurrency(cuota.amountPaid)}. Vence el ${formatDate(cuota.dueDate)}.`}
+        />
+      );
+
+    default:
+      // CURRENT / PENDING
+      return <InstallmentBalance {...balanceProps} note={`Vence el ${formatDate(cuota.dueDate)}`} />;
+  }
+}
+
+// ─── Comprobantes de una declaración (historial) ───────────────────────────────
+
+/** Miniatura del comprobante; si la imagen no carga (URL vencida, archivo borrado) no se muestra nada. */
+function VoucherThumb({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Abrir foto en tamaño completo"
+      className="block shrink-0 overflow-hidden rounded-md border border-border bg-white hover:border-primary-600 transition-colors"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- URL prefirmada temporal, no vale la pena el pipeline de optimización de next/image */}
+      <img src={src} alt={alt} onError={() => setFailed(true)} className="h-14 w-14 object-cover" />
+    </a>
+  );
+}
+
+function VoucherList({ detail }: { detail: MyPaymentDeclarationDetail | undefined }) {
   if (!detail) {
     return (
-      <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Loader2 className="w-3.5 h-3.5 animate-spin" />
         Cargando comprobantes...
       </div>
@@ -952,43 +836,18 @@ function VoucherPhotos({ detail }: { detail: MyPaymentDeclarationDetail | undefi
   }
 
   return (
-    <div className="space-y-3">
+    <ul className="space-y-2">
       {detail.vouchers.map((v, idx) => (
-        <div key={v.id} className="rounded-lg border border-border bg-card p-3 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold shrink-0">
-              {idx + 1}
-            </span>
-            <p className="text-xs font-semibold text-foreground">Comprobante {idx + 1}</p>
+        <li key={v.id} className="flex items-center gap-3">
+          <VoucherThumb src={v.photoUrl} alt={`Comprobante ${idx + 1} — operación ${v.operationNumber}`} />
+          <div className="min-w-0 text-xs text-muted-foreground">
+            <p>
+              Operación <span className="font-mono text-foreground">{v.operationNumber}</span>
+            </p>
+            {detail.vouchers.length > 1 && <p>{formatCurrency(v.amount)}</p>}
           </div>
-
-          <a
-            href={v.photoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group block rounded-lg border border-border overflow-hidden bg-white hover:border-primary/40 transition-colors"
-            title="Abrir foto en tamaño completo"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- URL prefirmada temporal, no vale la pena el pipeline de optimización de next/image */}
-            <img
-              src={v.photoUrl}
-              alt={`Comprobante ${idx + 1} — operación ${v.operationNumber}`}
-              className="w-full max-h-80 object-contain mx-auto bg-white group-hover:opacity-90 transition-opacity"
-            />
-          </a>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">N° de operación</p>
-              <p className="text-sm font-mono text-foreground truncate">{v.operationNumber}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">Monto</p>
-              <p className="text-sm font-semibold text-foreground">{formatCurrency(v.amount)}</p>
-            </div>
-          </div>
-        </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

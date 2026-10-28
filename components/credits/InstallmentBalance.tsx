@@ -13,6 +13,13 @@ interface Props {
   interestAmount?: number | null;
   principalPaid?: number | null;
   interestPaid?: number | null;
+  /**
+   * `unpaid` (por defecto): "Te falta pagar" + barra + lo que falta de cada parte.
+   * `paid`: solo lo que cubrió el pago (sin "te falta", sin filas en cero); el título lo pone quien lo usa.
+   */
+  variant?: 'unpaid' | 'paid';
+  /** Una línea simple bajo el monto (ej. fecha de vencimiento). Solo en `unpaid`. */
+  note?: React.ReactNode;
 }
 
 interface Row {
@@ -48,6 +55,16 @@ function LedgerRow({ row, withDot }: { row: Row; withDot: boolean }) {
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Fila de la variante `paid`: lo que se pagó de cada parte, sin cajas ni "de X · pagaste Y". */
+function PaidRow({ row }: { row: Row }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-3">
+      <dt className="text-sm text-muted-foreground">{row.label}</dt>
+      <dd className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(row.paid)}</dd>
     </div>
   );
 }
@@ -92,6 +109,20 @@ export function InstallmentBalance(props: Props) {
     });
   }
 
+  if (props.variant === 'paid') {
+    const paidRows = rows.filter((row) => row.paid > 0.004);
+    if (paidRows.length === 0) return null;
+    return (
+      <section aria-label="Qué cubrió tu pago" data-testid="installment-balance">
+        <dl className="divide-y border-y">
+          {paidRows.map((row) => (
+            <PaidRow key={row.key} row={row} />
+          ))}
+        </dl>
+      </section>
+    );
+  }
+
   const segments: DebtSegment[] = rows.map((row) => ({ part: row.part, amount: Math.max(0, row.total - row.paid) }));
   // La barra solo se muestra si las partes suman exactamente lo que falta; si no, mejor no dibujar algo que no cuadra.
   const composes = hasSplit && cents(segments.reduce((sum, s) => sum + s.amount, 0)) === cents(outstanding);
@@ -103,6 +134,7 @@ export function InstallmentBalance(props: Props) {
         <p className="text-4xl font-semibold tabular-nums text-foreground" data-testid="balance-outstanding">
           {formatCurrency(outstanding)}
         </p>
+        {props.note && <p className="mt-1.5 text-sm text-muted-foreground">{props.note}</p>}
       </div>
 
       {/* Sin leyenda propia: los puntos de color de la lista de abajo ya hacen de leyenda. */}

@@ -9,6 +9,11 @@ import type { DepositAccountConfig, DepositAccountError } from '@/modules/deposi
 interface DepositAccountCardProps {
   config: DepositAccountConfig | null;
   error: DepositAccountError | null;
+  /**
+   * Sin tarjeta ni título propio: solo los datos, para ponerlos dentro de otra superficie
+   * (ej. el paso "Deposita" de la cuota). Los estados vacíos pasan a ser una nota neutra.
+   */
+  bare?: boolean;
 }
 
 /**
@@ -21,7 +26,9 @@ interface DepositAccountCardProps {
  * <p>Si no hay cuenta configurada muestra el error con su call-to-action en vez de
  * desaparecer: el cliente necesita saber por qué no puede pagar y qué hacer.
  */
-export function DepositAccountCard({ config, error }: DepositAccountCardProps) {
+export function DepositAccountCard({ config, error, bare = false }: DepositAccountCardProps) {
+  if (bare) return <DepositAccountBare config={config} error={error} />;
+
   if (!config) {
     return (
       <Card className="border-warning-100 bg-warning-50/50">
@@ -91,17 +98,61 @@ export function DepositAccountCard({ config, error }: DepositAccountCardProps) {
 
 // ── Sub-componentes ──────────────────────────────────────────────────────────
 
+/** Versión embebida: datos con divisores finos, sin cajas anidadas ni fondos de color. */
+function DepositAccountBare({ config, error }: Pick<DepositAccountCardProps, 'config' | 'error'>) {
+  if (!config) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {error?.message ??
+          'Todavía no tenemos una cuenta para mostrarte. Escríbenos por WhatsApp y te indicamos cómo pagar.'}
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4">
+        <div className="divide-y divide-border border-y border-border">
+          <CopyableRow label="Banco" value={config.bankName} copyable={false} bare />
+          <CopyableRow label="Número de cuenta" value={config.accountNumber} mono bare />
+          {config.cci && <CopyableRow label="CCI (otros bancos)" value={config.cci} mono bare />}
+          <CopyableRow label="Titular" value={config.holderName} copyable={false} bare />
+          {config.accountType && (
+            <CopyableRow label="Tipo de cuenta" value={config.accountType} copyable={false} bare />
+          )}
+        </div>
+
+        {config.qrImageUrl && (
+          <div className="flex flex-row items-center gap-3 sm:flex-col sm:justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={config.qrImageUrl}
+              alt={`Código QR para depositar a la cuenta de ${config.holderName}`}
+              className="w-24 h-24 object-contain rounded-lg border border-border bg-white p-1.5"
+            />
+            <p className="text-xs text-muted-foreground text-center sm:max-w-24">Escanea el QR</p>
+          </div>
+        )}
+      </div>
+
+      {config.description && <p className="text-xs text-muted-foreground">{config.description}</p>}
+    </div>
+  );
+}
+
 /**
  * Fila con botón de copiar. El número de cuenta y el CCI se copian, no se transcriben a
  * mano: un dígito mal escrito manda la plata a otra cuenta.
  */
 function CopyableRow({
-  label, value, mono, copyable = true,
+  label, value, mono, copyable = true, bare = false,
 }: {
   label: string;
   value: string;
   mono?: boolean;
   copyable?: boolean;
+  /** Sin padding lateral: la fila vive en una lista sin borde. */
+  bare?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -117,7 +168,7 @@ function CopyableRow({
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 px-3 py-2">
+    <div className={`flex items-center justify-between gap-2 py-2 ${bare ? '' : 'px-3'}`}>
       <span className="text-xs text-muted-foreground shrink-0">{label}</span>
       <div className="flex items-center gap-1.5 min-w-0">
         <span className={`text-sm font-medium text-foreground truncate ${mono ? 'font-mono' : ''}`}>
