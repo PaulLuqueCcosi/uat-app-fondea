@@ -11,7 +11,6 @@ import { installmentStatusInfo } from '@/modules/admin/credit-status-labels';
 import { InstallmentTransactionsCard } from '@/components/admin/credits/detail/InstallmentTransactionsCard';
 import { InstallmentChargesTable } from '@/components/admin/credits/detail/InstallmentChargesTable';
 import { InstallmentPaymentsCard } from '@/components/admin/credits/detail/InstallmentPaymentsCard';
-import { PenaltyBreakdownTable } from '@/components/admin/credits/detail/PenaltyBreakdownTable';
 import { RegisterPaymentDialog } from '@/components/admin/credits/detail/RegisterPaymentDialog';
 import { KpiCard } from '@/components/admin/shared';
 import { DataRow } from '@/components/ui/data-row';
@@ -160,20 +159,10 @@ export default async function AdminInstallmentDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
-      {/* Mora por concepto (admin) */}
+      {/* Detalle de la cuota: capital, interés por tipo y mora, con lo pagado y lo que falta (admin) */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Mora por concepto</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PenaltyBreakdownTable items={data.penaltyBreakdown} />
-        </CardContent>
-      </Card>
-
-      {/* A dónde va el dinero: estado por concepto y pagos aplicados (admin) */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Estado por concepto</CardTitle>
+          <CardTitle className="text-sm">Detalle de la cuota</CardTitle>
         </CardHeader>
         <CardContent>
           <InstallmentChargesTable items={data.charges} />
