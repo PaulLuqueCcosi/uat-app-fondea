@@ -163,6 +163,11 @@ export interface Installment {
    * va a existir.
    */
   hasPendingDeclaration: boolean;
+  /** Cómo se compone el monto de la cuota: capital e interés (comisiones incluidas) con lo pagado de cada uno. */
+  principalAmount?: number | null;
+  interestAmount?: number | null;
+  principalPaid?: number | null;
+  interestPaid?: number | null;
 }
 
 // ─── Resumen ──────────────────────────────────────────────────────────────────

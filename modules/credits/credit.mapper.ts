@@ -108,6 +108,10 @@ export function mapInstallmentFromBackend(raw: any): Installment {
     // Comprobante en revisión: la mora está congelada, la UI debe mostrar
     // "en revisión" en vez de "vencida".
     hasPendingDeclaration: raw.has_pending_declaration ?? false,
+    principalAmount: raw.principal_amount ?? null,
+    interestAmount: raw.interest_amount ?? null,
+    principalPaid: raw.principal_paid ?? null,
+    interestPaid: raw.interest_paid ?? null,
   };
 }
 
