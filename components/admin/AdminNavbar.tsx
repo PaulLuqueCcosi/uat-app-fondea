@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { AdminUserMenu } from '@/components/admin/AdminUserMenu';
-import { useBreadcrumbLabelsStore } from '@/modules/shared/breadcrumb-labels';
+import { isOpaqueSegment, useBreadcrumbLabelExpired, useBreadcrumbLabelsStore } from '@/modules/shared/breadcrumb-labels';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -24,7 +24,8 @@ import {
 function getBreadcrumbs(
   pathname: string,
   dynamicLabels: Record<string, string>,
-): { label: string; href?: string }[] {
+  labelExpired: boolean,
+): { label: string; href?: string; pending?: boolean }[] {
   const segments = pathname.replace('/admin', '').split('/').filter(Boolean);
 
   if (segments.length === 0) return [{ label: 'Admin' }];
@@ -53,7 +54,7 @@ function getBreadcrumbs(
   // apunta al ancestro válido más cercano (el listado con tabs) en vez de a sí mismo.
   const NON_NAVIGABLE_SEGMENTS = new Set(['availability', 'fee_groups', 'pricing_rules', 'installments']);
 
-  const crumbs: { label: string; href?: string }[] = [
+  const crumbs: { label: string; href?: string; pending?: boolean }[] = [
     { label: 'Admin', href: '/admin' },
   ];
 
@@ -63,10 +64,15 @@ function getBreadcrumbs(
     path += `/${seg}`;
     const isLast = i === segments.length - 1;
     const isNavigable = !NON_NAVIGABLE_SEGMENTS.has(seg);
+    const isInstallmentNo = segments[i - 1] === 'installments';
+    const known = dynamicLabels[seg] || labelMap[seg];
+    // Un UUID sin nombre todavía no se muestra crudo: marcador de carga y, si el nombre nunca llega, un id corto.
+    const waiting = !isInstallmentNo && !known && isOpaqueSegment(seg) && !labelExpired;
     crumbs.push({
       // El número después de /installments es el nro. de cuota (…/installments/2 → "Cuota 2")
-      label: segments[i - 1] === 'installments' ? `Cuota ${seg}` : dynamicLabels[seg] || labelMap[seg] || seg,
+      label: isInstallmentNo ? `Cuota ${seg}` : known ?? (isOpaqueSegment(seg) ? (labelExpired ? `#${seg.slice(0, 8)}` : '') : seg),
       href: isLast ? undefined : (isNavigable ? path : lastValidPath),
+      pending: waiting,
     });
     if (isNavigable) lastValidPath = path;
   });
@@ -86,7 +92,8 @@ interface AdminNavbarProps {
 export function AdminNavbar({ user, onSignOut }: AdminNavbarProps) {
   const pathname = usePathname();
   const dynamicLabels = useBreadcrumbLabelsStore((s) => s.labels);
-  const breadcrumbs = getBreadcrumbs(pathname, dynamicLabels);
+  const labelExpired = useBreadcrumbLabelExpired(pathname);
+  const breadcrumbs = getBreadcrumbs(pathname, dynamicLabels, labelExpired);
 
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center border-b border-border bg-neutral-900 px-4">
@@ -116,10 +123,10 @@ export function AdminNavbar({ user, onSignOut }: AdminNavbarProps) {
                       <BreadcrumbItem className={idx < breadcrumbs.length - 1 ? 'hidden md:block' : ''}>
                         {crumb.href && !isLast ? (
                           <BreadcrumbLink render={<Link href={crumb.href} />} className="text-neutral-400 hover:text-white">
-                            {crumb.label}
+                            {crumb.pending ? <span aria-hidden className="inline-block h-3.5 w-24 animate-pulse rounded bg-neutral-700 align-middle" /> : crumb.label}
                           </BreadcrumbLink>
                         ) : (
-                          <BreadcrumbPage className="text-neutral-200">{crumb.label}</BreadcrumbPage>
+                          <BreadcrumbPage className="text-neutral-200">{crumb.pending ? <span aria-hidden className="inline-block h-3.5 w-24 animate-pulse rounded bg-neutral-700 align-middle" /> : crumb.label}</BreadcrumbPage>
                         )}
                       </BreadcrumbItem>
                       {!isLast && (

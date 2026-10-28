@@ -26,7 +26,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { UserMenuDropdown } from '@/components/ui/user-menu-dropdown';
-import { useBreadcrumbLabelsStore } from '@/modules/shared/breadcrumb-labels';
+import { isOpaqueSegment, useBreadcrumbLabelExpired, useBreadcrumbLabelsStore } from '@/modules/shared/breadcrumb-labels';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -36,7 +36,8 @@ import { useBreadcrumbLabelsStore } from '@/modules/shared/breadcrumb-labels';
 function getBreadcrumbs(
   pathname: string,
   dynamicLabels: Record<string, string>,
-): { label: string; href?: string }[] {
+  labelExpired: boolean,
+): { label: string; href?: string; pending?: boolean }[] {
   const segments = pathname.replace('/dashboard', '').split('/').filter(Boolean);
 
   if (segments.length === 0) return [{ label: 'Dashboard' }];
@@ -52,7 +53,7 @@ function getBreadcrumbs(
     'lambda-tester': 'Lambda Tester',
   };
 
-  const crumbs: { label: string; href?: string }[] = [
+  const crumbs: { label: string; href?: string; pending?: boolean }[] = [
     { label: 'Dashboard', href: '/dashboard' },
   ];
 
@@ -60,9 +61,13 @@ function getBreadcrumbs(
   segments.forEach((seg, i) => {
     path += `/${seg}`;
     const isLast = i === segments.length - 1;
+    const known = dynamicLabels[seg] || labelMap[seg];
+    // Un UUID sin nombre todavía no se muestra crudo: marcador de carga y, si el nombre nunca llega, un id corto.
+    const waiting = !known && isOpaqueSegment(seg) && !labelExpired;
     crumbs.push({
-      label: dynamicLabels[seg] || labelMap[seg] || seg,
+      label: known ?? (isOpaqueSegment(seg) ? (labelExpired ? `#${seg.slice(0, 8)}` : '') : seg),
       href: isLast ? undefined : path,
+      pending: waiting,
     });
   });
 
@@ -255,7 +260,8 @@ function NotificationBell() {
 export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
   const pathname = usePathname();
   const dynamicLabels = useBreadcrumbLabelsStore((s) => s.labels);
-  const breadcrumbs = getBreadcrumbs(pathname, dynamicLabels);
+  const labelExpired = useBreadcrumbLabelExpired(pathname);
+  const breadcrumbs = getBreadcrumbs(pathname, dynamicLabels, labelExpired);
 
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center border-b border-border bg-white/90 backdrop-blur-md px-4">
@@ -281,10 +287,10 @@ export function DashboardNavbar({ user, onSignOut }: DashboardNavbarProps) {
                       <BreadcrumbItem className={idx < breadcrumbs.length - 1 ? 'hidden md:block' : ''}>
                         {crumb.href && !isLast ? (
                           <BreadcrumbLink render={<Link href={crumb.href} />}>
-                            {crumb.label}
+                            {crumb.pending ? <span aria-hidden className="inline-block h-3.5 w-24 animate-pulse rounded bg-neutral-200 align-middle" /> : crumb.label}
                           </BreadcrumbLink>
                         ) : (
-                          <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                          <BreadcrumbPage>{crumb.pending ? <span aria-hidden className="inline-block h-3.5 w-24 animate-pulse rounded bg-neutral-200 align-middle" /> : crumb.label}</BreadcrumbPage>
                         )}
                       </BreadcrumbItem>
                       {!isLast && (
